@@ -1,29 +1,41 @@
 import React, { useState } from "react";
 
+interface Client {
+  clientId: string;
+  clientName: string;
+  location: string;
+}
+
 interface ClientFormProps {
-  onSubmit: (client: { clientId: string; clientName: string; location: string }) => void;
-  initialData?: { clientId: string; clientName: string; location: string };
+  onSubmit: (client: Client) => void;
+  initialData?: Client;
 }
 
 const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, initialData }) => {
-  const [formData, setFormData] = useState(
+  const [formData, setFormData] = useState<Client>(
     initialData || { clientId: "", clientName: "", location: "" }
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // ⏳ placeholder for API call
-    // await fetch("API_ENDPOINT", { method: "POST", body: JSON.stringify(formData) });
+    // ⏳ Placeholder for API call
+    // Example:
+    // await fetch("/api/clients", {
+    //   method: "POST",
+    //   headers: { "Content-Type": "application/json" },
+    //   body: JSON.stringify(formData),
+    // });
 
-    onSubmit(formData); // still notify parent, API will be plugged here
+    onSubmit(formData); // still notify parent
   };
 
   return (

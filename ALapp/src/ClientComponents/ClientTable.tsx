@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import ClientForm from "./ClientForm";
 
 interface Client {
   clientId: number;
@@ -7,16 +8,16 @@ interface Client {
 }
 
 const ClientTable: React.FC = () => {
-  const [clients, setClients] = useState<Client[]>([]);
+  const [clients, setClients] = useState<Client[]>([
+    { clientId: 1, clientName: "Test Client 1", location: "New York" },
+    { clientId: 2, clientName: "Test Client 2", location: "California" }
+  ]);
+  const [showForm, setShowForm] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
 
-  // Placeholder: Fetch clients from API
   const fetchClients = async () => {
     try {
-      // TODO: Replace with your real API call
-      // Example: const response = await fetch("/api/clients");
-      // const data = await response.json();
-      // setClients(data);
-
       console.log("Fetching clients...");
     } catch (error) {
       console.error("Error fetching clients:", error);
@@ -25,43 +26,117 @@ const ClientTable: React.FC = () => {
 
   useEffect(() => {
     fetchClients();
+    console.log("Current clients:", clients);
   }, []);
 
-  // Placeholder: Add client
-  const handleAdd = async () => {
+  const handleSubmit = async (client: {
+    clientId: string;
+    clientName: string;
+    location: string;
+  }) => {
     try {
-      // TODO: Replace with your real API POST call
-      console.log("Adding client...");
+      if (editingClient) {
+        setClients((prev) =>
+          prev.map((c) =>
+            c.clientId === editingClient.clientId
+              ? { ...client, clientId: Number(client.clientId) }
+              : c
+          )
+        );
+      } else {
+        setClients((prev) => [
+          ...prev,
+          { ...client, clientId: Number(client.clientId) },
+        ]);
+      }
+
+      setShowForm(false);
+      setEditingClient(null);
     } catch (error) {
-      console.error("Error adding client:", error);
+      console.error("Error saving client:", error);
     }
   };
 
-  // Placeholder: Edit client
-  const handleEdit = async (id: number) => {
+  const confirmDelete = async (id: number) => {
     try {
-      // TODO: Replace with your real API PUT call
-      console.log("Editing client with id:", id);
-    } catch (error) {
-      console.error("Error editing client:", error);
-    }
-  };
-
-  // Placeholder: Delete client
-  const handleDelete = async (id: number) => {
-    try {
-      // TODO: Replace with your real API DELETE call
-      console.log("Deleting client with id:", id);
+      setClients((prev) => prev.filter((c) => c.clientId !== id));
+      setShowDeleteConfirm(null);
     } catch (error) {
       console.error("Error deleting client:", error);
     }
   };
 
   return (
-    <div>
+    <div style={{ padding: "20px" }}>
       <h2>Client Table</h2>
-      <button onClick={handleAdd}>Add Client</button>
-      <table border={1} cellPadding={5} style={{ marginTop: "10px" }}>
+
+      {showForm && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div style={{ background: "white", padding: "20px", borderRadius: "8px", minWidth: "300px" }}>
+            <h3>{editingClient ? "Edit Client" : "Add Client"}</h3>
+            <ClientForm
+              onSubmit={handleSubmit}
+              initialData={
+                editingClient
+                  ? {
+                      clientId: String(editingClient.clientId),
+                      clientName: editingClient.clientName,
+                      location: editingClient.location,
+                    }
+                  : undefined
+              }
+            />
+            <button onClick={() => setShowForm(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {showDeleteConfirm !== null && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div style={{ background: "white", padding: "20px", borderRadius: "8px" }}>
+            <h3>Delete this client?</h3>
+            <button onClick={() => confirmDelete(showDeleteConfirm)}>Yes</button>
+            <button onClick={() => setShowDeleteConfirm(null)}>No</button>
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={() => {
+          setShowForm(true);
+          setEditingClient(null);
+        }}
+      >
+        Add Client
+      </button>
+
+      <table border={1} style={{ width: "100%", marginTop: "10px" }}>
         <thead>
           <tr>
             <th>Client ID</th>
@@ -78,8 +153,20 @@ const ClientTable: React.FC = () => {
                 <td>{client.clientName}</td>
                 <td>{client.location}</td>
                 <td>
-                  <button onClick={() => handleEdit(client.clientId)}>Edit</button>
-                  <button onClick={() => handleDelete(client.clientId)}>Delete</button>
+                  <button
+                    onClick={() => {
+                      setEditingClient(client);
+                      setShowForm(true);
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(client.clientId)}
+                    style={{ marginLeft: "5px" }}
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))
