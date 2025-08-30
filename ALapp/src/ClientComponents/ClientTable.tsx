@@ -1,5 +1,14 @@
 import React, { useEffect, useState } from "react";
 import ClientForm from "./ClientForm";
+import "primereact/resources/themes/saga-blue/theme.css";  // Theme
+import "primereact/resources/primereact.min.css";         // Core
+import "primeicons/primeicons.css";                      // Icons
+
+
+// PrimeReact imports
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
+import { Button } from "primereact/button";
 
 interface Client {
   clientId: number;
@@ -66,10 +75,56 @@ const ClientTable: React.FC = () => {
     }
   };
 
+  // Action buttons inside DataTable
+  const actionBodyTemplate = (rowData: Client) => {
+    return (
+      <div className="flex gap-2">
+        <Button
+          icon="pi pi-pencil"
+          rounded
+          outlined
+          severity="info"
+          onClick={() => {
+            setEditingClient(rowData);
+            setShowForm(true);
+          }}
+        />
+        <Button
+          icon="pi pi-trash"
+          rounded
+          outlined
+          severity="danger"
+          onClick={() => setShowDeleteConfirm(rowData.clientId)}
+        />
+      </div>
+    );
+  };
+
   return (
     <div style={{ padding: "20px" }}>
       <h2>Client Table</h2>
 
+      {/* Add Client Button */}
+      <Button
+        label="Add Client"
+        icon="pi pi-plus"
+        severity="success"
+        onClick={() => {
+          setShowForm(true);
+          setEditingClient(null);
+        }}
+        style={{ marginBottom: "1rem" }}
+      />
+
+      {/* PrimeReact DataTable */}
+      <DataTable value={clients} paginator rows={5} responsiveLayout="scroll">
+        <Column field="clientId" header="Client ID" sortable />
+        <Column field="clientName" header="Client Name" sortable />
+        <Column field="location" header="Location" sortable />
+        <Column body={actionBodyTemplate} header="Actions" style={{ width: "8rem" }} />
+      </DataTable>
+
+      {/* Add/Edit Client Modal */}
       {showForm && (
         <div
           style={{
@@ -99,11 +154,12 @@ const ClientTable: React.FC = () => {
                   : undefined
               }
             />
-            <button onClick={() => setShowForm(false)}>Cancel</button>
+            <Button label="Cancel" severity="secondary" onClick={() => setShowForm(false)} />
           </div>
         </div>
       )}
 
+      {/* Delete Confirmation Modal */}
       {showDeleteConfirm !== null && (
         <div
           style={{
@@ -121,62 +177,21 @@ const ClientTable: React.FC = () => {
         >
           <div style={{ background: "white", padding: "20px", borderRadius: "8px" }}>
             <h3>Delete this client?</h3>
-            <button onClick={() => confirmDelete(showDeleteConfirm)}>Yes</button>
-            <button onClick={() => setShowDeleteConfirm(null)}>No</button>
+            <Button
+              label="Yes"
+              icon="pi pi-check"
+              severity="danger"
+              onClick={() => confirmDelete(showDeleteConfirm)}
+            />
+            <Button
+              label="No"
+              icon="pi pi-times"
+              severity="secondary"
+              onClick={() => setShowDeleteConfirm(null)}
+            />
           </div>
         </div>
       )}
-
-      <button
-        onClick={() => {
-          setShowForm(true);
-          setEditingClient(null);
-        }}
-      >
-        Add Client
-      </button>
-
-      <table border={1} style={{ width: "100%", marginTop: "10px" }}>
-        <thead>
-          <tr>
-            <th>Client ID</th>
-            <th>Client Name</th>
-            <th>Location</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {clients.length > 0 ? (
-            clients.map((client) => (
-              <tr key={client.clientId}>
-                <td>{client.clientId}</td>
-                <td>{client.clientName}</td>
-                <td>{client.location}</td>
-                <td>
-                  <button
-                    onClick={() => {
-                      setEditingClient(client);
-                      setShowForm(true);
-                    }}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => setShowDeleteConfirm(client.clientId)}
-                    style={{ marginLeft: "5px" }}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan={4}>No clients available</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
     </div>
   );
 };
