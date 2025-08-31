@@ -3,7 +3,7 @@ import React, { useState } from "react";
 interface Client {
   clientId: string;
   clientName: string;
-  location: string;
+  adress: string;
 }
 
 interface ClientFormProps {
@@ -13,7 +13,7 @@ interface ClientFormProps {
 
 const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, initialData }) => {
   const [formData, setFormData] = useState<Client>(
-    initialData || { clientId: "", clientName: "", location: "" }
+    initialData || { clientId: "", clientName: "", adress: "" }
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,13 +40,17 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, initialData }) => {
 
   return (
     <form onSubmit={handleSubmit} style={{ marginBottom: "20px" }}>
-      <input
-        type="text"
-        name="clientId"
-        placeholder="Client ID"
-        value={formData.clientId}
-        onChange={handleChange}
-      />
+       {initialData && (
+        <input
+          type="text"
+          name="clientId"
+          placeholder="Client ID"
+          value={formData.clientId}
+          onChange={handleChange}
+          disabled // usually ID shouldn’t be editable
+        />
+      )}
+
       <input
         type="text"
         name="clientName"
@@ -56,9 +60,9 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, initialData }) => {
       />
       <input
         type="text"
-        name="location"
-        placeholder="Location"
-        value={formData.location}
+        name="adress"
+        placeholder="Adress"
+        value={formData.adress}
         onChange={handleChange}
       />
       <button type="submit">Save</button>

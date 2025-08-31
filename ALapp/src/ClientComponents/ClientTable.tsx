@@ -13,13 +13,13 @@ import { Button } from "primereact/button";
 interface Client {
   clientId: number;
   clientName: string;
-  location: string;
+  adress: string;
 }
 
 const ClientTable: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([
-    { clientId: 1, clientName: "Test Client 1", location: "New York" },
-    { clientId: 2, clientName: "Test Client 2", location: "California" }
+    { clientId: 1, clientName: "Test Client 1", adress: "New York" },
+    { clientId: 2, clientName: "Test Client 2", adress: "California" }
   ]);
   const [showForm, setShowForm] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -41,7 +41,7 @@ const ClientTable: React.FC = () => {
   const handleSubmit = async (client: {
     clientId: string;
     clientName: string;
-    location: string;
+    adress: string;
   }) => {
     try {
       if (editingClient) {
@@ -120,7 +120,7 @@ const ClientTable: React.FC = () => {
       <DataTable value={clients} paginator rows={5} responsiveLayout="scroll">
         <Column field="clientId" header="Client ID" sortable />
         <Column field="clientName" header="Client Name" sortable />
-        <Column field="location" header="Location" sortable />
+        <Column field="adress" header="Adress" sortable />
         <Column body={actionBodyTemplate} header="Actions" style={{ width: "8rem" }} />
       </DataTable>
 
@@ -149,10 +149,11 @@ const ClientTable: React.FC = () => {
                   ? {
                       clientId: String(editingClient.clientId),
                       clientName: editingClient.clientName,
-                      location: editingClient.location,
+                      adress: editingClient.adress,
                     }
                   : undefined
-              }
+                    // If we’re editing a client, it passes the existing data (clientId, clientName, adress) as initialData → this pre-fills the form.
+                }
             />
             <Button label="Cancel" severity="secondary" onClick={() => setShowForm(false)} />
           </div>
