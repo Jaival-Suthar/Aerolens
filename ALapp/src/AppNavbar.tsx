@@ -114,31 +114,30 @@ const AppNavbar: React.FC = () => {
 
   // Brand section with Swiss minimalism
   const startTemplate = (
-    <div 
-      style={{ 
-        display: "flex",
-        alignItems: "center",
-        height: "40px",
-        paddingLeft: "24px",
-        paddingRight: "24px",
-        color: "#000000",
-        fontWeight: "600",
-        fontSize: "16px",
-        gap: "8px",
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      height: "40px",
+      paddingLeft: "24px",
+      paddingRight: "24px",
+      color: "#000000",
+      fontWeight: "600",
+      fontSize: "16px",
+      gap: "8px",
+    }}
+  >
+    <img
+      src="/src/assets/Logo.webp"
+      alt="Aerolens Logo"
+      style={{
+        height: "24px",
+        width: "auto",
+        filter: "brightness(0) saturate(100%) invert(0%)", // Makes logo black to match text
       }}
-    >
-      <i 
-        className="pi pi-desktop" 
-        aria-hidden="true"
-        style={{
-          fontSize: "20px",
-          lineHeight: "1",
-        }}
-      />
-      <span>Aerolens Portal</span>
-    </div>
-  );
-
+    />
+  </div>
+);
   // Actions section with proper spacing
   const endTemplate = (
     <div 
