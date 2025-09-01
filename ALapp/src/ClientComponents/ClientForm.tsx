@@ -1,7 +1,9 @@
 import React, { useState } from "react";
+import { Button } from "primereact/button";
+import { InputText } from "primereact/inputtext";
 
 interface Client {
-  clientId: string;
+  // clientId: string;
   clientName: string;
   adress: string;
 }
@@ -9,11 +11,12 @@ interface Client {
 interface ClientFormProps {
   onSubmit: (client: Client) => void;
   initialData?: Client;
+  onCancel?: () => void;
 }
 
-const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, initialData }) => {
+const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, initialData, onCancel }) => {
   const [formData, setFormData] = useState<Client>(
-    initialData || { clientId: "", clientName: "", adress: "" }
+    initialData || {  clientName: "", adress: "" }
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,46 +29,75 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, initialData }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // ⏳ Placeholder for API call
-    // Example:
-    // await fetch("/api/clients", {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify(formData),
-    // });
-
-    onSubmit(formData); // still notify parent
+    onSubmit(formData);
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ marginBottom: "20px" }}>
-       {initialData && (
-        <input
-          type="text"
-          name="clientId"
-          placeholder="Client ID"
-          value={formData.clientId}
-          onChange={handleChange}
-          disabled // usually ID shouldn’t be editable
-        />
-      )}
+    <form onSubmit={handleSubmit} style={{ padding: "10px", minWidth: "350px" }}>
+      {/* {initialData && (
+        <div className="p-field" style={{ marginBottom: "1rem" }}>
+          <label htmlFor="clientId" style={{ display: "block", marginBottom: "0.5rem" }}>
+            Client ID
+          </label>
+          <InputText
+            id="clientId"
+            name="clientId"
+            value={formData.clientId}
+            onChange={handleChange}
+            disabled
+            style={{ width: "100%" }}
+          />
+        </div> */}
+    
 
-      <input
-        type="text"
-        name="clientName"
-        placeholder="Client Name"
-        value={formData.clientName}
-        onChange={handleChange}
-      />
-      <input
-        type="text"
-        name="adress"
-        placeholder="Adress"
-        value={formData.adress}
-        onChange={handleChange}
-      />
-      <button type="submit">Save</button>
+      <div className="p-field" style={{ marginBottom: "1rem" }}>
+        <label htmlFor="clientName" style={{ display: "block", marginBottom: "0.5rem" }}>
+          Client Name
+        </label>
+        <InputText
+          id="clientName"
+          name="clientName"
+          placeholder="Enter client name"
+          value={formData.clientName}
+          onChange={handleChange}
+          required
+          style={{ width: "100%" }}
+        />
+      </div>
+
+      <div className="p-field" style={{ marginBottom: "1.5rem" }}>
+        <label htmlFor="adress" style={{ display: "block", marginBottom: "0.5rem" }}>
+          Address
+        </label>
+        <InputText
+          id="adress"
+          name="adress"
+          placeholder="Enter address"
+          value={formData.adress}
+          onChange={handleChange}
+          required
+          style={{ width: "100%" }}
+        />
+      </div>
+
+      {/* Buttons Row */}
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+        {onCancel && (
+          <Button
+            type="button"
+            label="Cancel"
+            icon="pi pi-times"
+            severity="secondary"
+            onClick={onCancel}
+          />
+        )}
+        <Button
+          type="submit"
+          label="Save"
+          icon="pi pi-check"
+          severity="success"
+        />
+      </div>
     </form>
   );
 };

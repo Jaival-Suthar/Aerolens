@@ -38,34 +38,28 @@ const ClientTable: React.FC = () => {
     fetchClients();
     console.log("Current clients:", clients);
   }, []);
-
-  const handleSubmit = async (client: {
-    clientId: string;
-    clientName: string;
-    adress: string;
-  }) => {
-    try {
-      if (editingClient) {
-        setClients((prev) =>
-          prev.map((c) =>
-            c.clientId === editingClient.clientId
-              ? { ...client, clientId: Number(client.clientId) }
-              : c
-          )
-        );
-      } else {
-        setClients((prev) => [
-          ...prev,
-          { ...client, clientId: Number(client.clientId) },
-        ]);
-      }
-
-      setShowForm(false);
-      setEditingClient(null);
-    } catch (error) {
-      console.error("Error saving client:", error);
+  const handleSubmit = (client: { clientName: string; adress: string }) => {
+    if (editingClient) {
+      // 🔄 update existing client
+      setClients((prev) =>
+        prev.map((c) =>
+          c.clientId === editingClient.clientId
+            ? { ...c, ...client } // keep same clientId, update fields
+            : c
+        )
+      );
+    } else {
+      // ➕ add new client with temp ID (backend will overwrite)
+      setClients((prev) => [
+        ...prev,
+        { ...client, clientId: Date.now() },
+      ]);
     }
+  
+    setShowForm(false);
+    setEditingClient(null);
   };
+  
 
   const confirmDelete = async (id: number) => {
     try {
@@ -161,7 +155,7 @@ const ClientTable: React.FC = () => {
               initialData={
                 editingClient
                   ? {
-                      clientId: String(editingClient.clientId),
+                      
                       clientName: editingClient.clientName,
                       adress: editingClient.adress,
                     }
