@@ -1,55 +1,44 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 
-interface Client {
-  // clientId: string;
+interface ClientFormData {
   clientName: string;
-  adress: string;
+  address: string;
 }
 
 interface ClientFormProps {
-  onSubmit: (client: Client) => void;
-  initialData?: Client;
+  initialData?: ClientFormData;
+  onSubmit: (client: ClientFormData) => void | Promise<void>;
   onCancel?: () => void;
 }
 
 const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, initialData, onCancel }) => {
-  const [formData, setFormData] = useState<Client>(
-    initialData || {  clientName: "", adress: "" }
+  const [formData, setFormData] = useState<ClientFormData>(
+    initialData || { clientName: "", address: "" }
   );
+
+  // Update form if initialData changes (for editing a different client)
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+    } else {
+      setFormData({ clientName: "", address: "" });
+    }
+  }, [initialData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
   };
 
   return (
     <form onSubmit={handleSubmit} style={{ padding: "10px", minWidth: "350px" }}>
-      {/* {initialData && (
-        <div className="p-field" style={{ marginBottom: "1rem" }}>
-          <label htmlFor="clientId" style={{ display: "block", marginBottom: "0.5rem" }}>
-            Client ID
-          </label>
-          <InputText
-            id="clientId"
-            name="clientId"
-            value={formData.clientId}
-            onChange={handleChange}
-            disabled
-            style={{ width: "100%" }}
-          />
-        </div> */}
-    
-
       <div className="p-field" style={{ marginBottom: "1rem" }}>
         <label htmlFor="clientName" style={{ display: "block", marginBottom: "0.5rem" }}>
           Client Name
@@ -66,21 +55,20 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, initialData, onCancel
       </div>
 
       <div className="p-field" style={{ marginBottom: "1.5rem" }}>
-        <label htmlFor="adress" style={{ display: "block", marginBottom: "0.5rem" }}>
+        <label htmlFor="address" style={{ display: "block", marginBottom: "0.5rem" }}>
           Address
         </label>
         <InputText
-          id="adress"
-          name="adress"
+          id="address"
+          name="address"
           placeholder="Enter address"
-          value={formData.adress}
+          value={formData.address}
           onChange={handleChange}
           required
           style={{ width: "100%" }}
         />
       </div>
 
-      {/* Buttons Row */}
       <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
         {onCancel && (
           <Button
@@ -91,12 +79,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, initialData, onCancel
             onClick={onCancel}
           />
         )}
-        <Button
-          type="submit"
-          label="Save"
-          icon="pi pi-check"
-          severity="success"
-        />
+        <Button type="submit" label="Save" icon="pi pi-check" severity="success" />
       </div>
     </form>
   );
