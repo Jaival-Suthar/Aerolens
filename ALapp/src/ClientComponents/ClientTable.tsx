@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import ClientForm from "./ClientForm";
-import "primereact/resources/themes/saga-blue/theme.css";  // Theme
-import "primereact/resources/primereact.min.css";         // Core
-import "primeicons/primeicons.css";                      // Icons
-
+import "primereact/resources/themes/saga-blue/theme.css"; // Theme
+import "primereact/resources/primereact.min.css"; // Core
+import "primeicons/primeicons.css"; // Icons
 
 // PrimeReact imports
 import { DataTable } from "primereact/datatable";
@@ -19,8 +18,10 @@ interface Client {
 const ClientTable: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([
     { clientId: 1, clientName: "Test Client 1", adress: "New York" },
-    { clientId: 2, clientName: "Test Client 2", adress: "California" }
+    { clientId: 2, clientName: "Test Client 2", adress: "California" },
   ]);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+
   const [showForm, setShowForm] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
@@ -75,53 +76,59 @@ const ClientTable: React.FC = () => {
     }
   };
 
-  // Action buttons inside DataTable
-  const actionBodyTemplate = (rowData: Client) => {
-    return (
-      <div className="flex gap-2">
-        <Button
-          icon="pi pi-pencil"
-          rounded
-          outlined
-          severity="info"
-          onClick={() => {
-            setEditingClient(rowData);
-            setShowForm(true);
-          }}
-        />
-        <Button
-          icon="pi pi-trash"
-          rounded
-          outlined
-          severity="danger"
-          onClick={() => setShowDeleteConfirm(rowData.clientId)}
-        />
-      </div>
-    );
+  // ✅ Toolbar Actions
+  const handleAdd = async () => {
+    setEditingClient(null);
+    setShowForm(true);
+  };
+
+  const handleEdit = async () => {
+    if (!selectedClient) {
+      alert("Please select a client to edit");
+      return;
+    }
+    setEditingClient(selectedClient);
+    setShowForm(true);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedClient) {
+      alert("Please select a client to delete");
+      return;
+    }
+    setShowDeleteConfirm(selectedClient.clientId);
   };
 
   return (
     <div style={{ padding: "20px" }}>
       <h2>Client Table</h2>
 
-      {/* Add Client Button */}
-      <Button
-        label="Add Client"
-        icon="pi pi-plus"
-        severity="success"
-        onClick={() => {
-          setShowForm(true);
-          setEditingClient(null);
-        }}
-        style={{ marginBottom: "1rem" }}
-      />
+      {/* ✅ Action Buttons outside table */}
+      <div className="flex gap-2 mb-3">
+        <Button label="Add" icon="pi pi-plus" severity="success" onClick={handleAdd} />
+        <Button label="Edit" icon="pi pi-pencil" severity="info" onClick={handleEdit} />
+        <Button label="Delete" icon="pi pi-trash" severity="danger" onClick={handleDelete} />
+      </div>
 
-      {/* PrimeReact DataTable */}
-      <DataTable value={clients} paginator rows={5} responsiveLayout="scroll">
+      {/* ✅ DataTable with row selection */}
+      <DataTable
+        value={clients}
+        paginator
+        rows={5}
+        responsiveLayout="scroll"
+        selectionMode="single"
+        selection={selectedClient}
+        onSelectionChange={(e) => setSelectedClient(e.value as Client | null)}
+        dataKey="clientId"
+        onRowDoubleClick={(e) => {
+          setEditingClient(e.data as Client);   // e.data contains the row’s client
+          setShowForm(true);
+        }}
+      >
+        <Column selectionMode="single" headerStyle={{ width: "3rem" }}></Column>
         <Column field="clientId" header="Client ID" sortable />
         <Column field="clientName" header="Client Name" sortable />
-        <Column field="adress" header="Adress" sortable />
-        <Column body={actionBodyTemplate} header="Actions" style={{ width: "8rem" }} />
+        <Column field="adress" header="Address" sortable />
       </DataTable>
 
       {/* Add/Edit Client Modal */}
@@ -140,7 +147,14 @@ const ClientTable: React.FC = () => {
             zIndex: 1000,
           }}
         >
-          <div style={{ background: "white", padding: "20px", borderRadius: "8px", minWidth: "300px" }}>
+          <div
+            style={{
+              background: "white",
+              padding: "20px",
+              borderRadius: "8px",
+              minWidth: "300px",
+            }}
+          >
             <h3>{editingClient ? "Edit Client" : "Add Client"}</h3>
             <ClientForm
               onSubmit={handleSubmit}
@@ -152,10 +166,13 @@ const ClientTable: React.FC = () => {
                       adress: editingClient.adress,
                     }
                   : undefined
-                    // If we’re editing a client, it passes the existing data (clientId, clientName, adress) as initialData → this pre-fills the form.
-                }
+              }
             />
-            <Button label="Cancel" severity="secondary" onClick={() => setShowForm(false)} />
+            <Button
+              label="Cancel"
+              severity="secondary"
+              onClick={() => setShowForm(false)}
+            />
           </div>
         </div>
       )}
@@ -176,7 +193,13 @@ const ClientTable: React.FC = () => {
             zIndex: 1000,
           }}
         >
-          <div style={{ background: "white", padding: "20px", borderRadius: "8px" }}>
+          <div
+            style={{
+              background: "white",
+              padding: "20px",
+              borderRadius: "8px",
+            }}
+          >
             <h3>Delete this client?</h3>
             <Button
               label="Yes"
