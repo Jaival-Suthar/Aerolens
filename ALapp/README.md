@@ -66,5 +66,18 @@ export default tseslint.config([
     },
   },
 ])
-```
+
+
+
+//  "departments": [
+//             {
+//                 "departmentId": null,
+//                 "departmentName": null,
+//                 "departmentDescription": null
+//             }
+//         ],
+
+
+
+
 Showing Git Branch to Aksh from Jaival Branch

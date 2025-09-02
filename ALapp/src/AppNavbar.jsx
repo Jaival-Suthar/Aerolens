@@ -12,10 +12,10 @@ const navItems = [
     size: "large"
   },
   {
-    label: "Projects",
-    icon: "pi pi-briefcase",
-    path: "/projects",
-    description: "Manage your projects",
+    label: "Departments",
+    icon: "pi pi-building",
+    path: "/department",
+    description: "Manage company departments",
     size: "large"
   },
   {
