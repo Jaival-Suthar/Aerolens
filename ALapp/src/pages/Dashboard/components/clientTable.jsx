@@ -1,132 +1,54 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import React, { useEffect, useCallback } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Paginator } from "primereact/paginator";
-import { getClients } from "../services/clientService";
+import { useClientData } from "../hooks/useClientData";
+import { usePagination } from "../hooks/usePagination";
 
 const ClientTable = ({ onEdit, refreshTrigger = 0, selectedClient, onSelectionChange }) => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
-  
-  // State for clients and loading
-  const [clients, setClients] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  // Get pagination from URL parameters or localStorage defaults
-  const getInitialPagination = useCallback(() => {
-    // First try URL params
-    const urlPage = parseInt(searchParams.get('page')) || null;
-    const urlLimit = parseInt(searchParams.get('limit')) || null;
-    
-    // Then try localStorage
-    const savedPagination = localStorage.getItem('clientTablePagination');
-    const saved = savedPagination ? JSON.parse(savedPagination) : {};
-    
-    return {
-      currentPage: urlPage || saved.currentPage || 1,
-      limit: urlLimit || saved.limit || 10,
-      totalPages: 1,
-      totalRecords: 0,
-    };
-  }, [searchParams]);
-
-  const [pagination, setPagination] = useState(getInitialPagination);
-
-  // Update URL params when pagination changes
-  const updateUrlParams = useCallback((newPage, newLimit) => {
-    const params = new URLSearchParams();
-    params.set('page', newPage.toString());
-    params.set('limit', newLimit.toString());
-    
-    // Preserve other search params if any
-    searchParams.forEach((value, key) => {
-      if (key !== 'page' && key !== 'limit') {
-        params.set(key, value);
-      }
-    });
-    
-    setSearchParams(params, { replace: true });
-  }, [searchParams, setSearchParams]);
-
-  // Save pagination preferences to localStorage
-  const savePaginationPreferences = useCallback((page, limit) => {
-    const preferences = { currentPage: page, limit };
-    localStorage.setItem('clientTablePagination', JSON.stringify(preferences));
-  }, []);
-
-  // Memoized load function
-  const loadClients = useCallback(async (page, limit) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      console.log(`Loading clients: page=${page}, limit=${limit}`);
-      const response = await getClients(page, limit);
-      
-      if (response && response.data) {
-        setClients(response.data);
-        
-        if (response.pagination) {
-          setPagination(prev => ({
-            ...prev,
-            currentPage: response.pagination.currentPage,
-            totalPages: response.pagination.totalPages,
-            totalRecords: response.pagination.totalRecords,
-            limit: response.pagination.limit,
-          }));
-        } else {
-          // Fallback if no pagination in response
-          setPagination(prev => ({
-            ...prev,
-            currentPage: page,
-            limit: limit,
-            totalPages: Math.ceil(response.data.length / limit),
-            totalRecords: response.data.length,
-          }));
-        }
-      } else {
-        console.warn("No data received from API");
-        setClients([]);
-        setPagination(prev => ({ 
-          ...prev, 
-          currentPage: page,
-          limit: limit,
-          totalRecords: 0,
-          totalPages: 1
-        }));
-      }
-    } catch (error) {
-      console.error("Error loading clients:", error);
-      setError(error.message);
-      setClients([]);
-      setPagination(prev => ({ 
-        ...prev, 
-        currentPage: page,
-        limit: limit,
-        totalRecords: 0,
-        totalPages: 1
-      }));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Custom hooks
+  const { clients, loading, error, loadClients, setError } = useClientData(refreshTrigger);
+  const {
+    pagination,
+    getInitialPagination,
+    updateUrlParams,
+    savePaginationPreferences,
+    updatePaginationFromResponse,
+    resetPaginationOnError,
+    searchParams
+  } = usePagination();
 
   // Load clients when URL params change or component refreshes
   useEffect(() => {
-    const currentPagination = getInitialPagination();
-    const { currentPage, limit } = currentPagination;
-    
-    // Update internal state to match URL/localStorage
-    setPagination(currentPagination);
-    
-    // Load data with current pagination
-    loadClients(currentPage, limit);
-    
-    // Save preferences
-    savePaginationPreferences(currentPage, limit);
-  }, [searchParams, refreshTrigger, getInitialPagination, loadClients, savePaginationPreferences]);
+    const loadData = async () => {
+      const currentPagination = getInitialPagination();
+      const { currentPage, limit } = currentPagination;
+      
+      try {
+        // Load data with current pagination
+        const response = await loadClients(currentPage, limit);
+        
+        // Update pagination state based on response
+        updatePaginationFromResponse(response, currentPage, limit);
+        
+        // Save preferences
+        savePaginationPreferences(currentPage, limit);
+      } catch (error) {
+        // Reset pagination on error
+        resetPaginationOnError(currentPage, limit);
+      }
+    };
+
+    loadData();
+  }, [
+    searchParams, 
+    refreshTrigger, 
+    getInitialPagination, 
+    loadClients, 
+    savePaginationPreferences,
+    updatePaginationFromResponse,
+    resetPaginationOnError
+  ]);
 
   // Paginator change handler
   const onPageChange = useCallback((event) => {
@@ -231,16 +153,6 @@ const ClientTable = ({ onEdit, refreshTrigger = 0, selectedClient, onSelectionCh
           rowsPerPageOptions={[5, 10, 20, 50]}
           className="mt-3"
         />
-      )}
-      
-      {/* Debug info (remove in production) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mt-2 text-xs text-gray-500">
-          Debug: Page {pagination.currentPage} of {pagination.totalPages} 
-          | Limit: {pagination.limit} 
-          | Total: {pagination.totalRecords} records
-          | URL: {searchParams.toString()}
-        </div>
       )}
     </section>
   );
