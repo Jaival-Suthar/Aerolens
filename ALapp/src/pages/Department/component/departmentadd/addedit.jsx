@@ -7,40 +7,71 @@ import { InputText } from "primereact/inputtext";
 
 const Department = () => {
   const [departments, setDepartments] = useState([]);
+  const [selectedDepartments, setSelectedDepartments] = useState([]);
   const [visible, setVisible] = useState(false);
   const [formData, setFormData] = useState({
+    id: null,
     clientId: "",
+    clientName: "",
     departmentName: "",
     departmentDescription: "",
   });
 
-  // ✅ Fetch Departments (you can hook this to your API)
+  const baseUrl = import.meta.env.VITE_BASE_URL;
+
+  // Fetch Departments (GET API)
+  const fetchDepartments = async () => {
+    try {
+      const res = await fetch(`${baseUrl}/department`);
+      const data = await res.json();
+      setDepartments(data.data || data);
+    } catch (error) {
+      console.error("Error fetching departments:", error);
+    }
+  };
+
   useEffect(() => {
-    // Replace with GET request
-    setDepartments([
-      { id: 1, clientId: 123, clientName: "Client A", departmentName: "Finance", departmentDescription: "Handles financial matters" },
-    ]);
+    fetchDepartments();
   }, []);
 
-  // ✅ Handle form input
+  // Handle form input
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ✅ Submit form
+  // Open Add dialog (form blank)
+  const openAddDialog = () => {
+    setFormData({ id: null, clientId: "", clientName: "", departmentName: "", departmentDescription: "" });
+    setVisible(true);
+  };
+
+  // Open Edit dialog (populate form)
+  const openEditDialog = (dept) => {
+    setFormData(dept);
+    setVisible(true);
+  };
+
+  // Submit form (POST)
   const handleSubmit = async () => {
     try {
-      const response = await fetch("https://aerolens-backend.onrender.com/department", {
-        method: "POST",
+      const method = formData.id ? "PUT" : "POST";
+      const url = formData.id ? `${baseUrl}/department/${formData.id}` : `${baseUrl}/department`;
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          clientId: formData.clientId,
+          departmentName: formData.departmentName,
+          departmentDescription: formData.departmentDescription,
+        }),
       });
 
-      const data = await response.json();
-      if (response.ok) {
-        setDepartments([...departments, formData]); // update list
+      const data = await res.json();
+      if (res.ok) {
+        fetchDepartments(); // refresh table
         setVisible(false);
-        setFormData({ clientId: "", departmentName: "", departmentDescription: "" });
+        setFormData({ id: null, clientId: "", clientName: "", departmentName: "", departmentDescription: "" });
       } else {
         console.error("Error:", data.message);
       }
@@ -49,48 +80,50 @@ const Department = () => {
     }
   };
 
-  // ✅ Action Buttons
-  const actionBody = (rowData) => {
-    return (
-      <div className="flex gap-2">
-        <Button icon="pi pi-pencil" className="p-button-rounded p-button-text" />
-        <Button icon="pi pi-trash" className="p-button-rounded p-button-text p-button-danger" />
-      </div>
-    );
+  // Delete department
+  const handleDelete = async (dept) => {
+    try {
+      const res = await fetch(`${baseUrl}/department/${dept.id}`, { method: "DELETE" });
+      if (res.ok) fetchDepartments();
+    } catch (error) {
+      console.error("Delete Error:", error);
+    }
   };
+
+  // Action buttons
+  const actionBody = (rowData) => (
+    <div className="flex gap-2">
+      <Button icon="pi pi-pencil" className="p-button-rounded p-button-text" onClick={() => openEditDialog(rowData)} />
+      <Button icon="pi pi-trash" className="p-button-rounded p-button-text p-button-danger" onClick={() => handleDelete(rowData)} />
+    </div>
+  );
 
   return (
     <div className="p-4">
       <h2 className="mb-3">Departments</h2>
-      <Button label="Add Department" icon="pi pi-plus" onClick={() => setVisible(true)} />
+      <Button label="Add Department" icon="pi pi-plus" onClick={openAddDialog} className="mb-3" />
+      <Column body={actionBody} header="Actions" />
 
-      {/* Table */}
-      <DataTable value={departments} className="mt-4">
+      <DataTable
+        value={departments}
+        selection={selectedDepartments}
+        onSelectionChange={(e) => setSelectedDepartments(e.value)}
+        selectionMode="checkbox"
+        dataKey="id"
+      >
+        <Column selectionMode="multiple" headerStyle={{ width: "3rem" }}></Column>
         <Column field="clientName" header="Client Name" />
         <Column field="departmentName" header="Department Name" />
         <Column field="departmentDescription" header="Department Description" />
-        <Column body={actionBody} header="Actions" />
       </DataTable>
 
-      {/* Add Form */}
-      <Dialog header="Add Department" visible={visible} style={{ width: "30vw" }} onHide={() => setVisible(false)}>
+      <Dialog header={formData.id ? "Edit Department" : "Add Department"} visible={visible} style={{ width: "30vw" }} onHide={() => setVisible(false)}>
         <div className="flex flex-col gap-3">
-          <span className="p-float-label">
-            <InputText id="clientId" name="clientId" value={formData.clientId} onChange={handleChange} />
-            <label htmlFor="clientId">Client ID</label>
-          </span>
-
-          <span className="p-float-label">
-            <InputText id="departmentName" name="departmentName" value={formData.departmentName} onChange={handleChange} />
-            <label htmlFor="departmentName">Department Name</label>
-          </span>
-
-          <span className="p-float-label">
-            <InputText id="departmentDescription" name="departmentDescription" value={formData.departmentDescription} onChange={handleChange} />
-            <label htmlFor="departmentDescription">Department Description</label>
-          </span>
-
-          <Button label="Save" icon="pi pi-check" onClick={handleSubmit} />
+          <InputText name="clientId" placeholder="Client ID" value={formData.clientId} onChange={handleChange} />
+          <InputText name="clientName" placeholder="Client Name" value={formData.clientName} onChange={handleChange} />
+          <InputText name="departmentName" placeholder="Department Name" value={formData.departmentName} onChange={handleChange} />
+          <InputText name="departmentDescription" placeholder="Department Description" value={formData.departmentDescription} onChange={handleChange} />
+          <Button label="Save" icon="pi pi-check" onClick={handleSubmit} className="mt-2" />
         </div>
       </Dialog>
     </div>
