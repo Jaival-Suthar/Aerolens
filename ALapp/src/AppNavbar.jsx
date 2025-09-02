@@ -28,7 +28,6 @@ const navItems = [
 ];
 
 const AppNavbar = () => {
-  //console.log("Navbar Rendered");
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -39,7 +38,6 @@ const AppNavbar = () => {
     [navigate]
   );
 
-  // Swiss design inspired navigation items with precise spacing
   const model = navItems.map((item) => {
     const isActive = location.pathname === item.path;
 
@@ -71,7 +69,6 @@ const AppNavbar = () => {
               backgroundColor: "transparent",
             }}
           >
-            {/* Icon with consistent sizing */}
             <span 
               className={item.icon} 
               aria-hidden="true"
@@ -81,7 +78,6 @@ const AppNavbar = () => {
               }}
             />
             
-            {/* Label with Swiss typography principles */}
             <span style={{
               lineHeight: "1.2",
               whiteSpace: "nowrap",
@@ -89,7 +85,6 @@ const AppNavbar = () => {
               {item.label}
             </span>
 
-            {/* Active indicator - minimal underline */}
             {isActive && (
               <div
                 style={{
@@ -108,7 +103,6 @@ const AppNavbar = () => {
     };
   });
 
-  // Brand section with Swiss minimalism
   const startTemplate = (
   <div
     style={{
@@ -129,12 +123,12 @@ const AppNavbar = () => {
       style={{
         height: "24px",
         width: "auto",
-        filter: "brightness(0) saturate(100%) invert(0%)", // Makes logo black to match text
+        filter: "brightness(0) saturate(100%) invert(0%)",
       }}
     />
   </div>
 );
-  // Actions section with proper spacing
+
   const endTemplate = (
     <div 
       style={{ 
@@ -150,11 +144,12 @@ const AppNavbar = () => {
         className="p-button-rounded p-button-text large" 
         tooltip="Settings"
         tooltipOptions={{ position: "bottom" }}
+        fontSize="15px"
         style={{
           width: "32px",
           height: "32px",
           color: "#666666",
-          fontSize: "14px",
+          fontSize: "15px",
         }}
       />
       <Button 
@@ -162,11 +157,12 @@ const AppNavbar = () => {
         className="p-button-rounded p-button-text large" 
         tooltip="User Profile" 
         tooltipOptions={{ position: "bottom" }}
+        fontSize="15px"
         style={{
           width: "32px",
           height: "32px",
           color: "#666666",
-          fontSize: "14px",
+          fontSize: "15px",
         }}
       />
     </div>
