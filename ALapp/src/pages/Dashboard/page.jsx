@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
 import ClientTable from './components/clientTable';
-// import ClientAddEdit from './components/clientAddEdit';
 import ClientDelete from './components/clientDelete';
 import { Button } from 'primereact/button';
 import { createClient, updateClient, deleteClient } from './services/clientService';

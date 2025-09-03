@@ -10,9 +10,7 @@ const Department = () => {
   const [selectedDepartments, setSelectedDepartments] = useState([]);
   const [visible, setVisible] = useState(false);
   const [formData, setFormData] = useState({
-    id: null,
     clientId: "",
-    clientName: "",
     departmentName: "",
     departmentDescription: "",
   });
@@ -52,33 +50,33 @@ const Department = () => {
   };
 
   // Submit form (POST)
-  const handleSubmit = async () => {
-    try {
-      const method = formData.id ? "PUT" : "POST";
-      const url = formData.id ? `${baseUrl}/department/${formData.id}` : `${baseUrl}/department`;
+const handleSubmit = async () => {
+  try {
+    // Always POST for now
+    const url = `${baseUrl}/department`;   // ✅ corrected
 
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clientId: formData.clientId,
-          departmentName: formData.departmentName,
-          departmentDescription: formData.departmentDescription,
-        }),
-      });
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clientId: Number(formData.clientId), // ensure it's a number
+        departmentName: formData.departmentName,
+        departmentDescription: formData.departmentDescription,
+      }),
+    });
 
-      const data = await res.json();
-      if (res.ok) {
-        fetchDepartments(); // refresh table
-        setVisible(false);
-        setFormData({ id: null, clientId: "", clientName: "", departmentName: "", departmentDescription: "" });
-      } else {
-        console.error("Error:", data.message);
-      }
-    } catch (error) {
-      console.error("Server Error:", error);
+    const data = await res.json();
+    if (res.ok) {
+      fetchDepartments(); // refresh table
+      setVisible(false);
+      setFormData({ clientId: "", departmentName: "", departmentDescription: "" });
+    } else {
+      console.error("Error:", data.message || data);
     }
-  };
+  } catch (error) {
+    console.error("Server Error:", error);
+  }
+};
 
   // Delete department
   const handleDelete = async (dept) => {
@@ -102,7 +100,7 @@ const Department = () => {
     <div className="p-4">
       <h2 className="mb-3">Departments</h2>
       <Button label="Add Department" icon="pi pi-plus" onClick={openAddDialog} className="mb-3" />
-      <Column body={actionBody} header="Actions" />
+      {/* <Column body={actionBody} header="Actions" /> */}
 
       <DataTable
         value={departments}
@@ -115,12 +113,13 @@ const Department = () => {
         <Column field="clientName" header="Client Name" />
         <Column field="departmentName" header="Department Name" />
         <Column field="departmentDescription" header="Department Description" />
+        <Column body={actionBody} header="Actions" />  {/* ✅ Action buttons here */}
+
       </DataTable>
 
       <Dialog header={formData.id ? "Edit Department" : "Add Department"} visible={visible} style={{ width: "30vw" }} onHide={() => setVisible(false)}>
         <div className="flex flex-col gap-3">
           <InputText name="clientId" placeholder="Client ID" value={formData.clientId} onChange={handleChange} />
-          <InputText name="clientName" placeholder="Client Name" value={formData.clientName} onChange={handleChange} />
           <InputText name="departmentName" placeholder="Department Name" value={formData.departmentName} onChange={handleChange} />
           <InputText name="departmentDescription" placeholder="Department Description" value={formData.departmentDescription} onChange={handleChange} />
           <Button label="Save" icon="pi pi-check" onClick={handleSubmit} className="mt-2" />
