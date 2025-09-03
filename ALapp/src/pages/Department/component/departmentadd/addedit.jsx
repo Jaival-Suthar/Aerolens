@@ -20,9 +20,9 @@ const Department = () => {
   // Fetch Departments (GET API)
   const fetchDepartments = async () => {
     try {
-      const res = await fetch(`${baseUrl}/department`);
+      const res = await fetch(`${baseUrl}/client?page=${page}&limit=${limit}`);
       const data = await res.json();
-      setDepartments(data.data || data);
+      // setDepartments(data.data || data);
     } catch (error) {
       console.error("Error fetching departments:", error);
     }
