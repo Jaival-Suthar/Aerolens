@@ -115,15 +115,6 @@ const ClientTable = ({ onEdit, refreshTrigger = 0, selectedClient, onSelectionCh
           frozen
         />
         <Column
-          field="clientId"
-          header="Client ID"
-          sortable
-          bodyClassName={cellClass}
-          headerClassName={headerClass}
-          style={{ minWidth: '8rem' }}
-          body={(rowData) => rowData?.clientId || 'N/A'}
-        />
-        <Column
           field="clientName"
           header="Client Name"
           sortable
@@ -131,14 +122,6 @@ const ClientTable = ({ onEdit, refreshTrigger = 0, selectedClient, onSelectionCh
           headerClassName={headerClass}
           style={{ minWidth: '12rem' }}
           body={(rowData) => rowData?.clientName || 'N/A'}
-        />
-        <Column
-          field="address"
-          header="Address"
-          bodyClassName={cellClass}
-          headerClassName={headerClass}
-          style={{ minWidth: '15rem' }}
-          body={(rowData) => rowData?.address || 'N/A'}
         />
       </DataTable>
 
