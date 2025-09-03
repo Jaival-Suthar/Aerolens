@@ -19,10 +19,10 @@ const navItems = [
     size: "large"
   },
   {
-    label: "Reports",
-    icon: "pi pi-chart-line",
-    path: "/reports",
-    description: "Generate and view reports",
+    label: "Contact",
+    icon: "pi pi-id-card",
+    path: "/contact",
+    description: "See Client Contacts",
     size: "large"
   },
 ];

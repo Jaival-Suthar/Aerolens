@@ -5,7 +5,7 @@ export const getClients = async (page = 1, limit = 10) => {
   try {
     const response = await fetch(`${API_URL}/client?page=${page}&limit=${limit}`);
     if (!response.ok) throw new Error("Failed to fetch clients");
-    return await response.json(); // { data: [...], pagination: {...} }
+    return await response.json();
   } catch (error) {
     console.error(error);
     throw error;
