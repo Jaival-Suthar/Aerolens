@@ -112,11 +112,13 @@ const DepartmentTable = ({ clientId }) => {
                 throw new Error(errData.message || "Failed to add department");
             }
 
-            const newDept = await response.json();
-            await fetchDepartments();
-            // setDepartments([...departments, newDept]);
-            console.log("Department added:", newDept);
-            console.log(departments)
+
+            // const newDept = await response.json();
+            fetchDepartments();
+            
+            // console.log(newDept)
+            // console.log("Department added:", newDept);
+            // console.log(departments)
           }
     } catch (error) {
         console.error("Error saving department:", error);
@@ -234,6 +236,7 @@ const DepartmentTable = ({ clientId }) => {
         onSelectionChange={(e) => setSelectedDepartment(e.value)}
         tableStyle={{ minWidth: "50rem" }}
       >
+
         <Column selectionMode="single" style={{ width: "3em" }} />
         <Column field="departmentId" header="Department ID" />
         <Column field="departmentName" header="Department Name" />
