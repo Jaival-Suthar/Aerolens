@@ -122,7 +122,6 @@ const ClientAddEdit = ({
             <small className="p-error block mt-1">{errors.address}</small>
           )}
         </div>
-
         <div className="flex justify-end gap-2 mt-4">
           <Button
             label="Cancel"

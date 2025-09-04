@@ -1,9 +1,8 @@
-import { useState } from 'react';
-import ClientTable from './components/clientTable';
-import ClientAddEdit from './components/departmentAddEdit';
-import { Button } from 'primereact/button';
-import { Dropdown } from 'primereact/dropdown';
-import { createClient, updateClient } from './services/clientService';
+import { useState } from "react";
+import ClientTable from "./components/clientTable";
+import ClientAddEdit from "./components/departmentAddEdit";
+import { Button } from "primereact/button";
+import { Dropdown } from "primereact/dropdown";
 
 const Departments = () => {
   const [dialogVisible, setDialogVisible] = useState(false);
@@ -13,65 +12,58 @@ const Departments = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [viewMode, setViewMode] = useState("list"); // dropdown state
 
-  const handleAdd = () => {
-    setDialogMode("add");
-    setEditClient({ clientName: "", address: "" });
-    setDialogVisible(true);
-  };
+  // department form state (fixed to match backend keys)
+  const [departmentName, setDepartmentName] = useState("");
+  const [departmentDescription, setDepartmentDescription] = useState("");
 
-  const onSaveClient = async (client) => {
+  // API call for department creation
+  const addDepartment = async (department) => {
     try {
-      if (dialogMode === "add") {
-        await createClient({
-          name: client.clientName?.trim() || "",
-          address: client.address?.trim() || ""
-        });
-      } else {
-        await updateClient({
-          id: client.clientId,
-          name: client.clientName?.trim() || "",
-          address: client.address?.trim() || ""
-        });
-      }
+      const payload = {
+        clientId: selectedClient.clientId, // auto attach selected client
+        departmentName: department.departmentName,
+        departmentDescription: department.departmentDescription,
+      };
 
-      setRefreshTrigger(prev => prev + 1);
-      setDialogVisible(false);
-      setEditClient(null);
+      const response = await fetch(
+        "https://aerolens-backend.onrender.com/department",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to add department");
+
+      const data = await response.json();
+      console.log("Department added:", data);
+
+      setDepartmentName("");
+      setDepartmentDescription("");
+      setRefreshTrigger((prev) => prev + 1);
     } catch (error) {
-      console.error("Error saving client:", error);
+      console.error("Error adding department:", error);
     }
   };
 
+
   const onSelectionChange = (client) => {
     setSelectedClient(client);
-    // Do NOT change viewMode automatically — user must select from dropdown
+    // dropdown becomes enabled, but does NOT auto-switch view
   };
 
   const viewOptions = [
-    { label: 'List View', value: 'list' },
-    { label: 'Details View', value: 'details' }
+    { label: "List View", value: "list" },
+    { label: "Department Details", value: "details" },
   ];
 
-//   // if (client) {
-//   setViewMode("details");
-// } else {
-//   setViewMode("list");
-// } remove this
-
-
   return (
-    <div className="dashboard-container shadow-3 p-4" style={{ width: "100%", maxWidth: "100%" }}>
+    <div
+      className="dashboard-container shadow-3 p-4"
+      style={{ width: "100%", maxWidth: "100%" }}
+    >
       <div className="flex justify-content-between align-items-center mb-4 w-full">
-        <Button
-          label="Add Client"
-          icon="pi pi-plus"
-          severity="secondary"
-          outlined
-          size="medium"
-          className="font-medium"
-          onClick={handleAdd}
-        />
-
         {/* Dropdown for view mode, disabled if no client selected */}
         <Dropdown
           value={viewMode}
@@ -94,8 +86,43 @@ const Departments = () => {
           selectedClient && (
             <div className="p-4 border-round shadow-2">
               <h3>Department Details</h3>
-              <p><strong>Department Name:</strong> {selectedClient.deptName}</p>
-              <p><strong>Department Description:</strong> {selectedClient.deptDescription}</p>
+              <p>
+                <strong>Client:</strong> {selectedClient.clientName}
+              </p>
+
+              {/* Department Form */}
+              <div className="p-fluid">
+                <div className="p-field">
+                  <label htmlFor="departmentName">Department Name</label>
+                  <input
+                    id="departmentName"
+                    type="text"
+                    value={departmentName}
+                    onChange={(e) => setDepartmentName(e.target.value)}
+                    className="p-inputtext p-component"
+                  />
+                </div>
+                <div className="p-field">
+                  <label htmlFor="departmentDescription">
+                    Department Description
+                  </label>
+                  <input
+                    id="departmentDescription"
+                    type="text"
+                    value={departmentDescription}
+                    onChange={(e) => setDepartmentDescription(e.target.value)}
+                    className="p-inputtext p-component"
+                  />
+                </div>
+                <Button
+                  label="Save Department"
+                  icon="pi pi-check"
+                  onClick={() =>
+                    addDepartment({ departmentName, departmentDescription })
+                  }
+                  className="mt-2"
+                />
+              </div>
             </div>
           )
         )}
@@ -108,7 +135,7 @@ const Departments = () => {
             setDialogVisible(false);
             setEditClient(null);
           }}
-          onSave={onSaveClient}
+          onSave={addDepartment} // not used here but kept for consistency
           mode={dialogMode}
           client={editClient}
         />
