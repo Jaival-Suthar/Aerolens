@@ -1,10 +1,9 @@
 // Departments.js
 import { useState } from "react";
 import ClientTable from "./components/clientTable";
-import { Button } from "primereact/button";
 import { Dropdown } from "primereact/dropdown";
 import DepartmentTable from "./components/departmentTable";
-
+// import useContact from './services/useDepartment';
 const Departments = () => {
   const [selectedClient, setSelectedClient] = useState(null);
   const [viewMode, setViewMode] = useState("list"); // dropdown state

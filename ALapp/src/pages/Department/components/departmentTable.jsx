@@ -6,6 +6,8 @@ import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { classNames } from "primereact/utils";
 
+const API_BASE_URL = "https://aerolens-backend.onrender.com"; // Define the base URL here
+
 const DepartmentTable = ({ clientId }) => {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -26,18 +28,14 @@ const DepartmentTable = ({ clientId }) => {
     setError(null);
 
     try {
-      const response = await fetch(
-        `https://aerolens-backend.onrender.com/client/${clientId}`
-      );
-
+      const response = await fetch(`${API_BASE_URL}/client/${clientId}`);
       if (!response.ok) {
         const errData = await response.json();
         throw new Error(errData.message || "Failed to fetch departments");
       }
-
       const result = await response.json();
-
       if (result.success && result.data?.departments) {
+        console.log(result.data.clientId)
         setDepartments(result.data.departments);
         setClientName(result.data.clientName || "");
       } else {
@@ -53,7 +51,7 @@ const DepartmentTable = ({ clientId }) => {
 
   useEffect(() => {
     fetchDepartments();
-  }, [clientId]);
+  }, []);
 
   const openNew = () => {
     setDepartment({
@@ -68,35 +66,72 @@ const DepartmentTable = ({ clientId }) => {
     setDepartmentDialog(false);
   };
 
-  const handleSaveDepartment = () => {
+  const handleSaveDepartment = async () => {
     if (!department.departmentName.trim() || !department.departmentDescription.trim()) {
       console.error("Department name and description cannot be empty.");
       return;
     }
+    
+    setLoading(true);
+    try {
+        if (department.departmentId) {
+            // PUT request to update an existing department
+            const response = await fetch(`${API_BASE_URL}/department`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(department),
+            });
 
-    if (department.departmentId) {
-      // Logic for editing an existing department
-      setDepartments(
-        departments.map((dept) =>
-          dept.departmentId === department.departmentId ? department : dept
-        )
-      );
-    } else {
-      // Logic for adding a new department
-      const newDept = {
-        ...department,
-        departmentId: departments.length > 0 ? Math.max(...departments.map(d => d.departmentId)) + 1 : 1,
-      };
-      setDepartments([...departments, newDept]);
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.message || "Failed to update department");
+            }
+
+            const updatedDept = await response.json();
+            setDepartments(
+                departments.map((dept) =>
+                    dept.departmentId === updatedDept.departmentId ? updatedDept : dept
+                )
+            );
+        } else {
+            // POST request to add a new department
+            const payload = {
+                clientId: clientId,
+                departmentName: department.departmentName,
+                departmentDescription: department.departmentDescription,
+            };
+
+            const response = await fetch(`${API_BASE_URL}/department`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.message || "Failed to add department");
+            }
+
+            const newDept = await response.json();
+            
+            setDepartments([...departments, newDept]);
+            console.log("Department added:", newDept);
+            console.log(departments)
+          }
+    } catch (error) {
+        console.error("Error saving department:", error);
+        setError(error.message);
+    } finally {
+        setLoading(false);
+        setDepartmentDialog(false);
+        setDepartment({
+            departmentId: null,
+            departmentName: "",
+            departmentDescription: "",
+        });
     }
+};
 
-    setDepartmentDialog(false);
-    setDepartment({
-      departmentId: null,
-      departmentName: "",
-      departmentDescription: "",
-    });
-  };
 
   const editDepartment = () => {
     if (selectedDepartment) {
@@ -105,13 +140,33 @@ const DepartmentTable = ({ clientId }) => {
     }
   };
 
-  const confirmDeleteDepartment = () => {
+  const confirmDeleteDepartment = async () => {
     if (selectedDepartment) {
-      console.log(`Deleting department with ID: ${selectedDepartment.departmentId}`);
-      setDepartments(
-        departments.filter((dept) => dept.departmentId !== selectedDepartment.departmentId)
-      );
-      setSelectedDepartment(null);
+      setLoading(true);
+      try {
+          const response = await fetch(
+              `${API_BASE_URL}/department/${selectedDepartment.departmentId}`,
+              {
+                  method: "DELETE",
+              }
+          );
+
+          if (!response.ok) {
+              const errData = await response.json();
+              throw new Error(errData.message || "Failed to delete department");
+          }
+
+          setDepartments(
+              departments.filter((dept) => dept.departmentId !== selectedDepartment.departmentId)
+          );
+          setSelectedDepartment(null);
+          console.log("Department deleted successfully");
+      } catch (error) {
+          console.error("Error deleting department:", error);
+          setError(error.message);
+      } finally {
+          setLoading(false);
+      }
     }
   };
 
