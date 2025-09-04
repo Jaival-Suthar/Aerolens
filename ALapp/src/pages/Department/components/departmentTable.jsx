@@ -113,8 +113,8 @@ const DepartmentTable = ({ clientId }) => {
             }
 
             const newDept = await response.json();
-            
-            setDepartments([...departments, newDept]);
+            await fetchDepartments();
+            // setDepartments([...departments, newDept]);
             console.log("Department added:", newDept);
             console.log(departments)
           }
