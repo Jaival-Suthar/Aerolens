@@ -80,7 +80,6 @@ const Departments = () => {
       <div className="card">
         {viewMode === "list" ? (
           <ClientTable
-            onEdit={() => {}}
             selectedClient={selectedClient}
             onSelectionChange={onSelectionChange}
           />

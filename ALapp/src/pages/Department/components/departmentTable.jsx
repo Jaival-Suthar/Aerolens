@@ -6,7 +6,7 @@ import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { classNames } from "primereact/utils";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
-
+import { usePagination } from "../hooks/usePagination";
 const DepartmentTable = ({ clientId }) => {
   const API_BASE_URL = import.meta.env.VITE_BASE_URL;
 
@@ -277,6 +277,10 @@ const DepartmentTable = ({ clientId }) => {
 
       {/* Delete confirmation dialog */}
       <ConfirmDialog />
+            
+
+
+
     </div>
   );
 };
