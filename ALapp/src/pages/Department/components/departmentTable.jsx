@@ -139,6 +139,7 @@ const DepartmentTable = ({ clientId }) => {
       acceptClassName: "p-button-danger",
       acceptLabel: "Yes",
       rejectLabel: "No",
+      // The accept function is needed because you're making the API call to delete the department inside the confirmation dialog flow.
       accept: async () => {
         try {
           const response = await fetch(
