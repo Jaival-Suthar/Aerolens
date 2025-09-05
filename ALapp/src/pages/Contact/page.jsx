@@ -1,354 +1,193 @@
-import { useState, useRef, useEffect } from 'react';
-import ClientTable from './components/clientTable';
-import ContactAddEdit from './components/contactAddEdit';
-import ContactDelete from './components/contactDelete';
-import ContactTable from './components/contactTable';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { SplitButton } from 'primereact/splitbutton';
 import { Button } from 'primereact/button';
 import { Toast } from 'primereact/toast';
+
+// Component imports
+import ClientTable from './components/clientTable';
+import ContactAddEdit from './components/contactAddEdit';
+import ContactDelete from './components/contactDelete';
+import ClientContactsView from './components/clientContactsView';
+
+// Hook imports
 import useContact from './services/useContact';
+import { useContactOperations } from './hooks/useContactOperations';
+
+// Constants
+import { VIEW_MODES, DIALOG_MODES, getMenuItems, getEmptyContact } from './constants/contactConstants';
 
 const Contact = () => {
+  // Dialog state
   const [dialogVisible, setDialogVisible] = useState(false);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
-  const [dialogMode, setDialogMode] = useState("add");
+  const [dialogMode, setDialogMode] = useState(DIALOG_MODES.ADD);
+  
+  // Contact state
   const [editContact, setEditContact] = useState(null);
   const [contactToDelete, setContactToDelete] = useState(null);
-  const [selectedClient, setSelectedClient] = useState(null);
   const [selectedContact, setSelectedContact] = useState(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [activeView, setActiveView] = useState("table"); // "table", "department", "contacts"
-  const [clientContacts, setClientContacts] = useState([]);
+  
+  // Client state
+  const [selectedClient, setSelectedClient] = useState(null);
+  
+  // View state
+  const [activeView, setActiveView] = useState(VIEW_MODES.TABLE);
+  
+  // Refs
   const toast = useRef(null);
 
-  const { 
-    loading, 
-    error, 
-    createContact, 
-    updateContact, 
-    getClientDetails, 
-    deleteContact,
-    clearError 
-  } = useContact();
-
-  const showSuccess = (message) => {
+  // Hooks
+  const { loading, error, clearError } = useContact();
+  
+  // Toast functions
+  const showSuccess = useCallback((message) => {
     toast.current?.show({ severity: 'success', summary: 'Success', detail: message });
-  };
+  }, []);
 
-  const showError = (message) => {
+  const showError = useCallback((message) => {
     toast.current?.show({ severity: 'error', summary: 'Error', detail: message });
-  };
+  }, []);
 
-  // Load contacts when a client is selected and view is contacts
-  useEffect(() => {
-    if (selectedClient && activeView === "contacts") {
-      loadClientContacts(selectedClient.clientId);
-    }
-  }, [selectedClient, activeView, refreshTrigger]);
+  // Custom operations hook
+  const { 
+    refreshTrigger, 
+    handleSaveContact, 
+    handleDeleteContact,
+    validateContactSelection 
+  } = useContactOperations(showSuccess, showError);
 
-  // Show error toast when service error occurs
+  // Error handling effect
   useEffect(() => {
     if (error) {
       showError(error);
       clearError();
     }
-  }, [error, clearError]);
+  }, [error, clearError, showError]);
 
-  const loadClientContacts = async (clientId) => {
-    try {
-      const response = await getClientDetails(clientId);
-      if (response.success) {
-        // Ensure contacts have proper ID structure
-        const contacts = response.data.clientContacts || [];
-        const contactsWithValidIds = contacts.map((contact, index) => ({
-          ...contact,
-          // Ensure we always have a clientContactId for operations
-          clientContactId: contact.clientContactId || contact.id || `temp-${index}`,
-          // Keep original clientId reference
-          clientId: contact.clientId || clientId
-        }));
-        setClientContacts(contactsWithValidIds);
-      }
-    } catch (err) {
-      console.error('Error loading client contacts:', err);
-      setClientContacts([]);
-    }
-  };
-
-  const handleAddContact = () => {
+  // Event handlers
+  const handleAddContact = useCallback(() => {
     if (!selectedClient) {
       showError('Please select a client first to add a contact');
       return;
     }
-    setDialogMode("add");
-    setEditContact({
-      clientId: selectedClient.clientId,
-      contactPersonName: "",
-      email: "",
-      phone: "",
-      designation: ""
-    });
+    setDialogMode(DIALOG_MODES.ADD);
+    setEditContact(getEmptyContact(selectedClient.clientId));
     setDialogVisible(true);
-  };
+  }, [selectedClient, showError]);
 
-  const handleEditContact = (contact) => {
-    if (!contact) {
-      showError('No contact selected for editing');
-      return;
-    }
+  const handleEditContact = useCallback((contact) => {
+    if (!validateContactSelection(contact, showError)) return;
     
-    // Ensure we have the contact ID for editing
-    if (!contact.clientContactId) {
-      showError('Contact ID is missing. Cannot edit this contact.');
-      return;
-    }
-    
-    setDialogMode("edit");
+    setDialogMode(DIALOG_MODES.EDIT);
     setEditContact({
       ...contact,
-      // Ensure the contact ID is properly passed
       clientContactId: contact.clientContactId,
       clientId: contact.clientId || selectedClient?.clientId
     });
     setDialogVisible(true);
-  };
+  }, [validateContactSelection, showError, selectedClient]);
 
-  const handleDeleteSelectedContact = () => {
-    if (!selectedContact) {
-      showError('Please select a contact to delete');
-      return;
-    }
-    
-    // Ensure we have the contact ID for deletion
-    if (!selectedContact.clientContactId) {
-      showError('Contact ID is missing. Cannot delete this contact.');
-      return;
-    }
+  const handleDeleteSelectedContact = useCallback(() => {
+    if (!validateContactSelection(selectedContact, showError)) return;
     
     setContactToDelete({
       ...selectedContact,
       clientContactId: selectedContact.clientContactId
     });
     setDeleteDialogVisible(true);
-  };
+  }, [selectedContact, validateContactSelection, showError]);
 
-  const handleEditSelectedContact = () => {
-    if (!selectedContact) {
-      showError('Please select a contact to edit');
-      return;
-    }
-    
-    // Ensure we have the contact ID for editing
-    if (!selectedContact.clientContactId) {
-      showError('Contact ID is missing. Cannot edit this contact.');
-      return;
-    }
-    
+  const handleEditSelectedContact = useCallback(() => {
+    if (!validateContactSelection(selectedContact, showError)) return;
     handleEditContact(selectedContact);
-  };
+  }, [selectedContact, validateContactSelection, showError, handleEditContact]);
 
-  const onSaveContact = async (contactData) => {
-    try {
-      let response;
-      if (dialogMode === "add") {
-        // For new contacts, ensure clientId is included
-        const newContactData = {
-          ...contactData,
-          clientId: selectedClient?.clientId
-        };
-        response = await createContact(newContactData);
-        showSuccess("Contact added successfully");
-      } else {
-        // For updates, pass the contact data with the ID
-        const contactId = contactData.clientContactId || editContact?.clientContactId;
-        
-        if (!contactId) {
-          throw new Error('Contact ID is missing for update operation');
-        }
-        
-        // Pass the data as-is, the service will handle the ID extraction
-        const updateContactData = {
-          ...contactData,
-          clientContactId: contactId, // Keep original field name
-          clientId: contactData.clientId || selectedClient?.clientId
-        };
-        
-        response = await updateContact(updateContactData);
-        showSuccess("Contact updated successfully");
-      }
-      
+  // Dialog handlers
+  const onSaveContact = useCallback(async (contactData) => {
+    const result = await handleSaveContact(contactData, dialogMode, selectedClient);
+    if (result.success) {
       setDialogVisible(false);
       setEditContact(null);
-      setRefreshTrigger(prev => prev + 1);
-    } catch (err) {
-      console.error('Error saving contact:', err);
-      showError(err.message || 'Failed to save contact');
     }
-  };
+  }, [handleSaveContact, dialogMode, selectedClient]);
 
-  const onDeleteContact = async (contactToDelete) => {
-    try {
-      // Ensure we have the contact ID for deletion
-      if (!contactToDelete.clientContactId) {
-        throw new Error('Contact ID is missing for deletion');
-      }
-      
-      await deleteContact(contactToDelete.clientContactId);
-      showSuccess("Contact deleted successfully");
+  const onDeleteContact = useCallback(async (contactToDelete) => {
+    const result = await handleDeleteContact(contactToDelete);
+    if (result.success) {
       setDeleteDialogVisible(false);
       setContactToDelete(null);
       setSelectedContact(null);
-      setRefreshTrigger(prev => prev + 1);
-    } catch (err) {
-      console.error('Error deleting contact:', err);
-      showError(err.message || 'Failed to delete contact');
     }
-  };
+  }, [handleDeleteContact]);
 
-  const onClientSelectionChange = (client) => {
+  // Selection handlers
+  const onClientSelectionChange = useCallback((client) => {
     setSelectedClient(client);
-    setSelectedContact(null); // Clear contact selection when client changes
-    // Clear contacts when client changes
-    if (activeView === "contacts") {
-      setClientContacts([]);
-    }
-  };
+    setSelectedContact(null);
+  }, []);
 
-  const onContactSelectionChange = (contact) => {
-    // Validate that the contact has a proper ID before setting it as selected
+  const onContactSelectionChange = useCallback((contact) => {
     if (contact && !contact.clientContactId) {
       console.warn('Selected contact is missing clientContactId:', contact);
       showError('Invalid contact selection. Contact ID is missing.');
       return;
     }
     setSelectedContact(contact);
-  };
+  }, [showError]);
 
-  const menuItems = [
-    {
-      label: 'View Department',
-      icon: 'pi pi-building',
-      command: () => setActiveView("department")
-    },
-    {
-      label: 'View Contacts',
-      icon: 'pi pi-users',
-      command: () => setActiveView("contacts")
-    }
-  ];
+  // Dialog close handlers
+  const closeAddEditDialog = useCallback(() => {
+    setDialogVisible(false);
+    setEditContact(null);
+  }, []);
 
-  const contactMenuItems = [
-    {
-      label: 'Add Contact',
-      icon: 'pi pi-plus',
-      command: handleAddContact
-    },
-    {
-      label: 'Edit Contact',
-      icon: 'pi pi-pencil',
-      command: handleEditSelectedContact,
-      disabled: !selectedContact || !selectedContact.clientContactId
-    },
-    {
-      label: 'Delete Contact',
-      icon: 'pi pi-trash',
-      command: handleDeleteSelectedContact,
-      disabled: !selectedContact || !selectedContact.clientContactId
-    }
-  ];
+  const closeDeleteDialog = useCallback(() => {
+    setDeleteDialogVisible(false);
+    setContactToDelete(null);
+  }, []);
 
-  const renderView = () => {
+  // View handlers
+  const handleBackToClients = useCallback(() => {
+    setActiveView(VIEW_MODES.TABLE);
+  }, []);
+
+  // Menu items
+  const menuItems = getMenuItems(setActiveView);
+
+  // Render methods
+  const renderDepartmentView = () => (
+    <div>
+      <Button 
+        icon="pi pi-arrow-left" 
+        label="Back to Clients" 
+        onClick={handleBackToClients} 
+        className="mb-3" 
+      />
+      <h3>Department view is under construction</h3>
+    </div>
+  );
+
+  const renderMainView = () => {
     switch (activeView) {
-      case "department":
+      case VIEW_MODES.DEPARTMENT:
+        return renderDepartmentView();
+        
+      case VIEW_MODES.CONTACTS:
         return (
-          <div>
-            <Button 
-              icon="pi pi-arrow-left" 
-              label="Back to Clients" 
-              onClick={() => setActiveView("table")} 
-              className="mb-3" 
-            />
-            <h3>Department view is under construction</h3>
-          </div>
-        );
-      case "contacts":
-        return (
-          <div className="dashboard-container shadow-3 p-4" style={{ width: "100%", maxWidth: "100%" }}>
-            <Toast ref={toast} />
-            
-            <div className="flex justify-content-between align-items-center mb-4 w-full">
-              <div className="flex align-items-center gap-3">
-                <Button 
-                  icon="pi pi-arrow-left" 
-                  label="Back to Clients" 
-                  onClick={() => setActiveView("table")}
-                  severity="secondary"
-                  outlined
-                  size="small"
-                />
-                <span className="text-lg font-semibold">Contacts</span>
-              </div>
-              
-              <Button
-                label="Add Contact"
-                icon="pi pi-plus"
-                severity="secondary"
-                outlined
-                size="medium"
-                className="font-medium"
-                onClick={handleAddContact}
-                disabled={!selectedClient}
-              />
-              
-              <div className="flex gap-2 mr-6">
-                <Button
-                  icon="pi pi-pencil"
-                  rounded
-                  text
-                  severity="info"
-                  size="large"
-                  aria-label="Edit"
-                  disabled={!selectedContact || !selectedContact.clientContactId}
-                  onClick={handleEditSelectedContact}
-                  tooltip="Edit Selected Contact"
-                  tooltipOptions={{position: 'bottom'}}
-                />
-                <Button
-                  icon="pi pi-trash"
-                  rounded
-                  text
-                  severity="danger"
-                  size="large"
-                  aria-label="Delete"
-                  disabled={!selectedContact || !selectedContact.clientContactId}
-                  onClick={handleDeleteSelectedContact}
-                  tooltip="Delete Selected Contact"
-                  tooltipOptions={{position: 'bottom'}}
-                />
-              </div>
-            </div>
-
-            {selectedClient ? (
-              <div>
-                <h4 className="mb-3">
-                  Contacts for: {selectedClient.clientName}
-                </h4>
-                <ContactTable 
-                  contacts={clientContacts}
-                  loading={loading}
-                  selectedContact={selectedContact}
-                  onSelectionChange={onContactSelectionChange}
-                />
-              </div>
-            ) : (
-              <div className="text-center p-4">
-                <p>Please select a client from the main table to view contacts.</p>
-              </div>
-            )}
-          </div>
+          <ClientContactsView 
+            selectedClient={selectedClient}
+            onBackClick={handleBackToClients}
+            onAddContact={handleAddContact}
+            selectedContact={selectedContact}
+            onSelectionChange={onContactSelectionChange}
+            onEditContact={handleEditSelectedContact}
+            onDeleteContact={handleDeleteSelectedContact}
+            refreshTrigger={refreshTrigger}
+            loading={loading}
+          />
         );
       
-      case "table":
+      case VIEW_MODES.TABLE:
       default:
         return (
           <ClientTable
@@ -359,6 +198,36 @@ const Contact = () => {
         );
     }
   };
+
+  // Don't render the main container for contacts view (handled by ClientContactsView)
+  if (activeView === VIEW_MODES.CONTACTS) {
+    return (
+      <>
+        <Toast ref={toast} />
+        {renderMainView()}
+        
+        {dialogVisible && (
+          <ContactAddEdit
+            visible={dialogVisible}
+            onHide={closeAddEditDialog}
+            onSave={onSaveContact}
+            mode={dialogMode}
+            contact={editContact}
+            clientId={selectedClient?.clientId}
+          />
+        )}
+
+        {deleteDialogVisible && (
+          <ContactDelete
+            visible={deleteDialogVisible}
+            onHide={closeDeleteDialog}
+            contact={contactToDelete}
+            onDelete={onDeleteContact}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <div className="dashboard-container shadow-3 p-4" style={{ width: "100%", maxWidth: "100%" }}>
@@ -378,16 +247,13 @@ const Contact = () => {
       </div>
 
       <div className="card">
-        {renderView()}
+        {renderMainView()}
       </div>
 
       {dialogVisible && (
         <ContactAddEdit
           visible={dialogVisible}
-          onHide={() => {
-            setDialogVisible(false);
-            setEditContact(null);
-          }}
+          onHide={closeAddEditDialog}
           onSave={onSaveContact}
           mode={dialogMode}
           contact={editContact}
@@ -398,10 +264,7 @@ const Contact = () => {
       {deleteDialogVisible && (
         <ContactDelete
           visible={deleteDialogVisible}
-          onHide={() => {
-            setDeleteDialogVisible(false);
-            setContactToDelete(null);
-          }}
+          onHide={closeDeleteDialog}
           contact={contactToDelete}
           onDelete={onDeleteContact}
         />
