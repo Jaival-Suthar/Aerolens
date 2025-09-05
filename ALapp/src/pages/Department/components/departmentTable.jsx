@@ -5,10 +5,11 @@ import { Button } from "primereact/button";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { classNames } from "primereact/utils";
-
-const API_BASE_URL = "https://aerolens-backend.onrender.com"; // Define the base URL here
+import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 
 const DepartmentTable = ({ clientId }) => {
+  const API_BASE_URL = import.meta.env.VITE_BASE_URL;
+
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -35,7 +36,6 @@ const DepartmentTable = ({ clientId }) => {
       }
       const result = await response.json();
       if (result.success && result.data?.departments) {
-        console.log(result.data.clientId)
         setDepartments(result.data.departments);
         setClientName(result.data.clientName || "");
       } else {
@@ -71,67 +71,56 @@ const DepartmentTable = ({ clientId }) => {
       console.error("Department name and description cannot be empty.");
       return;
     }
-    
-    setLoading(true);
+
     try {
-        if (department.departmentId) {
-            // PUT request to update an existing department
-            const response = await fetch(`${API_BASE_URL}/department`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(department),
-            });
-
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.message || "Failed to update department");
-            }
-
-            const updatedDept = await response.json();
-            setDepartments(
-                departments.map((dept) =>
-                    dept.departmentId === updatedDept.departmentId ? updatedDept : dept
-                )
-            );
-        } else {
-            // POST request to add a new department
-            const payload = {
-                clientId: clientId,
-                departmentName: department.departmentName,
-                departmentDescription: department.departmentDescription,
-            };
-
-            const response = await fetch(`${API_BASE_URL}/department`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.message || "Failed to add department");
-            }
-
-            fetchDepartments();
-            
-            console.log(newDept)
-            console.log("Department added:", newDept);
-            console.log(departments)
-          }
-    } catch (error) {
-        console.error("Error saving department:", error);
-        setError(error.message);
-    } finally {
-        setLoading(false);
-        setDepartmentDialog(false);
-        setDepartment({
-            departmentId: null,
-            departmentName: "",
-            departmentDescription: "",
+      if (department.departmentId) {
+        // PATCH request to update an existing department
+        const response = await fetch(`${API_BASE_URL}/department`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(department),
         });
-    }
-};
 
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.message || "Failed to update department");
+        }
+
+        await fetchDepartments();
+      } else {
+        // POST request to add a new department
+        const payload = {
+          clientId: clientId,
+          departmentName: department.departmentName,
+          departmentDescription: department.departmentDescription,
+        };
+
+        const response = await fetch(`${API_BASE_URL}/department`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.message || "Failed to add department");
+        }
+
+        fetchDepartments();
+      }
+    } catch (error) {
+      console.error("Error saving department:", error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+      setDepartmentDialog(false);
+      setDepartment({
+        departmentId: null,
+        departmentName: "",
+        departmentDescription: "",
+      });
+    }
+  };
 
   const editDepartment = () => {
     if (selectedDepartment) {
@@ -140,38 +129,47 @@ const DepartmentTable = ({ clientId }) => {
     }
   };
 
-  const confirmDeleteDepartment = async () => {
-    if (selectedDepartment) {
-      setLoading(true);
-      try {
+  const confirmDeleteDepartment = () => {
+    if (!selectedDepartment) return;
+//pop up to confirm deletion
+    confirmDialog({
+      message: `Are you sure you want to delete department "${selectedDepartment.departmentName}"?`,
+      header: "Confirm Deletion",
+      icon: "pi pi-exclamation-triangle",
+      acceptClassName: "p-button-danger",
+      acceptLabel: "Yes",
+      rejectLabel: "No",
+      accept: async () => {
+        try {
           const response = await fetch(
-              `${API_BASE_URL}/department/${selectedDepartment.departmentId}`,
-              {
-                  method: "DELETE",
-              }
+            `${API_BASE_URL}/department/${selectedDepartment.departmentId}`,
+            { method: "DELETE" }
           );
 
           if (!response.ok) {
-              const errData = await response.json();
-              throw new Error(errData.message || "Failed to delete department");
+            const errData = await response.json();
+            throw new Error(errData.message || "Failed to delete department");
           }
 
           setDepartments(
-              departments.filter((dept) => dept.departmentId !== selectedDepartment.departmentId)
+            departments.filter(
+              (dept) => dept.departmentId !== selectedDepartment.departmentId
+            )
           );
           setSelectedDepartment(null);
           console.log("Department deleted successfully");
-      } catch (error) {
+        } catch (error) {
           console.error("Error deleting department:", error);
           setError(error.message);
-      } finally {
+        } finally {
           setLoading(false);
-      }
-    }
+        }
+      },
+    });
   };
 
   const onInputChange = (e, name) => {
-    const val = (e.target && e.target.value) || '';
+    const val = (e.target && e.target.value) || "";
     let _department = { ...department };
     _department[`${name}`] = val;
     setDepartment(_department);
@@ -234,13 +232,13 @@ const DepartmentTable = ({ clientId }) => {
         onSelectionChange={(e) => setSelectedDepartment(e.value)}
         tableStyle={{ minWidth: "50rem" }}
       >
-
         <Column selectionMode="single" style={{ width: "3em" }} />
         <Column field="departmentId" header="Department ID" />
         <Column field="departmentName" header="Department Name" />
         <Column field="departmentDescription" header="Department Description" />
       </DataTable>
 
+      {/* Add/Edit Dialog */}
       <Dialog
         visible={departmentDialog}
         style={{ width: "450px" }}
@@ -276,6 +274,9 @@ const DepartmentTable = ({ clientId }) => {
           />
         </div>
       </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <ConfirmDialog />
     </div>
   );
 };
