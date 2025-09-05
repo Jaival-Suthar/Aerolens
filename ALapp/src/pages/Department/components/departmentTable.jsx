@@ -229,7 +229,7 @@ const DepartmentTable = ({ clientId }) => {
   responsiveLayout="scroll"
   stripedRows
   className="text-m"
-  paginator={false} // We handle pagination separately
+  paginator={false} // pagination will be handled separately
   scrollHeight="400px"
   emptyMessage={loading ? "Loading..." : "No departments found."}
   selectionMode="single"
@@ -237,6 +237,7 @@ const DepartmentTable = ({ clientId }) => {
   onSelectionChange={(e) => setSelectedDepartment(e.value)}
   dataKey="departmentId"
   showGridlines
+  header={header} // keep your action buttons
 >
   <Column
     selectionMode="single"
