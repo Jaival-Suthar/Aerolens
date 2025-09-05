@@ -224,19 +224,52 @@ const DepartmentTable = ({ clientId }) => {
     <div>
       <h3>Departments for Client {clientName}</h3>
       <DataTable
-        value={departments}
-        header={header}
-        dataKey="departmentId"
-        selectionMode="single"
-        selection={selectedDepartment}
-        onSelectionChange={(e) => setSelectedDepartment(e.value)}
-        tableStyle={{ minWidth: "50rem" }}
-      >
-        <Column selectionMode="single" style={{ width: "3em" }} />
-        <Column field="departmentId" header="Department ID" />
-        <Column field="departmentName" header="Department Name" />
-        <Column field="departmentDescription" header="Department Description" />
-      </DataTable>
+  value={departments || []}
+  loading={loading}
+  responsiveLayout="scroll"
+  stripedRows
+  className="text-m"
+  paginator={false} // We handle pagination separately
+  scrollHeight="400px"
+  emptyMessage={loading ? "Loading..." : "No departments found."}
+  selectionMode="single"
+  selection={selectedDepartment}
+  onSelectionChange={(e) => setSelectedDepartment(e.value)}
+  dataKey="departmentId"
+  showGridlines
+>
+  <Column
+    selectionMode="single"
+    headerStyle={{ width: "3rem" }}
+    frozen
+  />
+  <Column
+    field="departmentId"
+    header="Department ID"
+    sortable
+    bodyClassName="py-1 px-2"
+    headerClassName="py-1 px-2 font-semibold"
+    style={{ minWidth: "8rem" }}
+    body={(rowData) => rowData?.departmentId || "N/A"}
+  />
+  <Column
+    field="departmentName"
+    header="Department Name"
+    sortable
+    bodyClassName="py-1 px-2"
+    headerClassName="py-1 px-2 font-semibold"
+    style={{ minWidth: "12rem" }}
+    body={(rowData) => rowData?.departmentName || "N/A"}
+  />
+  <Column
+    field="departmentDescription"
+    header="Department Description"
+    bodyClassName="py-1 px-2"
+    headerClassName="py-1 px-2 font-semibold"
+    style={{ minWidth: "15rem" }}
+    body={(rowData) => rowData?.departmentDescription || "N/A"}
+  />
+</DataTable>
 
       {/* Add/Edit Dialog */}
       <Dialog
