@@ -112,13 +112,11 @@ const DepartmentTable = ({ clientId }) => {
                 throw new Error(errData.message || "Failed to add department");
             }
 
-
-            // const newDept = await response.json();
             fetchDepartments();
             
-            // console.log(newDept)
-            // console.log("Department added:", newDept);
-            // console.log(departments)
+            console.log(newDept)
+            console.log("Department added:", newDept);
+            console.log(departments)
           }
     } catch (error) {
         console.error("Error saving department:", error);
