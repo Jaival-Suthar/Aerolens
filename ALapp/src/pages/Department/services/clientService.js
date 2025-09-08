@@ -1,9 +1,11 @@
-const API_URL = import.meta.env.VITE_BASE_URL;
+// ✅ Use consistent naming
+const API_BASE_URL = import.meta.env.VITE_BASE_URL;
+export default API_BASE_URL;
 
 // Fetch paginated clients
 export const getClients = async (page = 1, limit = 10) => {
   try {
-    const response = await fetch(`${API_URL}/client?page=${page}&limit=${limit}`);
+    const response = await fetch(`${API_BASE_URL}/client?page=${page}&limit=${limit}`);
     if (!response.ok) throw new Error("Failed to fetch clients");
     return await response.json(); // { data: [...], pagination: {...} }
   } catch (error) {
@@ -15,14 +17,14 @@ export const getClients = async (page = 1, limit = 10) => {
 // Create new client
 export const createClient = async ({ name, address }) => {
   try {
-    const response = await fetch(`${API_URL}/client`, {
+    const response = await fetch(`${API_BASE_URL}/client`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, address }),
     });
 
     if (!response.ok) {
-      const errorBody = await response.text(); // Read error response text
+      const errorBody = await response.text();
       console.error("Create client failed:", response.status, errorBody);
       throw new Error(`Failed to create client: ${response.status} ${errorBody}`);
     }
@@ -36,11 +38,10 @@ export const createClient = async ({ name, address }) => {
   }
 };
 
-
 // Update existing client
 export const updateClient = async ({ id, name, address }) => {
   try {
-    const response = await fetch(`${API_URL}/client`, {
+    const response = await fetch(`${API_BASE_URL}/client`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, name, address }),
@@ -58,7 +59,7 @@ export const updateClient = async ({ id, name, address }) => {
 // Delete client by ID
 export const deleteClient = async (id) => {
   try {
-    const response = await fetch(`${API_URL}/client/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/client/${id}`, {
       method: "DELETE",
     });
     if (!response.ok) {
