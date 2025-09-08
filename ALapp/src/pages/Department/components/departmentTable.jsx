@@ -29,6 +29,7 @@ const DepartmentTable = ({ clientId }) => {
 
   const handleAdd = async () => {
    console.log("Adding new department for clientId:", clientId);
+    await addDepartment();
     loadDepartments();
   };
 
