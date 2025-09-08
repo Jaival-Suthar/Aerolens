@@ -12,36 +12,44 @@ const DepartmentPage = () => {
 // controlling state for view mode: "list" or "departments". then when go to 
 // departments view, show the DepartmentTable component and then a button to go back to list view
 //button logic is below in handleGoBack function
-  const menuItems = [
-    {
-      label: "List",
-      icon: "pi pi-list",
-      command: () => setViewMode("list"),
-    },
-    {
-      label: "Departments",
-      icon: "pi pi-sitemap",
-      command: () => setViewMode("departments"),
-    },
-  ];
+// const menuItems = [
+//   {
+//     label: "List",
+//     icon: "pi pi-list",
+//     command: () => setViewMode("list"),
+//   },
+//   {
+//     label: "Departments",
+//     icon: "pi pi-sitemap",
+//     command: () => setViewMode("departments"),
+//   },
+// ];
+  const handleGotodepartment = () => {
+    setViewMode("departments");
+  };
   const handleGoBack = () => {
     setViewMode("list");
   };
-
-
+//   <SplitButton
+//   label="Settings"
+//   icon="pi pi-cog"
+//   model={menuItems}
+//   tooltip="Settings"
+//   tooltipOptions={{ position: "bottom" }}
+//   disabled={!selectedClient}
+//   aria-label="Settings"
+// />
   return (
     <div className="dashboard-container shadow-3 p-4" style={{ width: "100%", maxWidth: "100%" }}>
         <div className="flex justify-content-between align-items-center mb-4 w-full">
         {viewMode === "list" ? (
-          <SplitButton
-            label="Settings"
-            icon="pi pi-cog"
-            model={menuItems}
-            tooltip="Settings"
-            tooltipOptions={{ position: "bottom" }}
-            disabled={!selectedClient}
-            aria-label="Settings"
-          />
+        <Button
+        label="To Departments"
+        icon="pi pi-arrow-right"
+        onClick={handleGotodepartment}
+        className="p-button-text"
+        disabled={!selectedClient} // disable if no client selected
+      />
         ) : (
           <Button
             label="Back to Clients"
