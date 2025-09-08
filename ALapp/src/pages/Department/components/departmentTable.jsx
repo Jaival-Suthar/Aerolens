@@ -5,11 +5,16 @@ import { confirmDialog } from "primereact/confirmdialog";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
-import { getDepartments, addDepartment, updateDepartment, deleteDepartment } 
-  from "../services/useDepartment";
+import {
+  getDepartments,
+  addDepartment,
+  updateDepartment,
+  deleteDepartment,
+} from "../services/useDepartment";
 
 const DepartmentTable = ({ clientId }) => {
   const [departments, setDepartments] = useState([]);
+  const [selectedDepartment, setSelectedDepartment] = useState(null);
 
   useEffect(() => {
     if (clientId) {
@@ -23,60 +28,91 @@ const DepartmentTable = ({ clientId }) => {
   };
 
   const handleAdd = async () => {
-    const newDept = { clientId, departmentName: "New Dept", departmentDescription: "Test" };
+    const newDept = {
+      clientId,
+      departmentName: "New Dept",
+      departmentDescription: "Test",
+    };
     await addDepartment(newDept);
     loadDepartments();
   };
 
-  const handleUpdate = (dept) => {
+  const handleUpdate = () => {
+    if (!selectedDepartment) return;
+
     confirmDialog({
-      message: `Are you sure you want to save changes to department "${dept.departmentName}"?`,
+      message: `Are you sure you want to save changes to department "${selectedDepartment.departmentName}"?`,
       header: "Confirm Update",
       icon: "pi pi-exclamation-triangle",
       acceptClassName: "p-button-success",
       accept: async () => {
-        await updateDepartment(dept);
+        await updateDepartment(selectedDepartment);
         loadDepartments();
-        console.log(`Department "${dept.departmentName}" updated successfully`);
+        console.log(`Department "${selectedDepartment.departmentName}" updated successfully`);
       },
       reject: () => {
         console.log("Update cancelled");
-      }
+      },
     });
   };
-  
-  const handleDelete = (deptId, deptName) => {
+
+  const handleDelete = () => {
+    if (!selectedDepartment) return;
+
     confirmDialog({
-      message: `Are you sure you want to delete department "${deptName}"?`,
+      message: `Are you sure you want to delete department "${selectedDepartment.departmentName}"?`,
       header: "Confirm Deletion",
       icon: "pi pi-exclamation-triangle",
       acceptClassName: "p-button-danger",
       accept: async () => {
-        await deleteDepartment(deptId);
+        await deleteDepartment(selectedDepartment.departmentId);
+        setSelectedDepartment(null); // Clear selection after deletion
         loadDepartments();
       },
       reject: () => {
         console.log("Deletion cancelled");
-      }
+      },
     });
   };
 
   return (
     <div>
-      <h2>Departments</h2>
-      <Button label="Add Department" onClick={handleAdd} className="mb-3" />
-      <DataTable value={departments} dataKey="departmentId" tableStyle={{ minWidth: "50rem" }}>
+      <div className="flex justify-content-between align-items-center mb-3">
+        <h2>Departments</h2>
+        <div className="flex gap-2">
+          <Button
+            icon="pi pi-plus"
+            label="Add"
+            severity="info"
+            onClick={handleAdd}
+          />
+          <Button
+            icon="pi pi-pencil"
+            label="Edit"
+            onClick={handleUpdate}
+            disabled={!selectedDepartment}
+          />
+          <Button
+            icon="pi pi-trash"
+            label="Delete"
+            severity="danger"
+            onClick={handleDelete}
+            disabled={!selectedDepartment}
+          />
+        </div>
+      </div>
+      <DataTable
+        value={departments}
+        dataKey="departmentId"
+        selectionMode="single"
+        selection={selectedDepartment}
+        onSelectionChange={(e) => setSelectedDepartment(e.value)}
+        tableStyle={{ minWidth: "50rem" }}
+      >
+        <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
         <Column field="departmentId" header="ID" />
         <Column field="departmentName" header="Department Name" />
         <Column field="departmentDescription" header="Description" />
-        <Column
-          body={(rowData) => (
-            <>
-              <Button label="Edit" onClick={() => handleUpdate(rowData)} className="p-button-sm" />
-              <Button label="Delete" onClick={() => handleDelete(rowData.departmentId)} severity="danger" className="p-button-sm ml-2" />
-            </>
-          )}
-        />
       </DataTable>
     </div>
   );

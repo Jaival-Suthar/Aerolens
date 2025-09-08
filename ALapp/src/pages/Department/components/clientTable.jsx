@@ -18,7 +18,7 @@ const ClientTable = ({ onEdit, refreshTrigger = 0, selectedClient, onSelectionCh
     searchParams
   } = usePagination();
 
-  // Load clients when URL params change xor component refreshes
+  // Load clients when URL params change or component refreshes
   useEffect(() => {
     const loadData = async () => {
       const currentPagination = getInitialPagination();
@@ -72,13 +72,6 @@ const ClientTable = ({ onEdit, refreshTrigger = 0, selectedClient, onSelectionCh
     }
   }, [onSelectionChange]);
 
-  // Row double click handler
-  const onRowDoubleClick = useCallback((e) => {
-    if (e.data && onEdit) {
-      onEdit(e.data);
-    }
-  }, [onEdit]);
-
   const cellClass = "py-1 px-2";
   const headerClass = "py-1 px-2 font-semibold";
 
@@ -98,7 +91,7 @@ const ClientTable = ({ onEdit, refreshTrigger = 0, selectedClient, onSelectionCh
         loading={loading}
         responsiveLayout="scroll"
         stripedRows
-        className="text-m"
+        className="text-m shadow-2"
         paginator={false} // We handle pagination separately
         scrollHeight="400px"
         emptyMessage={loading ? "Loading..." : "No clients found."}
@@ -106,7 +99,6 @@ const ClientTable = ({ onEdit, refreshTrigger = 0, selectedClient, onSelectionCh
         selection={selectedClient}
         onSelectionChange={onSelectionChangeHandler}
         dataKey="clientId"
-        onRowDoubleClick={onRowDoubleClick}
         showGridlines
       >
         <Column 

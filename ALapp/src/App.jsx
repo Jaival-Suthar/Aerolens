@@ -8,7 +8,7 @@ import 'primereact/resources/themes/saga-blue/theme.css';
 import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
 import 'primeflex/primeflex.css';
-import Departments from './pages/Department/page';
+import DepartmentPage from './pages/Department/page';
 
 // Placeholder components for other routes
 
@@ -46,7 +46,7 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/department" element={<Departments />} />
+              <Route path="/department" element={<DepartmentPage />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
