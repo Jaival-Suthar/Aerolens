@@ -28,11 +28,23 @@ const DepartmentTable = ({ clientId }) => {
     loadDepartments();
   };
 
-  const handleUpdate = async (dept) => {
-    await updateDepartment(dept);
-    loadDepartments();
+  const handleUpdate = (dept) => {
+    confirmDialog({
+      message: `Are you sure you want to save changes to department "${dept.departmentName}"?`,
+      header: "Confirm Update",
+      icon: "pi pi-exclamation-triangle",
+      acceptClassName: "p-button-success",
+      accept: async () => {
+        await updateDepartment(dept);
+        loadDepartments();
+        console.log(`Department "${dept.departmentName}" updated successfully`);
+      },
+      reject: () => {
+        console.log("Update cancelled");
+      }
+    });
   };
-
+  
   const handleDelete = (deptId, deptName) => {
     confirmDialog({
       message: `Are you sure you want to delete department "${deptName}"?`,
