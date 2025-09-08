@@ -21,19 +21,14 @@ const DepartmentTable = ({ clientId }) => {
       loadDepartments();
     }
   }, [clientId]);
-
+// for fetch implementation
   const loadDepartments = async () => {
     const data = await getDepartments(clientId);
     setDepartments(data.departments);
   };
 
   const handleAdd = async () => {
-    const newDept = {
-      clientId,
-      departmentName: "New Dept",
-      departmentDescription: "Test",
-    };
-    await addDepartment(newDept);
+   console.log("Adding new department for clientId:", clientId);
     loadDepartments();
   };
 
