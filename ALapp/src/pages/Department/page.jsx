@@ -40,6 +40,7 @@ const menuItems = [
 //   aria-label="Settings"
 // />
   return (
+    <>
     <div className="dashboard-container shadow-3 p-4" style={{ width: "100%", maxWidth: "100%" }}>
         <div className="flex justify-end">
         {viewMode === "list" ? (
@@ -53,12 +54,16 @@ const menuItems = [
         //  aria-label="Settings"
        />
         ) : (
+          <div className="flex align-items-center gap-3"> 
           <Button
             label="Back to Clients"
+            outlined
+            severity="secondary"
             icon="pi pi-arrow-left"
             onClick={handleGoBack}
-            className="p-button-text"
+            size="medium"
           />
+          </div>
         )}
       </div>
 
@@ -71,6 +76,7 @@ const menuItems = [
 
         />
         
+        
         ) : (
           selectedClient && (
             <DepartmentTable
@@ -81,6 +87,7 @@ const menuItems = [
         )}
       </div>
     </div>
+    </>
   );
 };
 

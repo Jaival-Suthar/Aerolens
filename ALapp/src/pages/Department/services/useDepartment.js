@@ -37,12 +37,12 @@ export const addDepartment = async ({ clientId, departmentName, departmentDescri
 };
 
 // ✅ Update an existing department
-export const updateDepartment = async (department) => {
+export const updateDepartment = async (selectedDepartment) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/department`, {
+    const response = await fetch(`${API_BASE_URL}/department/${selectedDepartment.departmentId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(department),
+      body: JSON.stringify(selectedDepartment),
     });
 
     if (!response.ok) {
