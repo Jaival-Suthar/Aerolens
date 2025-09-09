@@ -6,33 +6,23 @@ export const useContact = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Helper function to handle API responses
   const handleApiResponse = async (response) => {
     const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.message || `HTTP error! status: ${response.status}`);
-    }
-    
+    if (!response.ok) throw new Error(data.message || `HTTP error! status: ${response.status}`);
     return data;
   };
 
-  // Create a new contact
+  // Create a new contact (POST /contact)
   const createContact = useCallback(async (contactData) => {
     setLoading(true);
     setError(null);
-    
     try {
       const response = await fetch(`${API_URL}/contact`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(contactData),
       });
-      
-      const result = await handleApiResponse(response);
-      return result;
+      return await handleApiResponse(response);
     } catch (err) {
       setError(err.message);
       throw err;
@@ -41,49 +31,30 @@ export const useContact = () => {
     }
   }, []);
 
-  // Update an existing contact
+  // Update existing contact (PATCH /contact/:contactId)
   const updateContact = useCallback(async (contactData) => {
     setLoading(true);
     setError(null);
-    
     try {
-      // Extract the contact ID - check both possible field names
       const contactId = contactData.contactId || contactData.clientContactId;
-      
-      if (!contactId) {
-        throw new Error('Contact ID is required for update operation');
-      }
-      
-      // Prepare the update payload with contactId in the body (as per API docs)
+      if (!contactId) throw new Error('Contact ID is required for update operation');
+
+      // Prepare partial update payload (exclude contactId from body)
       const updatePayload = {
-        contactId: contactId
+        ...(contactData.contactPersonName !== undefined && { contactPersonName: contactData.contactPersonName }),
+        ...(contactData.designation !== undefined && { designation: contactData.designation }),
+        ...(contactData.phone !== undefined && { phone: contactData.phone }),
+        ...(contactData.email !== undefined && { email: contactData.email }),
       };
-      
-      // Only include fields that are provided for update
-      if (contactData.contactPersonName !== undefined) {
-        updatePayload.contactPersonName = contactData.contactPersonName;
-      }
-      if (contactData.designation !== undefined) {
-        updatePayload.designation = contactData.designation;
-      }
-      if (contactData.phone !== undefined) {
-        updatePayload.phone = contactData.phone;
-      }
-      if (contactData.email !== undefined) {
-        updatePayload.email = contactData.email;
-      }
-      
-      // Use PATCH /contact endpoint (not /contact/:id based on API docs)
-      const response = await fetch(`${API_URL}/contact`, {
+
+      // Call PATCH with contactId in URL path per backend spec
+      const response = await fetch(`${API_URL}/contact/${contactId}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatePayload),
       });
-      
-      const result = await handleApiResponse(response);
-      return result;
+
+      return await handleApiResponse(response);
     } catch (err) {
       setError(err.message);
       throw err;
@@ -92,51 +63,19 @@ export const useContact = () => {
     }
   }, []);
 
-  // Get client details including contacts
-  const getClientDetails = useCallback(async (clientId) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await fetch(`${API_URL}/client/${clientId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      // Check if response is actually JSON
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error(`Server returned ${response.status}: Expected JSON but received ${contentType || 'unknown content type'}`);
-      }
-      
-      const result = await handleApiResponse(response);
-      return result;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Delete a contact
+  // Delete Contact (DELETE /contact/:id)
   const deleteContact = useCallback(async (contactId) => {
     setLoading(true);
     setError(null);
-    
     try {
-      // The API uses DELETE /contact/:id format
+      if (!contactId) throw new Error('Contact ID is required for delete operation');
+
       const response = await fetch(`${API_URL}/contact/${contactId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
-      
-      const result = await handleApiResponse(response);
-      return result;
+
+      return await handleApiResponse(response);
     } catch (err) {
       setError(err.message);
       throw err;
@@ -145,10 +84,32 @@ export const useContact = () => {
     }
   }, []);
 
-  // Clear error state
-  const clearError = useCallback(() => {
+  // Fetch client details including contacts (GET /client/:id)
+  const getClientDetails = useCallback(async (clientId) => {
+    setLoading(true);
     setError(null);
+    try {
+      if (!clientId) throw new Error('Client ID is required');
+
+      const response = await fetch(`${API_URL}/client/${clientId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json'))
+        throw new Error(`Expected JSON but got ${contentType || 'unknown content type'}`);
+
+      return await handleApiResponse(response);
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  const clearError = useCallback(() => setError(null), []);
 
   return {
     loading,
