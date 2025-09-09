@@ -102,17 +102,24 @@ const Dashboard = () => {
       <Toast ref={toast} />
       
       <div className="flex justify-content-between align-items-center mb-4 w-full">
-        <Button
-          label="Add Client"
-          icon="pi pi-plus"
-          severity="secondary"
-          outlined
-          size="medium"
-          className="font-medium"
-          onClick={handleAdd}
-        />
+        <div className="flex align-items-center gap-3">
+              </div>
 
         <div className="flex gap-2 mr-6">
+            <Button
+            rounded
+            text={false} // remove `text` for strong color fill
+            severity="success" // success is green in PrimeReact
+            outlined={false}
+            icon="pi pi-plus"
+            size="large"
+            className="font-medium mr-1"
+            onClick={handleAdd}
+            aria-label="Add"
+            tooltip="Add Client"
+            tooltipOptions={{ position: 'bottom' }}
+          />
+
           <Button
             icon="pi pi-pencil"
             rounded
