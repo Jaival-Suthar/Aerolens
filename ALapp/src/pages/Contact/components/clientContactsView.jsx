@@ -165,6 +165,7 @@ const ClientContactsView = ({ selectedClient, onBackClick }) => {
         loading={loadingContacts}
         selectedContact={state.selectedContact}
         onSelectionChange={handlers.selectContact}
+        onRowDoubleClick={handlers.editContact}
       />
 
       {state.dialogVisible && (

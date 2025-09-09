@@ -7,7 +7,8 @@ const ContactTable = ({
   contacts = [], 
   loading = false, 
   selectedContact, 
-  onSelectionChange 
+  onSelectionChange,
+  onRowDoubleClick   
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -45,6 +46,11 @@ const ContactTable = ({
       onSelectionChange(selectedContactData);
     }
   }, [onSelectionChange]);
+  const onRowDoubleClickHandler = useCallback((e) => {
+    if (onRowDoubleClick && e.data) {
+      onRowDoubleClick(e.data);
+    }
+  }, [onRowDoubleClick]);
 
   const cellClass = "py-1 px-2";
   const headerClass = "py-1 px-2 font-semibold";
@@ -78,6 +84,7 @@ const ContactTable = ({
         emptyMessage={loading ? "Loading contacts..." : "No contacts found."}
         selectionMode="single"
         selection={selectedContact}
+        onRowDoubleClick={onRowDoubleClickHandler}
         onSelectionChange={onSelectionChangeHandler}
         dataKey="clientContactId" // Use clientContactId as the unique identifier
         showGridlines
