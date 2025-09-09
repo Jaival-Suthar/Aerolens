@@ -26,13 +26,12 @@ const DepartmentTable = ({ clientId }) => {
     const data = await getDepartments(clientId);
     setDepartments(data.departments);
   };
-
   const handleAdd = async () => {
-   console.log("Adding new department for clientId:", clientId);
-    await addDepartment();
+    console.log("Adding new department for clientId:", clientId);
+    await addDepartment({ clientId, departmentName, departmentDescription });
     loadDepartments();
   };
-
+  
   const handleUpdate = () => {
     if (!selectedDepartment) return;
 
