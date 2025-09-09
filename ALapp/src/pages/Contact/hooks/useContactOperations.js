@@ -16,39 +16,42 @@ export const useContactOperations = (showSuccess, showError) => {
   }, []);
 
   const handleSaveContact = useCallback(async (contactData, dialogMode, selectedClient) => {
-    try {
-      if (dialogMode === "add") {
-        const newContactData = {
-          ...contactData,
-          clientId: selectedClient?.clientId
-        };
-        await createContact(newContactData);
-        showSuccess("Contact added successfully");
-      } else {
-        const contactId = contactData.clientContactId;
-        
-        if (!contactId) {
-          throw new Error('Contact ID is missing for update operation');
-        }
-        
-        const updateContactData = {
-          ...contactData,
-          clientContactId: contactId,
-          clientId: contactData.clientId || selectedClient?.clientId
-        };
-        
-        await updateContact(updateContactData);
-        showSuccess("Contact updated successfully");
+  try {
+    if (dialogMode === "add") {
+      const newContactData = {
+        ...contactData,
+        clientId: selectedClient?.clientId
+      };
+      await createContact(newContactData);
+      showSuccess("Contact added successfully");
+    } else {
+      // Make sure we have the contact ID
+      const contactId = contactData.clientContactId || contactData.contactId;
+      
+      if (!contactId) {
+        //console.error('Missing contact ID in contactData:', contactData);
+        throw new Error('Contact ID is missing for update operation');
       }
       
-      triggerRefresh();
-      return { success: true };
-    } catch (err) {
-      console.error('Error saving contact:', err);
-      showError(err.message || 'Failed to save contact');
-      return { success: false, error: err };
+      const updateContactData = {
+        ...contactData,
+        clientContactId: contactId,
+        clientId: contactData.clientId || selectedClient?.clientId
+      };
+      
+      //console.log('Calling updateContact with:', updateContactData);
+      await updateContact(updateContactData);
+      showSuccess("Contact updated successfully");
     }
-  }, [createContact, updateContact, showSuccess, showError, triggerRefresh]);
+    
+    triggerRefresh();
+    return { success: true };
+  } catch (err) {
+    console.error('Error saving contact:', err);
+    showError(err.message || 'Failed to save contact');
+    return { success: false, error: err };
+  }
+}, [createContact, updateContact, showSuccess, showError, triggerRefresh]);
 
   const handleDeleteContact = useCallback(async (contactToDelete) => {
     try {
