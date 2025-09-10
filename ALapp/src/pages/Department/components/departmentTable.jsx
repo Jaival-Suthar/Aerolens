@@ -1,5 +1,6 @@
 // src/pages/Department/components/DepartmentTable.jsx
 import React, { useEffect, useState } from "react";
+import { Paginator } from "primereact/paginator";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
@@ -18,7 +19,6 @@ const DepartmentTable = ({ clientId,clientName,handleGoBack }) => {
       loadDepartments();
     }
   }, [clientId]);
-
   // Fetch departments implementation
   const loadDepartments = async () => {
     try {
@@ -123,14 +123,18 @@ console.log(departments)
         </div>
 
         <h2> Departments for: {clientName}</h2>
-      <DataTable
-        value={departments}
-        dataKey="departmentId"
-        selectionMode="single"
-        selection={selectedDepartment}
-        onSelectionChange={(e) => setSelectedDepartment(e.value)}
-        tableStyle={{ minWidth: "50rem" }}
-      >
+        <DataTable
+          value={departments}
+          paginator
+          rows={5}
+          rowsPerPageOptions={[5, 10, 20]}
+          dataKey="departmentId"
+          selectionMode="single"
+          selection={selectedDepartment}
+          onSelectionChange={(e) => setSelectedDepartment(e.value)}
+          tableStyle={{ minWidth: "50rem" }}
+        >
+
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
         <Column field="departmentId" header="ID" />
         <Column field="departmentName" header="Department Name" />
@@ -155,6 +159,18 @@ console.log(departments)
         onSuccess={handleDeleteSuccess}
         onClearSelection={handleClearSelection}
       />
+
+{/* { totalRecords > 0 && (
+        <Paginator
+          first={(currentPage - 1) * rowsPerPage}
+          rows={rowsPerPage}
+          totalRecords={totalRecords}
+          onPageChange={onPageChange}
+          template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown"
+          rowsPerPageOptions={[5, 10, 20]}
+          className="mt-3"
+        />
+      )} */}
     </>
   );
 };

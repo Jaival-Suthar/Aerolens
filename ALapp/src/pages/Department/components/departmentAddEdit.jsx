@@ -113,31 +113,41 @@ const DepartmentAddEdit = ({
             modal
             className="p-fluid"
         >
-            <div className="field">
-                <label htmlFor="departmentName" className="font-bold">
-                    Department Name *
-                </label>
+           <div className="field">
+  <label htmlFor="departmentName" className="font-bold">
+    Department Name *
+  </label>
+  <InputTextarea
+    id="departmentName"
+    value={departmentName}
+    onChange={(e) => setDepartmentName(e.target.value)}
+    placeholder="Enter department name"
+    required
+    className={!departmentName ? "p-invalid" : ""}
+  />
+  {!departmentName && (
+    <small className="p-error">Department Name is required.</small>
+  )}
+</div>
 
-                <input
-                    type="text"
-                    value={departmentName}
-                    onChange={(e) => setDepartmentName(e.target.value)}
-                />
-                   {/* will store in departmentsname state that has been passed */}
-            </div>
+<div className="field">
+  <label htmlFor="departmentDescription" className="font-bold">
+    Department Description *
+  </label>
+  <InputTextarea
+    id="departmentDescription"
+    value={departmentDescription}
+    onChange={(e) => setDepartmentDescription(e.target.value)}
+    placeholder="Enter department description"
+    rows={4}
+    required
+    className={!departmentDescription ? "p-invalid" : ""}
+  />
+  {!departmentDescription && (
+    <small className="p-error">Department Description is required.</small>
+  )}
+</div>
 
-            <div className="field">
-                <label htmlFor="departmentDescription" className="font-bold">
-                    Department Description
-                </label>
-                <InputTextarea
-                    id="departmentDescription"
-                    value={departmentDescription}
-                    onChange={(e) =>setDepartmentDescription(e.target.value)}
-                    placeholder="Enter department description (optional)"
-                    rows={4}
-                />
-            </div>
         </Dialog>
     );
 };
