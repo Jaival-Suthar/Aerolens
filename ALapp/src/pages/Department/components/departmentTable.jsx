@@ -7,7 +7,7 @@ import { getDepartments } from "../services/useDepartment";
 import DepartmentAddEdit from "./departmentAddEdit";
 import DepartmentDelete from "./departmentDelete";
 
-const DepartmentTable = ({ clientId }) => {
+const DepartmentTable = ({ clientId,clientName,handleGoBack }) => {
   const [departments, setDepartments] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
@@ -29,14 +29,14 @@ const DepartmentTable = ({ clientId }) => {
     }
   };
 console.log(departments)
+
   const handleAdd = () => {
-    setEditingDepartment(null); // Set to null for add mode
     setShowAddEditDialog(true);
   };
 
   const handleEdit = () => {
     if (!selectedDepartment) return;
-    setEditingDepartment(selectedDepartment); // Set selected department for edit mode
+     // Set selected department for edit mode
     setShowAddEditDialog(true);
   };
 
@@ -69,7 +69,19 @@ console.log(departments)
   return (
     <>
       <div className="flex justify-content-between align-items-center mb-4 w-full">
+          <div className="flex justify-content-start align-items-center">
+          <Button
+          label="Back to Clients"
+          outlined
+          severity="secondary"
+          icon="pi pi-arrow-left"
+          onClick={handleGoBack}
+          size="medium"
+        />
+          </div>
+          
           <div className="flex gap-2 ml-auto mr-6">
+          
             <Button
               text={false}
               rounded
@@ -110,7 +122,7 @@ console.log(departments)
           </div>
         </div>
 
-
+        <h2> Departments for: {clientName}</h2>
       <DataTable
         value={departments}
         dataKey="departmentId"

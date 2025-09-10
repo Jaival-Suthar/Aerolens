@@ -22,6 +22,7 @@ const DepartmentAddEdit = ({
     useEffect(() => {
         if (isEditMode) {
             setDepartmentName(selectedDepartment.departmentName || "");
+            //this will prefill the form with existing data when in edit mode from the selected department from the component departmentTable.jsx
             setDepartmentDescription(selectedDepartment.departmentDescription || "");
         } else {
             // Reset form for add mode
