@@ -12,9 +12,10 @@ const DepartmentAddEdit = ({
     clientId,
     onSuccess
 }) => {
+    //input field states that will be used for edit and add department
     const [departmentName, setDepartmentName] = useState("");
     const [departmentDescription, setDepartmentDescription] = useState("");
-    const [loading, setLoading] = useState(false);
+    // const [loading, setLoading] = useState(false);
     const isEditMode = selectedDepartment !== null;
     console.log(isEditMode)
 
@@ -39,7 +40,7 @@ const DepartmentAddEdit = ({
             return;
         }
 
-        setLoading(true);
+        // setLoading(true);
         try {
             if (isEditMode ) {
               
@@ -72,9 +73,7 @@ const DepartmentAddEdit = ({
             setDepartmentDescription("");
         } catch (error) {
             console.error("Error saving department:", error);
-        } finally {
-            setLoading(false);
-        }
+        } 
     };
 
     const handleCancel = () => {
@@ -90,13 +89,13 @@ const DepartmentAddEdit = ({
                 icon="pi pi-times"
                 outlined
                 onClick={handleCancel} // Reset form on cancel
-                disabled={loading}
+                // disabled={loading}
             />
             <Button
                 label={isEditMode ? "Update" : "Save"}
                 icon={isEditMode ? "pi pi-check" : "pi pi-plus"}
                 onClick={handleSave}
-                loading={loading}
+                // loading={loading}
                 disabled={!departmentName.trim()}
             />
         </div>

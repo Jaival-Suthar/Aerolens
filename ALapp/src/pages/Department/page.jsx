@@ -81,7 +81,7 @@ const menuItems = [
           selectedClient && (
             <DepartmentTable
               clientId={selectedClient.clientId}
-              clientName={selectedClient.clientName}
+              // clientName={selectedClient.clientName}
             />
           )
         )}

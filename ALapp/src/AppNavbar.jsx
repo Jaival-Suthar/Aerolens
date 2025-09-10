@@ -12,7 +12,7 @@ const navItems = [
     size: "large"
   },
   {
-    label: "Departments",
+    label: "Clients",
     icon: "pi pi-building",
     path: "/department",
     description: "Manage company departments",
