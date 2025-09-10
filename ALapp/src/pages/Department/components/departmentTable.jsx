@@ -37,6 +37,8 @@ console.log(departments)
   const handleEdit = () => {
     if (!selectedDepartment) return;
      // Set selected department for edit mode
+     console.log("Editing department:", selectedDepartment);
+      setEditingDepartment(selectedDepartment); // Set the department to be edited
     setShowAddEditDialog(true);
   };
 

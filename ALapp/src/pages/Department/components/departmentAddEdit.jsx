@@ -44,7 +44,6 @@ const DepartmentAddEdit = ({
         // setLoading(true);
         try {
             if (isEditMode ) {
-              
                 await updateDepartment({
                     ...selectedDepartment,
                     departmentName: departmentName.trim(),
@@ -59,8 +58,8 @@ const DepartmentAddEdit = ({
                 });
                 console.log("Adding new department for clientId:", clientId);
             }
-//             // {
-//   clientId,
+//       // {
+//   clientId, //primary key from parent component departmentTable.jsx
 //   departmentName,           // comes directly from state
 //   departmentDescription     // comes directly from state connecting to the adddepartment function in useDepartment.js
 // }
