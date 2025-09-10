@@ -140,7 +140,6 @@ console.log(departments)
         visible={showDeleteDialog}
         onHide={handleDeleteDialogHide}
         selectedDepartment={selectedDepartment}
-        departments={departments}
         onSuccess={handleDeleteSuccess}
         onClearSelection={handleClearSelection}
       />
