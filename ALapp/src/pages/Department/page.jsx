@@ -1,7 +1,7 @@
 // src/pages/Department/page.tsx
 import { useState } from "react";
 import { SplitButton } from "primereact/splitbutton";
-import ClientTable from "./components/ClientTable";
+import ClientTable from "../Dashboard/components/clientTable"
 import DepartmentTable from "./components/departmentTable";
 import { Button } from "primereact/button";
 const DepartmentPage = () => {

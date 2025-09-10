@@ -16,6 +16,7 @@ const DepartmentAddEdit = ({
     const [departmentDescription, setDepartmentDescription] = useState("");
     const [loading, setLoading] = useState(false);
     const isEditMode = selectedDepartment !== null;
+    console.log(isEditMode)
 
     useEffect(() => {
         if (isEditMode) {
@@ -27,7 +28,11 @@ const DepartmentAddEdit = ({
             setDepartmentDescription("");
         }
     }, [selectedDepartment, visible]);
+    // the effect re-runs whenever:
 
+    // A new department is selected (selectedDepartment changes).
+    
+    // Or the dialog/modal opens/closes (visible changes).
     const handleSave = async () => {
         if (!departmentName.trim()) {
             // You can add toast notification here if needed
@@ -37,8 +42,7 @@ const DepartmentAddEdit = ({
         setLoading(true);
         try {
             if (isEditMode ) {
-                setDepartmentName(selectedDepartment.departmentName || "");
-            setDepartmentDescription(selectedDepartment.departmentDescription || "");
+              
                 await updateDepartment({
                     ...selectedDepartment,
                     departmentName: departmentName.trim(),
@@ -53,7 +57,13 @@ const DepartmentAddEdit = ({
                 });
                 console.log("Adding new department for clientId:", clientId);
             }
+//             // {
+//   clientId,
+//   departmentName,           // comes directly from state
+//   departmentDescription     // comes directly from state connecting to the adddepartment function in useDepartment.js
+// }
 
+                //That happens when you submit/save the form in your <Dialog>. Typically, you’ll have something like:
             onSuccess(); // Reload departments
             onHide(); // Close dialog
 
@@ -79,7 +89,7 @@ const DepartmentAddEdit = ({
                 label="Cancel"
                 icon="pi pi-times"
                 outlined
-                onClick={handleCancel}
+                onClick={handleCancel} // Reset form on cancel
                 disabled={loading}
             />
             <Button
@@ -113,7 +123,7 @@ const DepartmentAddEdit = ({
                     value={departmentName}
                     onChange={(e) => setDepartmentName(e.target.value)}
                 />
-
+                   {/* will store in departmentsname state that has been passed */}
             </div>
 
             <div className="field">
