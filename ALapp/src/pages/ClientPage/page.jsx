@@ -9,7 +9,7 @@ import { Toast } from 'primereact/toast';
 import { VIEW_MODES, getMenuItems } from '../Contact/constants/contactConstants';
 import { SplitButton } from 'primereact/splitbutton';
 
-const Dashboard = () => {
+const Client = () => {
   const [dialogVisible, setDialogVisible] = useState(false);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
   const [dialogMode, setDialogMode] = useState("add");
@@ -231,4 +231,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default Client;
