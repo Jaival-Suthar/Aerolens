@@ -18,20 +18,6 @@ const navItems = [
     description: "View Clients",
     size: "large"
   },
-  {
-    label: "Projects",
-    icon: "pi pi-briefcase",
-    path: "/projects",
-    description: "Manage your projects",
-    size: "large"
-  },
-  {
-    label: "Contact",
-    icon: "pi pi-cog",
-    path: "/contact",
-    description: "See Client Contacts",
-    size: "large"
-  },
 ];
 
 const AppNavbar = () => {
