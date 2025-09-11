@@ -8,7 +8,7 @@ import { getDepartments } from "../services/useDepartment";
 import DepartmentAddEdit from "./departmentAddEdit";
 import DepartmentDelete from "./departmentDelete";
 
-const DepartmentTable = ({ clientId,clientName,handleGoBack }) => {
+const DepartmentTable = ({ clientId,clientName, onBackClick }) => {
   const [departments, setDepartments] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
@@ -77,7 +77,7 @@ console.log(departments)
           outlined
           severity="secondary"
           icon="pi pi-arrow-left"
-          onClick={handleGoBack}
+          onClick={onBackClick}
           size="medium"
         />
           </div>

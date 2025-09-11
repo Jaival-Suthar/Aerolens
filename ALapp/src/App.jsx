@@ -4,7 +4,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import AppNavbar from './AppNavbar';
 import Client from './pages/ClientPage/page';
 import Dashboard from './pages/Dashboard/page';
-import Client from './pages/ClientPage/page';
 import Contact from './pages/Contact/page';
 import { PrimeReactProvider } from 'primereact/api';
 import 'primereact/resources/themes/saga-blue/theme.css';
