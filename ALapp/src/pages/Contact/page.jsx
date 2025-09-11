@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import ClientTable from '../Dashboard/components/clientTable';
+import ClientTable from '../ClientPage/components/clientTable';
 import ClientContactsView from './components/clientContactsView';
 import { VIEW_MODES, getMenuItems } from './constants/contactConstants';
 import { SplitButton } from 'primereact/splitbutton';
@@ -41,10 +41,10 @@ const Page = () => {
               aria-label="Settings"
             />
           </div>
-          <ClientTable 
+          {/* <ClientTable 
             selectedClient={selectedClient} 
             onSelectionChange={handleClientSelect} 
-          />
+          /> */}
         </>
       )}
 

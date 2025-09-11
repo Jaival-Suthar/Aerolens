@@ -2,6 +2,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AppNavbar from './AppNavbar';
+import Client from './pages/ClientPage/page';
 import Dashboard from './pages/Dashboard/page';
 import Contact from './pages/Contact/page';
 import { PrimeReactProvider } from 'primereact/api';
@@ -45,6 +46,7 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/client" element={<Client />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="*" element={<NotFound />} />
