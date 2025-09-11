@@ -11,17 +11,6 @@ import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
 import 'primeflex/primeflex.css';
 
-// Placeholder components for other routes
-const Projects = () => (
-  <div className="p-2">
-    <div className="card">
-      <h2>Projects</h2>
-      <p>Projects component will be implemented here.</p>
-    </div>
-  </div>
-);
-
-
 const NotFound = () => (
   <div className="flex flex-column align-items-center justify-content-center h-screen">
     <i className="pi pi-exclamation-triangle text-6xl text-orange-500 mb-3"></i>
@@ -47,6 +36,7 @@ const App = () => {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/client" element={<Client />} />
+              <Route path="/contact" element={<Contact />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>

@@ -8,6 +8,7 @@ import { createClient, updateClient, deleteClient } from './services/clientServi
 import { Toast } from 'primereact/toast';
 import { VIEW_MODES, getMenuItems } from '../Contact/constants/contactConstants';
 import { SplitButton } from 'primereact/splitbutton';
+import DepartmentTable from '../Department/components/departmentTable';
 
 const Client = () => {
   const [dialogVisible, setDialogVisible] = useState(false);
@@ -208,15 +209,11 @@ const Client = () => {
           )}
 
           {activeView === VIEW_MODES.DEPARTMENT && selectedClient && (
-            <div>
-              <button
-                onClick={handleBackToClients}
-                className="mb-3 p-button p-button-secondary"
-              >
-                &larr; Back to Clients
-              </button>
-              <h3>Department view under construction</h3>
-            </div>
+            <DepartmentTable
+            clientId={selectedClient.clientId}
+            clientName={selectedClient.clientName}
+            onBackClick={handleBackToClients}
+          />
           )}
         </div>
 
