@@ -6,9 +6,16 @@ import { Button } from "primereact/button";
 const navItems = [
   {
     label: "Dashboard",
-    icon: "pi pi-home",
+    icon: "pi pi-id-card",
     path: "/dashboard",
-    description: "View dashboard and analytics",
+    description: "View Dashboard and Analytics",
+    size: "large"
+  },
+  {
+    label: "Client",
+    icon: "pi pi-id-card",
+    path: "/client",
+    description: "View Clients",
     size: "large"
   },
   {
@@ -19,10 +26,10 @@ const navItems = [
     size: "large"
   },
   {
-    label: "Reports",
-    icon: "pi pi-chart-line",
-    path: "/reports",
-    description: "Generate and view reports",
+    label: "Contact",
+    icon: "pi pi-cog",
+    path: "/contact",
+    description: "See Client Contacts",
     size: "large"
   },
 ];

@@ -2,7 +2,9 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AppNavbar from './AppNavbar';
+import Client from './pages/ClientPage/page';
 import Dashboard from './pages/Dashboard/page';
+import Contact from './pages/Contact/page';
 import { PrimeReactProvider } from 'primereact/api';
 import 'primereact/resources/themes/saga-blue/theme.css';
 import 'primereact/resources/primereact.min.css';
@@ -19,14 +21,6 @@ const Projects = () => (
   </div>
 );
 
-const Reports = () => (
-  <div className="p-2">
-    <div className="card">
-      <h2>Reports</h2>
-      <p>Reports component will be implemented here.</p>
-    </div>
-  </div>
-);
 
 const NotFound = () => (
   <div className="flex flex-column align-items-center justify-content-center h-screen">
@@ -52,8 +46,9 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/client" element={<Client />} />
               <Route path="/projects" element={<Projects />} />
-              <Route path="/reports" element={<Reports />} />
+              <Route path="/contact" element={<Contact />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
