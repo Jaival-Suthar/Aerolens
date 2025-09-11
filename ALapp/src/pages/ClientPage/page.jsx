@@ -48,30 +48,48 @@ const Client = () => {
     setDialogVisible(true);
   };
 
-  const onSaveClient = async (client) => {
-    try {
-      if (dialogMode === "add") {
-        await createClient({
-          name: client.clientName?.trim() || "",
-          address: client.address?.trim() || ""
-        });
-        showSuccess("Client added successfully");
-      } else {
-        await updateClient({
-          id: client.clientId,
-          name: client.clientName?.trim() || "",
-          address: client.address?.trim() || ""
-        });
-        showSuccess("Client updated successfully");
+ const onSaveClient = async (client) => {
+  try {
+    if (dialogMode === "add") {
+      await createClient({
+        name: client.clientName?.trim() || "",
+        address: client.address?.trim() || "",
+      });
+      showSuccess("Client added successfully");
+    } else {
+      // Prepare update data with only non-empty values
+      const clientIdNum = Number(client.clientId);
+      if (!clientIdNum || isNaN(clientIdNum)) {
+        showError("Invalid client ID. Cannot update client.");
+        return;
       }
-      setRefreshTrigger(prev => prev + 1);
-      setDialogVisible(false);
-      setEditClient(null);
-    } catch (error) {
-      console.error("Error saving client:", error);
-      showError("Failed to save client. Please try again.");
+
+      const updateData = { id: clientIdNum };
+
+      const trimmedName = client.clientName?.trim();
+      const trimmedAddress = client.address?.trim();
+
+      if (trimmedName) updateData.name = trimmedName;
+      if (trimmedAddress) updateData.address = trimmedAddress;
+
+      if (!updateData.name && !updateData.address) {
+        showError("Please provide at least a name or address to update.");
+        return;
+      }
+
+      await updateClient(updateData);
+      showSuccess("Client updated successfully");
     }
-  };
+
+    setRefreshTrigger((prev) => prev + 1);
+    setDialogVisible(false);
+    setEditClient(null);
+  } catch (error) {
+    console.error("Error saving client:", error);
+    showError("Failed to save client. Please try again.");
+  }
+};
+
 
   const handleEdit = (client) => {
     if (!client) return;

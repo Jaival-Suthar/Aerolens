@@ -39,21 +39,49 @@ export const createClient = async ({ name, address }) => {
 
 // Update existing client
 export const updateClient = async ({ id, name, address }) => {
+  // Question every requirement
+  if (!id || typeof id !== "number") {
+    throw new Error("Client ID is required and must be a number for update");
+  }
+  if (!name && !address) {
+    throw new Error("At least one of 'name' or 'address' must be provided for update");
+  }
+  // Simplify payload
+  const body = {};
+  if (name) body.name = name;
+  if (address) body.address = address;
+
+  const url = `${API_URL}/client/${id}`;
+  console.log("PATCHing client with URL:", url, "Payload:", body);
+
   try {
-    const response = await fetch(`${API_URL}/client`, {
+    const response = await fetch(url, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, name, address }),
+      body: JSON.stringify(body),
     });
+
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error("Failed to update client: " + errorText);
+      let errorText;
+      try {
+        errorText = await response.text();
+      } catch {
+        errorText = "Unknown error";
+      }
+      console.error("Update failed at physics level:", response.status, errorText);
+      throw new Error(`Failed to update client: ${response.status} ${errorText}`);
     }
+
+    const data = await response.json();
+    console.log("PATCH succeeded:", data);
+    return data;
   } catch (error) {
-    console.error(error);
+    // No excuses
+    console.error("Mission-critical failure in updateClient:", error);
     throw error;
   }
 };
+
 
 // Delete client by ID
 export const deleteClient = async (id) => {
