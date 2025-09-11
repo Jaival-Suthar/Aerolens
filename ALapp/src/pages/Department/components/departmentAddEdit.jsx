@@ -15,6 +15,8 @@ const DepartmentAddEdit = ({
     //input field states that will be used for edit and add department
     const [departmentName, setDepartmentName] = useState("");
     const [departmentDescription, setDepartmentDescription] = useState("");
+    const [submitted, setSubmitted] = useState(false); // <-- track if user tried to save
+
     // const [loading, setLoading] = useState(false);
     const isEditMode = selectedDepartment !== null;
     console.log(isEditMode)
@@ -36,12 +38,8 @@ const DepartmentAddEdit = ({
     
     // Or the dialog/modal opens/closes (visible changes).
     const handleSave = async () => {
-        if (!departmentName.trim()) {
-            // You can add toast notification here if needed
-            return;
-        }
-
-        // setLoading(true);
+        setSubmitted(true); // 👈 turn on validation
+        // this state is used to conditionally apply the "p-invalid" class to the input fields and show error messages if they are empty when the user tries to save.
         try {
             if (isEditMode ) {
                 await updateDepartment({
@@ -96,7 +94,7 @@ const DepartmentAddEdit = ({
                 icon={isEditMode ? "pi pi-check" : "pi pi-plus"}
                 onClick={handleSave}
                 // loading={loading}
-                disabled={!departmentName.trim()}
+                disabled={!departmentName.trim()&& !departmentDescription.trim()}
             />
         </div>
 
@@ -122,9 +120,10 @@ const DepartmentAddEdit = ({
     onChange={(e) => setDepartmentName(e.target.value)}
     placeholder="Enter department name"
     required
-    className={!departmentName ? "p-invalid" : ""}
+    className={submitted && !departmentName ? "p-invalid" : ""}
+    //this will add a red border to the input field if the user has tried to submit the form without filling it out and the departmnetName is empty
   />
-  {!departmentName && (
+  { submitted &&!departmentName && (
     <small className="p-error">Department Name is required.</small>
   )}
 </div>
@@ -138,11 +137,11 @@ const DepartmentAddEdit = ({
     value={departmentDescription}
     onChange={(e) => setDepartmentDescription(e.target.value)}
     placeholder="Enter department description"
-    rows={4}
     required
-    className={!departmentDescription ? "p-invalid" : ""}
+    className={submitted && !departmentDescription ? "p-invalid" : ""}
+    //this will add a red border to the input field if the user has tried to submit the form without filling it out and the departmnetDescription is empty
   />
-  {!departmentDescription && (
+  { submitted && !departmentDescription && (
     <small className="p-error">Department Description is required.</small>
   )}
 </div>
