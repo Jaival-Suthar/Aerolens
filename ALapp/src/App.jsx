@@ -2,6 +2,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AppNavbar from './AppNavbar';
+import Client from './pages/ClientPage/page';
 import Dashboard from './pages/Dashboard/page';
 import Client from './pages/ClientPage/page';
 import Contact from './pages/Contact/page';
