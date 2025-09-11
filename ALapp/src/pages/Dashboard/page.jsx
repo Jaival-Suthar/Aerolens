@@ -27,18 +27,20 @@ const Dashboard = () => {
   const showError = (message) => {
     toast.current?.show({severity:'error', summary: 'Error', detail: message});
   };
+
   const handleBackToClients = () => {
-      setActiveView(VIEW_MODES.TABLE);
-      setSelectedClient(null);
-    };
+    setActiveView(VIEW_MODES.TABLE);
+    setSelectedClient(null);
+  };
+
+  // Now menuItems will properly trigger view changes
   const menuItems = getMenuItems((view) => {
-      if (view === VIEW_MODES.CONTACTS && !selectedClient) {
-        // Block navigation if no client selected
-        alert('Please select a client first.');
-        return;
-      }
-      setActiveView(view);
-    });
+    if ((view === VIEW_MODES.CONTACTS || view === VIEW_MODES.DEPARTMENT) && !selectedClient) {
+      alert('Please select a client first.');
+      return;
+    }
+    setActiveView(view);
+  });
 
   const handleAdd = () => {
     setDialogMode("add");
@@ -49,14 +51,12 @@ const Dashboard = () => {
   const onSaveClient = async (client) => {
     try {
       if (dialogMode === "add") {
-        // Create new client - map clientName to name for API
         await createClient({
           name: client.clientName?.trim() || "",
           address: client.address?.trim() || ""
         });
         showSuccess("Client added successfully");
       } else {
-        // Update existing client - map clientName to name for API
         await updateClient({
           id: client.clientId,
           name: client.clientName?.trim() || "",
@@ -64,8 +64,6 @@ const Dashboard = () => {
         });
         showSuccess("Client updated successfully");
       }
-      
-      // Refresh the table and close dialog
       setRefreshTrigger(prev => prev + 1);
       setDialogVisible(false);
       setEditClient(null);
@@ -113,122 +111,122 @@ const Dashboard = () => {
     setSelectedClient(client);
   };
 
+  // Single card controls and main view swapping
   return (
     <>
-    <div className="dashboard-container shadow-3 p-4" style={{ width: "100%", maxWidth: "100%" }}>
-      <Toast ref={toast} />
-      
-      <div className="flex justify-content-between align-items-center mb-4 w-full">
-        <div className="flex align-items-center gap-3">
+      <div className="dashboard-container shadow-3 p-4" style={{ width: "100%", maxWidth: "100%" }}>
+        <Toast ref={toast} />
+
+        <div className="flex justify-content-between align-items-center mb-4 w-full">
+          {activeView === VIEW_MODES.TABLE && (
+            <>
+              <div className="flex align-items-center gap-3">
+                <SplitButton
+                  icon="pi pi-cog"
+                  model={menuItems}
+                  tooltip="Settings"
+                  tooltipOptions={{ position: 'bottom' }}
+                  disabled={!selectedClient}
+                  aria-label="Settings"
+                />
               </div>
+              <div className="flex gap-2 mr-6">
+                <Button
+                  rounded
+                  severity="success"
+                  icon="pi pi-plus"
+                  size="large"
+                  className="font-medium mr-1"
+                  onClick={handleAdd}
+                  aria-label="Add"
+                  tooltip="Add Client"
+                  tooltipOptions={{ position: 'bottom' }}
+                />
+                <Button
+                  icon="pi pi-pencil"
+                  rounded
+                  text
+                  severity="info"
+                  size="large"
+                  aria-label="Edit"
+                  disabled={!selectedClient}
+                  onClick={handleEditSelected}
+                  tooltip="Edit Selected Client"
+                  tooltipOptions={{position: 'bottom'}}
+                />
+                <Button
+                  icon="pi pi-trash"
+                  rounded
+                  text
+                  severity="danger"
+                  size="large"
+                  aria-label="Delete"
+                  disabled={!selectedClient}
+                  onClick={handleDeleteSelected}
+                  tooltip="Delete Selected Client"
+                  tooltipOptions={{position: 'bottom'}}
+                />
+              </div>
+            </>
+          )}
+        </div>
 
-        <div className="flex gap-2 mr-6">
-            {activeView === VIEW_MODES.TABLE && (
-        <>
-          <div className="mb-4">
-            <SplitButton
-              icon="pi pi-cog"
-              model={menuItems}
-              tooltip="Settings"
-              tooltipOptions={{ position: 'bottom' }}
-              disabled={!selectedClient}
-              aria-label="Settings"
+
+        <div className="card">
+          {activeView === VIEW_MODES.TABLE && (
+            <ClientTable
+              onEdit={handleEdit}
+              refreshTrigger={refreshTrigger}
+              selectedClient={selectedClient}
+              onSelectionChange={onSelectionChange}
             />
-          </div>
-          {/* <ClientTable 
-            selectedClient={selectedClient} 
-            onSelectionChange={handleClientSelect} 
-          /> */}
-        </>
-      )}
+          )}
 
-      {activeView === VIEW_MODES.CONTACTS && selectedClient && (
-        <ClientContactsView selectedClient={selectedClient} onBackClick={handleBackToClients} />
-      )}
+          {activeView === VIEW_MODES.CONTACTS && selectedClient && (
+            <ClientContactsView
+              selectedClient={selectedClient}
+              onBackClick={handleBackToClients}
+            />
+          )}
 
-      {activeView === VIEW_MODES.DEPARTMENT && (
-        <div>
-          <button onClick={handleBackToClients} className="mb-3 p-button p-button-secondary">
-            &larr; Back to Clients
-          </button>
-          <h3>Department view under construction</h3>
+          {activeView === VIEW_MODES.DEPARTMENT && selectedClient && (
+            <div>
+              <button
+                onClick={handleBackToClients}
+                className="mb-3 p-button p-button-secondary"
+              >
+                &larr; Back to Clients
+              </button>
+              <h3>Department view under construction</h3>
+            </div>
+          )}
         </div>
-      )}
-            <Button
-            rounded
-            text={false} // remove `text` for strong color fill
-            severity="success" // success is green in PrimeReact
-            outlined={false}
-            icon="pi pi-plus"
-            size="large"
-            className="font-medium mr-1"
-            onClick={handleAdd}
-            aria-label="Add"
-            tooltip="Add Client"
-            tooltipOptions={{ position: 'bottom' }}
-          />
 
-          <Button
-            icon="pi pi-pencil"
-            rounded
-            text
-            severity="info"
-            size="large"
-            aria-label="Edit"
-            disabled={!selectedClient}
-            onClick={handleEditSelected}
-            tooltip="Edit Selected Client"
-            tooltipOptions={{position: 'bottom'}}
+        {dialogVisible && (
+          <ClientAddEdit
+            visible={dialogVisible}
+            onHide={() => {
+              setDialogVisible(false);
+              setEditClient(null);
+            }}
+            onSave={onSaveClient}
+            mode={dialogMode}
+            client={editClient}
           />
-          <Button
-            icon="pi pi-trash"
-            rounded
-            text
-            severity="danger"
-            size="large"
-            aria-label="Delete"
-            disabled={!selectedClient}
-            onClick={handleDeleteSelected}
-            tooltip="Delete Selected Client"
-            tooltipOptions={{position: 'bottom'}}
+        )}
+
+        {deleteDialogVisible && (
+          <ClientDelete
+            visible={deleteDialogVisible}
+            onHide={() => {
+              setDeleteDialogVisible(false);
+              setClientToDelete(null);
+            }}
+            onDelete={onDeleteClient}
+            client={clientToDelete}
           />
-        </div>
+        )}
       </div>
-
-      <div className="card">
-        <ClientTable 
-          onEdit={handleEdit} 
-          refreshTrigger={refreshTrigger}
-          selectedClient={selectedClient}
-          onSelectionChange={onSelectionChange}
-        />
-      </div>
-
-      {dialogVisible && (
-        <ClientAddEdit
-          visible={dialogVisible}
-          onHide={() => {
-            setDialogVisible(false);
-            setEditClient(null);
-          }}
-          onSave={onSaveClient}
-          mode={dialogMode}
-          client={editClient}
-        />
-      )}
-
-      {deleteDialogVisible && (
-        <ClientDelete
-          visible={deleteDialogVisible}
-          onHide={() => {
-            setDeleteDialogVisible(false);
-            setClientToDelete(null);
-          }}
-          onDelete={onDeleteClient}
-          client={clientToDelete}
-        />
-      )}
-    </div>
     </>
   );
 };
