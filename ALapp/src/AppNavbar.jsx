@@ -5,10 +5,10 @@ import { Button } from "primereact/button";
 
 const navItems = [
   {
-    label: "Dashboard",
-    icon: "pi pi-home",
-    path: "/dashboard",
-    description: "View dashboard and analytics",
+    label: "Client",
+    icon: "pi pi-id-card",
+    path: "/client",
+    description: "View Clients",
     size: "large"
   },
   {

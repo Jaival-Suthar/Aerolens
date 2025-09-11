@@ -6,7 +6,7 @@ import { Button } from 'primereact/button';
 import { createClient, updateClient, deleteClient } from './services/clientService';
 import { Toast } from 'primereact/toast';
 
-const Dashboard = () => {
+const Client = () => {
   const [dialogVisible, setDialogVisible] = useState(false);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
   const [dialogMode, setDialogMode] = useState("add");
@@ -177,4 +177,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default Client;
