@@ -19,13 +19,6 @@ const navItems = [
     size: "large"
   },
   {
-    label: "Department",
-    icon: "pi pi-sitemap",
-    path: "/department",
-    description: "View Departments",
-    size: "large"
-  },
-  {
     label: "Contact",
     icon: "pi pi-cog",
     path: "/contact",
