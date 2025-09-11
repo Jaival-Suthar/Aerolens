@@ -145,6 +145,7 @@ const DepartmentAddEdit = ({
     <small className="p-error">Department Description is required.</small>
   )}
 </div>
+   {/* this will check the asme condition as classname and will make sure the actual message prints. Or else only a red border will show. */}
 
         </Dialog>
     );
