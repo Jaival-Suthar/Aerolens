@@ -2,9 +2,12 @@ import { useState, useRef } from 'react';
 import ClientTable from './components/clientTable';
 import ClientAddEdit from './components/clientAddEdit';
 import ClientDelete from './components/clientDelete';
+import ClientContactsView from '../Contact/components/clientContactsView';
 import { Button } from 'primereact/button';
 import { createClient, updateClient, deleteClient } from './services/clientService';
 import { Toast } from 'primereact/toast';
+import { VIEW_MODES, getMenuItems } from '../Contact/constants/contactConstants';
+import { SplitButton } from 'primereact/splitbutton';
 
 const Client = () => {
   const [dialogVisible, setDialogVisible] = useState(false);
@@ -14,6 +17,7 @@ const Client = () => {
   const [clientToDelete, setClientToDelete] = useState(null);
   const [selectedClient, setSelectedClient] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [activeView, setActiveView] = useState(VIEW_MODES.TABLE);
   const toast = useRef(null);
 
   const showSuccess = (message) => {
@@ -23,6 +27,18 @@ const Client = () => {
   const showError = (message) => {
     toast.current?.show({severity:'error', summary: 'Error', detail: message});
   };
+  const handleBackToClients = () => {
+      setActiveView(VIEW_MODES.TABLE);
+      setSelectedClient(null);
+    };
+  const menuItems = getMenuItems((view) => {
+      if (view === VIEW_MODES.CONTACTS && !selectedClient) {
+        // Block navigation if no client selected
+        alert('Please select a client first.');
+        return;
+      }
+      setActiveView(view);
+    });
 
   const handleAdd = () => {
     setDialogMode("add");
@@ -98,6 +114,7 @@ const Client = () => {
   };
 
   return (
+    <>
     <div className="dashboard-container shadow-3 p-4" style={{ width: "100%", maxWidth: "100%" }}>
       <Toast ref={toast} />
       
@@ -106,6 +123,37 @@ const Client = () => {
               </div>
 
         <div className="flex gap-2 mr-6">
+            {activeView === VIEW_MODES.TABLE && (
+        <>
+          <div className="mb-4">
+            <SplitButton
+              icon="pi pi-cog"
+              model={menuItems}
+              tooltip="Settings"
+              tooltipOptions={{ position: 'bottom' }}
+              disabled={!selectedClient}
+              aria-label="Settings"
+            />
+          </div>
+          {/* <ClientTable 
+            selectedClient={selectedClient} 
+            onSelectionChange={handleClientSelect} 
+          /> */}
+        </>
+      )}
+
+      {activeView === VIEW_MODES.CONTACTS && selectedClient && (
+        <ClientContactsView selectedClient={selectedClient} onBackClick={handleBackToClients} />
+      )}
+
+      {activeView === VIEW_MODES.DEPARTMENT && (
+        <div>
+          <button onClick={handleBackToClients} className="mb-3 p-button p-button-secondary">
+            &larr; Back to Clients
+          </button>
+          <h3>Department view under construction</h3>
+        </div>
+      )}
             <Button
             rounded
             text={false} // remove `text` for strong color fill
@@ -181,6 +229,7 @@ const Client = () => {
         />
       )}
     </div>
+    </>
   );
 };
 
