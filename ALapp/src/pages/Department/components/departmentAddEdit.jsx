@@ -19,7 +19,7 @@ const DepartmentAddEdit = ({
 
     // const [loading, setLoading] = useState(false);
     const isEditMode = selectedDepartment !== null;
-    console.log(isEditMode)
+    //console.log(isEditMode)
 
     useEffect(() => {
         if (isEditMode) {
@@ -47,14 +47,14 @@ const DepartmentAddEdit = ({
                     departmentName: departmentName.trim(),
                     departmentDescription: departmentDescription.trim()
                 });
-                console.log(`Department "${departmentName}" updated successfully`);
+                //console.log(`Department "${departmentName}" updated successfully`);
             } else {
                 await addDepartment({
                     clientId,
                     departmentName,
                     departmentDescription
                 });
-                console.log("Adding new department for clientId:", clientId);
+                //console.log("Adding new department for clientId:", clientId);
             }
 //       // {
 //   clientId, //primary key from parent component departmentTable.jsx

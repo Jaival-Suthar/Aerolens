@@ -28,7 +28,7 @@ const DepartmentTable = ({ clientId,clientName, onBackClick }) => {
       console.error("Error loading departments:", error);
     }
   };
-console.log(departments)
+//console.log(departments)
 
   const handleAdd = () => {
     setShowAddEditDialog(true);
@@ -37,7 +37,7 @@ console.log(departments)
   const handleEdit = () => {
     if (!selectedDepartment) return;
      // Set selected department for edit mode
-     console.log("Editing department:", selectedDepartment);
+     //console.log("Editing department:", selectedDepartment);
       setEditingDepartment(selectedDepartment); // Set the department to be edited
     setShowAddEditDialog(true);
   };
