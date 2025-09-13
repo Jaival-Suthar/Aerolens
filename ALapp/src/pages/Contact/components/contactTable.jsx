@@ -59,7 +59,7 @@ const ContactTable = ({
         loading={loading}
         responsiveLayout="scroll"
         stripedRows
-        className="text-sm shadow-2"
+        className="text-sm"
         paginator={true}
         rows={rowsPerPage}
         onPage={onPageChange}

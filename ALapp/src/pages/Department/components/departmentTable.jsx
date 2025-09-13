@@ -94,8 +94,13 @@ const DepartmentTable = ({ clientId,clientName, onBackClick }) => {
               outlined={false}
               className="font-medium"
               disabled={!clientId}
+              style={{
+                backgroundColor: '#d4edda', // pastel green
+                borderColor: '#c3e6cb',
+                color: '#155724',
+              }}
               aria-label="Add"
-              tooltip="Add Department"
+              tooltip="Add"
               tooltipOptions={{ position: "bottom" }}
             />
             <Button
@@ -105,8 +110,15 @@ const DepartmentTable = ({ clientId,clientName, onBackClick }) => {
               size="large"
               onClick={handleEdit}
               disabled={!selectedDepartment}
+              style={{
+                backgroundColor: '#d1ecf1',  // pastel blue
+                borderColor: '#bee5eb',
+                color: '#0c5460',
+                borderWidth: '1.5px',
+                borderStyle: 'solid'
+              }}
               aria-label="Edit"
-              tooltip="Edit Department"
+              tooltip="Edit"
               tooltipOptions={{ position: "bottom" }}
             />
             <Button
@@ -117,14 +129,21 @@ const DepartmentTable = ({ clientId,clientName, onBackClick }) => {
               severity="danger"
               onClick={handleDelete}
               disabled={!selectedDepartment}
+              style={{
+                backgroundColor: '#f8d7da',  // pastel red
+                borderColor: '#f5c6cb',
+                color: '#721c24',
+                borderWidth: '1.5px',
+                borderStyle: 'solid'
+              }}
               aria-label="Delete"
-              tooltip="Delete Department"
+              tooltip="Delete"
               tooltipOptions={{ position: "bottom" }}
             />
           </div>
         </div>
 
-        <h2> Departments for: {clientName}</h2>
+        <h4 className="mb-3"> Departments for: {clientName}</h4>
         <DataTable
           value={departments}
           paginator

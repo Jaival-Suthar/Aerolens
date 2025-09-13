@@ -138,7 +138,7 @@ const ClientContactsView = ({ selectedClient, onBackClick }) => {
 
   if (!selectedClient) {
     return (
-      <div className="dashboard-container shadow-3 p-4" style={{ width: '100%', maxWidth: '100%' }}>
+      <div className="dashboard-container p-2" style={{ width: '100%', maxWidth: '100%' }}>
         <ContactViewHeader onBackClick={onBackClick} />
         <div className="text-center p-4">Please select a client to view contacts.</div>
       </div>
@@ -146,7 +146,7 @@ const ClientContactsView = ({ selectedClient, onBackClick }) => {
   }
 
   return (
-    <div className="dashboard-container shadow-3 p-4" style={{ width: '100%', maxWidth: '100%' }}>
+    <div className="dashboard-container p-2" style={{ width: '100%', maxWidth: '100%' }}>
       <Toast ref={toast} />
 
       <ContactViewHeader

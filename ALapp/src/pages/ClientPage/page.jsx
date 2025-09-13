@@ -157,8 +157,13 @@ const Client = () => {
                   size="large"
                   className="font-medium mr-1"
                   onClick={handleAdd}
+                  style={{
+                    backgroundColor: '#d4edda', // pastel green
+                    borderColor: '#c3e6cb',
+                    color: '#155724',
+                  }}
                   aria-label="Add"
-                  tooltip="Add Client"
+                  tooltip="Add"
                   tooltipOptions={{ position: 'bottom' }}
                 />
                 <Button
@@ -167,10 +172,17 @@ const Client = () => {
                   text
                   severity="info"
                   size="large"
+                  style={{
+                    backgroundColor: '#d1ecf1',  // pastel blue
+                    borderColor: '#bee5eb',
+                    color: '#0c5460',
+                    borderWidth: '1.5px',
+                    borderStyle: 'solid'
+                  }}
                   aria-label="Edit"
                   disabled={!selectedClient}
                   onClick={handleEditSelected}
-                  tooltip="Edit Selected Client"
+                  tooltip="Edit"
                   tooltipOptions={{position: 'bottom'}}
                 />
                 <Button
@@ -179,10 +191,17 @@ const Client = () => {
                   text
                   severity="danger"
                   size="large"
+                  style={{
+                    backgroundColor: '#f8d7da',  // pastel red
+                    borderColor: '#f5c6cb',
+                    color: '#721c24',
+                    borderWidth: '1.5px',
+                    borderStyle: 'solid'
+                  }}
                   aria-label="Delete"
                   disabled={!selectedClient}
                   onClick={handleDeleteSelected}
-                  tooltip="Delete Selected Client"
+                  tooltip="Delete"
                   tooltipOptions={{position: 'bottom'}}
                 />
               </div>
