@@ -1,5 +1,8 @@
 import React from 'react';
 import { Button } from 'primereact/button';
+import AddButton from '../../../shared/AddButton';
+import EditButton from '../../../shared/EditButton';
+import DeleteButton from '../../../shared/DeleteButton';
 
 const ContactViewHeader = ({ 
   onBackClick, 
@@ -25,7 +28,18 @@ const ContactViewHeader = ({
       </div>
 
       <div className="flex gap-2 mr-6">
-          <Button
+          <AddButton
+            onClick={onAddContact}
+          />
+          <EditButton
+            onClick={onEditContact}
+            disabled={!selectedContact?.clientContactId}
+          />
+          <DeleteButton
+            onClick={onDeleteContact}
+            disabled={!selectedContact?.clientContactId}
+          />
+          {/* <Button
           icon="pi pi-plus"
           rounded
           text={false} // false for filled button
@@ -80,7 +94,7 @@ const ContactViewHeader = ({
           onClick={onDeleteContact}
           tooltip="Delete"
           tooltipOptions={{position: 'bottom'}}
-        />
+        /> */}
       </div>
     </div>
   );

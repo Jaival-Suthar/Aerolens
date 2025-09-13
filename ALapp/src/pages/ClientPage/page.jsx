@@ -9,6 +9,9 @@ import { Toast } from 'primereact/toast';
 import { VIEW_MODES, getMenuItems } from '../Contact/constants/contactConstants';
 import { SplitButton } from 'primereact/splitbutton';
 import DepartmentTable from '../Department/components/departmentTable';
+import AddButton from '../../../src/shared/AddButton';
+import EditButton from '../../../src/shared/EditButton';
+import DeleteButton from '../../../src/shared/DeleteButton';
 
 const Client = () => {
   const [dialogVisible, setDialogVisible] = useState(false);
@@ -150,7 +153,18 @@ const Client = () => {
                 />
               </div>
               <div className="flex gap-2 mr-6">
-                <Button
+                <AddButton
+                  onClick={handleAdd}
+                />
+                <EditButton
+                  onClick={handleEditSelected}
+                  disabled={!selectedClient}
+                />
+                <DeleteButton
+                  onClick={handleDeleteSelected}
+                  disabled={!selectedClient}
+                /> 
+                {/* <Button
                   rounded
                   severity="success"
                   icon="pi pi-plus"
@@ -203,7 +217,7 @@ const Client = () => {
                   onClick={handleDeleteSelected}
                   tooltip="Delete"
                   tooltipOptions={{position: 'bottom'}}
-                />
+                /> */}
               </div>
             </>
           )}

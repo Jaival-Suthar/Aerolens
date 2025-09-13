@@ -7,6 +7,9 @@ import { Button } from "primereact/button";
 import { getDepartments } from "../services/useDepartment";
 import DepartmentAddEdit from "./departmentAddEdit";
 import DepartmentDelete from "./departmentDelete";
+import AddButton from "../../../shared/AddButton";
+import EditButton from "../../../shared/EditButton";
+import DeleteButton from "../../../shared/DeleteButton";
 
 const DepartmentTable = ({ clientId,clientName, onBackClick }) => {
   const [departments, setDepartments] = useState([]);
@@ -83,8 +86,19 @@ const DepartmentTable = ({ clientId,clientName, onBackClick }) => {
           </div>
           
           <div className="flex gap-2 ml-auto mr-6">
-          
-            <Button
+            <AddButton
+              onClick={handleAdd}
+              disabled={!clientId}
+            />
+            <EditButton
+              onClick={handleEdit}
+              disabled={!selectedDepartment}
+            />
+            <DeleteButton
+              onClick={handleDelete}
+              disabled={!selectedDepartment}
+            />
+            {/* <Button
               text={false}
               rounded
               icon="pi pi-plus"
@@ -139,7 +153,7 @@ const DepartmentTable = ({ clientId,clientName, onBackClick }) => {
               aria-label="Delete"
               tooltip="Delete"
               tooltipOptions={{ position: "bottom" }}
-            />
+            /> */}
           </div>
         </div>
 
