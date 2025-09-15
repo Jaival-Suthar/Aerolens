@@ -2,17 +2,23 @@ import React, { useState, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
+import { ClientAddEditProps, ClientType } from "../types/clientTypes";
 
-const ClientAddEdit = ({
-  visible = false,
-  onHide,
-  onSave,
-  mode = "add",
-  client = null
-}) => {
-  const [clientName, setClientName] = useState("");
-  const [address, setAddress] = useState("");
-  const [errors, setErrors] = useState({});
+
+
+const ClientAddEdit: React.FC<ClientAddEditProps> = ({ 
+    visible, 
+    onHide, 
+    onSave, 
+    mode = "add", 
+    client = null 
+  }) => {
+
+  const [clientName, setClientName] = useState<string>("");
+  const [address, setAddress] = useState<string>("");
+  const [errors, setErrors] = useState<{ clientName?: string; address?: string }>(
+    {}
+  );
 
   // Initialize form data when dialog opens or client changes
   useEffect(() => {
@@ -28,44 +34,38 @@ const ClientAddEdit = ({
     }
   }, [client, visible]);
 
-  const validateForm = () => {
-    const newErrors = {};
-    
-    if (!clientName || clientName.trim() === "") {
+  const validateForm = (): boolean => {
+    const newErrors: { clientName?: string; address?: string } = {};
+
+    if (!clientName.trim()) {
       newErrors.clientName = "Client Name is required";
     }
-    
-    if (!address || address.trim() === "") {
+
+    if (!address.trim()) {
       newErrors.address = "Address is required";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
-    if (!validateForm()) {
-      return;
-    }
+  const handleSubmit = (): void => {
+    if (!validateForm()) return;
 
-    const clientData = {
-      ...client, // Include existing client data (like clientId for edits)
+    const clientData: ClientType = {
+      ...client,
       clientName: clientName.trim(),
       address: address.trim(),
     };
 
-    if (onSave) {
-      onSave(clientData);
-    }
+    onSave(clientData);
   };
 
-  const handleCancel = () => {
+  const handleCancel = (): void => {
     setClientName("");
     setAddress("");
     setErrors({});
-    if (onHide) {
-      onHide();
-    }
+    onHide();
   };
 
   const dialogHeader = mode === "add" ? "Add New Client" : "Edit Client";
@@ -77,7 +77,7 @@ const ClientAddEdit = ({
       modal
       onHide={handleCancel}
       style={{ width: "30vw", minWidth: "300px" }}
-      breakpoints={{ '960px': '50vw', '641px': '90vw' }}
+      breakpoints={{ "960px": "50vw", "641px": "90vw" }}
     >
       <div className="p-fluid">
         <div className="field mb-3">
@@ -90,7 +90,7 @@ const ClientAddEdit = ({
             onChange={(e) => {
               setClientName(e.target.value);
               if (errors.clientName) {
-                setErrors(prev => ({ ...prev, clientName: null }));
+                setErrors((prev) => ({ ...prev, clientName: undefined }));
               }
             }}
             autoFocus
@@ -112,7 +112,7 @@ const ClientAddEdit = ({
             onChange={(e) => {
               setAddress(e.target.value);
               if (errors.address) {
-                setErrors(prev => ({ ...prev, address: null }));
+                setErrors((prev) => ({ ...prev, address: undefined }));
               }
             }}
             style={{ borderRadius: "8px" }}

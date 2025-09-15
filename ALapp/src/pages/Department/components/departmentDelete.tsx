@@ -1,20 +1,20 @@
-// src/pages/Department/components/DepartmentDelete.jsx
+// src/pages/Department/components/DepartmentDelete.tsx
 import React, { useState } from "react";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { deleteDepartment } from "../services/useDepartment";
+import { DepartmentDeleteProps } from "../types/departmentTypes";
 
-const DepartmentDelete = ({ 
-  visible, 
-  onHide, 
+const DepartmentDelete: React.FC<DepartmentDeleteProps> = ({
+  visible,
+  onHide,
   selectedDepartment,
-  departments, 
   onSuccess,
-  onClearSelection 
+  onClearSelection
 }) => {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const handleDelete = async () => {
+  const handleDelete = async (): Promise<void> => {
     if (!selectedDepartment) return;
 
     setLoading(true);
@@ -32,7 +32,7 @@ const DepartmentDelete = ({
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = (): void => {
     console.log("Deletion cancelled");
     onHide();
   };
@@ -64,15 +64,20 @@ const DepartmentDelete = ({
       footer={dialogFooter}
       style={{ width: "400px" }}
       modal
+      className="p-fluid"
     >
-      <div className="flex align-items-center">
-        <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: "2rem", color: "#f59e0b" }} />
+      <div className="confirmation-content">
+        <i 
+          className="pi pi-exclamation-triangle mr-3" 
+          style={{ fontSize: "2rem", color: "var(--yellow-500)" }} 
+        />
         <div>
-          <p className="m-0">
+          <div className="font-bold text-xl mb-2">Confirm Deletion</div>
+          <p className="mb-3">
             Are you sure you want to delete department{" "}
             <strong>"{selectedDepartment?.departmentName}"</strong>?
           </p>
-          <p className="text-sm text-600 mt-2 mb-0">
+          <p className="text-sm text-600">
             This action cannot be undone.
           </p>
         </div>

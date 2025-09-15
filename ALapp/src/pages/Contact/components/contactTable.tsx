@@ -1,51 +1,46 @@
 import React, { useState, useCallback } from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
+import type { DataTablePageEvent, DataTableRowClickEvent, DataTableSelectionSingleChangeEvent } from 'primereact/datatable';
+import type { Contact, ContactTableProps } from '../types/contactTypes';
 
-const ContactTable = ({
+const ContactTable: React.FC<ContactTableProps> = ({
   contacts = [],
   loading = false,
   selectedContact,
   onSelectionChange,
   onRowDoubleClick
 }) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(5);
 
   // Event handler for page changes
-  const onPageChange = useCallback((event) => {
-    setCurrentPage(event.page + 1); // PrimeReact uses 0-based indexing
+  const onPageChange = useCallback((event: DataTablePageEvent) => {
     setRowsPerPage(event.rows);
   }, []);
 
-  const onSelectionChangeHandler = useCallback((e) => {
-    const selectedContactData = e.value;
-    if (selectedContactData && !selectedContactData.clientContactId) {
-      console.error('Selected contact is missing clientContactId:', selectedContactData);
-      return;
-    }
+  const onSelectionChangeHandler = useCallback((e: DataTableSelectionSingleChangeEvent<Contact[]>) => {
     if (onSelectionChange) {
-      onSelectionChange(selectedContactData);
+      onSelectionChange(e.value as Contact | null);
     }
   }, [onSelectionChange]);
 
-  const onRowDoubleClickHandler = useCallback((e) => {
+  const onRowDoubleClickHandler = useCallback((e: DataTableRowClickEvent) => {
     if (onRowDoubleClick && e.data) {
-      onRowDoubleClick(e.data);
+      onRowDoubleClick(e.data as Contact);
     }
   }, [onRowDoubleClick]);
 
   const cellClass = "py-1 px-2";
   const headerClass = "py-1 px-2 font-semibold";
 
-  const contactPersonTemplate = (rowData) => (
+  const contactPersonTemplate = (rowData: Contact) => (
     <div>
       <div className="font-medium">{rowData.contactPersonName}</div>
       <div className="text-sm text-gray-600">{rowData.email}</div>
     </div>
   );
 
-  const designationTemplate = (rowData) => (
+  const designationTemplate = (rowData: Contact) => (
     <div>
       <div className="font-medium">{rowData.designation}</div>
       <div className="text-sm text-gray-600">{rowData.phone}</div>

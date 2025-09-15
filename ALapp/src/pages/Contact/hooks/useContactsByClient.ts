@@ -1,8 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import useContact from '../services/useContact';
+import type { Contact, ApiResponse } from '../types/contactTypes';
 
-export const useContactsByClient = (clientId, refreshTrigger) => {
-  const [contacts, setContacts] = useState([]);
+// Define the expected shape of getClientDetails response data
+interface ClientDetailsResponse {
+  clientContacts: Contact[];
+}
+
+export const useContactsByClient = (clientId: number | undefined, refreshTrigger: number) => {
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const { getClientDetails, loading, error, clearError } = useContact();
 
   const loadContacts = useCallback(async () => {
@@ -11,14 +17,9 @@ export const useContactsByClient = (clientId, refreshTrigger) => {
       return;
     }
     try {
-      const response = await getClientDetails(clientId);
+      const response: ApiResponse<ClientDetailsResponse> = await getClientDetails(clientId);
       if (response.success && response.data?.clientContacts) {
-        const contactsWithIds = response.data.clientContacts.map((contact, idx) => ({
-          ...contact,
-          clientContactId: contact.clientContactId || contact.id || `temp-${idx}`,
-          clientId: contact.clientId || clientId,
-        }));
-        setContacts(contactsWithIds);
+        setContacts(response.data.clientContacts);
       } else {
         setContacts([]);
       }

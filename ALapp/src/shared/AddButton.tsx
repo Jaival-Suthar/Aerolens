@@ -1,7 +1,13 @@
 import React from 'react';
 import { Button } from 'primereact/button';
 
-const AddButton = ({ onClick, disabled, tooltip }) => (
+type AddButtonProps = {
+  onClick: React.MouseEventHandler<HTMLButtonElement>;
+  disabled?: boolean;
+  tooltip?: string;
+};
+
+const AddButton: React.FC<AddButtonProps> = ({ onClick, disabled, tooltip }) => (
   <Button
     icon="pi pi-plus"
     rounded

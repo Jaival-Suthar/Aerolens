@@ -1,13 +1,18 @@
 import React, { useEffect, useCallback } from "react";
-import { DataTable } from "primereact/datatable";
+import { DataTable, type DataTableSelectionSingleChangeEvent, type DataTableRowClickEvent } from "primereact/datatable";
 import { Column } from "primereact/column";
-import { Paginator } from "primereact/paginator";
+import { Paginator, type PaginatorPageChangeEvent } from "primereact/paginator";
 import { useClientData } from "../hooks/useClientData";
 import { usePagination } from "../hooks/usePagination";
+import type { ClientTableProps, ClientType } from "../types/clientTypes";
 
-const ClientTable = ({ onEdit, refreshTrigger = 0, selectedClient, onSelectionChange }) => {
-  // Custom hooks
-  const { clients, loading, error, loadClients, setError } = useClientData(refreshTrigger);
+const ClientTable: React.FC<ClientTableProps> = ({
+  onEdit,
+  refreshTrigger = 0,
+  selectedClient,
+  onSelectionChange,
+}) => {
+  const { clients, loading, error, loadClients } = useClientData();
   const {
     pagination,
     getInitialPagination,
@@ -15,69 +20,59 @@ const ClientTable = ({ onEdit, refreshTrigger = 0, selectedClient, onSelectionCh
     savePaginationPreferences,
     updatePaginationFromResponse,
     resetPaginationOnError,
-    searchParams
+    searchParams,
   } = usePagination();
 
-  // Load clients when URL params change or component refreshes
   useEffect(() => {
     const loadData = async () => {
-      const currentPagination = getInitialPagination();
-      const { currentPage, limit } = currentPagination;
-      
+      const { currentPage, limit } = getInitialPagination();
       try {
-        // Load data with current pagination
         const response = await loadClients(currentPage, limit);
-        
-        // Update pagination state based on response
-        updatePaginationFromResponse(response, currentPage, limit);
-        
-        // Save preferences
+        updatePaginationFromResponse(
+          { ...response, pagination: response.pagination ?? {} },
+          currentPage,
+          limit
+        );
         savePaginationPreferences(currentPage, limit);
-      } catch (error) {
-        // Reset pagination on error
+      } catch {
         resetPaginationOnError(currentPage, limit);
       }
     };
-
     loadData();
   }, [
-    searchParams, 
-    refreshTrigger, 
-    getInitialPagination, 
-    loadClients, 
+    searchParams,
+    refreshTrigger,
+    getInitialPagination,
+    loadClients,
     savePaginationPreferences,
     updatePaginationFromResponse,
-    resetPaginationOnError
+    resetPaginationOnError,
   ]);
 
-  // Paginator change handler
-  const onPageChange = useCallback((event) => {
-    const newPage = event.page + 1; // PrimeReact uses 0-based indexing
-    const newLimit = event.rows;
-    
-    console.log(`Page change: page=${newPage}, limit=${newLimit}`);
-    
-    // Update URL params (this will trigger useEffect to load data)
-    updateUrlParams(newPage, newLimit);
-    
-    // Save preferences
-    savePaginationPreferences(newPage, newLimit);
-  }, [updateUrlParams, savePaginationPreferences]);
+  const onPageChange = useCallback(
+    (event: PaginatorPageChangeEvent) => {
+      const newPage = event.page + 1; // zero-based → one-based
+      const newLimit = event.rows;
+      updateUrlParams(newPage, newLimit);
+      savePaginationPreferences(newPage, newLimit);
+    },
+    [updateUrlParams, savePaginationPreferences]
+  );
 
-  // Selection change handler
-  const onSelectionChangeHandler = useCallback((e) => {
-    console.log("Selection changed:", e.value);
-    if (onSelectionChange) {
-      onSelectionChange(e.value);
-    }
-  }, [onSelectionChange]);
+  const onSelectionChangeHandler = useCallback(
+    (e: DataTableSelectionSingleChangeEvent<ClientType[]>) => {
+      // Cast e.value to ClientType since we know it's a single selection
+      onSelectionChange((e.value as ClientType) ?? null);
+    },
+    [onSelectionChange]
+  );
 
-  // Row double click handler
-  const onRowDoubleClick = useCallback((e) => {
-    if (e.data && onEdit) {
-      onEdit(e.data);
-    }
-  }, [onEdit]);
+  const onRowDoubleClick = useCallback(
+    (e: DataTableRowClickEvent) => {
+      onEdit(e.data as ClientType);
+    },
+    [onEdit]
+  );
 
   const cellClass = "py-1 px-2";
   const headerClass = "py-1 px-2 font-semibold";
@@ -85,21 +80,25 @@ const ClientTable = ({ onEdit, refreshTrigger = 0, selectedClient, onSelectionCh
   return (
     <section className="client-table" aria-label="Client data table">
       {error && (
-        <div className="p-message p-message-error mb-3">
+        <div
+          className="p-message p-message-error mb-3"
+          role="alert"
+          aria-live="assertive"
+        >
           <div className="p-message-wrapper">
-            <div className="p-message-icon pi pi-times-circle"></div>
+            <div className="p-message-icon pi pi-times-circle" />
             <div className="p-message-text">Error loading clients: {error}</div>
           </div>
         </div>
       )}
-      
-      <DataTable
-        value={clients || []}
+
+      <DataTable<ClientType[]>
+        value={clients}
         loading={loading}
         responsiveLayout="scroll"
         stripedRows
         className="text-m"
-        paginator={false} // We handle pagination separately
+        paginator={false} // external paginator
         scrollHeight="400px"
         emptyMessage={loading ? "Loading..." : "No clients found."}
         selectionMode="single"
@@ -108,20 +107,17 @@ const ClientTable = ({ onEdit, refreshTrigger = 0, selectedClient, onSelectionCh
         dataKey="clientId"
         onRowDoubleClick={onRowDoubleClick}
         showGridlines
+        aria-live="polite"
       >
-        <Column 
-          selectionMode="single" 
-          headerStyle={{ width: "3rem" }}
-          frozen
-        />
+        <Column selectionMode="single" headerStyle={{ width: "3rem" }} frozen />
         <Column
           field="clientId"
           header="Client ID"
           sortable
           bodyClassName={cellClass}
           headerClassName={headerClass}
-          style={{ minWidth: '8rem' }}
-          body={(rowData) => rowData?.clientId || 'N/A'}
+          style={{ minWidth: "8rem" }}
+          body={(row: ClientType) => row.clientId ?? "N/A"}
         />
         <Column
           field="clientName"
@@ -129,20 +125,19 @@ const ClientTable = ({ onEdit, refreshTrigger = 0, selectedClient, onSelectionCh
           sortable
           bodyClassName={cellClass}
           headerClassName={headerClass}
-          style={{ minWidth: '12rem' }}
-          body={(rowData) => rowData?.clientName || 'N/A'}
+          style={{ minWidth: "12rem" }}
+          body={(row: ClientType) => row.clientName ?? "N/A"}
         />
         <Column
           field="address"
           header="Address"
           bodyClassName={cellClass}
           headerClassName={headerClass}
-          style={{ minWidth: '15rem' }}
-          body={(rowData) => rowData?.address || 'N/A'}
+          style={{ minWidth: "15rem" }}
+          body={(row: ClientType) => row.address ?? "N/A"}
         />
       </DataTable>
 
-      {/* Only show paginator if we have data or are not loading */}
       {!loading && pagination.totalRecords > 0 && (
         <Paginator
           first={(pagination.currentPage - 1) * pagination.limit}
@@ -152,6 +147,7 @@ const ClientTable = ({ onEdit, refreshTrigger = 0, selectedClient, onSelectionCh
           template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown"
           rowsPerPageOptions={[5, 10, 20, 50]}
           className="mt-3"
+          aria-label="Table pagination controls"
         />
       )}
     </section>

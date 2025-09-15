@@ -7,20 +7,29 @@ import ContactViewHeader from './contactViewHeader';
 import { useContactOperations } from '../hooks/useContactOperations';
 import { useContactsByClient } from '../hooks/useContactsByClient';
 import { DIALOG_MODES } from '../constants/contactConstants';
+import type {
+  Client,
+  Contact,
+  ClientContactsViewState,
+  ClientContactsAction,
+  DialogMode,
+} from '../types/contactTypes';
+
 
 const ContactAddEdit = lazy(() => import('./contactAddEdit'));
 const ContactDelete = lazy(() => import('./contactDelete'));
 
-const initialState = {
+const initialState: ClientContactsViewState = {
   selectedContact: null,
   dialogVisible: false,
   deleteDialogVisible: false,
-  dialogMode: DIALOG_MODES.ADD,
+  dialogMode: DIALOG_MODES.ADD as DialogMode,
   editContact: null,
   contactToDelete: null,
 };
 
-function reducer(state, action) {
+
+function reducer(state: ClientContactsViewState, action: ClientContactsAction): ClientContactsViewState { 
   switch (action.type) {
     case 'SELECT_CONTACT':
       return { ...state, selectedContact: action.payload };
@@ -51,11 +60,16 @@ function reducer(state, action) {
   }
 }
 
-const ClientContactsView = ({ selectedClient, onBackClick }) => {
-  const [state, dispatch] = useReducer(reducer, initialState);
-  const toast = useRef(null);
+interface ClientContactsViewProps {
+  selectedClient: Client | null;
+  onBackClick: () => void;
+}
 
-  const showToast = (severity, message) => {
+const ClientContactsView: React.FC<ClientContactsViewProps> = ({ selectedClient, onBackClick }) => {
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const toast = useRef<Toast>(null);
+
+  const showToast = (severity: 'success' | 'error', message: string) => {
     toast.current?.show({
       severity,
       summary: severity === 'error' ? 'Error' : 'Success',
@@ -68,11 +82,9 @@ const ClientContactsView = ({ selectedClient, onBackClick }) => {
     handleSaveContact,
     handleDeleteContact,
     refreshTrigger,
-    validateContactSelection,
-    triggerRefresh,
   } = useContactOperations(
-    (msg) => showToast('success', msg),
-    (msg) => showToast('error', msg)
+    (msg: string) => showToast('success', msg),
+    (msg: string) => showToast('error', msg)
   );
 
   // Get contacts for this client
@@ -99,15 +111,21 @@ const ClientContactsView = ({ selectedClient, onBackClick }) => {
       }
       dispatch({
         type: 'OPEN_DIALOG',
-        payload: { mode: DIALOG_MODES.ADD, contact: { clientId: selectedClient.clientId } },
+        payload: { 
+          mode: DIALOG_MODES.ADD as DialogMode, 
+          contact: null 
+        },
       });
     },
-    editContact: (contact) => {
+    editContact: (contact: Contact) => {
       if (!contact?.clientContactId) {
         showToast('error', 'Select a valid contact first');
         return;
       }
-      dispatch({ type: 'OPEN_DIALOG', payload: { mode: DIALOG_MODES.EDIT, contact } });
+      dispatch({ 
+        type: 'OPEN_DIALOG', 
+        payload: { mode: DIALOG_MODES.EDIT as DialogMode, contact } 
+      });
     },
     deleteSelected: () => {
       if (!state.selectedContact) {
@@ -117,17 +135,19 @@ const ClientContactsView = ({ selectedClient, onBackClick }) => {
       dispatch({ type: 'OPEN_DELETE_DIALOG', payload: state.selectedContact });
     },
     editSelected: () => {
-      handlers.editContact(state.selectedContact);
+      if (state.selectedContact) {
+        handlers.editContact(state.selectedContact);
+      }
     },
-    saveContact: async (contactData) => {
+    saveContact: async (contactData: Partial<Contact> & { clientId?: number }) => {
       const result = await handleSaveContact(contactData, state.dialogMode, selectedClient);
       if (result.success) dispatch({ type: 'CLOSE_DIALOG' });
     },
-    deleteContact: async (contactToDelete) => {
+    deleteContact: async (contactToDelete: Contact) => {
       const result = await handleDeleteContact(contactToDelete);
       if (result.success) dispatch({ type: 'CLOSE_DELETE_DIALOG' });
     },
-    selectContact: (contact) => {
+    selectContact: (contact: Contact | null) => {
       if (contact && !contact.clientContactId) {
         showToast('error', 'Invalid contact selection. ID missing.');
         return;
@@ -139,7 +159,13 @@ const ClientContactsView = ({ selectedClient, onBackClick }) => {
   if (!selectedClient) {
     return (
       <div className="dashboard-container p-2" style={{ width: '100%', maxWidth: '100%' }}>
-        <ContactViewHeader onBackClick={onBackClick} />
+        <ContactViewHeader 
+          onBackClick={onBackClick}
+          onAddContact={() => {}}
+          selectedContact={null}
+          onEditContact={() => {}}
+          onDeleteContact={() => {}}
+        />
         <div className="text-center p-4">Please select a client to view contacts.</div>
       </div>
     );

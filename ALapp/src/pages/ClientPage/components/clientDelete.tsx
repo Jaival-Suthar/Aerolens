@@ -1,15 +1,22 @@
 import React from "react";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
+import type { ClientDeleteProps } from "../types/clientTypes";
 
-const ClientDelete = ({ visible, onHide, onDelete, client }) => {
+
+const ClientDelete: React.FC<ClientDeleteProps> = ({
+  visible,
+  onHide,
+  onDelete,
+  client
+}) => {
   return (
     <Dialog
       header="Confirm Delete"
       visible={visible}
       modal
       onHide={onHide}
-      style={{ width: "25vw" }}
+      style={{ width: "25vw", minWidth: "300px" }}
     >
       <p>
         Are you sure you want to delete client{" "}

@@ -1,8 +1,16 @@
 import React from "react";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
+import type { Contact } from "../types/contactTypes";
 
-const ContactDelete = ({ visible, onHide, onDelete, contact }) => {
+interface ContactDeleteProps {
+  visible: boolean;
+  onHide: () => void;
+  onDelete?: (contact: Contact) => void;
+  contact: Contact | null;
+}
+
+const ContactDelete: React.FC<ContactDeleteProps> = ({ visible, onHide, onDelete, contact }) => {
   const handleDelete = () => {
     if (onDelete && contact) {
       onDelete(contact);
