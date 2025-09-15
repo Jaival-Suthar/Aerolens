@@ -4,6 +4,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import AppNavbar from './AppNavbar';
 import Client from './pages/ClientPage/page';
 import Dashboard from './pages/Dashboard/page';
+import JobProfile from './pages/JobProfile/page';
+import Resume from './pages/Resume/page';
 import { PrimeReactProvider } from 'primereact/api';
 import 'primereact/resources/themes/saga-blue/theme.css';
 import 'primereact/resources/primereact.min.css';
@@ -36,6 +38,8 @@ const App = (): JSX.Element => {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/client" element={<Client />} />
               {/* <Route path="/contact" element={<Contact />} /> */}
+              <Route path="/job-profile" element={<JobProfile />} />
+              <Route path="/resume" element={<Resume />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>

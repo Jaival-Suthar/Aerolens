@@ -26,6 +26,20 @@ const navItems: NavItem[] = [
     description: "View Clients",
     size: "large",
   },
+  {
+    label: "Job Profile",
+    icon: "pi pi-briefcase",
+    path: "/job-profile",
+    description: "View Job Profiles",
+    size: "large",
+  },
+  {
+    label: "Resume",
+    icon: "pi pi-file",
+    path: "/resume",
+    description: "View Resumes",
+    size: "large",
+  }
 ];
 
 const AppNavbar: React.FC = () => {
