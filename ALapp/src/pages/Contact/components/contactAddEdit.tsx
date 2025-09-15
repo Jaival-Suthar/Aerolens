@@ -2,20 +2,33 @@ import React, { useState, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
+import type {
+  ContactAddEditProps,
+  ContactAddEditPayload,
+} from "../types/contactTypes";
 
-const ContactAddEdit = ({
+interface Errors {
+  contactPersonName?: string | null;
+  designation?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  clientId?: string | null;
+  general?: string | null;
+}
+
+const ContactAddEdit: React.FC<ContactAddEditProps> = ({
   visible = false,
   onHide,
   onSave,
   mode = "add",
   contact = null,
-  clientId = null // Required for adding new contacts
+  clientId = null,
 }) => {
-  const [contactPersonName, setContactPersonName] = useState("");
-  const [designation, setDesignation] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [errors, setErrors] = useState({});
+  const [contactPersonName, setContactPersonName] = useState<string>("");
+  const [designation, setDesignation] = useState<string>("");
+  const [phone, setPhone] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  const [errors, setErrors] = useState<Errors>({});
 
   // Initialize form data when dialog opens or contact changes
   useEffect(() => {
@@ -35,107 +48,69 @@ const ContactAddEdit = ({
     }
   }, [contact, visible]);
 
-  const validateForm = () => {
-    const newErrors = {};
-    
-    if (!contactPersonName || contactPersonName.trim() === "") {
-      newErrors.contactPersonName = "Contact Person Name is required";
+  // Type only for function interface, not for object mutation.
+const handleSubmit = () => {
+  // Validate based on mode
+  const newErrors: Errors = {};
+
+  // Common validation for both modes
+  if (!contactPersonName || contactPersonName.trim() === "") {
+    newErrors.contactPersonName = "Contact Person Name is required";
+  }
+  if (!designation || designation.trim() === "") {
+    newErrors.designation = "Designation is required";
+  }
+  if (!phone || phone.trim() === "") {
+    newErrors.phone = "Phone is required";
+  }
+  if (!email || email.trim() === "") {
+    newErrors.email = "Email is required";
+  } else if (!/\S+@\S+\.\S+/.test(email.trim())) {
+    newErrors.email = "Please enter a valid email address";
+  }
+
+  // Mode-specific validation
+  if (mode === "add") {
+  if (clientId != null) {
+    // Build payload part or whatever needs the clientId
+    // e.g., payload = { clientId: Number(clientId), ... }
+  } else {
+    newErrors.clientId = "Client ID is required for adding new contact";
+  }
+}
+
+  if (mode === "edit" && contact) {
+    const hasChanges =
+      contactPersonName.trim() !== (contact.contactPersonName || "") ||
+      designation.trim() !== (contact.designation || "") ||
+      phone.trim() !== (contact.phone || "") ||
+      email.trim() !== (contact.email || "");
+    if (!hasChanges) {
+      newErrors.general = "At least one field must be modified for update";
     }
-    
-    if (!designation || designation.trim() === "") {
-      newErrors.designation = "Designation is required";
-    }
-    
-    if (!phone || phone.trim() === "") {
-      newErrors.phone = "Phone is required";
-    }
-    
-    if (!email || email.trim() === "") {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(email.trim())) {
-      newErrors.email = "Please enter a valid email address";
-    }
+  }
 
-    // For add mode, clientId is required
-    if (mode === "add" && !clientId) {
-      newErrors.clientId = "Client ID is required for adding new contact";
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  setErrors(newErrors);
+  if (Object.keys(newErrors).length > 0) return;
 
-  const validateUpdateForm = () => {
-    const newErrors = {};
-    
-    // For update mode, at least one field must be provided and different from original
-    if (mode === "edit" && contact) {
-      const hasChanges = 
-        contactPersonName.trim() !== (contact.contactPersonName || "") ||
-        designation.trim() !== (contact.designation || "") ||
-        phone.trim() !== (contact.phone || "") ||
-        email.trim() !== (contact.email || "");
-      
-      if (!hasChanges) {
-        newErrors.general = "At least one field must be modified for update";
-      }
-    }
+  // Build payload
+  const payload: ContactAddEditPayload = {
+  contactPersonName: contactPersonName.trim(),
+  designation: designation.trim(),
+  phone: phone.trim(),
+  email: email.trim(),
+  ...(mode === "add" && clientId ? { clientId } : {}),
+  ...(mode === "edit" && contact?.clientContactId
+    ? { clientContactId: contact.clientContactId }
+    : mode === "edit" && contact?.contactId
+    ? { contactId: contact.contactId }
+    : {}),
+};
 
-    // Validate email format if provided
-    if (email && email.trim() !== "" && !/\S+@\S+\.\S+/.test(email.trim())) {
-      newErrors.email = "Please enter a valid email address";
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
-  const handleSubmit = () => {
-    if (mode === "add") {
-      if (!validateForm()) {
-        return;
-      }
+  if (onSave) onSave(payload);
+};
 
-      const contactData = {
-        clientId: clientId,
-        contactPersonName: contactPersonName.trim(),
-        designation: designation.trim(),
-        phone: phone.trim(),
-        email: email.trim(),
-      };
-
-      if (onSave) {
-        onSave(contactData);
-      }
-    } else if (mode === "edit") {
-      if (!validateUpdateForm()) {
-        return;
-      }
-
-      // Use the correct field name mapping for the API
-      const updateData = {
-        contactId: contact?.clientContactId || contact?.contactId // Map frontend field to API field
-      };
-
-      // Only include fields that have been modified
-      if (contactPersonName.trim() !== (contact?.contactPersonName || "")) {
-        updateData.contactPersonName = contactPersonName.trim();
-      }
-      if (designation.trim() !== (contact?.designation || "")) {
-        updateData.designation = designation.trim();
-      }
-      if (phone.trim() !== (contact?.phone || "")) {
-        updateData.phone = phone.trim();
-      }
-      if (email.trim() !== (contact?.email || "")) {
-        updateData.email = email.trim();
-      }
-
-      if (onSave) {
-        onSave(updateData);
-      }
-    }
-  };
 
   const handleCancel = () => {
     setContactPersonName("");
@@ -148,9 +123,9 @@ const ContactAddEdit = ({
     }
   };
 
-  const clearFieldError = (fieldName) => {
+  const clearFieldError = (fieldName: keyof Errors) => {
     if (errors[fieldName]) {
-      setErrors(prev => ({ ...prev, [fieldName]: null }));
+      setErrors((prev) => ({ ...prev, [fieldName]: null }));
     }
   };
 
@@ -163,7 +138,7 @@ const ContactAddEdit = ({
       modal
       onHide={handleCancel}
       style={{ width: "30vw", minWidth: "300px" }}
-      breakpoints={{ '960px': '50vw', '641px': '90vw' }}
+      breakpoints={{ "960px": "50vw", "641px": "90vw" }}
     >
       <div className="p-fluid">
         {errors.general && (
@@ -225,9 +200,7 @@ const ContactAddEdit = ({
             style={{ borderRadius: "8px" }}
             className={errors.phone ? "p-invalid" : ""}
           />
-          {errors.phone && (
-            <small className="p-error block mt-1">{errors.phone}</small>
-          )}
+          {errors.phone && <small className="p-error block mt-1">{errors.phone}</small>}
         </div>
 
         <div className="field mb-4">
@@ -245,9 +218,7 @@ const ContactAddEdit = ({
             style={{ borderRadius: "8px" }}
             className={errors.email ? "p-invalid" : ""}
           />
-          {errors.email && (
-            <small className="p-error block mt-1">{errors.email}</small>
-          )}
+          {errors.email && <small className="p-error block mt-1">{errors.email}</small>}
         </div>
 
         <div className="flex justify-end gap-2 mt-4">

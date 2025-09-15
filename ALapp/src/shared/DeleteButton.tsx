@@ -1,7 +1,13 @@
 import React from 'react';
 import { Button } from 'primereact/button';
 
-const DeleteButton = ({ onClick, disabled, tooltip }) => (
+type DeleteButtonProps = {
+  onClick: React.MouseEventHandler<HTMLButtonElement>;
+  disabled?: boolean;
+  tooltip?: string;
+};
+
+const DeleteButton: React.FC<DeleteButtonProps> = ({ onClick, disabled, tooltip }) => (
   <Button
     icon="pi pi-trash"
     rounded

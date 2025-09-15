@@ -4,14 +4,13 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import AppNavbar from './AppNavbar';
 import Client from './pages/ClientPage/page';
 import Dashboard from './pages/Dashboard/page';
-import Contact from './pages/Contact/page';
 import { PrimeReactProvider } from 'primereact/api';
 import 'primereact/resources/themes/saga-blue/theme.css';
 import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
 import 'primeflex/primeflex.css';
 
-const NotFound = () => (
+const NotFound: React.FC = () => (
   <div className="flex flex-column align-items-center justify-content-center h-screen">
     <i className="pi pi-exclamation-triangle text-6xl text-orange-500 mb-3"></i>
     <h1 className="text-4xl font-bold text-900 mb-2">404</h1>
@@ -25,7 +24,7 @@ const NotFound = () => (
   </div>
 );
 
-const App = () => {
+const App = (): JSX.Element => {
   return (
     <PrimeReactProvider>
       <Router>
@@ -36,7 +35,7 @@ const App = () => {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/client" element={<Client />} />
-              <Route path="/contact" element={<Contact />} />
+              {/* <Route path="/contact" element={<Contact />} /> */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
