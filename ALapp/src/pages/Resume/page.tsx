@@ -6,7 +6,11 @@ const Resume = () => {
     return (
         <div className="p-2">
             <Card title="Welcome to the Resume" className="mb-3">
+                
                 <ResumeTable/>
+                 {/* // strin/> */}
+
+
                 {/* <p className="m-0">Resume component will be implemented here.</p> */}
             </Card>
             </div>

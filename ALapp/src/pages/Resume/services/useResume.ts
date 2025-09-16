@@ -1,29 +1,34 @@
 import { CandidatesResponse,Candidate } from "../types/resumeTypes";
+// const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
 
 let candidates: Candidate[] = [
   {
-    id: 1,
-    name: "John Doe",
-    contact: "1234567890",
+    candidateId: 1,
+    candidateName: "John Doe",
+    contactNumber: "1234567890",
     email: "john@example.com",
-    recruiter: "Palash",
-    role: "Full Stack",
-    location: "IDC",
-    ctc: "20 LPA",
-    noticePeriod: "60 days",
-    experience: "6 years",
+    recruiterName: "Palash",
+    jobRole: "Full Stack",
+    preferredJobLocation: "Ahemdabad",
+    currentCTC: 20,
+    expectedCTC: 25,
+    noticePeriod: 60,
+    experienceYears: 6,
     status: "In Progress",
-    linkedin: "https://linkedin.com/in/johndoe"
+    linkedinProfileUrl: "https://linkedin.com/in/johndoe"
+
   }
 ];
-
 // CREATE
-export const createCandidate = async (candidate: Candidate) => {
-  candidate.id = Date.now();
-  candidates.push(candidate);
-  return candidate;
+// CREATE
+export const createCandidate = async (candidate: Omit<Candidate, "candidateId">) => {
+  const newCandidate: Candidate = {
+    ...candidate,
+    candidateId: Date.now(), // assign a unique ID
+  };
+  candidates.push(newCandidate);
+  return newCandidate;
 };
-
 // READ
 // Get all candidates
 export const getCandidates = async (): Promise<CandidatesResponse> => {
@@ -38,12 +43,12 @@ export const getCandidates = async (): Promise<CandidatesResponse> => {
   
 // UPDATE
 export const updateCandidate = async (id: number, updated: Partial<Candidate>) => {
-  candidates = candidates.map(c => (c.id === id ? { ...c, ...updated } : c));
-  return candidates.find(c => c.id === id);
+  candidates = candidates.map(c => (c.candidateId === id ? { ...c, ...updated } : c));
+  return candidates.find(c => c.candidateId === id);
 };
 
 // DELETE
 export const deleteCandidate = async (id: number) => {
-  candidates = candidates.filter(c => c.id !== id);
+  candidates = candidates.filter(c => c.candidateId !== id);
   return true;
 };

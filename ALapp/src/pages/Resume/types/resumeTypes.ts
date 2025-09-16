@@ -2,23 +2,24 @@
 
 // Candidate model
 export interface Candidate {
-    id: number;
-    name: string;
-    contact: string;
-    email: string;
-    recruiter: string;
-    role: string;
-    location: string;
-    ctc: string;
-    noticePeriod: string;
-    experience: string;
-    status: string;
-    linkedin: string;
-  }
+  candidateId: number;
+  candidateName: string;
+  contactNumber: string;
+  email: string;
+  recruiterName: string;
+  jobRole: string;
+  preferredJobLocation: string;
+  currentCTC: number;
+  expectedCTC: number;
+  noticePeriod: number;
+  experienceYears: number;
+  status: string;
+  linkedinProfileUrl: string;
+}
+
   export interface ResumeTableProps {
     candidateId: number | null;
    candidateName: string;
-    onBackClick: () => void;
   }
   // Generic API wrapper
   export interface ApiResponse<T> {

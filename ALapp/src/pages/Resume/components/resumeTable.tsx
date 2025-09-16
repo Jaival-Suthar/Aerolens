@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { DataTable, DataTableSelectionSingleChangeEvent } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
-// import ResumeAddEdit from "../components/resumeAddEdit";
+import ResumeAddEdit from "../components/resumeAddEdit";
 // import ResumeDelete from "../components/resumeDelete";
 import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
@@ -10,7 +10,7 @@ import DeleteButton from "../../../shared/DeleteButton";
 import { Candidate, ResumeTableProps } from "../types/resumeTypes";
 import { getCandidates } from "../services/useResume";
 
-const ResumeTable: React.FC<ResumeTableProps> = ({ candidateId, candidateName, onBackClick }) => {
+const ResumeTable: React.FC<any> = () => {
   const [resumes, setResumes] = useState<Candidate[]>([]);
   const [selectedResume, setSelectedResume] = useState<Candidate | null>(null);
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
@@ -21,15 +21,14 @@ const ResumeTable: React.FC<ResumeTableProps> = ({ candidateId, candidateName, o
     try {
       const data = await getCandidates();
       setResumes(data.candidates);
-      console.log(resumes)
     } catch (error) {
       console.error("Error loading resumes:", error);
     }
   }, []);
 
   useEffect(() => {
-    if (candidateId) loadResumes();
-  }, [candidateId, loadResumes]);
+      loadResumes();
+  }, []);
 
   const handleAdd = () => {
     setEditingResume(null);
@@ -58,14 +57,13 @@ const ResumeTable: React.FC<ResumeTableProps> = ({ candidateId, candidateName, o
 
         </div>
         <div className="flex gap-2">
-          <AddButton onClick={handleAdd} disabled={!candidateId} />
+          <AddButton onClick={handleAdd} />
           <EditButton onClick={handleEdit} disabled={!selectedResume} />
           <DeleteButton onClick={handleDelete} disabled={!selectedResume} />
         </div>
       </div>
 
-      <h4>Resumes for: {candidateName}</h4>
-
+      {/* <h4>Resumes for: {candidateName}</h4> */}
       <DataTable
   value={resumes}
   paginator
@@ -73,38 +71,33 @@ const ResumeTable: React.FC<ResumeTableProps> = ({ candidateId, candidateName, o
   rowsPerPageOptions={[5, 10, 20]}
   selectionMode="single"
   selection={selectedResume}
+  dataKey="candidateId" 
   onSelectionChange={(e:any) => setSelectedResume(e.value)}
   tableStyle={{ minWidth: "80rem" }}
 >
-  <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
-  <Column field="candidateName" header="Candidate Name" />
-  <Column field="contactNumber" header="Contact Number" />
-  <Column field="email" header="Email" />
-  <Column field="recruiter" header="Recruiter" />
-  <Column field="role" header="Role" />
-  <Column field="preferredLocation" header="Preferable Location" />
-  <Column field="currentCTC" header="Current CTC" />
-  <Column field="expectedCTC" header="Expected CTC" />
-  <Column field="noticePeriod" header="Notice Period" />
-  <Column field="experience" header="Experience" />
-  <Column field="status" header="Status" />
-  <Column field="linkedinProfile" header="LinkedIn Profile URL" />
+<Column selectionMode="single" headerStyle={{ width: "3rem" }} />
+<Column field="candidateName" header="Candidate Name" />
+<Column field="contactNumber" header="Contact Number" />
+<Column field="email" header="Email" />
+<Column field="recruiterName" header="Recruiter" />
+<Column field="jobRole" header="Role" />
+<Column field="preferredJobLocation" header="Preferable Location" />
+<Column field="currentCTC" header="Current CTC" />
+<Column field="expectedCTC" header="Expected CTC" />
+<Column field="noticePeriod" header="Notice Period" />
+<Column field="experienceYears" header="Experience" />
+<Column field="status" header="Status" />
+<Column field="linkedinProfileUrl" header="LinkedIn Profile URL" />
+
 </DataTable>
-
-
-      {/* Add/Edit Dialog */}
-      {/* <ResumeAddEdit
+     <ResumeAddEdit
         visible={showAddEditDialog}
         onHide={() => setShowAddEditDialog(false)}
         selectedResume={editingResume}
-        candidateId={candidateId}
-        resumes={resumes}
-        setResumes={setResumes}
         onSuccess={handleAddEditSuccess}
-      /> */}
+      />
 
-      {/* Delete Dialog */}
-      {/* <ResumeDelete
+       {/* <ResumeDelete
         visible={showDeleteDialog}
         onHide={() => setShowDeleteDialog(false)}
         selectedResume={selectedResume}
@@ -112,7 +105,7 @@ const ResumeTable: React.FC<ResumeTableProps> = ({ candidateId, candidateName, o
         setResumes={setResumes}
         onSuccess={handleDeleteSuccess}
         onClearSelection={handleClearSelection}
-      /> */}
+      /> */ }
     </>
   );
 };
