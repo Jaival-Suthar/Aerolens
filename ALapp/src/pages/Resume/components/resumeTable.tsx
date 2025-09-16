@@ -54,11 +54,9 @@ const ResumeTable: React.FC<ResumeTableProps> = ({ candidateId, candidateName, o
   return (
     <>
       <div className="flex justify-content-between mb-4 w-full">
-        <Button
-          label="Back to Candidates"
-          icon="pi pi-arrow-left"
-          onClick={onBackClick}
-        />
+        <div className="flex gap-2">
+
+        </div>
         <div className="flex gap-2">
           <AddButton onClick={handleAdd} disabled={!candidateId} />
           <EditButton onClick={handleEdit} disabled={!selectedResume} />
@@ -69,20 +67,30 @@ const ResumeTable: React.FC<ResumeTableProps> = ({ candidateId, candidateName, o
       <h4>Resumes for: {candidateName}</h4>
 
       <DataTable
-        value={resumes}
-        paginator
-        rows={5}
-        selectionMode="single"
-        selection={selectedResume}
-        onSelectionChange={(e:any) =>
-          setSelectedResume(e.value)
-        }
-      >
-        <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
-        <Column field="resumeId" header="ID" />
-        <Column field="resumeTitle" header="Title" />
-        <Column field="experienceYears" header="Experience" />
-      </DataTable>
+  value={resumes}
+  paginator
+  rows={5}
+  rowsPerPageOptions={[5, 10, 20]}
+  selectionMode="single"
+  selection={selectedResume}
+  onSelectionChange={(e:any) => setSelectedResume(e.value)}
+  tableStyle={{ minWidth: "80rem" }}
+>
+  <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
+  <Column field="candidateName" header="Candidate Name" />
+  <Column field="contactNumber" header="Contact Number" />
+  <Column field="email" header="Email" />
+  <Column field="recruiter" header="Recruiter" />
+  <Column field="role" header="Role" />
+  <Column field="preferredLocation" header="Preferable Location" />
+  <Column field="currentCTC" header="Current CTC" />
+  <Column field="expectedCTC" header="Expected CTC" />
+  <Column field="noticePeriod" header="Notice Period" />
+  <Column field="experience" header="Experience" />
+  <Column field="status" header="Status" />
+  <Column field="linkedinProfile" header="LinkedIn Profile URL" />
+</DataTable>
+
 
       {/* Add/Edit Dialog */}
       {/* <ResumeAddEdit
