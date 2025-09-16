@@ -7,8 +7,9 @@ import ResumeAddEdit from "../components/resumeAddEdit";
 import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
-import { Candidate, ResumeTableProps } from "../types/resumeTypes";
+import { Candidate} from "../types/resumeTypes";
 import { getCandidates } from "../services/useResume";
+import ResumeDelete from "./resumeDelete";
 
 const ResumeTable: React.FC<any> = () => {
   const [resumes, setResumes] = useState<Candidate[]>([]);
@@ -97,15 +98,13 @@ const ResumeTable: React.FC<any> = () => {
         onSuccess={handleAddEditSuccess}
       />
 
-       {/* <ResumeDelete
+       <ResumeDelete
         visible={showDeleteDialog}
         onHide={() => setShowDeleteDialog(false)}
         selectedResume={selectedResume}
-        resumes={resumes}
-        setResumes={setResumes}
         onSuccess={handleDeleteSuccess}
         onClearSelection={handleClearSelection}
-      /> */ }
+      /> 
     </>
   );
 };

@@ -204,7 +204,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
       <div className="field">
         <label className="font-bold">Expected CTC</label>
         <InputNumber
-          type="number"
+        
           value={formData.expectedCTC}
           onChange={(e) => handleChange("expectedCTC", Number(e.value))}
         />
@@ -223,8 +223,8 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
       <div className="field">
         <label className="font-bold">Experience (Years)</label>
         <InputNumber
-          type="number"
-          value={formData.experienceYears}
+          value={formData.experienceYears || 0} // ensure number
+
           onChange={(e) => handleChange("experienceYears", Number(e.value))}
         />
       </div>

@@ -67,4 +67,11 @@ export interface Candidate {
     status?: string;
     linkedin?: string;
   }
+   export interface ResumeDeleteProps {
+    visible: boolean;
+    onHide: () => void;
+    selectedResume: Candidate | null;
+    onSuccess: () => void;
+    onClearSelection: () => void;
+  }
   
