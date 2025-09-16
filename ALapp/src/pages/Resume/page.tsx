@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from 'primereact/card';
-
+//Parent component for Resume section
 const Resume = () => {
     return (
         <div className="p-2">
