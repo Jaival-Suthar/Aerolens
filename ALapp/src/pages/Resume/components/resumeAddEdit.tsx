@@ -6,7 +6,7 @@ import { Dropdown } from "primereact/dropdown";
 import { Candidate } from "../types/resumeTypes";
 import { createCandidate,updateCandidate} from "../services/useResume";
 import { InputNumber } from "primereact/inputnumber";
-import { ResumeAddEditProps,AddCandidate,UpdateCandidate } from "../types/resumeTypes";
+import { ResumeAddEditProps,AddCandidate } from "../types/resumeTypes";
 
 const statusOptions = [
   { label: "Selected", value: "Selected" },
@@ -56,7 +56,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
       //exisitng blank will be overwritten by selectedResume
     } else {
       setFormData({
-        // candidateId: Date.now(),
         candidateName: "",
         contactNumber: "",
         email: "",
@@ -196,20 +195,21 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     </div>
     
     {/* Recruiter */}
-    <div className="field">
-  <label className="font-bold">Recruiter *</label>
-  <Dropdown
-    value={formData.recruiterName}
-    options={recruitorsOptions}
-    onChange={(e) => handleChange("recruiterName", e.value)}
-    required
-    placeholder="Select Recruiter"
-    className={submitted && !formData.recruiterName.trim() ? "p-invalid" : ""}
-  />
-  {submitted && !formData.recruiterName.trim() && (
-    <small className="p-error">Recruiter is required.</small>
-  )}
-</div>
+   <div className="field">
+        <label className="font-bold">Recruiter *</label>
+        <Dropdown
+          value={formData.recruiterName}
+          options={recruitorsOptions}
+          onChange={(e) => handleChange("recruiterName", e.value)}
+          required
+          placeholder="Select Recruiter"
+          className={submitted && !formData.recruiterName.trim() ? "p-invalid" : ""}
+        />
+        {submitted && !formData.recruiterName.trim() && (
+          <small className="p-error">Recruiter is required.</small>
+        )}
+      </div>
+
 
     {/* Job Role */}
     <div className="field">
