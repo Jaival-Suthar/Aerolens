@@ -73,7 +73,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     }
   }, [selectedResume, visible, isEditMode]);
 
-  const handleChange = (field: keyof Candidate, value: any) => {
+  const handleChange = (field: keyof AddCandidate, value: any) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
