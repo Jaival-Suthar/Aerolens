@@ -1,6 +1,7 @@
 // src/Resume/types/resumeTypes.ts
 
 // Candidate model
+//used for adding client in resumeAddEdit.tsx
 export interface Candidate {
   candidateId: number;
   candidateName: string;
@@ -17,15 +18,10 @@ export interface Candidate {
   linkedinProfileUrl: string;
 }
 
-  export interface ResumeTableProps {
-    candidateId: number | null;
-   candidateName: string;
-  }
-  // Generic API wrapper
-  export interface ApiResponse<T> {
-    data: T;
-    message?: string;
-  }
+  // export interface ApiResponse<T> {
+  //   data: T;
+  //   message?: string;
+  // }
   
   // Error response from backend
   export interface ErrorResponse {
@@ -38,35 +34,35 @@ export interface Candidate {
   }
   
   // Payload for adding a new candidate
-  export interface AddCandidatePayload {
-    name: string;
-    contact: string;
-    email: string;
-    recruiter: string;
-    role: string;
-    location: string;
-    ctc: string;
-    noticePeriod: string;
-    experience: string;
-    status: string;
-    linkedin: string;
-  }
+  // export interface AddCandidatePayload {
+  //   name: string;
+  //   contact: string;
+  //   email: string;
+  //   recruiter: string;
+  //   role: string;
+  //   location: string;
+  //   ctc: string;
+  //   noticePeriod: string;
+  //   experience: string;
+  //   status: string;
+  //   linkedin: string;
+  // }
   
   // Payload for updating a candidate
-  export interface UpdateCandidatePayload {
-    id: number;
-    name?: string;
-    contact?: string;
-    email?: string;
-    recruiter?: string;
-    role?: string;
-    location?: string;
-    ctc?: string;
-    noticePeriod?: string;
-    experience?: string;
-    status?: string;
-    linkedin?: string;
-  }
+  // export interface UpdateCandidatePayload {
+  //   id: number;
+  //   name?: string;
+  //   contact?: string;
+  //   email?: string;
+  //   recruiter?: string;
+  //   role?: string;
+  //   location?: string;
+  //   ctc?: string;
+  //   noticePeriod?: string;
+  //   experience?: string;
+  //   status?: string;
+  //   linkedin?: string;
+  // }
    export interface ResumeDeleteProps {
     visible: boolean;
     onHide: () => void;

@@ -29,12 +29,16 @@ export const createCandidate = async (candidate: Omit<Candidate, "candidateId">)
   candidates.push(newCandidate);
   return newCandidate;
 };
+// To read Omit is used to remove candidateId from the type Candidate
+
 // READ
 // Get all candidates
 export const getCandidates = async (): Promise<CandidatesResponse> => {
     try {
       // mock data for now
       return { candidates: candidates };
+      //this line means return an object with a property candidates whose value 
+      // is the array candidates
     } catch (error) {
       console.error('Error fetching candidates:', error);
       throw error;
@@ -46,7 +50,7 @@ export const updateCandidate = async (id: number, updated: Partial<Candidate>) =
   candidates = candidates.map(c => (c.candidateId === id ? { ...c, ...updated } : c));
   return candidates.find(c => c.candidateId === id);
 };
-
+// To read Partial means that the fields in Candidate are optional
 // DELETE
 export const deleteCandidate = async (id: number) => {
   candidates = candidates.filter(c => c.candidateId !== id);
