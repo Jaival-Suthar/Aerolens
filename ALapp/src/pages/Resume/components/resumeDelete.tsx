@@ -6,11 +6,11 @@ import { deleteCandidate } from "../services/useResume";
 import { ResumeDeleteProps } from "../types/resumeTypes";
 
 const ResumeDelete: React.FC<ResumeDeleteProps> = ({
-  visible,
-  onHide,
-  selectedResume,
-  onSuccess,
-  onClearSelection
+  visible, //dialgoue visibility
+  onHide, // function to close the dialog
+  selectedResume, // the candidate selected for deletion
+  onSuccess, // function to call after successful deletion to refresh the list
+  onClearSelection // function to clear the selected candidate object
 }) => {
 
   const handleDelete = async (): Promise<void> => {

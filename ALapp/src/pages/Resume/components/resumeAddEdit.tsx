@@ -3,7 +3,6 @@ import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { Dropdown } from "primereact/dropdown";
-import { Candidate } from "../types/resumeTypes";
 import { createCandidate,updateCandidate} from "../services/useResume";
 import { InputNumber } from "primereact/inputnumber";
 import { ResumeAddEditProps,AddCandidate } from "../types/resumeTypes";
@@ -79,6 +78,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
       });
     }
   }, [selectedResume, visible, isEditMode]);
+  //these three dependencies means whenever any of these change the useEffect will run again
 
   const handleChange = (field: keyof AddCandidate, value: any) => {
     setFormData((prev) => ({

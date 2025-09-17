@@ -1,48 +1,55 @@
+import { json } from "react-router-dom";
 import { CandidatesResponse,Candidate,AddCandidate,UpdateCandidate } from "../types/resumeTypes";
-// const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
+const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
 
-let candidates: Candidate[] = [
-  // {
-  //   candidateId: 1,
-  //   candidateName: "John Doe",
-  //   contactNumber: "1234567890",
-  //   email: "john@example.com",
-  //   recruiterName: "Palash",
-  //   jobRole: "Full Stack",
-  //   preferredJobLocation: "Ahemdabad",
-  //   currentCTC: 20,
-  //   expectedCTC: 25,
-  //   noticePeriod: 60,
-  //   experienceYears: 6,
-  //   status: "In Progress",
-  //   linkedinProfileUrl: "https://linkedin.com/in/johndoe"
 
-  // }
-];
 // CREATE
 // CREATE
 
 export const createCandidate = async (candidate: AddCandidate): Promise<Candidate> => {
-  const newCandidate: Candidate = { ...candidate, candidateId: Date.now() }; // Assign a unique ID
+  try {
+    const response = await fetch(`${API_BASE_URL}/candidate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(candidate),
+    });
 
-  candidates.push(newCandidate); // no candidateId needed
+    if (!response.ok) {
+      throw new Error("Failed to create candidate");
+    }
 
-  return newCandidate;
+    const data = await response.json();
+    return data.data.candidate;
+  } catch (error) {
+    console.error("Error creating candidate:", error);
+    throw error;
+  }
 };
+
 
 // READ
 // Get all candidates
-export const getCandidates = async (): Promise<CandidatesResponse> => {
-    try {
-      // mock data for now
-      return { candidates };
-      //this line means return an object with a property candidates whose value 
-      // is the array candidates
-    } catch (error) {
-      console.error('Error fetching candidates:', error);
-      throw error;
+export const getCandidates = async (): Promise<Candidate[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/candidate`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch candidates");
     }
-  };
+
+    const data = await response.json();
+    return data.data.candidates;
+  } catch (error) {
+    console.error("Error fetching candidates:", error);
+    throw error;
+  }
+};
+
   
 // UPDATE
 export const updateCandidate = async (id: number, updated: Partial<UpdateCandidate>) => {
@@ -51,7 +58,19 @@ export const updateCandidate = async (id: number, updated: Partial<UpdateCandida
 };
 // To read Partial means that the fields in Candidate are optional
 // DELETE
-export const deleteCandidate = async (id: number) => {
-  candidates = candidates.filter(c => c.candidateId !== id);
-  return true;
+export const deleteCandidate = async (id: number): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/candidate/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to delete candidate");
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error deleting candidate:", error);
+    throw error;
+  }
 };

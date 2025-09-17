@@ -21,7 +21,7 @@ const ResumeTable: React.FC<any> = () => {
   const loadResumes = useCallback(async () => {
     try {
       const data = await getCandidates();
-      setResumes(data.candidates);
+      setResumes(data);
     } catch (error) {
       console.error("Error loading resumes:", error);
     }
