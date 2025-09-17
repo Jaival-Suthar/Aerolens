@@ -19,6 +19,14 @@ const recruitorsOptions = [
   { label: "Yash", value: "Yash" }
 ];
 //
+const locationOptions =
+[
+    { label: "Ahmedabad", value: "Ahmedabad" },
+    { label: "Bangalore", value: "Bangalore" },
+    { label: "San Francisco", value: "San Francisco" },
+
+
+  ]
 
 // Jayraj/Khushi/Yash
 
@@ -224,16 +232,12 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
         <small className="p-error">Job Role is required.</small>
       )}
     </div>
-    
     {/* Preferred Job Location */}
     <div className="field">
       <label className="font-bold">Preferred Job Location *</label>
       <Dropdown
         value={formData.preferredJobLocation}
-        options={[
-          { label: "Ahmedabad", value: "Ahmedabad" },
-          { label: "Bangalore", value: "Bangalore" },
-        ]}
+        options={locationOptions}
         onChange={(e) => handleChange("preferredJobLocation", e.value)}
         required
         className={submitted && !formData.preferredJobLocation ? "p-invalid" : ""}
@@ -243,6 +247,23 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
         <small className="p-error">Preferred Job Location is required.</small>
       )}
     </div>
+{/*    {/* Status */}
+{/* <div className="field">
+      <label className="font-bold">Status *</label>
+      <Dropdown
+        value={formData.status}
+        options={statusOptions}
+        onChange={(e) => handleChange("status", e.value)}
+        required
+        className={submitted && !formData.status.trim() ? "p-invalid" : ""}
+        placeholder="Select Status"
+      />
+      {submitted && !formData.status.trim() && (
+        <small className="p-error">Status is required.</small>
+      )}
+    </div> */} */
+
+
     
     {/* Current CTC */}
     <div className="field">
