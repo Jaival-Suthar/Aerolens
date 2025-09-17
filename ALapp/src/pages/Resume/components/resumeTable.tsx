@@ -77,14 +77,14 @@ const ResumeTable: React.FC<any> = () => {
   tableStyle={{ minWidth: "80rem" }}
 >
 <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
-<Column field="candidateName" header="Candidate Name" />
-<Column field="contactNumber" header="Contact Number" />
-<Column field="email" header="Email" />
-<Column field="recruiterName" header="Recruiter" />
-<Column field="jobRole" header="Role" />
-<Column field="preferredJobLocation" header="Preferable Location" />
-<Column field="currentCTC" header="Current CTC" />
-<Column field="expectedCTC" header="Expected CTC" />
+<Column field="candidateName" sortable header="Candidate Name" />
+<Column field="contactNumber" sortable header="Contact Number" />
+<Column field="email"  sortable header="Email" />
+<Column field="recruiterName" sortable header="Recruiter" />
+<Column field="jobRole"  sortable header="Role" />
+<Column field="preferredJobLocation" sortable header="Preferable Location" />
+<Column field="currentCTC" sortable header="Current CTC" />
+<Column field="expectedCTC" sortable header="Expected CTC" />
 <Column field="noticePeriod" header="Notice Period" />
 <Column field="experienceYears" header="Experience" />
 <Column field="status" header="Status" />
