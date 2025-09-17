@@ -43,35 +43,37 @@ export interface ResumeAddEditProps {
 }
 
   // Payload for adding a new candidate
-  // export interface AddCandidatePayload {
-  //   name: string;
-  //   contact: string;
-  //   email: string;
-  //   recruiter: string;
-  //   role: string;
-  //   location: string;
-  //   ctc: string;
-  //   noticePeriod: string;
-  //   experience: string;
-  //   status: string;
-  //   linkedin: string;
-  // }
+  export interface AddCandidate {
+    candidateName: string;
+    contactNumber: string;
+    email: string;
+    recruiterName: string;
+    jobRole: string;
+    preferredJobLocation: string;
+    currentCTC: number;
+    expectedCTC: number;
+    noticePeriod: number;
+    experienceYears: number;
+    status: string;
+    linkedinProfileUrl: string;
+  }
   
   // Payload for updating a candidate
-  // export interface UpdateCandidatePayload {
-  //   id: number;
-  //   name?: string;
-  //   contact?: string;
-  //   email?: string;
-  //   recruiter?: string;
-  //   role?: string;
-  //   location?: string;
-  //   ctc?: string;
-  //   noticePeriod?: string;
-  //   experience?: string;
-  //   status?: string;
-  //   linkedin?: string;
-  // }
+  export interface UpdateCandidate {
+    candidateId: number;
+    candidateName: string;
+    contactNumber: string;
+    email: string;
+    recruiterName: string;
+    jobRole: string;
+    preferredJobLocation: string;
+    currentCTC: number;
+    expectedCTC: number;
+    noticePeriod: number;
+    experienceYears: number;
+    status: string;
+    linkedinProfileUrl: string;
+  }
    export interface ResumeDeleteProps {
     visible: boolean;
     onHide: () => void;

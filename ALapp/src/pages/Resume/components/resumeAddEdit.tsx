@@ -6,7 +6,7 @@ import { Dropdown } from "primereact/dropdown";
 import { Candidate } from "../types/resumeTypes";
 import { createCandidate,updateCandidate} from "../services/useResume";
 import { InputNumber } from "primereact/inputnumber";
-import { ResumeAddEditProps } from "../types/resumeTypes";
+import { ResumeAddEditProps,AddCandidate,UpdateCandidate } from "../types/resumeTypes";
 
 const statusOptions = [
   { label: "Selected", value: "Selected" },
@@ -30,8 +30,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   onSuccess,
 }) => {
     //state for form data
-  const [formData, setFormData] = useState<Candidate>({
-    candidateId: Date.now(),
+  const [formData, setFormData] = useState<AddCandidate>({
     candidateName: "",
     contactNumber: "",
     email: "",
@@ -54,9 +53,10 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   useEffect(() => {
     if (isEditMode && selectedResume) {
       setFormData({ ...selectedResume });
+      //exisitng blank will be overwritten by selectedResume
     } else {
       setFormData({
-        candidateId: Date.now(),
+        // candidateId: Date.now(),
         candidateName: "",
         contactNumber: "",
         email: "",
@@ -94,7 +94,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
         // the candidate with id selectedResume.candidateId 
         // using the data in formData.
       } else {
-        const { candidateId, ...newCandidate } = formData;
+        const {  ...newCandidate } = formData;
         //this line creates a new object newCandidate that contains all properties of formData except candidateId.
         //except candidateId.
         await createCandidate(newCandidate); // create a new candidate

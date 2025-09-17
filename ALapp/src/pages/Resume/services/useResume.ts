@@ -1,35 +1,34 @@
-import { CandidatesResponse,Candidate } from "../types/resumeTypes";
+import { CandidatesResponse,Candidate,AddCandidate,UpdateCandidate } from "../types/resumeTypes";
 // const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
 
 let candidates: Candidate[] = [
-  {
-    candidateId: 1,
-    candidateName: "John Doe",
-    contactNumber: "1234567890",
-    email: "john@example.com",
-    recruiterName: "Palash",
-    jobRole: "Full Stack",
-    preferredJobLocation: "Ahemdabad",
-    currentCTC: 20,
-    expectedCTC: 25,
-    noticePeriod: 60,
-    experienceYears: 6,
-    status: "In Progress",
-    linkedinProfileUrl: "https://linkedin.com/in/johndoe"
+  // {
+  //   candidateId: 1,
+  //   candidateName: "John Doe",
+  //   contactNumber: "1234567890",
+  //   email: "john@example.com",
+  //   recruiterName: "Palash",
+  //   jobRole: "Full Stack",
+  //   preferredJobLocation: "Ahemdabad",
+  //   currentCTC: 20,
+  //   expectedCTC: 25,
+  //   noticePeriod: 60,
+  //   experienceYears: 6,
+  //   status: "In Progress",
+  //   linkedinProfileUrl: "https://linkedin.com/in/johndoe"
 
-  }
+  // }
 ];
 // CREATE
 // CREATE
-export const createCandidate = async (candidate: Omit<Candidate, "candidateId">) => {
-  const newCandidate: Candidate = {
-    ...candidate,
-    candidateId: Date.now(), // assign a unique ID
-  };
-  candidates.push(newCandidate);
+
+export const createCandidate = async (candidate: AddCandidate): Promise<Candidate> => {
+  const newCandidate: Candidate = { ...candidate, candidateId: Date.now() }; // Assign a unique ID
+
+  candidates.push(newCandidate); // no candidateId needed
+
   return newCandidate;
 };
-// To read Omit is used to remove candidateId from the type Candidate
 
 // READ
 // Get all candidates
@@ -46,7 +45,7 @@ export const getCandidates = async (): Promise<CandidatesResponse> => {
   };
   
 // UPDATE
-export const updateCandidate = async (id: number, updated: Partial<Candidate>) => {
+export const updateCandidate = async (id: number, updated: Partial<UpdateCandidate>) => {
   candidates = candidates.map(c => (c.candidateId === id ? { ...c, ...updated } : c));
   return candidates.find(c => c.candidateId === id);
 };
