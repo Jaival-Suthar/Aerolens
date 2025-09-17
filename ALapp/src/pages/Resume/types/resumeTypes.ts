@@ -31,6 +31,13 @@ export interface Candidate {
   export interface CandidatesResponse {
     candidates: Candidate[];
   }
+  export interface ResumeDeleteProps {
+    visible: boolean;
+    onHide: () => void;
+    selectedResume: Candidate | null;
+    onSuccess: () => void;
+    onClearSelection: () => void;
+  }
   
 // Props for ResumeAddEdit component
 export interface ResumeAddEditProps {
@@ -76,11 +83,5 @@ export interface ResumeAddEditProps {
     status: string;
     linkedinProfileUrl: string;
   }
-   export interface ResumeDeleteProps {
-    visible: boolean;
-    onHide: () => void;
-    selectedResume: Candidate | null;
-    onSuccess: () => void;
-    onClearSelection: () => void;
-  }
+  
   

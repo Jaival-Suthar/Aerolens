@@ -246,25 +246,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
       {submitted && !formData.preferredJobLocation && (
         <small className="p-error">Preferred Job Location is required.</small>
       )}
-    </div>
-{/*    {/* Status */}
-{/* <div className="field">
-      <label className="font-bold">Status *</label>
-      <Dropdown
-        value={formData.status}
-        options={statusOptions}
-        onChange={(e) => handleChange("status", e.value)}
-        required
-        className={submitted && !formData.status.trim() ? "p-invalid" : ""}
-        placeholder="Select Status"
-      />
-      {submitted && !formData.status.trim() && (
-        <small className="p-error">Status is required.</small>
-      )}
-    </div> */} */
-
-
-    
+    </div>    
     {/* Current CTC */}
     <div className="field">
       <label className="font-bold">Current CTC *</label>

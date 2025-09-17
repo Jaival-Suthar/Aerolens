@@ -35,7 +35,7 @@ export const createCandidate = async (candidate: AddCandidate): Promise<Candidat
 export const getCandidates = async (): Promise<CandidatesResponse> => {
     try {
       // mock data for now
-      return { candidates: candidates };
+      return { candidates };
       //this line means return an object with a property candidates whose value 
       // is the array candidates
     } catch (error) {
