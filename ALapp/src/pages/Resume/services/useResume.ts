@@ -2,7 +2,6 @@ import { json } from "react-router-dom";
 import { CandidatesResponse,Candidate,AddCandidate,UpdateCandidate } from "../types/resumeTypes";
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
 
-
 // CREATE
 // CREATE
 

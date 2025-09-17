@@ -12,7 +12,8 @@ const ResumeDelete: React.FC<ResumeDeleteProps> = ({
   onSuccess, // function to call after successful deletion to refresh the list
   onClearSelection // function to clear the selected candidate object
 }) => {
-
+//we declare the props from resumedeleteProps interface because we are using typescript
+// and we want to ensure that the component receives the correct types of props.
   const handleDelete = async (): Promise<void> => {
     if (!selectedResume) return;
 
