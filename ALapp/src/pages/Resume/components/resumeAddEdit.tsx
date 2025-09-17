@@ -94,10 +94,9 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
         // the candidate with id selectedResume.candidateId 
         // using the data in formData.
       } else {
-        const {  ...newCandidate } = formData;
         //this line creates a new object newCandidate that contains all properties of formData except candidateId.
         //except candidateId.
-        await createCandidate(newCandidate); // create a new candidate
+        await createCandidate(formData); // create a new candidate
         //using the old formData but without candidateId
       }
   
