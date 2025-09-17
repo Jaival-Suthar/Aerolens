@@ -1,15 +1,12 @@
 import React from 'react';
-import { Card } from 'primereact/card';
+import JobProfileMain from './components/jobProfileTable';
 
-const JobProfile = () => {
-    return (
-        <div className="p-2">
-            <Card title="Welcome to the Job Profile" className="mb-3">
-                <p className="m-0">Job profile will be implemented here</p>
-            </Card>
-            </div>
-    );
-}
+const JobProfile: React.FC = () => {
+  return (
+    <div className="p-2">
+      <JobProfileMain />
+    </div>
+  );
+};
 
 export default JobProfile;
-  
