@@ -6,20 +6,22 @@ import { Dropdown } from "primereact/dropdown";
 import { Candidate } from "../types/resumeTypes";
 import { createCandidate,updateCandidate} from "../services/useResume";
 import { InputNumber } from "primereact/inputnumber";
-
-interface ResumeAddEditProps {
-  visible: boolean;
-  onHide: () => void;
-  selectedResume: Candidate | null;
-//   candidateId: number;
-  onSuccess: () => void;
-}
+import { ResumeAddEditProps } from "../types/resumeTypes";
 
 const statusOptions = [
   { label: "Selected", value: "Selected" },
   { label: "Rejected", value: "Rejected" },
   { label: "Interview Pending", value: "Interview Pending" },
 ];
+const recruitorsOptions = [
+  { label: "Jayraj", value: "Jayraj" },
+  { label: "Khushi", value: "Khushi" },
+  { label: "Yash", value: "Yash" }
+];
+//
+
+// Jayraj/Khushi/Yash
+
 
 const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   visible,
@@ -196,18 +198,20 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     
     {/* Recruiter */}
     <div className="field">
-      <label className="font-bold">Recruiter *</label>
-      <InputText
-        value={formData.recruiterName}
-        onChange={(e) => handleChange("recruiterName", e.target.value)}
-        required
-        className={submitted && !formData.recruiterName.trim() ? "p-invalid" : ""}
-      />
-      {submitted && !formData.recruiterName.trim() && (
-        <small className="p-error">Recruiter is required.</small>
-      )}
-    </div>
-    
+  <label className="font-bold">Recruiter *</label>
+  <Dropdown
+    value={formData.recruiterName}
+    options={recruitorsOptions}
+    onChange={(e) => handleChange("recruiterName", e.value)}
+    required
+    placeholder="Select Recruiter"
+    className={submitted && !formData.recruiterName.trim() ? "p-invalid" : ""}
+  />
+  {submitted && !formData.recruiterName.trim() && (
+    <small className="p-error">Recruiter is required.</small>
+  )}
+</div>
+
     {/* Job Role */}
     <div className="field">
       <label className="font-bold">Job Role *</label>

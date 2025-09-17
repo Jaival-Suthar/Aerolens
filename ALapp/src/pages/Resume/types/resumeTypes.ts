@@ -33,6 +33,15 @@ export interface Candidate {
     candidates: Candidate[];
   }
   
+
+export interface ResumeAddEditProps {
+  visible: boolean;
+  onHide: () => void;
+  selectedResume: Candidate | null;
+//   candidateId: number;
+  onSuccess: () => void;
+}
+
   // Payload for adding a new candidate
   // export interface AddCandidatePayload {
   //   name: string;
