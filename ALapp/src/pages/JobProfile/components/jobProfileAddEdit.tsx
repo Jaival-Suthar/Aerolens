@@ -1,18 +1,19 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { InputTextarea } from 'primereact/inputtextarea';
-import { InputNumber, type InputNumberValueChangeEvent } from 'primereact/inputnumber';
+import { InputNumber } from 'primereact/inputnumber';
 import { Dropdown, type DropdownChangeEvent } from 'primereact/dropdown';
 import { Calendar } from 'primereact/calendar';
 import { classNames } from 'primereact/utils';
 
-import { validateJobProfileRequest } from '../services/jobProfileService';
+import { getDepartmentsByClientId } from '../services/jobProfileService';
 import type {
   JobProfile,
-  JobProfilePayload,
+  JobProfileFormData,
   JobProfileFormErrors,
+  JobProfileRequest,
   ClientOption,
   DepartmentOption,
   JobStatus
@@ -21,7 +22,7 @@ import type {
 interface Props {
   visible: boolean;
   onHide: () => void;
-  onSave: (jobProfile: JobProfilePayload) => Promise<void>;
+  onSave: (jobProfile: JobProfileRequest) => Promise<void>;
   jobProfile?: JobProfile | null;
   clients: ClientOption[];
   loading?: boolean;
@@ -34,16 +35,18 @@ const statusOptions: { label: string; value: JobStatus }[] = [
   { label: 'Cancelled', value: 'Cancelled' },
 ];
 
-const emptyForm: Partial<JobProfilePayload> = {
-  clientId: undefined,
-  departmentId: undefined,
+const emptyForm: JobProfileFormData = {
+  jobProfileId: undefined,
+  clientId: null,
+  departmentId: null,
   jobProfileDescription: '',
   jobRole: '',
   techSpecification: '',
-  positions: 0,
-  estimatedCloseDate: '',
+  positions: null,
+  receivedOn: null,
+  estimatedCloseDate: null,
   location: '',
-  status: undefined,
+  status: null,
 };
 
 const JobProfileAddEdit: React.FC<Props> = ({
@@ -54,8 +57,10 @@ const JobProfileAddEdit: React.FC<Props> = ({
   clients,
   loading = false,
 }) => {
-  const [form, setForm] = useState<Partial<JobProfilePayload>>(emptyForm);
+  const [form, setForm] = useState<JobProfileFormData>(emptyForm);
   const [errors, setErrors] = useState<JobProfileFormErrors>({});
+  const [loadingDepartments, setLoadingDepartments] = useState(false);
+  const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   const tomorrow = new Date();
@@ -67,16 +72,18 @@ const JobProfileAddEdit: React.FC<Props> = ({
     if (visible) {
       if (jobProfile) {
         setForm({
-        clientId: jobProfile.clientId,
-        departmentId: jobProfile.departmentId,
-        jobProfileDescription: jobProfile.jobProfileDescription,
-        jobRole: jobProfile.jobRole,
-        techSpecification: jobProfile.techSpecification,
-        positions: jobProfile.positions,
-        estimatedCloseDate: jobProfile.estimatedCloseDate,
-        location: jobProfile.location || '',
-        status: jobProfile.status,
-      });
+          jobProfileId: jobProfile.jobProfileId,
+          clientId: jobProfile.clientId,
+          departmentId: jobProfile.departmentId,
+          jobProfileDescription: jobProfile.jobProfileDescription,
+          jobRole: jobProfile.jobRole,
+          techSpecification: jobProfile.techSpecification,
+          positions: jobProfile.positions,
+          receivedOn: jobProfile.receivedOn ? new Date(jobProfile.receivedOn) : null,
+          estimatedCloseDate: jobProfile.estimatedCloseDate ? new Date(jobProfile.estimatedCloseDate) : null,
+          location: jobProfile.location,
+          status: jobProfile.status,
+        });
       } else {
         setForm({ ...emptyForm });
       }
@@ -85,113 +92,111 @@ const JobProfileAddEdit: React.FC<Props> = ({
     }
   }, [visible, jobProfile]);
 
-  // Get departments for the selected client using useMemo for optimization
-  const availableDepartments = useMemo((): DepartmentOption[] => {
-    if (!form.clientId) return [];
-    
-    const selectedClient = clients.find(client => client.clientId === form.clientId);
-    return selectedClient ? selectedClient.departments : [];
-  }, [form.clientId, clients]);
+  // Load departments when client changes
+  useEffect(() => {
+    const load = async () => {
+      if (form.clientId !== null) {
+        setLoadingDepartments(true);
+        try {
+          const data = await getDepartmentsByClientId(form.clientId);
+          setDepartments(data);
 
-  // Check if the currently selected department is still valid for the selected client
-  const isDepartmentValidForClient = useMemo((): boolean => {
-    if (!form.clientId || !form.departmentId) return true;
-    
-    return availableDepartments.some(dept => dept.departmentId === form.departmentId);
-  }, [form.clientId, form.departmentId, availableDepartments]);
-
-  // Prepare client options for dropdown
-  const clientOptions = useMemo(() => 
-    clients.map(client => ({ 
-      label: client.clientName, 
-      value: client.clientId 
-    }))
-  , [clients]);
-
-  // Prepare department options for dropdown
-  const departmentOptions = useMemo(() => 
-    availableDepartments.map(dept => ({ 
-      label: dept.departmentName, 
-      value: dept.departmentId 
-    }))
-  , [availableDepartments]);
+          // Reset department if current one is not valid for new client
+          if (form.departmentId && !data.find(d => d.id === form.departmentId)) {
+            setForm(prev => ({ ...prev, departmentId: null }));
+          }
+        } catch (err) {
+          console.error('Error loading departments', err);
+          setDepartments([]);
+        } finally {
+          setLoadingDepartments(false);
+        }
+      } else {
+        // If no client selected, reset departments list and departmentId
+        setDepartments([]);
+        setForm(prev => ({ ...prev, departmentId: null }));
+      }
+    };
+    load();
+  }, [form.clientId]);
 
   // Generic change handler
   const updateField = <
-    K extends keyof JobProfilePayload & keyof JobProfileFormErrors
+    K extends keyof JobProfileFormData & keyof JobProfileFormErrors
   >(
     field: K,
-    value: JobProfilePayload[K]
+    value: JobProfileFormData[K]
   ) => {
-    setForm(prev => {
-      const newForm = { ...prev, [field]: value };
-      
-      // Reset departmentId if clientId changes and current department is not valid for new client
-      if (field === 'clientId') {
-        const newClient = clients.find(c => c.clientId === value);
-        const currentDepartmentId = prev.departmentId;
-        
-        if (currentDepartmentId && newClient) {
-          const isDepartmentValid = newClient.departments.some(
-            dept => dept.departmentId === currentDepartmentId
-          );
-          
-          if (!isDepartmentValid) {
-            newForm.departmentId = 0;
-          }
-        } else {
-          newForm.departmentId = 0;
-        }
-      }
-      
-      return newForm;
-    });
+    setForm(prev => ({ ...prev, [field]: value }));
 
-    // Clear field-specific errors
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
   };
 
-  // Submit handler
-  const handleSubmit = async () => {
-    // Validate department is still valid for selected client
-    if (form.clientId && form.departmentId && !isDepartmentValidForClient) {
-      setErrors({ departmentId: 'Selected department is not valid for the selected client' });
-      return;
+  // Validation
+  const validate = useCallback((): boolean => {
+    const e: JobProfileFormErrors = {};
+
+    if (!form.clientId) e.clientId = 'Client is required';
+    if (!form.departmentId) e.departmentId = 'Department is required';
+
+    if (!form.jobProfileDescription.trim()) {
+      e.jobProfileDescription = 'Job Profile Description is required';
+    } else if (form.jobProfileDescription.length < 10) {
+      e.jobProfileDescription = 'Minimum 10 characters required';
+    } else if (form.jobProfileDescription.length > 500) {
+      e.jobProfileDescription = 'Maximum 500 characters allowed';
     }
 
-    const payload: JobProfilePayload = {
+    if (!form.jobRole.trim()) {
+      e.jobRole = 'Job Role is required';
+    } else if (form.jobRole.length < 2) {
+      e.jobRole = 'Minimum 2 characters required';
+    } else if (form.jobRole.length > 100) {
+      e.jobRole = 'Maximum 100 characters allowed';
+    }
+
+    if (!form.techSpecification.trim()) {
+      e.techSpecification = 'Tech Specification is required';
+    }
+
+    if (form.positions === null || form.positions === undefined) {
+      e.positions = 'Positions is required';
+    }
+
+    if (!form.estimatedCloseDate) {
+      e.estimatedCloseDate = 'Required';
+    } else if (form.estimatedCloseDate <= new Date()) {
+      e.estimatedCloseDate = 'Must be in the future';
+    }
+
+    if (!form.location.trim()) e.location = 'Location required';
+
+    if (!form.status) e.status = 'Status is required';
+
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }, [form]);
+
+  // Submit handler
+  const handleSubmit = async () => {
+    if (!validate()) return;
+    setSubmitting(true);
+
+    const payload: JobProfileRequest = {
+      ...(form.jobProfileId && { jobProfileId: form.jobProfileId }),
       clientId: form.clientId!,
       departmentId: form.departmentId!,
-      jobProfileDescription: form.jobProfileDescription!.trim(),
-      jobRole: form.jobRole!.trim(),
-      techSpecification: form.techSpecification!.trim(),
+      jobProfileDescription: form.jobProfileDescription.trim(),
+      jobRole: form.jobRole.trim(),
+      techSpecification: form.techSpecification.trim(),
       positions: form.positions!,
-      estimatedCloseDate: new Date(form.estimatedCloseDate!).toISOString(),
-      location: form.location!.trim(), // Change from locationId to location
+      estimatedCloseDate: form.estimatedCloseDate!.toISOString(),
+      location: form.location.trim(),
       status: form.status!,
     };
 
-    const validationErrors = validateJobProfileRequest(payload);
-    if (validationErrors.length > 0) {
-      const errorObj: JobProfileFormErrors = {};
-      validationErrors.forEach(err => {
-        if (err.includes('Client')) errorObj.clientId = err;
-        if (err.includes('Department')) errorObj.departmentId = err;
-        if (err.includes('Description')) errorObj.jobProfileDescription = err;
-        if (err.includes('Job Role')) errorObj.jobRole = err;
-        if (err.includes('Tech Specification')) errorObj.techSpecification = err;
-        if (err.includes('Positions')) errorObj.positions = err;
-        if (err.includes('Close Date')) errorObj.estimatedCloseDate = err;
-        if (err.includes('Location')) errorObj.location = err;
-        if (err.includes('Status')) errorObj.status = err;
-      });
-      setErrors(errorObj);
-      return;
-    }
-
-    setSubmitting(true);
     try {
       await onSave(payload);
     } catch (err) {
@@ -233,16 +238,15 @@ const JobProfileAddEdit: React.FC<Props> = ({
       resizable={false}
     >
       <div className="p-fluid formgrid grid gap-3">
+
         <div className="field col-6">
           <label>Client</label>
           <Dropdown
-            value={form.clientId || null}
-            options={clientOptions}
+            value={form.clientId}
+            options={clients.map(c => ({ label: c.name, value: c.id }))}
             onChange={(e: DropdownChangeEvent) => updateField('clientId', e.value)}
             placeholder="Select Client"
             className={classNames({ 'p-invalid': errors.clientId })}
-            optionLabel="label"
-            optionValue="value"
           />
           {errors.clientId && <small className="p-error">{errors.clientId}</small>}
         </div>
@@ -250,60 +254,48 @@ const JobProfileAddEdit: React.FC<Props> = ({
         <div className="field col-6">
           <label>Department</label>
           <Dropdown
-            value={form.departmentId || null}
-            options={departmentOptions}
+            value={form.departmentId}
+            options={departments.map(d => ({ label: d.name, value: d.id }))}
             onChange={(e: DropdownChangeEvent) => updateField('departmentId', e.value)}
             placeholder="Select Department"
-            disabled={!form.clientId || availableDepartments.length === 0}
-            className={classNames({ 
-              'p-invalid': errors.departmentId || (form.departmentId && !isDepartmentValidForClient) 
-            })}
-            optionLabel="label"
-            optionValue="value"
+            loading={loadingDepartments}
+            disabled={!form.clientId}
+            className={classNames({ 'p-invalid': errors.departmentId })}
           />
-          {!form.clientId && (
-            <small className="text-muted"></small>
-          )}
-          {form.clientId && availableDepartments.length === 0 && (
-            <small className="text-muted">No departments available for selected client</small>
-          )}
-          {form.departmentId && !isDepartmentValidForClient && (
-            <small className="p-error">Selected department is not valid for the selected client</small>
-          )}
           {errors.departmentId && <small className="p-error">{errors.departmentId}</small>}
         </div>
 
         <div className="field col-12">
           <label>Job Profile Description</label>
           <InputTextarea
-            value={form.jobProfileDescription || ''}
+            value={form.jobProfileDescription}
             onChange={e => updateField('jobProfileDescription', e.target.value)}
             rows={3}
             maxLength={500}
             className={classNames({ 'p-invalid': errors.jobProfileDescription })}
             placeholder="Minimum 10 characters, maximum 500 characters"
           />
-          <small className="text-muted">{form.jobProfileDescription?.length ?? 0}/500 characters</small>
+          <small className="text-muted">{form.jobProfileDescription.length}/500 characters</small>
           {errors.jobProfileDescription && <small className="p-error">{errors.jobProfileDescription}</small>}
         </div>
 
         <div className="field col-6">
           <label>Job Role</label>
           <InputText
-            value={form.jobRole || ''}
+            value={form.jobRole}
             onChange={e => updateField('jobRole', e.target.value)}
             maxLength={100}
             className={classNames({ 'p-invalid': errors.jobRole })}
             placeholder="e.g., Backend Engineer"
           />
-          <small className="text-muted">{form.jobRole?.length ?? 0}/100 characters</small>
+          <small className="text-muted">{form.jobRole.length}/100 characters</small>
           {errors.jobRole && <small className="p-error">{errors.jobRole}</small>}
         </div>
 
         <div className="field col-6">
           <label>Tech Specification</label>
           <InputText
-            value={form.techSpecification || ''}
+            value={form.techSpecification}
             onChange={e => updateField('techSpecification', e.target.value)}
             className={classNames({ 'p-invalid': errors.techSpecification })}
             placeholder="e.g., Java, React, Spring Boot"
@@ -315,7 +307,7 @@ const JobProfileAddEdit: React.FC<Props> = ({
           <label>Positions</label>
           <InputNumber
             value={form.positions ?? undefined}
-            onValueChange={(e: InputNumberValueChangeEvent) => updateField('positions', e.value ?? 0)}
+            onInput={(e: React.ChangeEvent<HTMLInputElement>) => updateField('positions', e.target.value ? Number(e.target.value.replace(/,/g, '')) : null)}
             min={1}
             className={classNames({ 'p-invalid': errors.positions })}
           />
@@ -325,8 +317,8 @@ const JobProfileAddEdit: React.FC<Props> = ({
         <div className="field col-4">
           <label>Estimated Close Date</label>
           <Calendar
-            value={form.estimatedCloseDate ? new Date(form.estimatedCloseDate) : null}
-            onChange={e => updateField('estimatedCloseDate', (e.value as Date)?.toISOString() ?? '')}
+            value={form.estimatedCloseDate}
+            onChange={e => updateField('estimatedCloseDate', (e.value as Date) ?? null)}
             showIcon
             minDate={tomorrow}
             className={classNames({ 'p-invalid': errors.estimatedCloseDate })}
@@ -337,7 +329,7 @@ const JobProfileAddEdit: React.FC<Props> = ({
         <div className="field col-4">
           <label>Location</label>
           <InputText
-            value={form.location || ''}
+            value={form.location}
             onChange={e => updateField('location', e.target.value)}
             className={classNames({ 'p-invalid': errors.location })}
             placeholder="e.g., US, IDC, Seattle"
@@ -348,16 +340,15 @@ const JobProfileAddEdit: React.FC<Props> = ({
         <div className="field col-12">
           <label>Status</label>
           <Dropdown
-            value={form.status || null}
+            value={form.status}
             options={statusOptions}
             onChange={(e: DropdownChangeEvent) => updateField('status', e.value)}
             placeholder="Select Status"
             className={classNames({ 'p-invalid': errors.status })}
-            optionLabel="label"
-            optionValue="value"
           />
           {errors.status && <small className="p-error">{errors.status}</small>}
         </div>
+
       </div>
     </Dialog>
   );
