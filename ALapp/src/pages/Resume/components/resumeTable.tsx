@@ -1,16 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { DataTable, DataTableSelectionSingleChangeEvent } from "primereact/datatable";
+import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import { Button } from "primereact/button";
 import ResumeAddEdit from "../components/resumeAddEdit";
-// import ResumeDelete from "../components/resumeDelete";
 import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
-import { Candidate} from "../types/resumeTypes";
+import { Candidate } from "../types/resumeTypes";
 import { getCandidates } from "../services/useResume";
 import ResumeDelete from "./resumeDelete";
-
 const ResumeTable: React.FC<any> = () => {
   const [resumes, setResumes] = useState<Candidate[]>([]);
   const [selectedResume, setSelectedResume] = useState<Candidate | null>(null);
@@ -28,7 +25,7 @@ const ResumeTable: React.FC<any> = () => {
   }, []);
 
   useEffect(() => {
-      loadResumes();
+    loadResumes();
   }, []);
 
   const handleAdd = () => {
@@ -66,45 +63,45 @@ const ResumeTable: React.FC<any> = () => {
 
       {/* <h4>Resumes for: {candidateName}</h4> */}
       <DataTable
-  value={resumes}
-  paginator
-  rows={5}
-  rowsPerPageOptions={[5, 10, 20]}
-  selectionMode="single"
-  selection={selectedResume}
-  dataKey="candidateId" 
-  onSelectionChange={(e:any) => setSelectedResume(e.value)}
-  tableStyle={{ minWidth: "80rem" }}
->
-<Column selectionMode="single" headerStyle={{ width: "3rem" }} />
-<Column field="candidateName" sortable header="Candidate Name" />
-<Column field="contactNumber" sortable header="Contact Number" />
-<Column field="email"  sortable header="Email" />
-<Column field="recruiterName" sortable header="Recruiter" />
-<Column field="jobRole"  sortable header="Role" />
-<Column field="preferredJobLocation" sortable header="Preferable Location" />
-<Column field="currentCTC" sortable header="Current CTC" />
-<Column field="expectedCTC" sortable header="Expected CTC" />
-<Column field="noticePeriod" header="Notice Period" />
-<Column field="experienceYears" header="Experience" />
-<Column field="statusName" header="statusName" />
-<Column field="linkedinProfileUrl" header="LinkedIn Profile URL" />
+        value={resumes}
+        paginator
+        rows={5}
+        rowsPerPageOptions={[5, 10, 20]}
+        selectionMode="single"
+        selection={selectedResume}
+        dataKey="candidateId"
+        onSelectionChange={(e: any) => setSelectedResume(e.value)}
+        tableStyle={{ minWidth: "80rem" }}
+      >
+        <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
+        <Column field="candidateName" sortable header="Candidate Name" />
+        <Column field="contactNumber" sortable header="Contact Number" />
+        <Column field="email" sortable header="Email" />
+        <Column field="recruiterName" sortable header="Recruiter" />
+        <Column field="jobRole" sortable header="Role" />
+        <Column field="preferredJobLocation" sortable header="Preferable Location" />
+        <Column field="currentCTC" sortable header="Current CTC" />
+        <Column field="expectedCTC" sortable header="Expected CTC" />
+        <Column field="noticePeriod" header="Notice Period" />
+        <Column field="experienceYears" header="Experience" />
+        <Column field="statusName" header="statusName" />
+        <Column field="linkedinProfileUrl" header="LinkedIn Profile URL" />
 
-</DataTable>
-     <ResumeAddEdit
+      </DataTable>
+      <ResumeAddEdit
         visible={showAddEditDialog}
         onHide={() => setShowAddEditDialog(false)}
         selectedResume={editingResume}
         onSuccess={handleAddEditSuccess}
       />
 
-       <ResumeDelete
+      <ResumeDelete
         visible={showDeleteDialog}
         onHide={() => setShowDeleteDialog(false)}
         selectedResume={selectedResume}
         onSuccess={handleDeleteSuccess}
         onClearSelection={handleClearSelection}
-      /> 
+      />
     </>
   );
 };

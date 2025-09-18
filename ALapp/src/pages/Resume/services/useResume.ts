@@ -1,5 +1,5 @@
 import { json } from "react-router-dom";
-import { CandidatesResponse,Candidate,AddCandidate } from "../types/resumeTypes";
+import { Candidate, AddCandidate } from "../types/resumeTypes";
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
 
 // CREATE
@@ -49,12 +49,12 @@ export const getCandidates = async (): Promise<Candidate[]> => {
   }
 };
 
-  
+
 // UPDATE
 export const updateCandidate = async (
   id: number,
   candidate: AddCandidate
-) :Promise<AddCandidate>=> {
+): Promise<AddCandidate> => {
   try {
     const response = await fetch(`${API_BASE_URL}/candidate/${id}`, {
       method: "PATCH",
@@ -69,8 +69,8 @@ export const updateCandidate = async (
     }
 
     const data = await response.json();
-    return data?.data?.candidate; 
-  
+    return data?.data?.candidate;
+
   } catch (error) {
     console.error("Error updating candidate:", error);
     throw error;

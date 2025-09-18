@@ -17,20 +17,10 @@ export interface Candidate {
   linkedinProfileUrl: string;
 }
 
-  // export interface ApiResponse<T> {
-  //   data: T;
-  //   message?: string;
-  // }
   
-  // Error response from backend
-  export interface ErrorResponse {
-    message: string;
-  }
   
   // Response for fetching candidates
-  export interface CandidatesResponse {
-    candidates: Candidate[];
-  }
+
   export interface ResumeDeleteProps {
     visible: boolean;
     onHide: () => void;
@@ -65,23 +55,5 @@ export interface ResumeAddEditProps {
     statusName: string;
     linkedinProfileUrl: string;
   }
-  
-  // Payload for updating a candidate
-  // export interface UpdateCandidate {
-  //   candidateId: number;
-  //   candidateName: string;
-  //   contactNumber: string;
-
-  //   email: string;
-  //   recruiterName: string;
-  //   jobRole: string;
-  //   preferredJobLocation: string;
-  //   currentCTC: number;
-  //   expectedCTC: number;
-  //   noticePeriod: number;
-  //   experienceYears: number;
-  //   status: string;
-  //   linkedinProfileUrl: string;
-  // }
   
   
