@@ -48,7 +48,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     expectedCTC: 0,
     noticePeriod: 0,
     experienceYears: 0,
-    status: "",
+    statusName: "",
     linkedinProfileUrl: "",
   });
   const [submitted, setSubmitted] = useState(false);
@@ -56,7 +56,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
 
   // Determine if we are in edit mode   
   const isEditMode = selectedResume !== null;
-
+console.log(selectedResume)
   useEffect(() => {
     if (isEditMode && selectedResume) {
       setFormData({ ...selectedResume });
@@ -73,7 +73,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
         expectedCTC: 0,
         noticePeriod: 0,
         experienceYears: 0,
-        status: "",
+        statusName: "",
         linkedinProfileUrl: "",
       });
     }
@@ -97,6 +97,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     try {
       if (isEditMode && selectedResume) {
         await updateCandidate(selectedResume.candidateId, formData);
+        console.log(selectedResume)
         //this line means update 
         // the candidate with id selectedResume.candidateId 
         // using the data in formData.
@@ -120,19 +121,53 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     setSubmitted(false);
     onHide();
   };
-  const isFormValid = 
-  formData.candidateName.trim() &&
-  formData.email.trim() &&
-  formData.contactNumber.trim() &&
-  formData.recruiterName.trim() &&
-  formData.jobRole.trim() &&
-  formData.preferredJobLocation &&
-  formData.currentCTC > 0 &&
-  formData.expectedCTC > 0 &&
-  formData.noticePeriod > 0 &&
-  formData.experienceYears > 0 &&
-  formData.status.trim() &&
-  formData.linkedinProfileUrl.trim();
+
+//   const isFormValid =
+//   // Candidate and recruiter name: 2–100 chars, letters, spaces, ., -, '
+//   formData.candidateName.trim().length >= 2 &&
+//   formData.candidateName.trim().length <= 100 &&
+//   /^[a-zA-Z .'-]+$/.test(formData.candidateName) &&
+//   formData.recruiterName.trim().length >= 2 &&
+//   formData.recruiterName.trim().length <= 100 &&
+//   /^[a-zA-Z .'-]+$/.test(formData.recruiterName) &&
+
+//   // Contact number: 7–25 chars, numbers, +, -
+//   formData.contactNumber.trim().length >= 7 &&
+//   formData.contactNumber.trim().length <= 25 &&
+//   /^[0-9+\- ]+$/.test(formData.contactNumber) &&
+
+//   // Email: valid format, max 255 chars
+//   formData.email.trim().length > 0 &&
+//   formData.email.length <= 255 &&
+//   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) &&
+
+//   // Job role: 2–100 chars
+//   formData.jobRole.trim().length >= 2 &&
+//   formData.jobRole.trim().length <= 100 &&
+
+//   // Preferred job location: Ahmedabad or Bangalore
+//   (formData.preferredJobLocation === "Ahmedabad" || formData.preferredJobLocation === "Bangalore") &&
+
+//   // Current and expected CTC: positive integers, expected >= current
+//   formData.currentCTC > 0 &&
+//   formData.expectedCTC > 0 &&
+//   formData.expectedCTC >= formData.currentCTC &&
+
+//   // Notice period: 0–365
+//   formData.noticePeriod >= 0 &&
+//   formData.noticePeriod <= 365 &&
+
+//   // Experience: 0–50
+//   formData.experienceYears >= 0 &&
+//   formData.experienceYears <= 50 &&
+
+//   // LinkedIn URL: non-empty, max 500 chars, must be a URL
+//   formData.linkedinProfileUrl.trim().length > 0 &&
+//   formData.linkedinProfileUrl.length <= 500 &&
+//   /^https?:\/\/(www\.)?linkedin\.com\/.*$/.test(formData.linkedinProfileUrl) &&
+
+//   // Status: Selected, Rejected, Interview Pending
+//   ["Selected", "Rejected", "Interview Pending"].includes(formData.statusName);
 
   const dialogFooter = (
     <div className="flex justify-content-end gap-2">
@@ -141,199 +176,277 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
         label={isEditMode ? "Update" : "Save"}
         icon={isEditMode ? "pi pi-check" : "pi pi-plus"}
         onClick={handleSave}
-        disabled={!isFormValid}
+        // disabled={!isFormValid}
       />
     </div>
   );
 
   return (
     <Dialog
-      visible={visible}
-      onHide={handleCancel}
-      header={isEditMode ? "Edit Resume" : "Add New Resume"}
-      footer={dialogFooter}
-      style={{ width: "600px" }}
-      modal
-      className="p-fluid"
-    >{/* Candidate Name */}
-    <div className="field">
-      <label className="font-bold">Candidate Name *</label>
-      <InputText
-        value={formData.candidateName}
-        onChange={(e) => handleChange("candidateName", e.target.value)}
-        required
-        className={submitted && !formData.candidateName.trim() ? "p-invalid" : ""}
-      />
-      {submitted && !formData.candidateName.trim() && (
-        <small className="p-error">Candidate Name is required.</small>
-      )}
-    </div>
-    
-    {/* Email */}
-    <div className="field">
-      <label className="font-bold">Email *</label>
-      <InputText
-        value={formData.email}
-        onChange={(e) => handleChange("email", e.target.value)}
-        required
-        className={
-          submitted &&
-          (!formData.email.trim() || !formData.email.includes("@"))
-            ? "p-invalid"
-            : ""
-        }
-      />
-      {submitted && !formData.email.trim() && (
-        <small className="p-error">Email is required.</small>
-      )}
-    </div>
-    
-    {/* Contact Number */}
-    <div className="field">
-      <label className="font-bold">Contact Number *</label>
-      <InputText
-        value={formData.contactNumber}
-        onChange={(e) => handleChange("contactNumber", e.target.value)}
-        required
-        className={submitted && !formData.contactNumber.trim() ? "p-invalid" : ""}
-      />
-      {submitted && !formData.contactNumber.trim() && (
-        <small className="p-error">Contact Number is required.</small>
-      )}
-    </div>
-    
-    {/* Recruiter */}
-   <div className="field">
-        <label className="font-bold">Recruiter *</label>
-        <Dropdown
-          value={formData.recruiterName}
-          options={recruitorsOptions}
-          onChange={(e) => handleChange("recruiterName", e.value)}
-          required
-          placeholder="Select Recruiter"
-          className={submitted && !formData.recruiterName.trim() ? "p-invalid" : ""}
-        />
-        {submitted && !formData.recruiterName.trim() && (
-          <small className="p-error">Recruiter is required.</small>
-        )}
-      </div>
+  visible={visible}
+  onHide={handleCancel}
+  header={isEditMode ? "Edit Resume" : "Add New Resume"}
+  footer={dialogFooter}
+  style={{ width: "600px" }}
+  modal
+  className="p-fluid"
+>
+  {/* Candidate Name */}
+  {/* Candidate Name */}
+<div className="field">
+  <label className="font-bold">Candidate Name *</label>
+  <InputText
+    value={formData.candidateName}
+    onChange={(e) => handleChange("candidateName", e.target.value)}
+    className={
+      submitted &&
+      (formData.candidateName.trim().length < 2 ||
+        formData.candidateName.trim().length > 100 ||
+        !/^[a-zA-Z .'-]+$/.test(formData.candidateName))
+        ? "p-invalid"
+        : ""
+    }
+  />
+  {submitted && formData.candidateName.trim().length < 2 && (
+    <small className="p-error">Candidate Name must be at least 2 characters</small>
+  )}
+  {submitted && formData.candidateName.trim().length > 100 && (
+    <small className="p-error">Candidate Name cannot exceed 100 characters</small>
+  )}
+  {submitted && !/^[a-zA-Z .'-]+$/.test(formData.candidateName) && (
+    <small className="p-error">Candidate Name contains invalid characters</small>
+  )}
+</div>
 
+{/* Recruiter Name */}
+<div className="field">
+  <label className="font-bold">Recruiter *</label>
+  <Dropdown
+    value={formData.recruiterName}
+    options={recruitorsOptions}
+    onChange={(e) => handleChange("recruiterName", e.value)}
+    placeholder="Select Recruiter"
+    className={
+      submitted &&
+      (formData.recruiterName.trim().length < 2 ||
+        formData.recruiterName.trim().length > 100 ||
+        !/^[a-zA-Z .'-]+$/.test(formData.recruiterName))
+        ? "p-invalid"
+        : ""
+    }
+  />
+  {submitted && formData.recruiterName.trim().length < 2 && (
+    <small className="p-error">Recruiter Name must be at least 2 characters</small>
+  )}
+  {submitted && formData.recruiterName.trim().length > 100 && (
+    <small className="p-error">Recruiter Name cannot exceed 100 characters</small>
+  )}
+  {submitted && !/^[a-zA-Z .'-]+$/.test(formData.recruiterName) && (
+    <small className="p-error">Recruiter Name contains invalid characters</small>
+  )}
+</div>
 
-    {/* Job Role */}
-    <div className="field">
-      <label className="font-bold">Job Role *</label>
-      <InputText
-        value={formData.jobRole}
-        onChange={(e) => handleChange("jobRole", e.target.value)}
-        required
-        className={submitted && !formData.jobRole.trim() ? "p-invalid" : ""}
-      />
-      {submitted && !formData.jobRole.trim() && (
-        <small className="p-error">Job Role is required.</small>
-      )}
-    </div>
-    {/* Preferred Job Location */}
-    <div className="field">
-      <label className="font-bold">Preferred Job Location *</label>
-      <Dropdown
-        value={formData.preferredJobLocation}
-        options={locationOptions}
-        onChange={(e) => handleChange("preferredJobLocation", e.value)}
-        required
-        className={submitted && !formData.preferredJobLocation ? "p-invalid" : ""}
-        placeholder="Select Location"
-      />
-      {submitted && !formData.preferredJobLocation && (
-        <small className="p-error">Preferred Job Location is required.</small>
-      )}
-    </div>    
-    {/* Current CTC */}
-    <div className="field">
-      <label className="font-bold">Current CTC *</label>
-      <InputNumber
-        value={formData.currentCTC}
-        onChange={(e) => handleChange("currentCTC", Number(e.value))}
-        required
-        className={submitted && !formData.currentCTC ? "p-invalid" : ""}
-      />
-      {submitted && !formData.currentCTC && (
-        <small className="p-error">Current CTC is required.</small>
-      )}
-    </div>
-    
-    {/* Expected CTC */}
-    <div className="field">
-      <label className="font-bold">Expected CTC *</label>
-      <InputNumber
-        value={formData.expectedCTC}
-        onChange={(e) => handleChange("expectedCTC", Number(e.value))}
-        required
-        className={submitted && !formData.expectedCTC ? "p-invalid" : ""}
-      />
-      {submitted && !formData.expectedCTC && (
-        <small className="p-error">Expected CTC is required.</small>
-      )}
-    </div>
-    
-    {/* Notice Period */}
-    <div className="field">
-      <label className="font-bold">Notice Period *</label>
-      <InputNumber
-        value={formData.noticePeriod}
-        onChange={(e) => handleChange("noticePeriod", Number(e.value))}
-        required
-        className={submitted && !formData.noticePeriod ? "p-invalid" : ""}
-      />
-      {submitted && !formData.noticePeriod && (
-        <small className="p-error">Notice Period is required.</small>
-      )}
-    </div>
-    
-    {/* Experience Years */}
-    <div className="field">
-      <label className="font-bold">Experience (Years) *</label>
-      <InputNumber
-        value={formData.experienceYears}
-        onChange={(e) => handleChange("experienceYears", Number(e.value))}
-        required
-        className={submitted && !formData.experienceYears ? "p-invalid" : ""}
-      />
-      {submitted && !formData.experienceYears && (
-        <small className="p-error">Experience is required.</small>
-      )}
-    </div>
-    
-    {/* Status */}
-    <div className="field">
-      <label className="font-bold">Status *</label>
-      <Dropdown
-        value={formData.status}
-        options={statusOptions}
-        onChange={(e) => handleChange("status", e.value)}
-        required
-        className={submitted && !formData.status.trim() ? "p-invalid" : ""}
-        placeholder="Select Status"
-      />
-      {submitted && !formData.status.trim() && (
-        <small className="p-error">Status is required.</small>
-      )}
-    </div>
-    
-    {/* LinkedIn */}
-    <div className="field">
-      <label className="font-bold">LinkedIn Profile URL *</label>
-      <InputText
-        value={formData.linkedinProfileUrl}
-        onChange={(e) => handleChange("linkedinProfileUrl", e.target.value)}
-        required
-        className={submitted && !formData.linkedinProfileUrl.trim() ? "p-invalid" : ""}
-      />
-      {submitted && !formData.linkedinProfileUrl.trim() && (
-        <small className="p-error">LinkedIn Profile URL is required.</small>
-      )}
-    </div>
-    
-    </Dialog>
+{/* Contact Number */}
+<div className="field">
+  <label className="font-bold">Contact Number *</label>
+  <InputText
+    value={formData.contactNumber}
+    onChange={(e) => handleChange("contactNumber", e.target.value)}
+    className={
+      submitted &&
+      (formData.contactNumber.trim().length < 7 ||
+        formData.contactNumber.trim().length > 25 ||
+        !/^[0-9+\- ]+$/.test(formData.contactNumber))
+        ? "p-invalid"
+        : ""
+    }
+  />
+  {submitted && formData.contactNumber.trim().length < 7 && (
+    <small className="p-error">Contact Number must be at least 7 digits</small>
+  )}
+  {submitted && formData.contactNumber.trim().length > 25 && (
+    <small className="p-error">Contact Number cannot exceed 25 digits</small>
+  )}
+  {submitted && !/^[0-9+\- ]+$/.test(formData.contactNumber) && (
+    <small className="p-error">Contact Number contains invalid characters</small>
+  )}
+</div>
+
+{/* Email */}
+<div className="field">
+  <label className="font-bold">Email *</label>
+  <InputText
+    value={formData.email}
+    onChange={(e) => handleChange("email", e.target.value)}
+    className={
+      submitted &&
+      (formData.email.trim().length === 0 ||
+        formData.email.length > 255 ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
+        ? "p-invalid"
+        : ""
+    }
+  />
+  {submitted && formData.email.trim().length === 0 && (
+    <small className="p-error">Email is required</small>
+  )}
+  {submitted && formData.email.length > 255 && (
+    <small className="p-error">Email cannot exceed 255 characters</small>
+  )}
+  {submitted && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) && (
+    <small className="p-error">Email format is invalid</small>
+  )}
+</div>
+
+{/* Job Role */}
+<div className="field">
+  <label className="font-bold">Job Role *</label>
+  <InputText
+    value={formData.jobRole}
+    onChange={(e) => handleChange("jobRole", e.target.value)}
+    className={
+      submitted &&
+      (formData.jobRole.trim().length < 2 || formData.jobRole.trim().length > 100)
+        ? "p-invalid"
+        : ""
+    }
+  />
+  {submitted && formData.jobRole.trim().length < 2 && (
+    <small className="p-error">Job Role must be at least 2 characters</small>
+  )}
+  {submitted && formData.jobRole.trim().length > 100 && (
+    <small className="p-error">Job Role cannot exceed 100 characters</small>
+  )}
+</div>
+
+{/* Preferred Job Location */}
+<div className="field">
+  <label className="font-bold">Preferred Job Location *</label>
+  <Dropdown
+    value={formData.preferredJobLocation}
+    options={locationOptions}
+    onChange={(e) => handleChange("preferredJobLocation", e.value)}
+    placeholder="Select Location"
+    className={
+      submitted &&
+      !["Ahmedabad", "Bangalore"].includes(formData.preferredJobLocation)
+        ? "p-invalid"
+        : ""
+    }
+  />
+  {submitted && !["Ahmedabad", "Bangalore"].includes(formData.preferredJobLocation) && (
+    <small className="p-error">Preferred Job Location must be Ahmedabad or Bangalore</small>
+  )}
+</div>
+
+{/* Current CTC */}
+<div className="field">
+  <label className="font-bold">Current CTC *</label>
+  <InputNumber
+    value={formData.currentCTC}
+    onChange={(e) => handleChange("currentCTC", Number(e.value))}
+    className={submitted && formData.currentCTC <= 0 ? "p-invalid" : ""}
+  />
+  {submitted && formData.currentCTC <= 0 && (
+    <small className="p-error">Current CTC must be greater than 0</small>
+  )}
+</div>
+
+{/* Expected CTC */}
+<div className="field">
+  <label className="font-bold">Expected CTC *</label>
+  <InputNumber
+    value={formData.expectedCTC}
+    onChange={(e) => handleChange("expectedCTC", Number(e.value))}
+    className={
+      submitted &&
+      (formData.expectedCTC <= 0 || formData.expectedCTC < formData.currentCTC)
+        ? "p-invalid"
+        : ""
+    }
+  />
+  {submitted && formData.expectedCTC <= 0 && (
+    <small className="p-error">Expected CTC must be greater than 0</small>
+  )}
+  {submitted && formData.expectedCTC < formData.currentCTC && (
+    <small className="p-error">Expected CTC cannot be less than Current CTC</small>
+  )}
+</div>
+
+{/* Notice Period */}
+<div className="field">
+  <label className="font-bold">Notice Period *</label>
+  <InputNumber
+    value={formData.noticePeriod}
+    onChange={(e) => handleChange("noticePeriod", Number(e.value))}
+    className={
+      submitted && (formData.noticePeriod < 0 || formData.noticePeriod > 365)
+        ? "p-invalid"
+        : ""
+    }
+  />
+  {submitted && (formData.noticePeriod < 0 || formData.noticePeriod > 365) && (
+    <small className="p-error">Notice Period must be between 0 and 365 days</small>
+  )}
+</div>
+
+{/* Experience Years */}
+<div className="field">
+  <label className="font-bold">Experience (Years) *</label>
+  <InputNumber
+    value={formData.experienceYears}
+    onChange={(e) => handleChange("experienceYears", Number(e.value))}
+    className={
+      submitted && (formData.experienceYears < 0 || formData.experienceYears > 50)
+        ? "p-invalid"
+        : ""
+    }
+  />
+  {submitted && (formData.experienceYears < 0 || formData.experienceYears > 50) && (
+    <small className="p-error">Experience must be between 0 and 50 years</small>
+  )}
+  {/* // */}
+</div>
+
+{/* Status */}
+<div className="field">
+  <label className="font-bold">Status *</label>
+  <Dropdown
+    value={formData.statusName}
+    options={statusOptions}
+    onChange={(e) => handleChange("statusName", e.value)}
+    placeholder="Select Status"
+    className={
+      submitted && !["Selected", "Rejected", "Interview Pending"].includes(formData.statusName)
+        ? "p-invalid"
+        : ""
+    }
+  />
+  {submitted && !["Selected", "Rejected", "Interview Pending"].includes(formData.statusName) && (
+    <small className="p-error">Status must be Selected, Rejected, or Interview Pending</small>
+  )}
+</div>
+
+{/* LinkedIn URL */}
+<div className="field">
+  <label className="font-bold">LinkedIn Profile URL *</label>
+  <InputText
+    value={formData.linkedinProfileUrl}
+    onChange={(e) => handleChange("linkedinProfileUrl", e.target.value)}
+    className={
+      submitted &&
+      (formData.linkedinProfileUrl.trim().length === 0 ||
+        formData.linkedinProfileUrl.length > 500 ||
+        !/^https?:\/\/(www\.)?linkedin\.com\/.*$/.test(formData.linkedinProfileUrl))
+        ? "p-invalid"
+        : ""
+    }
+  />
+  
+</div>
+
+</Dialog>
+
   );
 };
 

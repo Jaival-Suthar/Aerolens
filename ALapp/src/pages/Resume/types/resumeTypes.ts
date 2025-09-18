@@ -13,7 +13,7 @@ export interface Candidate {
   expectedCTC: number;
   noticePeriod: number;
   experienceYears: number;
-  status: string;
+  statusName: string;
   linkedinProfileUrl: string;
 }
 
@@ -62,26 +62,26 @@ export interface ResumeAddEditProps {
     expectedCTC: number;
     noticePeriod: number;
     experienceYears: number;
-    status: string;
+    statusName: string;
     linkedinProfileUrl: string;
   }
   
   // Payload for updating a candidate
-  export interface UpdateCandidate {
-    candidateId: number;
-    candidateName: string;
-    contactNumber: string;
+  // export interface UpdateCandidate {
+  //   candidateId: number;
+  //   candidateName: string;
+  //   contactNumber: string;
 
-    email: string;
-    recruiterName: string;
-    jobRole: string;
-    preferredJobLocation: string;
-    currentCTC: number;
-    expectedCTC: number;
-    noticePeriod: number;
-    experienceYears: number;
-    status: string;
-    linkedinProfileUrl: string;
-  }
+  //   email: string;
+  //   recruiterName: string;
+  //   jobRole: string;
+  //   preferredJobLocation: string;
+  //   currentCTC: number;
+  //   expectedCTC: number;
+  //   noticePeriod: number;
+  //   experienceYears: number;
+  //   status: string;
+  //   linkedinProfileUrl: string;
+  // }
   
   

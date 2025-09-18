@@ -87,7 +87,7 @@ const ResumeTable: React.FC<any> = () => {
 <Column field="expectedCTC" sortable header="Expected CTC" />
 <Column field="noticePeriod" header="Notice Period" />
 <Column field="experienceYears" header="Experience" />
-<Column field="status" header="Status" />
+<Column field="statusName" header="statusName" />
 <Column field="linkedinProfileUrl" header="LinkedIn Profile URL" />
 
 </DataTable>
