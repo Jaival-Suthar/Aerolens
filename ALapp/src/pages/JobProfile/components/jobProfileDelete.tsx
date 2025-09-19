@@ -3,13 +3,14 @@ import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
 import { Message } from 'primereact/message';
 import { deleteJobProfile } from '../services/jobProfileService';
-import type { JobProfile } from '../types/jobProfileTypes';
+import type { JobProfile, ClientOption } from '../types/jobProfileTypes';
 
 interface Props {
   visible: boolean;
   onHide: () => void;
   onDelete: () => void;
   jobProfile: JobProfile | null;
+  clients: ClientOption[];
   loading?: boolean;
 }
 
@@ -18,6 +19,7 @@ const JobProfileDelete: React.FC<Props> = ({
   onHide,
   onDelete,
   jobProfile,
+  clients,
   loading = false,
 }) => {
   const [deleting, setDeleting] = useState(false);
@@ -74,6 +76,11 @@ const JobProfileDelete: React.FC<Props> = ({
 
   if (!jobProfile) return null;
 
+  // Look up clientName and departmentName from clients array
+  const client = clients.find(c => c.clientId === jobProfile.clientId);
+  const clientName = client?.clientName || '-';
+  const departmentName = client?.departments.find(d => d.departmentId === jobProfile.departmentId)?.departmentName || '-';
+
   return (
     <Dialog
       visible={visible}
@@ -113,13 +120,13 @@ const JobProfileDelete: React.FC<Props> = ({
             <span className="text-color-secondary">Client:</span>
           </div>
           <div className="col-6">
-            {jobProfile.clientName}
+            {clientName}
           </div>
           <div className="col-6">
             <span className="text-color-secondary">Department:</span>
           </div>
           <div className="col-6">
-            {jobProfile.departmentName}
+            {departmentName}
           </div>
           <div className="col-6">
             <span className="text-color-secondary">Role:</span>

@@ -12,14 +12,16 @@ import EditButton from '../../../shared/EditButton';
 import DeleteButton from '../../../shared/DeleteButton';
 import { 
   getJobProfiles, 
-  getClients, 
   createJobProfile, 
-  updateJobProfile 
+  updateJobProfile,
+  deleteJobProfile,
+  getJobProfileById
 } from '../services/jobProfileService';
 import type { 
   JobProfile, 
   ClientOption, 
-  JobProfileRequest 
+  JobProfilePayload,
+  ApiResponse
 } from '../types/jobProfileTypes';
 
 const JobProfileMain: React.FC = () => {
@@ -27,52 +29,36 @@ const JobProfileMain: React.FC = () => {
   const [jobProfiles, setJobProfiles] = useState<JobProfile[]>([]);
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [loading, setLoading] = useState(false);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-
-  // Dialog states
+  const [selectedJobProfile, setSelectedJobProfile] = useState<JobProfile | null>(null);
   const [addEditVisible, setAddEditVisible] = useState(false);
   const [deleteVisible, setDeleteVisible] = useState(false);
-  const [selectedJobProfile, setSelectedJobProfile] = useState<JobProfile | null>(null);
 
   // Load data on component mount
   useEffect(() => {
-    loadJobProfiles();
-    loadClients();
+    loadData();
   }, []);
 
-  const loadJobProfiles = async (page = 1, limit = 10) => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      const response = await getJobProfiles(page, limit);
-      if (response.success) {
-        setJobProfiles(response.data);
-        setTotalRecords(response.totalRecords);
-        setCurrentPage(response.currentPage);
+      // Get both job profiles and clients in one call
+      const { jobProfiles: jobProfilesResponse, clients: clientsData } = await getJobProfiles();
+      
+      if (jobProfilesResponse.success) {
+        setJobProfiles(jobProfilesResponse.data);
+        setClients(clientsData);
+      } else {
+        throw new Error(jobProfilesResponse.message || 'Failed to load job profiles');
       }
     } catch (error) {
-      console.error('Error fetching job profiles:', error);
+      console.error('Error fetching data:', error);
       toast.current?.show({
         severity: 'error',
         summary: 'Error',
-        detail: 'Failed to load job profiles'
+        detail: 'Failed to load data'
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadClients = async () => {
-    try {
-      const clientsData = await getClients();
-      setClients(clientsData);
-    } catch (error) {
-      console.error('Error fetching clients:', error);
-      toast.current?.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load clients'
-      });
     }
   };
 
@@ -81,23 +67,41 @@ const JobProfileMain: React.FC = () => {
     setAddEditVisible(true);
   };
 
-  const handleEdit = (jobProfile: JobProfile) => {
-    setSelectedJobProfile(jobProfile);
-    setAddEditVisible(true);
-  };
+  const handleEdit = async (jobProfile: JobProfile) => {
+  try {
+    setLoading(true);
+    // Fetch fresh data from API
+    const response = await getJobProfileById(jobProfile.jobProfileId);
+    if (response.success) {
+      setSelectedJobProfile(response.data);
+      setAddEditVisible(true);
+    } else {
+      throw new Error(response.message || 'Failed to fetch job profile');
+    }
+  } catch (error) {
+    console.error('Error fetching job profile:', error);
+    toast.current?.show({
+      severity: 'error',
+      summary: 'Error',
+      detail: error instanceof Error ? error.message : 'Failed to fetch job profile'
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleDelete = (jobProfile: JobProfile) => {
     setSelectedJobProfile(jobProfile);
     setDeleteVisible(true);
   };
 
-  const handleSave = async (jobProfileData: JobProfileRequest) => {
+  const handleSave = async (jobProfileData: JobProfilePayload) => {
     try {
-      let response;
+      let response: ApiResponse<JobProfile>;
       
-      if (jobProfileData.jobProfileId) {
+      if (selectedJobProfile?.jobProfileId) {
         // Update existing
-        response = await updateJobProfile(jobProfileData.jobProfileId, jobProfileData);
+        response = await updateJobProfile(selectedJobProfile.jobProfileId, jobProfileData);
       } else {
         // Create new
         response = await createJobProfile(jobProfileData);
@@ -110,13 +114,10 @@ const JobProfileMain: React.FC = () => {
           detail: response.message
         });
         setAddEditVisible(false);
-        loadJobProfiles(currentPage);
+        setSelectedJobProfile(null);
+        loadData(); // Reload both job profiles and clients
       } else {
-        toast.current?.show({
-          severity: 'error',
-          summary: 'Error',
-          detail: response.message || 'Failed to save job profile'
-        });
+        throw new Error(response.message || 'Failed to save job profile');
       }
     } catch (error) {
       toast.current?.show({
@@ -127,13 +128,30 @@ const JobProfileMain: React.FC = () => {
     }
   };
 
-  const handleDeleteConfirm = () => {
-    toast.current?.show({
-      severity: 'success',
-      summary: 'Success',
-      detail: 'Job profile deleted successfully'
-    });
-    loadJobProfiles(currentPage);
+  const handleDeleteConfirm = async () => {
+    if (!selectedJobProfile) return;
+
+    try {
+      const response: ApiResponse<null> = await deleteJobProfile(selectedJobProfile.jobProfileId);
+      if (response.success) {
+        toast.current?.show({
+          severity: 'success',
+          summary: 'Success',
+          detail: response.message
+        });
+        setDeleteVisible(false);
+        setSelectedJobProfile(null);
+        loadData(); // Reload data
+      } else {
+        throw new Error(response.message || 'Failed to delete job profile');
+      }
+    } catch (error) {
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: error instanceof Error ? error.message : 'An unexpected error occurred'
+      });
+    }
   };
 
   // Table column renderers
@@ -151,7 +169,6 @@ const JobProfileMain: React.FC = () => {
     return <Tag value={rowData.status} severity={getSeverity(rowData.status)} />;
   };
 
-
   const dateBodyTemplate = (rowData: JobProfile, field: keyof JobProfile) => {
     const date = rowData[field] as string;
     return date ? new Date(date).toLocaleDateString() : '-';
@@ -164,23 +181,15 @@ const JobProfileMain: React.FC = () => {
       <div className="flex justify-content-between align-items-center mb-4">
         <h2>Job Profiles Management</h2>
         <div className='flex gap-2'>
-        <AddButton onClick={handleAddNew} />
-        <EditButton onClick={() => handleEdit(selectedJobProfile!)} disabled={!selectedJobProfile} />
-        <DeleteButton onClick={() => handleDelete(selectedJobProfile!)} disabled={!selectedJobProfile} />
+          <AddButton onClick={handleAddNew} />
+          <EditButton onClick={() => handleEdit(selectedJobProfile!)} disabled={!selectedJobProfile} />
+          <DeleteButton onClick={() => handleDelete(selectedJobProfile!)} disabled={!selectedJobProfile} />
         </div>
       </div>
 
       <DataTable
         value={jobProfiles}
         loading={loading}
-        paginator
-        rows={10}
-        totalRecords={totalRecords}
-        lazy
-        onPage={(e) => { 
-          setSelectedJobProfile(null); // clear selection on page change
-          loadJobProfiles(e.page! + 1, e.rows);
-        }}
         selectionMode="single"
         selection={selectedJobProfile}
         onSelectionChange={(e) => setSelectedJobProfile(e.value as JobProfile | null)}
@@ -197,16 +206,28 @@ const JobProfileMain: React.FC = () => {
           field="clientName" 
           header="Client" 
           sortable 
+          body={(rowData) => rowData.clientName || '-'}
         />
         <Column 
           field="departmentName" 
           header="Department" 
           sortable 
+          body={(rowData) => rowData.departmentName || '-'}
         />
         <Column 
           field="jobRole" 
           header="Role" 
           sortable 
+        />
+        <Column 
+          field="jobProfileDescription" 
+          header="Description" 
+          style={{ maxWidth: '200px' }}
+          body={(rowData) => (
+            <div className="text-overflow-ellipsis overflow-hidden" title={rowData.jobProfileDescription}>
+              {rowData.jobProfileDescription}
+            </div>
+          )}
         />
         <Column 
           field="techSpecification" 
@@ -230,6 +251,12 @@ const JobProfileMain: React.FC = () => {
           sortable 
         />
         <Column 
+          field="receivedOn" 
+          header="Received On" 
+          sortable 
+          body={(rowData) => dateBodyTemplate(rowData, 'receivedOn')}
+        />
+        <Column 
           field="estimatedCloseDate" 
           header="Close Date" 
           sortable 
@@ -246,7 +273,10 @@ const JobProfileMain: React.FC = () => {
       {/* Add/Edit Dialog */}
       <JobProfileAddEdit
         visible={addEditVisible}
-        onHide={() => setAddEditVisible(false)}
+        onHide={() => {
+          setAddEditVisible(false);
+          setSelectedJobProfile(null);
+        }}
         onSave={handleSave}
         jobProfile={selectedJobProfile}
         clients={clients}
@@ -256,9 +286,13 @@ const JobProfileMain: React.FC = () => {
       {/* Delete Confirmation Dialog */}
       <JobProfileDelete
         visible={deleteVisible}
-        onHide={() => setDeleteVisible(false)}
+        onHide={() => {
+          setDeleteVisible(false);
+          setSelectedJobProfile(null);
+        }}
         onDelete={handleDeleteConfirm}
         jobProfile={selectedJobProfile}
+        clients={clients}
         loading={loading}
       />
     </div>
