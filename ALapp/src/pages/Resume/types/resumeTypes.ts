@@ -41,7 +41,7 @@ export interface ResumeAddEditProps {
 }
 
   // Payload for adding a new candidate
-  export interface AddCandidate {
+  export interface AddEditCandidate {
     candidateName: string;
     contactNumber: string;
     email: string;

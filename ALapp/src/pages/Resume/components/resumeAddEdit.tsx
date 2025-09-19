@@ -5,7 +5,7 @@ import { InputText } from "primereact/inputtext";
 import { Dropdown } from "primereact/dropdown";
 import { createCandidate, updateCandidate } from "../services/useResume";
 import { InputNumber } from "primereact/inputnumber";
-import { ResumeAddEditProps, AddCandidate } from "../types/resumeTypes";
+import { ResumeAddEditProps, AddEditCandidate } from "../types/resumeTypes";
 
 const statusOptions = [
     { label: "Selected", value: "Selected" },
@@ -37,7 +37,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     onSuccess,
 }) => {
     //state for form data
-    const [formData, setFormData] = useState<AddCandidate>({
+    const [formData, setFormData] = useState<AddEditCandidate>({
         candidateName: "",
         contactNumber: "",
         email: "",
@@ -60,6 +60,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     useEffect(() => {
         if (isEditMode && selectedResume) {
             setFormData({ ...selectedResume });
+            //this line will store the whole selected row inside setFormData.
             //exisitng blank will be overwritten by selectedResume
         } else {
             setFormData({
@@ -80,7 +81,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     }, [selectedResume, visible, isEditMode]);
     //these three dependencies means whenever any of these change the useEffect will run again
 
-    const handleChange = (field: keyof AddCandidate, value: any) => {
+    const handleChange = (field: keyof AddEditCandidate, value: any) => {
         setFormData((prev) => ({
             ...prev,
             [field]: value,

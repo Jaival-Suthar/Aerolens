@@ -1,11 +1,11 @@
 import { json } from "react-router-dom";
-import { Candidate, AddCandidate } from "../types/resumeTypes";
+import { Candidate, AddEditCandidate } from "../types/resumeTypes";
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
 
 // CREATE
 // CREATE
 
-export const createCandidate = async (candidate: AddCandidate): Promise<Candidate> => {
+export const createCandidate = async (candidate: AddEditCandidate): Promise<Candidate> => {
   try {
     const response = await fetch(`${API_BASE_URL}/candidate`, {
       method: "POST",
@@ -53,8 +53,8 @@ export const getCandidates = async (): Promise<Candidate[]> => {
 // UPDATE
 export const updateCandidate = async (
   id: number,
-  candidate: AddCandidate
-): Promise<AddCandidate> => {
+  candidate: AddEditCandidate
+): Promise<AddEditCandidate> => {
   try {
     const response = await fetch(`${API_BASE_URL}/candidate/${id}`, {
       method: "PATCH",
