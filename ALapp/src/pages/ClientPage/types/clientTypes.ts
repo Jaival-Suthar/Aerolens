@@ -3,20 +3,24 @@ import type { DataTableValue } from "primereact/datatable";
 
 // Core client shape - extends DataTableValue for PrimeReact compatibility
 export type ClientType = DataTableValue & {
-  clientId?: number;
+  clientId: number;
   clientName: string;
   address: string;
 };
+export type ClientAddType = Omit<ClientType, "clientId">;
+
 
 // Props for Add/Edit dialog
 export type ClientAddEditProps = {
   visible: boolean;
   onHide: () => void;
-  onSave: (client: ClientType) => void;
+  onSave: (client: ClientAddType | ClientType) => void;
   mode?: "add" | "edit";
-  client?: ClientType | null;
+  client?: ClientAddType | ClientType | null;
   loading?: boolean;
 };
+
+
 
 // Props for Delete dialog
 export type ClientDeleteProps = {

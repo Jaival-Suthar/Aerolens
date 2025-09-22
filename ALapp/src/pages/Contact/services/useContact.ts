@@ -1,19 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { Contact, ApiResponse, ContactAddEditPayload } from '../types/contactTypes';
-
-// Mutable type for API payloads
-interface ContactPayload {
-  clientContactId?: number;
-  clientId?: number;
-  contactPersonName?: string;
-  designation?: string;
-  phone?: string;
-  email?: string;
-}
-
-interface ClientDetailsResponse {
-  clientContacts: Contact[];
-}
+import type { Contact, ApiResponse, ContactAddEditPayload, ClientDetailsApiResponse, ContactPayload } from '../types/contactTypes';
 
 export const useContact = () => {
   const [loading, setLoading] = useState<boolean>(false);
@@ -23,8 +9,42 @@ export const useContact = () => {
   const handleApiResponse = async <T>(response: Response): Promise<ApiResponse<T>> => {
     const data: ApiResponse<T> = await response.json();
     if (!response.ok) throw new Error(data.message || `HTTP error! status: ${response.status}`);
+    console.log('API Response Data:', data);
     return data;
   };
+
+  // Fetch client details including contacts (GET /client/:clientId)
+  const getClientDetails = useCallback(
+    async (clientId: number): Promise<ApiResponse<ClientDetailsApiResponse>> => {
+      console.log('Fetching client details for clientId:', clientId);
+      setLoading(true);
+      setError(null);
+      try {
+        if (!clientId) throw new Error('Client ID is required');
+
+        const response = await fetch(`${API_URL}/client/${clientId}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        console.log('Response Status:', response.status);
+        console.log('Response Headers:', response.headers);
+        const contentType = response.headers.get('content-type');
+        
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error(`Expected JSON but got ${contentType || 'unknown content type'}`);
+        }
+
+        return await handleApiResponse<ClientDetailsApiResponse>(response);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [API_URL]
+  );
 
   // Create a new contact (POST /contact)
   const createContact = useCallback(
@@ -115,35 +135,7 @@ export const useContact = () => {
     [API_URL]
   );
 
-  // Fetch client details including contacts (GET /client/:clientId)
-  const getClientDetails = useCallback(
-    async (clientId: number): Promise<ApiResponse<ClientDetailsResponse>> => {
-      setLoading(true);
-      setError(null);
-      try {
-        if (!clientId) throw new Error('Client ID is required');
-
-        const response = await fetch(`${API_URL}/client/${clientId}`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-        });
-
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error(`Expected JSON but got ${contentType || 'unknown content type'}`);
-        }
-
-        return await handleApiResponse<ClientDetailsResponse>(response);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        setError(errorMessage);
-        throw err;
-      } finally {
-        setLoading(false);
-      }
-    },
-    [API_URL]
-  );
+  
 
   const clearError = useCallback(() => setError(null), []);
 

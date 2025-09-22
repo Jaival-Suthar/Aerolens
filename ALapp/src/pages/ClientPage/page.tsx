@@ -11,7 +11,7 @@ import AddButton from "../../shared/AddButton";
 import EditButton from "../../shared/EditButton";
 import DeleteButton from "../../shared/DeleteButton";
 import { createClient, updateClient, deleteClient } from "./services/clientService";
-import { ClientType } from "./types/clientTypes";
+import { ClientType, ClientAddType } from "./types/clientTypes";
 
 
 // type ClientType = {
@@ -25,7 +25,7 @@ const Client: React.FC = () => {
   const [dialogVisible, setDialogVisible] = useState(false);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
   const [dialogMode, setDialogMode] = useState<"add" | "edit">("add");
-  const [editClient, setEditClient] = useState<ClientType | null>(null);
+  const [editClient, setEditClient] = useState<ClientAddType | ClientType | null>(null);
   const [clientToDelete, setClientToDelete] = useState<ClientType | null>(null);
   const [selectedClient, setSelectedClient] = useState<ClientType | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -59,39 +59,27 @@ const Client: React.FC = () => {
     setDialogVisible(true);
   };
 
-  const onSaveClient = async (client: ClientType) => {
+  const onSaveClient = (client: ClientType | ClientAddType): void => {
+  (async () => {
     setLoading(true);
     try {
       if (dialogMode === "add") {
+        const newClient = client as ClientAddType;
         await createClient({
-          name: client.clientName.trim(),
-          address: client.address.trim(),
+          name: newClient.clientName.trim(),
+          address: newClient.address.trim()
         });
         showToast("success", "Success", "Client added successfully");
       } else {
-        const clientIdNum = Number(client.clientId);
-        if (!clientIdNum || isNaN(clientIdNum)) {
-          showToast("error", "Error", "Invalid client ID. Cannot update client.");
-          return;
-        }
-
-        const trimmedName = client.clientName.trim();
-        const trimmedAddress = client.address.trim();
-
-        if (!trimmedName && !trimmedAddress) {
-          showToast("error", "Error", "Provide a name or address to update.");
-          return;
-        }
-
-        // Always provide both fields to satisfy the required type
+        const existingClient = client as ClientType;
+        if (!existingClient.clientId) throw new Error("Invalid client ID");
         await updateClient({
-          id: clientIdNum,
-          name: trimmedName,
-          address: trimmedAddress,
+          id: existingClient.clientId,
+          name: existingClient.clientName.trim(),
+          address: existingClient.address.trim()
         });
         showToast("success", "Success", "Client updated successfully");
       }
-
       setRefreshTrigger((prev) => prev + 1);
       setDialogVisible(false);
       setEditClient(null);
@@ -101,7 +89,9 @@ const Client: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  })();
+};
+
 
   const handleEdit = (client: ClientType) => {
     setDialogMode("edit");

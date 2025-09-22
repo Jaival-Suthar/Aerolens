@@ -14,7 +14,21 @@ export interface Contact {
   readonly phone?: string;
   readonly email?: string;
 }
-
+export interface ClientDetailsApiResponse {
+  clientContact: Contact[];  // Note: lowercase 'c' to match API
+  address?: string;
+  clientId?: number;
+  clientName?: string;
+}
+// Add this interface at the top of the file:
+export interface ContactPayload {
+  clientContactId?: number;
+  clientId?: number;
+  contactPersonName?: string;
+  designation?: string;
+  phone?: string;
+  email?: string;
+}
 export interface Client {
   readonly clientId: number;
   readonly clientName: string;
