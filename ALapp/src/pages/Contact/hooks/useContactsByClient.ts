@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import useContact from '../services/useContact';
 import type { Contact, ApiResponse, ClientDetailsApiResponse } from '../types/contactTypes';
+import type { Contact, ApiResponse, ClientDetailsApiResponse } from '../types/contactTypes';
 
 
 export const useContactsByClient = (clientId: number | undefined, refreshTrigger: number) => {
@@ -62,33 +63,41 @@ export const useContactsByClientFlexible = (clientId: number | undefined, refres
   const { getClientDetails, loading, error, clearError } = useContact();
 
   const loadContacts = useCallback(async () => {
-  if (!clientId) {
-    setContacts([]);
-    return;
-  }
-  try {
-    const response: ApiResponse<ClientDetailsApiResponse> = await getClientDetails(clientId);
-    
-    if (response.success && response.data) {
-      let contactsArray: Contact[] = [];
-      
-      // Only check for the correct API structure
-      if (response.data.clientContact && Array.isArray(response.data.clientContact)) {
-        contactsArray = response.data.clientContact;
-      } else if (response.data.clientContact && typeof response.data.clientContact === 'object') {
-        contactsArray = [response.data.clientContact];
-      }
-      
-      console.log('Processed contacts:', contactsArray);
-      setContacts(contactsArray);
-    } else {
+    if (!clientId) {
       setContacts([]);
+      return;
     }
-  } catch (err) {
-    console.error('Failed to load contacts:', err);
-    setContacts([]);
-  }
-}, [clientId, getClientDetails]);
+    try {
+      const response: ApiResponse<any> = await getClientDetails(clientId);
+      
+      if (response.success && response.data) {
+        let contactsArray: Contact[] = [];
+        
+        // Handle different possible response structures
+        if (response.data.clientContact && Array.isArray(response.data.clientContact)) {
+          // If it's an array with uppercase 'C'
+          contactsArray = response.data.clientContact;
+        } else if (response.data.clientcontact && Array.isArray(response.data.clientcontact)) {
+          // If it's an array with lowercase 'c'
+          contactsArray = response.data.clientcontact;
+        } else if (response.data.clientcontact && typeof response.data.clientcontact === 'object') {
+          // If it's a single object with lowercase 'c' (current API structure)
+          contactsArray = [response.data.clientcontact];
+        } else if (response.data.clientContact && typeof response.data.clientContact === 'object') {
+          // If it's a single object with uppercase 'C'
+          contactsArray = [response.data.clientContact];
+        }
+        
+        console.log('Processed contacts:', contactsArray);
+        setContacts(contactsArray);
+      } else {
+        setContacts([]);
+      }
+    } catch (err) {
+      setContacts([]);
+      console.error('Failed to load contacts:', err);
+    }
+  }, [clientId, getClientDetails]);
 
   useEffect(() => {
     loadContacts();
