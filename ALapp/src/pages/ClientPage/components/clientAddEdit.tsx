@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
-import { ClientAddEditProps, ClientType } from "../types/clientTypes";
+import { ClientAddEditProps, ClientType, ClientAddType } from "../types/clientTypes";
 
 
 
@@ -50,16 +50,33 @@ const ClientAddEdit: React.FC<ClientAddEditProps> = ({
   };
 
   const handleSubmit = (): void => {
-    if (!validateForm()) return;
+  if (!validateForm()) return;
 
-    const clientData: ClientType = {
-      ...client,
-      clientName: clientName.trim(),
-      address: address.trim(),
+  const trimmedName = clientName.trim();
+  const trimmedAddress = address.trim();
+
+  if (mode === "add") {
+    const clientData: ClientAddType = {
+      clientName: trimmedName,
+      address: trimmedAddress,
     };
-
     onSave(clientData);
-  };
+  } else {
+    // edit mode, clientId must exist in client
+    if (!client || !("clientId" in client)) {
+      // This is catastrophic: editing client without clientId
+      console.error("Missing clientId in edit mode");
+      return;
+    }
+    const clientData: ClientType = {
+      clientId: client.clientId,
+      clientName: trimmedName,
+      address: trimmedAddress,
+    };
+    onSave(clientData);
+  }
+};
+
 
   const handleCancel = (): void => {
     setClientName("");
