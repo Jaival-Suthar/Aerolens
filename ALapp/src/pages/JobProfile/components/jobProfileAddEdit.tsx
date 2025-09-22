@@ -35,8 +35,8 @@ const statusOptions: { label: string; value: JobStatus }[] = [
 ];
 
 const emptyForm: Partial<JobProfilePayload> = {
-  clientId: 0,
-  departmentId: 0,
+  clientId: undefined,
+  departmentId: undefined,
   jobProfileDescription: '',
   jobRole: '',
   techSpecification: '',
@@ -74,7 +74,7 @@ const JobProfileAddEdit: React.FC<Props> = ({
         techSpecification: jobProfile.techSpecification,
         positions: jobProfile.positions,
         estimatedCloseDate: jobProfile.estimatedCloseDate,
-        location: jobProfile.location, // This stays the same
+        location: jobProfile.location || '',
         status: jobProfile.status,
       });
       } else {
@@ -262,7 +262,7 @@ const JobProfileAddEdit: React.FC<Props> = ({
             optionValue="value"
           />
           {!form.clientId && (
-            <small className="text-muted">Please select a client first</small>
+            <small className="text-muted"></small>
           )}
           {form.clientId && availableDepartments.length === 0 && (
             <small className="text-muted">No departments available for selected client</small>
