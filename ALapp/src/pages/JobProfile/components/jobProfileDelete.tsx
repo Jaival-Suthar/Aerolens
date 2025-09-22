@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
 import { Message } from 'primereact/message';
-import { deleteJobProfile } from '../services/jobProfileService';
 import type { JobProfile, ClientOption } from '../types/jobProfileTypes';
 
 interface Props {
@@ -22,36 +21,15 @@ const JobProfileDelete: React.FC<Props> = ({
   clients,
   loading = false,
 }) => {
-  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleDelete = async () => {
-    if (!jobProfile?.jobProfileId) return;
-
-    setDeleting(true);
-    setError(null);
-
-    try {
-      const response = await deleteJobProfile(jobProfile.jobProfileId);
-      
-      if (response.success) {
-        onDelete();
-        onHide();
-      } else {
-        setError(response.message || 'Failed to delete job profile');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
-    } finally {
-      setDeleting(false);
-    }
+  const handleDelete = () => {
+    onDelete();
   };
 
   const handleHide = () => {
-    if (!deleting) {
-      setError(null);
-      onHide();
-    }
+    setError(null);
+    onHide();
   };
 
   const footer = (
@@ -61,14 +39,13 @@ const JobProfileDelete: React.FC<Props> = ({
         icon="pi pi-times"
         outlined
         onClick={handleHide}
-        disabled={deleting || loading}
+        disabled={loading}
       />
       <Button
         label="Delete"
         icon="pi pi-trash"
         severity="danger"
         onClick={handleDelete}
-        loading={deleting}
         disabled={loading}
       />
     </div>
@@ -78,8 +55,8 @@ const JobProfileDelete: React.FC<Props> = ({
 
   // Look up clientName and departmentName from clients array
   const client = clients.find(c => c.clientId === jobProfile.clientId);
-  const clientName = client?.clientName || '-';
-  const departmentName = client?.departments.find(d => d.departmentId === jobProfile.departmentId)?.departmentName || '-';
+  const clientName = client?.clientName || jobProfile.clientName || '-';
+  const departmentName = client?.departments.find(d => d.departmentId === jobProfile.departmentId)?.departmentName || jobProfile.departmentName || '-';
 
   return (
     <Dialog
@@ -89,7 +66,6 @@ const JobProfileDelete: React.FC<Props> = ({
       modal
       onHide={handleHide}
       footer={footer}
-      closable={!deleting}
       draggable={false}
       resizable={false}
     >
@@ -111,7 +87,7 @@ const JobProfileDelete: React.FC<Props> = ({
             <strong>Job Profile Details:</strong>
           </div>
           <div className="col-6">
-            <span className="text-color-secondary">ID:</span>
+            <span className="text-color-secondary">Job Profile ID:</span>
           </div>
           <div className="col-6">
             {jobProfile.jobProfileId}
@@ -139,6 +115,12 @@ const JobProfileDelete: React.FC<Props> = ({
           </div>
           <div className="col-6">
             {jobProfile.positions}
+          </div>
+          <div className="col-6">
+            <span className="text-color-secondary">Location:</span>
+          </div>
+          <div className="col-6">
+            {jobProfile.location || '-'}
           </div>
           <div className="col-6">
             <span className="text-color-secondary">Status:</span>

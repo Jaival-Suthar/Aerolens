@@ -11,7 +11,7 @@ const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
 
 // Data mapping function to transform API response to frontend format
 function mapApiJobProfile(data: any): JobProfile {
-  console.log('Mapping API job profile:', data);
+  //console.log('Mapping API job profile:', data);
   const mapped = {
     jobProfileId: data.jobProfileId,
     clientId: data.clientId || 0,
@@ -25,12 +25,11 @@ function mapApiJobProfile(data: any): JobProfile {
     receivedOn: data.receivedOn,
     estimatedCloseDate: data.estimatedCloseDate,
     // locationId: data.locationId || 0,
-    locationName: data.locationName || '',
     location: data.locationName || data.location || '', // Fallback logic
     status: (data.statusName || data.status || 'Pending') as JobStatus,
     statusName: data.statusName
   };
-  console.log('Mapped job profile:', mapped);
+  //console.log('Mapped job profile:', mapped);
   return mapped;
 }
 

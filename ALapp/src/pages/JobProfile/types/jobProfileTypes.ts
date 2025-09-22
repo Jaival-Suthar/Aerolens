@@ -24,7 +24,7 @@ export interface JobProfile {
   receivedOn?: string;
   estimatedCloseDate: string;
   // locationId: number; // API returns locationId, not location
-  locationName?: string; // API might return locationName
+  location: string; // API might return locationName
   // location: string; // Keep for UI compatibility
   status: JobStatus;
   statusName?: string; // API returns statusName

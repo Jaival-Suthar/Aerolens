@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
-import { Tag } from 'primereact/tag';
 import { Toast } from 'primereact/toast';
 import { useRef } from 'react';
+import { Tag } from 'primereact/tag';
 
 import JobProfileAddEdit from '../components/jobProfileAddEdit';
 import JobProfileDelete from '../components/jobProfileDelete';
@@ -129,30 +129,30 @@ const JobProfileMain: React.FC = () => {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!selectedJobProfile) return;
+  if (!selectedJobProfile) return;
 
-    try {
-      const response: ApiResponse<null> = await deleteJobProfile(selectedJobProfile.jobProfileId);
-      if (response.success) {
-        toast.current?.show({
-          severity: 'success',
-          summary: 'Success',
-          detail: response.message
-        });
-        setDeleteVisible(false);
-        setSelectedJobProfile(null);
-        loadData(); // Reload data
-      } else {
-        throw new Error(response.message || 'Failed to delete job profile');
-      }
-    } catch (error) {
+  try {
+    const response: ApiResponse<null> = await deleteJobProfile(selectedJobProfile.jobProfileId);
+    if (response.success) {
       toast.current?.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: error instanceof Error ? error.message : 'An unexpected error occurred'
+        severity: 'success',
+        summary: 'Success',
+        detail: response.message
       });
+      setDeleteVisible(false);
+      setSelectedJobProfile(null);
+      loadData(); // Reload data
+    } else {
+      throw new Error(response.message || 'Failed to delete job profile');
     }
-  };
+  } catch (error) {
+    toast.current?.show({
+      severity: 'error',
+      summary: 'Error',
+      detail: error instanceof Error ? error.message : 'An unexpected error occurred'
+    });
+  }
+};
 
   // Table column renderers
   const statusBodyTemplate = (rowData: JobProfile) => {
@@ -206,13 +206,13 @@ const JobProfileMain: React.FC = () => {
           field="clientName" 
           header="Client" 
           sortable 
-          body={(rowData) => rowData.clientName || '-'}
+          //body={(rowData) => rowData.clientName || '-'}
         />
         <Column 
           field="departmentName" 
           header="Department" 
           sortable 
-          body={(rowData) => rowData.departmentName || '-'}
+          //body={(rowData) => rowData.departmentName || '-'}
         />
         <Column 
           field="jobRole" 
@@ -223,21 +223,21 @@ const JobProfileMain: React.FC = () => {
           field="jobProfileDescription" 
           header="Description" 
           style={{ maxWidth: '200px' }}
-          body={(rowData) => (
-            <div className="text-overflow-ellipsis overflow-hidden" title={rowData.jobProfileDescription}>
-              {rowData.jobProfileDescription}
-            </div>
-          )}
+          // body={(rowData) => (
+          //   <div className="text-overflow-ellipsis overflow-hidden" title={rowData.jobProfileDescription}>
+          //     {rowData.jobProfileDescription}
+          //   </div>
+          // )}
         />
         <Column 
           field="techSpecification" 
           header="Tech Stack" 
           style={{ maxWidth: '200px' }}
-          body={(rowData) => (
-            <div className="text-overflow-ellipsis overflow-hidden" title={rowData.techSpecification}>
-              {rowData.techSpecification}
-            </div>
-          )}
+          // body={(rowData) => (
+          //   <div className="text-overflow-ellipsis overflow-hidden" title={rowData.techSpecification}>
+          //     {rowData.techSpecification}
+          //   </div>
+          // )}
         />
         <Column 
           field="positions" 
