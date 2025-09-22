@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import ResumeAddEdit from "../components/resumeAddEdit";
@@ -8,13 +8,15 @@ import DeleteButton from "../../../shared/DeleteButton";
 import { Candidate } from "../types/resumeTypes";
 import { getCandidates } from "../services/useResume";
 import ResumeDelete from "./resumeDelete";
+import ExportExcelButton from "../../../shared/ExportExcelButton";
+
 const ResumeTable: React.FC<any> = () => {
   const [resumes, setResumes] = useState<Candidate[]>([]);
   const [selectedResume, setSelectedResume] = useState<Candidate | null>(null);
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editingResume, setEditingResume] = useState<Candidate | null>(null);
-
+  const dt = useRef<DataTable<any>>(null);
   const loadResumes = useCallback(async () => {
     try {
       const data = await getCandidates();
@@ -55,6 +57,7 @@ const ResumeTable: React.FC<any> = () => {
 
         </div>
         <div className="flex gap-2">
+          <ExportExcelButton dtRef={dt} />
           <AddButton onClick={handleAdd} />
           <EditButton onClick={handleEdit} disabled={!selectedResume} />
           <DeleteButton onClick={handleDelete} disabled={!selectedResume} />
@@ -63,6 +66,7 @@ const ResumeTable: React.FC<any> = () => {
 
       {/* <h4>Resumes for: {candidateName}</h4> */}
       <DataTable
+      ref={dt}
         value={resumes}
         paginator
         rows={5}
