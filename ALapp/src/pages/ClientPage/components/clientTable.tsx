@@ -7,6 +7,7 @@ import { usePagination } from "../hooks/usePagination";
 import type { ClientTableProps, ClientType } from "../types/clientTypes";
 
 const ClientTable: React.FC<ClientTableProps> = ({
+  dtRef,
   onEdit,
   refreshTrigger = 0,
   selectedClient,
@@ -29,7 +30,7 @@ const ClientTable: React.FC<ClientTableProps> = ({
       try {
         const response = await loadClients(currentPage, limit);
         updatePaginationFromResponse(
-          { ...response, pagination: response.pagination ?? {} },
+          { ...response, pagination: response.meta ?? {} },
           currentPage,
           limit
         );
@@ -60,12 +61,12 @@ const ClientTable: React.FC<ClientTableProps> = ({
   );
 
   const onSelectionChangeHandler = useCallback(
-    (e: DataTableSelectionSingleChangeEvent<ClientType[]>) => {
-      // Cast e.value to ClientType since we know it's a single selection
-      onSelectionChange((e.value as ClientType) ?? null);
-    },
-    [onSelectionChange]
-  );
+  (e: DataTableSelectionSingleChangeEvent<ClientType[]>) => {
+    onSelectionChange(e.value ?? null);
+  },
+  [onSelectionChange]
+);
+
 
   const onRowDoubleClick = useCallback(
     (e: DataTableRowClickEvent) => {
@@ -76,7 +77,6 @@ const ClientTable: React.FC<ClientTableProps> = ({
 
   const cellClass = "py-1 px-2";
   const headerClass = "py-1 px-2 font-semibold";
-
   return (
     <section className="client-table" aria-label="Client data table">
       {error && (
@@ -92,7 +92,8 @@ const ClientTable: React.FC<ClientTableProps> = ({
         </div>
       )}
 
-      <DataTable<ClientType[]>
+      <DataTable
+        ref={dtRef}
         value={clients}
         loading={loading}
         responsiveLayout="scroll"
@@ -145,7 +146,7 @@ const ClientTable: React.FC<ClientTableProps> = ({
           totalRecords={pagination.totalRecords}
           onPageChange={onPageChange}
           template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown"
-          rowsPerPageOptions={[5, 10, 20, 50]}
+          rowsPerPageOptions={[10, 20, 50]}
           className="mt-3"
           aria-label="Table pagination controls"
         />

@@ -10,6 +10,7 @@ import JobProfileDelete from '../components/jobProfileDelete';
 import AddButton from '../../../shared/AddButton';
 import EditButton from '../../../shared/EditButton';
 import DeleteButton from '../../../shared/DeleteButton';
+import ExportExcelButton from '../../../shared/ExportExcelButton';
 import { 
   getJobProfiles, 
   createJobProfile, 
@@ -32,7 +33,7 @@ const JobProfileMain: React.FC = () => {
   const [selectedJobProfile, setSelectedJobProfile] = useState<JobProfile | null>(null);
   const [addEditVisible, setAddEditVisible] = useState(false);
   const [deleteVisible, setDeleteVisible] = useState(false);
-
+  const dt = useRef<DataTable<any>>(null);
   // Load data on component mount
   useEffect(() => {
     loadData();
@@ -178,9 +179,10 @@ const JobProfileMain: React.FC = () => {
     <div className="card">
       <Toast ref={toast} />
       
-      <div className="flex justify-content-between align-items-center mb-4">
-        <h2>Job Profiles Management</h2>
+      <div className="flex justify-content-between align-items-center mb-2">
+        <h2>Job Profiles Requirements</h2>
         <div className='flex gap-2'>
+          <ExportExcelButton dtRef={dt} />
           <AddButton onClick={handleAddNew} />
           <EditButton onClick={() => handleEdit(selectedJobProfile!)} disabled={!selectedJobProfile} />
           <DeleteButton onClick={() => handleDelete(selectedJobProfile!)} disabled={!selectedJobProfile} />
@@ -188,6 +190,7 @@ const JobProfileMain: React.FC = () => {
       </div>
 
       <DataTable
+        ref={dt}
         value={jobProfiles}
         loading={loading}
         selectionMode="single"
