@@ -52,10 +52,8 @@ const ResumeTable: React.FC<any> = () => {
 
   return (
     <>
-      <div className="flex justify-content-between mb-4 w-full">
-        <div className="flex gap-2">
-
-        </div>
+      <div className="flex justify-content-between mb-2">
+        <h2>Candidate Resume Management</h2>
         <div className="flex gap-2">
           <ExportExcelButton dtRef={dt} />
           <AddButton onClick={handleAdd} />
@@ -66,7 +64,7 @@ const ResumeTable: React.FC<any> = () => {
 
       {/* <h4>Resumes for: {candidateName}</h4> */}
       <DataTable
-      ref={dt}
+        ref={dt}
         value={resumes}
         paginator
         rows={5}
