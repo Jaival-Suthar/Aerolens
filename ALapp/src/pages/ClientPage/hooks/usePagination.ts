@@ -78,7 +78,7 @@ export const usePagination = () => {
       totalPages: 1,
     });
   }, []);
-
+  //console.log("Pagination Hook:", pagination);
   return {
     pagination,
     setPagination,
