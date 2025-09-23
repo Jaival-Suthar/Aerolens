@@ -3,7 +3,7 @@ import { Button } from 'primereact/button';
 import { DataTable } from 'primereact/datatable';
 
 type ExportExcelButtonProps = {
-  dtRef: React.RefObject<DataTable<any>>;
+  dtRef: React.RefObject<React.ElementRef<typeof DataTable>>;
   label?: string;
   disabled?: boolean;
   tooltip?: string;
@@ -21,7 +21,7 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({ dtRef, label = 'E
       text={false}
       severity="success"
       size="large"
-      className="font-medium mr-1"
+      className="font-medium"
       onClick={handleExport}
       disabled={disabled}
       aria-label={label}

@@ -21,9 +21,9 @@ const AddButton: React.FC<AddButtonProps> = ({ onClick, disabled, tooltip }) => 
     tooltip={tooltip || "Add"}
     tooltipOptions={{ position: 'bottom' }}
     style={{
-      backgroundColor: '#d4edda',
-      borderColor: '#c3e6cb',
-      color: '#155724',
+      backgroundColor: '#cce5ff', 
+      borderColor: '#99ccff',
+      color: '#004085',
       borderWidth: '1.5px',
       borderStyle: 'solid'
     }}
