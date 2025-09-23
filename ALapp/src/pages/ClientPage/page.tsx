@@ -12,6 +12,8 @@ import EditButton from "../../shared/EditButton";
 import DeleteButton from "../../shared/DeleteButton";
 import { createClient, updateClient, deleteClient } from "./services/clientService";
 import { ClientType, ClientAddType } from "./types/clientTypes";
+import ExportExcelButton from "../../shared/ExportExcelButton";
+import { DataTable } from "primereact/datatable";
 
 
 // type ClientType = {
@@ -30,6 +32,7 @@ const Client: React.FC = () => {
   const [selectedClient, setSelectedClient] = useState<ClientType | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [activeView, setActiveView] = useState<string>(VIEW_MODES.TABLE);
+  const dt = useRef<React.ElementRef<typeof DataTable>>(null);
 
   const toast = useRef<Toast | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -155,6 +158,7 @@ const Client: React.FC = () => {
                 />
               </div>
               <div className="flex gap-2 mr-6">
+                <ExportExcelButton dtRef={dt} />
                 <AddButton onClick={handleAdd} disabled={loading} />
                 <EditButton onClick={handleEditSelected} disabled={!selectedClient || loading} />
                 <DeleteButton onClick={handleDeleteSelected} disabled={!selectedClient || loading} />
@@ -166,6 +170,7 @@ const Client: React.FC = () => {
         <div className="card">
           {activeView === VIEW_MODES.TABLE && (
             <ClientTable
+              dtRef={dt}
               onEdit={handleEdit}
               refreshTrigger={refreshTrigger}
               selectedClient={selectedClient}

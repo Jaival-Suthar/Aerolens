@@ -1,6 +1,6 @@
 // src/types/client.ts
 import type { DataTableValue } from "primereact/datatable";
-
+import { DataTable } from "primereact/datatable";
 // Core client shape - extends DataTableValue for PrimeReact compatibility
 export type ClientType = DataTableValue & {
   clientId: number;
@@ -33,6 +33,7 @@ export type ClientDeleteProps = {
 
 // Props for Table
 export type ClientTableProps = {
+   dtRef?: React.RefObject<React.ElementRef<typeof DataTable>>;
   onEdit: (client: ClientType) => void;
   refreshTrigger?: number;
   selectedClient: ClientType | null;
@@ -42,7 +43,7 @@ export type ClientTableProps = {
 
 export type ClientsApiResponse = {
   data: ClientType[];
-  pagination: {
+  meta: {
     currentPage: number;
     totalPages: number;
     totalRecords: number;
