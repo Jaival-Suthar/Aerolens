@@ -3,45 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Menubar } from "primereact/menubar";
 import { Button } from "primereact/button";
 
-type NavItem = {
-  label: string;
-  icon: string;
-  path: string;
-  description: string;
-  size: "small" | "medium" | "large";
-};
-
-const navItems: NavItem[] = [
-  {
-    label: "Dashboard",
-    icon: "pi pi-id-card",
-    path: "/dashboard",
-    description: "View Dashboard and Analytics",
-    size: "large",
-  },
-  {
-    label: "Client",
-    icon: "pi pi-id-card",
-    path: "/client",
-    description: "View Clients",
-    size: "large",
-  },
-  {
-    label: "Job Profile",
-    icon: "pi pi-briefcase",
-    path: "/job-profile",
-    description: "View Job Profiles",
-    size: "large",
-  },
-  {
-    label: "Resume",
-    icon: "pi pi-file",
-    path: "/resume",
-    description: "View Resumes",
-    size: "large",
-  }
-];
-
 const AppNavbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -53,69 +14,75 @@ const AppNavbar: React.FC = () => {
     [navigate]
   );
 
-  const model = navItems.map((item) => {
-    const isActive = location.pathname === item.path;
+  // Helper function to check if a menu item or its children are active
+  const isMenuActive = (path?: string, childrenPaths?: string[]) => {
+    if (path && location.pathname === path) return true;
+    if (childrenPaths) {
+      return childrenPaths.some(childPath => location.pathname === childPath);
+    }
+    return false;
+  };
 
-    return {
-      label: item.label,
-      icon: item.icon,
-      command: () => handleNavigation(item.path),
-      title: item.description,
-      template: () => (
-        <div
-          onClick={() => handleNavigation(item.path)}
-          title={item.description}
-          className={`nav-item ${isActive ? "nav-item-active" : ""}`}
-          style={{
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            height: "40px",
-            padding: "0 20px",
-            marginRight: "8px",
-            position: "relative",
-            color: isActive ? "#000000" : "#666666",
-            fontWeight: isActive ? "500" : "400",
-            fontSize: "14px",
-            userSelect: "none",
-            gap: "6px",
-            borderRadius: 0,
-            backgroundColor: "transparent",
-          }}
-        >
-          <span
-            className={item.icon}
-            aria-hidden="true"
-            style={{
-              fontSize: "16px",
-              lineHeight: "1",
-            }}
-          />
-          <span
-            style={{
-              lineHeight: "1.2",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {item.label}
-          </span>
-
-          {isActive && (
-            <div
-              style={{
-                position: "absolute",
-                bottom: 0,
-                left: "24px",
-                right: "24px",
-                height: "2px",
-                backgroundColor: "#000000",
-              }}
-            />
-          )}
-        </div>
-      ),
-    };
-  });
+  // Menubar items configuration with active state classes
+  const items = [
+    {
+      label: "Dashboard",
+      icon: "pi pi-id-card",
+      command: () => handleNavigation("/dashboard"),
+      className: isMenuActive("/dashboard") ? "nav-item-active" : "",
+    },
+    {
+      label: "Master",
+      className: isMenuActive(undefined, ["/client", "/job-profile"]) ? "nav-item-active nav-dropdown-active" : "",
+      items: [
+        {
+          label: "Client",
+          icon: "pi pi-id-card",
+          command: () => handleNavigation("/client"),
+          className: isMenuActive("/client") ? "nav-subitem-active" : "",
+        },
+        {
+          label: "Job Profile",
+          icon: "pi pi-briefcase",
+          command: () => handleNavigation("/job-profile"),
+          className: isMenuActive("/job-profile") ? "nav-subitem-active" : "",
+        },
+        {
+          label: "Members",
+          icon: "pi pi-users",
+          command: () => handleNavigation("/members"),
+          className: isMenuActive("/members") ? "nav-subitem-active" : "",
+        },
+        {
+          label: "Lookup Data",
+          icon: "pi pi-database",
+          command: () => handleNavigation("/lookup-data"),
+          className: isMenuActive("/lookup-data") ? "nav-subitem-active" : "",
+        }
+      ],
+    },
+    {
+      label: "Transaction",
+      className: isMenuActive(undefined, ["/resume"]) ? "nav-item-active nav-dropdown-active" : "",
+      items: [
+        {
+          label: "Resume",
+          icon: "pi pi-file",
+          command: () => handleNavigation("/resume"),
+          className: isMenuActive("/resume") ? "nav-subitem-active" : "",
+        },
+      ],
+    },
+    {
+      label: "Reports",
+      className: isMenuActive(undefined, ["/reports"]) ? "nav-item-active nav-dropdown-active" : "",
+      items: [
+        {
+          label: "Reports",
+          icon: "pi pi-chart-bar",}
+      ]
+    },
+  ];
 
   const startTemplate = (
     <div
@@ -183,11 +150,64 @@ const AppNavbar: React.FC = () => {
   return (
     <>
       <style>{`
-        .nav-item:hover:not(.nav-item-active) {
-          background-color: #f8f9fa !important;
-          color: #333333 !important;
+        .p-menubar-root-list > li > .p-menuitem-link .p-menuitem-text {
+          padding-right: 1.5rem; /* Adjust padding for no arrow */
+        }
+        .p-menubar-root-list > li > ul {
+          top: 58px !important; /* Align dropdown right below navbar */
+        }
+        .p-menubar-root-list > li > .p-menuitem-link > .pi-angle-down {
+          display: none !important; /* Hide dropdown arrow */
+        }
+        
+        /* Active state for direct menu items */
+        .nav-item-active > .p-menuitem-link {
+          font-weight: 600 !important;
+          color: #000000 !important;
+          border-bottom: 2px solid #000000 !important;
+          background: rgba(0, 0, 0, 0.02) !important;
+        }
+        
+        /* Active state for dropdown parent items */
+        .nav-dropdown-active > .p-menuitem-link {
+          font-weight: 600 !important;
+          color: #000000 !important;
+          background: rgba(0, 0, 0, 0.04) !important;
+          border-bottom: 2px solid #3b82f6 !important; /* Blue indicator for dropdown parents */
+        }
+        
+        /* Active state for submenu items */
+        .nav-subitem-active > .p-menuitem-link {
+          font-weight: 600 !important;
+          color: #3b82f6 !important;
+          background: rgba(59, 130, 246, 0.1) !important;
+        }
+        
+        /* Hover states */
+        .p-menubar-root-list > li > .p-menuitem-link:hover {
+          background: rgba(0, 0, 0, 0.03) !important;
+        }
+        
+        .p-menubar-submenu .p-menuitem-link:hover {
+          background: rgba(59, 130, 246, 0.05) !important;
+        }
+        
+        /* Ensure active states override hover */
+        .nav-item-active > .p-menuitem-link:hover,
+        .nav-dropdown-active > .p-menuitem-link:hover {
+          background: rgba(0, 0, 0, 0.06) !important;
+        }
+        
+        .nav-subitem-active > .p-menuitem-link:hover {
+          background: rgba(59, 130, 246, 0.15) !important;
+        }
+        
+        /* Smooth transitions */
+        .p-menuitem-link {
+          transition: all 0.2s ease !important;
         }
       `}</style>
+
       <div
         style={{
           background: "#ffffff",
@@ -198,7 +218,7 @@ const AppNavbar: React.FC = () => {
         }}
       >
         <Menubar
-          model={model}
+          model={items}
           start={startTemplate}
           end={endTemplate}
           style={{
