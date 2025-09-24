@@ -112,14 +112,15 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
 
     return (
         <Dialog
-            visible={visible}
-            onHide={handleCancel}
-            header={isEditMode ? "Edit Resume" : "Add New Resume"}
-            footer={dialogFooter}
-            style={{ width: "600px" }}
-            modal
-            className="p-fluid"
-        >
+        visible={visible}
+        onHide={handleCancel}
+        header={isEditMode ? "Edit Resume" : "Add New Resume"}
+        footer={dialogFooter}
+        style={{ width: "600px", maxHeight: "90vh" }}
+        modal
+        className="p-fluid"
+    >
+
             {/* Candidate Name */}
             <div className="field">
                 <label className="font-bold">Candidate Name *</label>
@@ -235,22 +236,28 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             </div>
 
             {/* Resume Upload */}
-            <div className="field">
-                <label className="font-bold">Upload Resume</label>
-                <FileUpload
-                    mode="basic"
-                    name="resume"
-                    accept=".pdf,.doc,.docx"
-                    maxFileSize={5 * 1024 * 1024}
-                    auto={false}
-                    customUpload
-                    uploadHandler={handleFileUpload}
-                    chooseLabel="Select File"
-                />
-                {formData.resumeFile && (
-                    <small className="p-success">File selected: {formData.resumeFile.name}</small>
-                )}
-            </div>
+<div className="field">
+    <label className="font-bold">Upload Resume</label>
+    <FileUpload
+        mode="basic"
+        name="resume"
+        accept=".pdf,.doc,.docx"
+        maxFileSize={5 * 1024 * 1024}
+        auto={false}
+        customUpload
+        uploadHandler={handleFileUpload}
+        chooseLabel="Select File"
+        chooseOptions={{
+            icon: "pi pi-file-pdf", // 👈 PrimeIcons PDF icon
+            label: "Upload PDF",    // 👈 Custom label (optional)
+            className: "p-button-danger p-button-sm" // 👈 red PDF-style button
+        }}
+    />
+    {formData.resumeFile && (
+        <small className="p-success">File selected: {formData.resumeFile.name}</small>
+    )}
+</div>
+
         </Dialog>
     );
 };
