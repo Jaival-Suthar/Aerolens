@@ -54,6 +54,8 @@ export interface ResumeAddEditProps {
     experienceYears: number;
     statusName: string;
     linkedinProfileUrl: string;
+    resumeFile: File | null; // ✅ added
+
   }
   
   
