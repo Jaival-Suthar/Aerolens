@@ -285,24 +285,37 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             </div>
 
             {/* Resume Upload */}
-            <div className="field col-12 md:col-6">
-                <label className="font-bold">Upload Resume</label>
-                <FileUpload
-                mode="basic"
-                name="resume"
-                accept=".pdf,.doc,.docx"
-                maxFileSize={5 * 1024 * 1024}
-                auto={false}
-                customUpload
-                uploadHandler={handleFileUpload}
-                chooseLabel="Select File"
-                chooseOptions={{
-                    icon: "pi pi-file-pdf", // 👈 PrimeIcons PDF icon
-                    label: "Upload PDF",    // 👈 Custom label (optional)
-                    className: "p-button-danger p-button-sm" // 👈 red PDF-style button
-                }}
-            />
-            </div>
+         {/* Resume Upload */}
+<div className="field col-12 md:col-6">
+  <label className="font-bold">Upload Resume</label>
+  <FileUpload
+    mode="basic"
+    name="resume"
+    accept=".pdf,.doc,.docx"
+    maxFileSize={5 * 1024 * 1024}
+    auto={false}
+    customUpload
+    // ❌ remove uploadHandler
+    onSelect={(e) => {
+      if (e.files && e.files.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          resumeFile: e.files[0], // ✅ store immediately
+        }));
+      }
+    }}
+    chooseLabel="Select File"
+    chooseOptions={{
+      icon: "pi pi-file-pdf",
+      label: "Upload PDF",
+      className: "p-button-danger p-button-sm",
+    }}
+  />
+</div>
+{formData.resumeFile && (
+  <small className="p-success">File selected: {formData.resumeFile.name}</small>
+)}
+
     {formData.resumeFile && (
         <small className="p-success">File selected: {formData.resumeFile.name}</small>
     )}
