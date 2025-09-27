@@ -26,10 +26,10 @@ const AppNavbar: React.FC = () => {
   // Menubar items configuration with active state classes
   const items = [
     {
-      label: "Dashboard",
+      label: "Home",
       icon: "pi pi-id-card",
-      command: () => handleNavigation("/dashboard"),
-      className: isMenuActive("/dashboard") ? "nav-item-active" : "",
+      command: () => handleNavigation("/home"),
+      className: isMenuActive("/home") ? "nav-item-active" : "",
     },
     {
       label: "Master",

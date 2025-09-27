@@ -3,7 +3,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AppNavbar from './AppNavbar';
 import Client from './pages/ClientPage/page';
-import Dashboard from './pages/Dashboard/page';
+import Home from './pages/Dashboard/page';
 import JobProfile from './pages/JobProfile/page';
 import Resume from './pages/Resume/page';
 import { PrimeReactProvider } from 'primereact/api';
@@ -34,8 +34,8 @@ const App = (): JSX.Element => {
           <AppNavbar />
           <main className="main-content p-2" style={{ background: "#fff", minHeight: "100vh" }}>
             <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/" element={<Navigate to="/home" replace />} />
+              <Route path="/home" element={<Home />} />
               <Route path="/client" element={<Client />} />
               {/* <Route path="/contact" element={<Contact />} /> */}
               <Route path="/job-profile" element={<JobProfile />} />
