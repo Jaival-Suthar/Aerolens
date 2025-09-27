@@ -29,6 +29,8 @@ export const createCandidate = async (candidate: AddEditCandidate): Promise<Cand
     const response = await fetch(`${API_BASE_URL}/candidate`, {
       method: "POST",
       //body: formData,
+      headers: { "Content-Type": "multipart/form-data" },
+
       body: JSON.stringify(formData),
     });
 
@@ -220,6 +222,7 @@ export const uploadResume = async (candidateId: number, resumeFile: File): Promi
     
     const response = await fetch(`${API_BASE_URL}/candidate/${candidateId}/resume`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: formData,
     });
     
