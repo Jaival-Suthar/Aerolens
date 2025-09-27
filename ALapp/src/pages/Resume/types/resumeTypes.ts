@@ -15,8 +15,24 @@ export interface Candidate {
   experienceYears: number;
   statusName: string;
   linkedinProfileUrl: string;
+  resumeFilename?: string;        // Add this
+  resumeOriginalName?: string;    // Add this  
+  resumeUploadDate?: string;
 }
-
+export interface CandidateUpdatePayload {
+  candidateName?: string;
+  contactNumber?: string;
+  email?: string;
+  recruiterName?: string;
+  jobRole?: string;
+  preferredJobLocation?: string;
+  currentCTC?: number;
+  expectedCTC?: number;
+  noticePeriod?: number;
+  experienceYears?: number;
+  statusName?: string; // Mapping to API's 'status' field
+  linkedinProfileUrl?: string;
+}
   
   
   // Response for fetching candidates

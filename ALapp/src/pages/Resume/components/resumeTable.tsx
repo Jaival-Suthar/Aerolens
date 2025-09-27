@@ -9,6 +9,7 @@ import { Candidate } from "../types/resumeTypes";
 import { getCandidates } from "../services/useResume";
 import ResumeDelete from "./resumeDelete";
 import ExportExcelButton from "../../../shared/ExportExcelButton";
+import { Button } from "primereact/button";
 
 const ResumeTable: React.FC<any> = () => {
   const [resumes, setResumes] = useState<Candidate[]>([]);
@@ -20,9 +21,10 @@ const ResumeTable: React.FC<any> = () => {
   const loadResumes = useCallback(async () => {
     try {
       const data = await getCandidates();
-      setResumes(data);
+      setResumes(Array.isArray(data) ? data : []); // Add safety check
     } catch (error) {
       console.error("Error loading resumes:", error);
+      setResumes([]); // Set empty array on error
     }
   }, []);
 
@@ -49,7 +51,43 @@ const ResumeTable: React.FC<any> = () => {
   const handleAddEditSuccess = () => loadResumes();
   const handleDeleteSuccess = () => loadResumes();
   const handleClearSelection = () => setSelectedResume(null);
-
+  const resumeActionTemplate = (candidate: Candidate) => {
+    if (!candidate.resumeFilename) {
+      return <span className="text-400">No Resume</span>;
+    }
+  
+    return (
+      <div className="flex gap-1">
+        <Button
+          icon="pi pi-download"
+          className="p-button-sm p-button-outlined"
+          tooltip="Download Resume"
+          onClick={() => handleDownloadResume(candidate.candidateId)}
+        />
+        <Button
+          icon="pi pi-eye"
+          className="p-button-sm p-button-outlined"
+          tooltip="Preview Resume"
+          onClick={() => handlePreviewResume(candidate.candidateId)}
+        />
+      </div>
+    );
+  };
+  
+  const handleDownloadResume = (candidateId: number) => {
+    const downloadUrl = `${import.meta.env.VITE_BASE_URL}/candidate/${candidateId}/resume`;
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = '';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
+  const handlePreviewResume = (candidateId: number) => {
+    const previewUrl = `${import.meta.env.VITE_BASE_URL}/candidate/${candidateId}/resume/preview`;
+    window.open(previewUrl, '_blank');
+  };
   return (
     <>
       <div className="flex justify-content-between mb-2">
@@ -88,7 +126,11 @@ const ResumeTable: React.FC<any> = () => {
         <Column field="experienceYears" header="Experience" />
         <Column field="statusName" header="Status" />
         <Column field="linkedinProfileUrl" header="LinkedIn Profile URL" />
-        <Column field="ResumePDF" header="Resume "/>
+        <Column 
+          header="Resume" 
+          body={(rowData: Candidate) => resumeActionTemplate(rowData)}
+          style={{ width: '8rem' }}
+        />
 
       </DataTable>
       <ResumeAddEdit

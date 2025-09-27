@@ -6,6 +6,7 @@ import { Dropdown } from "primereact/dropdown";
 import { FileUpload } from "primereact/fileupload";
 import { InputNumber } from "primereact/inputnumber";
 import { ResumeAddEditProps, AddEditCandidate } from "../types/resumeTypes";
+import { createCandidate, updateCandidate, uploadResume } from "../services/useResume";
 
 const statusOptions = [
     { label: "Selected", value: "Selected" },
@@ -86,13 +87,61 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
         }
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         setSubmitted(true);
-        // no API logic yet, just close and trigger success
-        onSuccess();
-        onHide();
-        setSubmitted(false);
-    };
+        
+        // Basic validation check (you may want more robust validation)
+        const isFormValid = formData.candidateName && formData.contactNumber && formData.email;
+        if (!isFormValid) {
+            console.error("Validation failed: required fields missing.");
+            setSubmitted(false);
+            return;
+        }
+
+        try {
+          if (isEditMode && selectedResume) {
+            // EDIT MODE: Update candidate data (PATCH) and optionally upload new resume (POST)
+            
+            const { resumeFile, ...updateData } = formData;
+            
+            // 1. Prepare data for the PATCH request (only fields that can be updated)
+            // Use statusName in the payload, which updateCandidate will map to 'status'
+            const candidateUpdatePayload = {
+                candidateName: updateData.candidateName,
+                contactNumber: updateData.contactNumber,
+                email: updateData.email,
+                recruiterName: updateData.recruiterName,
+                jobRole: updateData.jobRole,
+                preferredJobLocation: updateData.preferredJobLocation,
+                currentCTC: updateData.currentCTC,
+                expectedCTC: updateData.expectedCTC,
+                noticePeriod: updateData.noticePeriod,
+                experienceYears: updateData.experienceYears,
+                statusName: updateData.statusName, // Will be mapped to 'status' in service
+                linkedinProfileUrl: updateData.linkedinProfileUrl,
+            };
+
+            // 2. Update candidate's data
+            await updateCandidate(selectedResume.candidateId, candidateUpdatePayload);
+            
+            // 3. If a new resume file is selected, upload or replace it
+            if (resumeFile) {
+              await uploadResume(selectedResume.candidateId, resumeFile);
+            }
+          } else {
+            // CREATE MODE: Create new candidate (POST with FormData)
+            await createCandidate(formData);
+          }
+          
+          onSuccess();
+          onHide();
+        } catch (error) {
+          console.error("Error saving candidate:", error);
+          // You might want to show an error message to the user here
+        } finally {
+          setSubmitted(false);
+        }
+      };
 
     const handleCancel = () => {
         setSubmitted(false);
@@ -112,17 +161,17 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
 
     return (
         <Dialog
-        visible={visible}
-        onHide={handleCancel}
-        header={isEditMode ? "Edit Resume" : "Add New Resume"}
-        footer={dialogFooter}
-        style={{ width: "600px", maxHeight: "90vh" }}
-        modal
-        className="p-fluid"
-    >
-
+            visible={visible}
+            onHide={handleCancel}
+            header={isEditMode ? "Edit Resume" : "Add New Resume"}
+            footer={dialogFooter}
+            style={{ width: "900px", maxHeight: "90vh" }} // Change width from 600px to 900px
+            modal
+            className="p-fluid"
+        >
+            <div className="formgrid grid">
             {/* Candidate Name */}
-            <div className="field">
+            <div className="field col-12 md:col-6">
                 <label className="font-bold">Candidate Name *</label>
                 <InputText
                     value={formData.candidateName}
@@ -131,7 +180,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             </div>
 
             {/* Recruiter */}
-            <div className="field">
+            <div className="field col-12 md:col-6">
                 <label className="font-bold">Recruiter *</label>
                 <Dropdown
                     value={formData.recruiterName}
@@ -142,7 +191,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             </div>
 
             {/* Contact Number */}
-            <div className="field">
+            <div className="field col-12 md:col-6">
                 <label className="font-bold">Contact Number *</label>
                 <InputText
                     value={formData.contactNumber}
@@ -151,7 +200,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             </div>
 
             {/* Email */}
-            <div className="field">
+            <div className="field col-12 md:col-6">
                 <label className="font-bold">Email *</label>
                 <InputText
                     value={formData.email}
@@ -160,7 +209,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             </div>
 
             {/* Job Role */}
-            <div className="field">
+            <div className="field col-12 md:col-6">
                 <label className="font-bold">Job Role *</label>
                 <InputText
                     value={formData.jobRole}
@@ -169,7 +218,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             </div>
 
             {/* Preferred Job Location */}
-            <div className="field">
+            <div className="field col-12 md:col-6">
                 <label className="font-bold">Preferred Job Location *</label>
                 <Dropdown
                     value={formData.preferredJobLocation}
@@ -180,7 +229,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             </div>
 
             {/* Current CTC */}
-            <div className="field">
+            <div className="field col-12 md:col-6">
                 <label className="font-bold">Current CTC *</label>
                 <InputNumber
                     value={formData.currentCTC}
@@ -189,7 +238,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             </div>
 
             {/* Expected CTC */}
-            <div className="field">
+            <div className="field col-12 md:col-6">
                 <label className="font-bold">Expected CTC *</label>
                 <InputNumber
                     value={formData.expectedCTC}
@@ -198,7 +247,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             </div>
 
             {/* Notice Period */}
-            <div className="field">
+            <div className="field col-12 md:col-6">
                 <label className="font-bold">Notice Period *</label>
                 <InputNumber
                     value={formData.noticePeriod}
@@ -207,7 +256,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             </div>
 
             {/* Experience */}
-            <div className="field">
+            <div className="field col-12 md:col-6">
                 <label className="font-bold">Experience (Years) *</label>
                 <InputNumber
                     value={formData.experienceYears}
@@ -216,7 +265,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             </div>
 
             {/* Status */}
-            <div className="field">
+            <div className="field col-12 md:col-6">
                 <label className="font-bold">Status *</label>
                 <Dropdown
                     value={formData.statusName}
@@ -227,7 +276,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             </div>
 
             {/* LinkedIn URL */}
-            <div className="field">
+            <div className="field col-12 md:col-6">
                 <label className="font-bold">LinkedIn Profile URL *</label>
                 <InputText
                     value={formData.linkedinProfileUrl}
@@ -236,23 +285,24 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             </div>
 
             {/* Resume Upload */}
-<div className="field">
-    <label className="font-bold">Upload Resume</label>
-    <FileUpload
-        mode="basic"
-        name="resume"
-        accept=".pdf,.doc,.docx"
-        maxFileSize={5 * 1024 * 1024}
-        auto={false}
-        customUpload
-        uploadHandler={handleFileUpload}
-        chooseLabel="Select File"
-        chooseOptions={{
-            icon: "pi pi-file-pdf", // 👈 PrimeIcons PDF icon
-            label: "Upload PDF",    // 👈 Custom label (optional)
-            className: "p-button-danger p-button-sm" // 👈 red PDF-style button
-        }}
-    />
+            <div className="field col-12 md:col-6">
+                <label className="font-bold">Upload Resume</label>
+                <FileUpload
+                mode="basic"
+                name="resume"
+                accept=".pdf,.doc,.docx"
+                maxFileSize={5 * 1024 * 1024}
+                auto={false}
+                customUpload
+                uploadHandler={handleFileUpload}
+                chooseLabel="Select File"
+                chooseOptions={{
+                    icon: "pi pi-file-pdf", // 👈 PrimeIcons PDF icon
+                    label: "Upload PDF",    // 👈 Custom label (optional)
+                    className: "p-button-danger p-button-sm" // 👈 red PDF-style button
+                }}
+            />
+            </div>
     {formData.resumeFile && (
         <small className="p-success">File selected: {formData.resumeFile.name}</small>
     )}
