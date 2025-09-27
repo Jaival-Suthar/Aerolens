@@ -8,63 +8,50 @@ export const createCandidate = async (candidate: AddEditCandidate): Promise<Cand
     console.log("🚀 CREATE CANDIDATE - Starting...");
     console.log("📝 Input candidate data:", candidate);
     console.log("🌐 API_BASE_URL:", API_BASE_URL);
-    
-    // const formData = new FormData();
-    const formData={
-      "candidateName":candidate.candidateName,
-      "contactNumber":candidate.contactNumber,
-      "email":candidate.email,
-      "recruiterName":candidate.recruiterName,
-      "jobRole":candidate.jobRole,
-      "preferredJobLocation":candidate.preferredJobLocation,
-      "currentCTC":Number(candidate.currentCTC),
-      "expectedCTC":Number(candidate.expectedCTC),
-      "noticePeriod": Number(candidate.noticePeriod),
-      "experienceYears": Number(candidate.experienceYears),
-      "linkedinProfileUrl": candidate.linkedinProfileUrl || "",
-      // "status": candidate?.statusName||null,
-      "resume": candidate?.resumeFile
+
+    // ✅ Use FormData for files + text fields
+    const formData = new FormData();
+    formData.append("candidateName", candidate.candidateName);
+    formData.append("contactNumber", candidate.contactNumber);
+    formData.append("email", candidate.email);
+    formData.append("recruiterName", candidate.recruiterName);
+    formData.append("jobRole", candidate.jobRole);
+    formData.append("preferredJobLocation", candidate.preferredJobLocation);
+    formData.append("currentCTC", String(candidate.currentCTC));
+    formData.append("expectedCTC", String(candidate.expectedCTC));
+    formData.append("noticePeriod", String(candidate.noticePeriod));
+    formData.append("experienceYears", String(candidate.experienceYears));
+    formData.append("linkedinProfileUrl", candidate.linkedinProfileUrl || "");
+
+    if (candidate.resumeFile) {
+      formData.append("resume", candidate.resumeFile); // must be File or Blob
     }
-    
+
     const response = await fetch(`${API_BASE_URL}/candidate`, {
       method: "POST",
-      //body: formData,
-      headers: { "Content-Type": "multipart/form-data" },
-
-      body: JSON.stringify(formData),
+      body: formData, // ✅ do not stringify
+      // ❌ do not manually set Content-Type for FormData
     });
 
     console.log("📡 Response received:");
-    console.log("  Status:", response.status);
-    console.log("  Status Text:", response.statusText);
-    console.log("  Headers:", Object.fromEntries(response.headers.entries()));
+    console.log("  Status:", response.status, response.statusText);
 
     if (!response.ok) {
-      console.error("❌ Response not OK, attempting to parse error...");
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-      
       try {
         const errorData = await response.json();
         console.error("🚨 API Error Data:", errorData);
         errorMessage = errorData.error || errorData.message || errorMessage;
-      } catch (parseError) {
-        console.error("🚨 Could not parse error as JSON:", parseError);
-        try {
-          const errorText = await response.text();
-          console.error("🚨 Raw error response:", errorText);
-        } catch (textError) {
-          console.error("🚨 Could not even get text response:", textError);
-        }
+      } catch {
+        const errorText = await response.text();
+        console.error("🚨 Raw error response:", errorText);
       }
-      
       throw new Error(errorMessage);
     }
 
     const data = await response.json();
     console.log("✅ Success response data:", data);
-    console.log("✅ Returning candidate:", data.data);
-    
-    return data.data;
+    return data.data as Candidate;
   } catch (error) {
     console.error("💥 Error in createCandidate:", error);
     throw error;
