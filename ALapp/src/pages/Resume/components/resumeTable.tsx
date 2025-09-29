@@ -20,7 +20,8 @@ const ResumeTable: React.FC<any> = () => {
   const dt = useRef<DataTable<any>>(null);
   const loadResumes = useCallback(async () => {
     try {
-      const data = await getCandidates();
+      // TODO pass dynamic pagenumber and pageSize
+      const data = await getCandidates(1, 30);
       setResumes(Array.isArray(data) ? data : []); // Add safety check
     } catch (error) {
       console.error("Error loading resumes:", error);

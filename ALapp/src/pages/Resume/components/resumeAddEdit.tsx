@@ -119,6 +119,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
                 experienceYears: updateData.experienceYears,
                 statusName: updateData.statusName, // Will be mapped to 'status' in service
                 linkedinProfileUrl: updateData.linkedinProfileUrl,
+                resume:resumeFile
             };
 
             // 2. Update candidate's data

@@ -59,12 +59,12 @@ export const createCandidate = async (candidate: AddEditCandidate): Promise<Cand
 };
 
 // READ
-export const getCandidates = async (): Promise<Candidate[]> => {
+export const getCandidates = async (pageNumber: number, pageSize: number = 5): Promise<Candidate[]> => {
   try {
     console.log("📖 GET CANDIDATES - Starting...");
     console.log("🌐 API_BASE_URL:", API_BASE_URL);
     
-    const response = await fetch(`${API_BASE_URL}/candidate`, {
+    const response = await fetch(`${API_BASE_URL}/candidate?pageSize=${pageSize}&pageNumber=${pageNumber}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
