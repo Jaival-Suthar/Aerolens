@@ -50,7 +50,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     const isEditMode = selectedResume !== null;
 
     useEffect(() => {
-        if (isEditMode && selectedResume) {
+        if (isEditMode) {
             setFormData({ ...selectedResume, resumeFile: null });
         } else {
             setFormData({
