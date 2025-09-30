@@ -438,28 +438,30 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
         </div>
 
         {/* Current CTC */}
-        <div className="field col-12 md:col-6">
-          <label className="font-bold">Current CTC *</label>
-          <InputNumber
-            value={formData.currentCTC}
-            onChange={(e) => handleChange("currentCTC", Number(e.value))}
-            onBlur={() => handleBlur("currentCTC")}
-            className={shouldShowError("currentCTC") ? "p-invalid" : ""}
-          />
-          {shouldShowError("currentCTC") && <small className="p-error">{errors.currentCTC}</small>}
-        </div>
+<div className="field col-12 md:col-6">
+  <label className="font-bold">Current CTC *</label>
+  <InputNumber
+    value={formData.currentCTC}
+    onChange={(e) => handleChange("currentCTC", Number(e.value))}
+    onBlur={() => handleBlur("currentCTC")}
+    className={shouldShowError("currentCTC") ? "p-invalid" : ""}
+    prefix={formData.preferredJobLocation === "San Francisco" ? "$" : "₹"}
+  />
+  {shouldShowError("currentCTC") && <small className="p-error">{errors.currentCTC}</small>}
+</div>
 
-        {/* Expected CTC */}
-        <div className="field col-12 md:col-6">
-          <label className="font-bold">Expected CTC *</label>
-          <InputNumber
-            value={formData.expectedCTC}
-            onChange={(e) => handleChange("expectedCTC", Number(e.value))}
-            onBlur={() => handleBlur("expectedCTC")}
-            className={shouldShowError("expectedCTC") ? "p-invalid" : ""}
-          />
-          {shouldShowError("expectedCTC") && <small className="p-error">{errors.expectedCTC}</small>}
-        </div>
+{/* Expected CTC */}
+<div className="field col-12 md:col-6">
+  <label className="font-bold">Expected CTC *</label>
+  <InputNumber
+    value={formData.expectedCTC}
+    onChange={(e) => handleChange("expectedCTC", Number(e.value))}
+    onBlur={() => handleBlur("expectedCTC")}
+    className={shouldShowError("expectedCTC") ? "p-invalid" : ""}
+    prefix={formData.preferredJobLocation === "San Francisco" ? "$" : "₹"}
+  />
+  {shouldShowError("expectedCTC") && <small className="p-error">{errors.expectedCTC}</small>}
+</div>
 
         {/* Notice Period */}
         <div className="field col-12 md:col-6">

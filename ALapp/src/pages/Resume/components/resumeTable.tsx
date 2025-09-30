@@ -21,7 +21,7 @@ const ResumeTable: React.FC<any> = () => {
   const loadResumes = useCallback(async () => {
     try {
       // TODO pass dynamic pagenumber and pageSize
-      const data = await getCandidates(1, 30);
+      const data = await getCandidates(1, 10000);
       setResumes(Array.isArray(data) ? data : []); // Add safety check
     } catch (error) {
       console.error("Error loading resumes:", error);
@@ -126,7 +126,25 @@ const ResumeTable: React.FC<any> = () => {
         <Column field="noticePeriod" header="Notice Period" />
         <Column field="experienceYears" header="Experience" />
         <Column field="statusName" header="Status" />
-        <Column field="linkedinProfileUrl" header="LinkedIn Profile URL" />
+        <Column
+  field="linkedinProfileUrl"
+  header="LinkedIn Profile"
+  body={(rowData: Candidate) =>
+    rowData.linkedinProfileUrl ? (
+      <a
+        href={rowData.linkedinProfileUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 underline hover:text-blue-800"
+      >
+        {rowData.linkedinProfileUrl}
+      </a>
+    ) : (
+      <span className="text-400">N/A</span>
+    )
+  }
+/>
+
         <Column 
           header="Resume" 
           body={(rowData: Candidate) => resumeActionTemplate(rowData)}
