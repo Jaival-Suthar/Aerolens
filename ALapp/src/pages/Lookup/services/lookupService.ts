@@ -2,7 +2,7 @@ import { LookupApiResponse } from '../types/lookupTypes';
 
 // ✅ Load backend URL from environment
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
-console.log("✅ API_BASE_URL:", API_BASE_URL);
+//console.log("✅ API_BASE_URL:", API_BASE_URL);
 
 /**
  * ✅ Checks response status and returns parsed JSON or throws an error
@@ -26,7 +26,7 @@ export const lookupService = {
    */
   async getAll(page = 1, limit = 10): Promise<LookupApiResponse> {
     const url = `${API_BASE_URL}/lookup?page=${page}&limit=${limit}`;
-    console.log("📡 GET:", url);
+    //console.log("📡 GET:", url);
 
     const res = await fetch(url, {
       method: 'GET',
@@ -44,7 +44,7 @@ export const lookupService = {
     if (lookupKey <= 0) throw new Error('Invalid lookupKey provided');
 
     const url = `${API_BASE_URL}/lookup/${lookupKey}`;
-    console.log("📡 GET BY KEY:", url);
+    //console.log("📡 GET BY KEY:", url);
 
     const res = await fetch(url, {
       method: 'GET',
@@ -64,7 +64,7 @@ export const lookupService = {
     }
 
     const url = `${API_BASE_URL}/lookup`;
-    console.log("📡 POST:", url, payload);
+    //console.log("📡 POST:", url, payload);
 
     const res = await fetch(url, {
       method: 'POST',
@@ -83,7 +83,7 @@ export const lookupService = {
     if (lookupKey <= 0) throw new Error('Invalid lookupKey provided');
 
     const url = `${API_BASE_URL}/lookup/${lookupKey}`;
-    console.log("📡 DELETE:", url);
+    //console.log("📡 DELETE:", url);
 
     const res = await fetch(url, { method: 'DELETE' });
     return checkStatus(res);
