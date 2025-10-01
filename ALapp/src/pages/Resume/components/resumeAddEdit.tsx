@@ -304,19 +304,19 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     try {
       if (isEditMode && selectedResume) {
         const { resumeFile, ...updateData } = formData;
-
-        const candidateUpdatePayload = {
-          ...updateData,
-          resume: resumeFile,
-        };
-
-        await updateCandidate(selectedResume.candidateId, candidateUpdatePayload);
+      
+        // ✅ Do NOT include resume in payload (backend update should only handle text fields)
+        await updateCandidate(selectedResume.candidateId, updateData);
+      
+        // ✅ Upload file only if user selected one
         if (resumeFile) {
           await uploadResume(selectedResume.candidateId, resumeFile);
         }
       } else {
+        // For new candidate, pass full formData including resumeFile
         await createCandidate(formData);
       }
+      
 
       onSuccess();
       onHide();
