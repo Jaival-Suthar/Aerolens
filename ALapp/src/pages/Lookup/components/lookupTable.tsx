@@ -78,7 +78,7 @@ const LookupTable: React.FC<LookupTableProps> = ({
   return (
     <div className="card">
       <div className="flex justify-content-between align-items-center mb-2">
-        <h2>Job Profiles Requirements</h2>
+        <h2>Lookup Data</h2>
         <div className="flex gap-2">
           <AddButton onClick={handleAddClick} />
           {/* <DeleteButton
