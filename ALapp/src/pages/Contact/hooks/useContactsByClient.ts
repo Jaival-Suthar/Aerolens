@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import useContact from '../services/useContact';
 import type { Contact, ApiResponse, ClientDetailsApiResponse } from '../types/contactTypes';
 
-
 export const useContactsByClient = (clientId: number | undefined, refreshTrigger: number) => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const { getClientDetails, loading, error, clearError } = useContact();
