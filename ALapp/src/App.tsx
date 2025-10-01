@@ -6,6 +6,7 @@ import Client from './pages/ClientPage/page';
 import Home from './pages/Dashboard/page';
 import JobProfile from './pages/JobProfile/page';
 import Resume from './pages/Resume/page';
+import LookupPage from './pages/Lookup/page';
 import { PrimeReactProvider } from 'primereact/api';
 import 'primereact/resources/themes/saga-blue/theme.css';
 import 'primereact/resources/primereact.min.css';
@@ -40,6 +41,7 @@ const App = (): JSX.Element => {
               {/* <Route path="/contact" element={<Contact />} /> */}
               <Route path="/job-profile" element={<JobProfile />} />
               <Route path="/resume" element={<Resume />} />
+              <Route path="/lookup-data" element={<LookupPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
