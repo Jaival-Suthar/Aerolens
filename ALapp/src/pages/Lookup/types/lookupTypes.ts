@@ -26,6 +26,12 @@ export interface ValidationError {
 export interface LookupApiResponse {
   success: boolean;
   message: string;
+  error?: string; // Optional error code
+  details?: {     // Optional details for error information
+    validationErrors?: ValidationError[];
+    [key: string]: any;
+  };
   data?: LookupEntry[] | LookupEntry;
   meta?: PaginationMeta;
 }
+
