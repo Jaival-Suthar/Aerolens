@@ -5,6 +5,8 @@ import { Button } from "primereact/button";
 import { InputTextarea } from "primereact/inputtextarea";
 import { addDepartment, updateDepartment } from "../services/useDepartment";
 import { DepartmentAddEditProps } from "../types/departmentTypes";
+import { FaCheck } from "react-icons/fa";
+import DialogButton from "../../../shared/DialogAddEditButton";
 
 const DepartmentAddEdit: React.FC<DepartmentAddEditProps> = ({
   visible,
@@ -80,16 +82,18 @@ const DepartmentAddEdit: React.FC<DepartmentAddEditProps> = ({
 
   const dialogFooter = (
     <div className="flex justify-content-end gap-2">
-      <Button
+      <DialogButton
         label="Cancel"
-        icon="pi pi-times"
-        outlined
-        onClick={handleCancel} // Reset form on cancel
+        severity="secondary"
+        onClick={handleCancel}
+        className="w-auto"
       />
-      <Button
-        label={isEditMode ? "Update" : "Save"}
-        icon={isEditMode ? "pi pi-check" : "pi pi-plus"}
+      <DialogButton
+        label={isEditMode ? "Update Department" : "Add Department"}
+        severity="success"
+        icon={<FaCheck style={{ fontSize: 16, marginRight: 8, marginLeft: 4 }} />}
         onClick={handleSave}
+        className="w-auto"
         disabled={!departmentName.trim() || !departmentDescription.trim()}
       />
     </div>

@@ -1,6 +1,7 @@
-import React from 'react';
-import { Button } from 'primereact/button';
-import { DataTable } from 'primereact/datatable';
+import React from "react";
+import { Button } from "primereact/button";
+import { FaFileExcel } from "react-icons/fa";
+import { DataTable } from "primereact/datatable";
 
 type ExportExcelButtonProps = {
   dtRef: React.RefObject<React.ElementRef<typeof DataTable>>;
@@ -9,32 +10,36 @@ type ExportExcelButtonProps = {
   tooltip?: string;
 };
 
-const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({ dtRef, label = 'Export', disabled, tooltip }) => {
+const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({ dtRef, label = "Export", disabled, tooltip }) => {
   const handleExport = () => {
     dtRef.current?.exportCSV();
   };
 
   return (
     <Button
-      icon="pi pi-file-excel"
-      rounded
-      text={false}
-      severity="success"
-      size="large"
-      className="font-medium"
       onClick={handleExport}
       disabled={disabled}
       aria-label={label}
       tooltip={tooltip || label}
-      tooltipOptions={{ position: 'bottom' }}
+      tooltipOptions={{ position: "bottom" }}
+      rounded
+      text={false}
+      className="font-medium mr-1"
       style={{
-        backgroundColor: '#d4edda',
-        borderColor: '#c3e6cb',
-        color: '#155724',
-        borderWidth: '1.5px',
-        borderStyle: 'solid'
+        backgroundColor: "#d4edda",   // pastel green
+        color: "#155724",             // dark green for icon
+        border: "none",
+        boxShadow: "none",
+        width: 40,
+        height: 40,
+        padding: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
       }}
-    />
+    >
+      <FaFileExcel style={{ color: "#155724", fontSize: 20 }} />
+    </Button>
   );
 };
 

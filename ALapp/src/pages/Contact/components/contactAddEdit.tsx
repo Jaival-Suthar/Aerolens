@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
-import { Button } from "primereact/button";
 import type {
   ContactAddEditProps,
   ContactAddEditPayload,
 } from "../types/contactTypes";
+import DialogButton from "../../../shared/DialogAddEditButton";
+import { FaCheck } from 'react-icons/fa';
 
 interface Errors {
   contactPersonName?: string | null;
@@ -130,10 +131,27 @@ const handleSubmit = () => {
   };
 
   const dialogHeader = mode === "add" ? "Add New Contact" : "Edit Contact";
-
+  const dialogFooter = (
+    <div className="flex justify-content-end gap-2 mt-2 w-full">
+      <DialogButton
+            label="Cancel"
+            severity="secondary"
+            onClick={handleCancel}
+            className="w-auto"
+          />
+          <DialogButton
+            label={mode === "add" ? "Add Contact" : "Update Contact"}
+            severity="success"
+            icon={<FaCheck style={{ fontSize: 16, marginRight: 8, marginLeft: 4 }} />}
+            onClick={handleSubmit}
+            className="w-auto"
+          />
+    </div>
+  );
   return (
     <Dialog
       header={dialogHeader}
+      footer={dialogFooter}
       visible={visible}
       modal
       onHide={handleCancel}
@@ -219,39 +237,6 @@ const handleSubmit = () => {
             className={errors.email ? "p-invalid" : ""}
           />
           {errors.email && <small className="p-error block mt-1">{errors.email}</small>}
-        </div>
-
-        <div className="flex justify-end gap-2 mt-4">
-          <Button
-            label="Cancel"
-            text
-            severity="secondary"
-            size="small"
-            onClick={handleCancel}
-            className="w-auto"
-            style={{
-              borderWidth: "1.5px",
-              borderColor: "#6c757d",
-              color: "#6c757d",
-              backgroundColor: "transparent",
-              padding: "0.4rem 1rem",
-              borderRadius: "6px",
-              fontWeight: "500",
-            }}
-          />
-          <Button
-            label={mode === "add" ? "Add Contact" : "Save Changes"}
-            severity="success"
-            icon="pi pi-check"
-            size="small"
-            onClick={handleSubmit}
-            className="w-auto"
-            style={{
-              padding: "0.4rem 1rem",
-              borderRadius: "6px",
-              fontWeight: "600",
-            }}
-          />
         </div>
       </div>
     </Dialog>

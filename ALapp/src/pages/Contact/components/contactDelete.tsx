@@ -2,7 +2,7 @@ import React from "react";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import type { Contact } from "../types/contactTypes";
-
+import DialogDeleteButton from "../../../shared/DialogDeleteButton";
 interface ContactDeleteProps {
   visible: boolean;
   onHide: () => void;
@@ -16,10 +16,18 @@ const ContactDelete: React.FC<ContactDeleteProps> = ({ visible, onHide, onDelete
       onDelete(contact);
     }
   };
-
+  const dialogFooter = (
+    <div className="flex justify-content-end gap-2">
+         <DialogDeleteButton
+          onCancel={onHide}
+          onDelete={handleDelete}
+        />
+        </div>
+  );
   return (
     <Dialog
       header="Confirm Delete"
+      footer={dialogFooter}
       visible={visible}
       modal
       onHide={onHide}
@@ -40,22 +48,6 @@ const ContactDelete: React.FC<ContactDeleteProps> = ({ visible, onHide, onDelete
             <div><strong>Phone:</strong> {contact.phone}</div>
           </div>
         )}
-        
-        <div className="flex justify-end gap-2">
-          <Button
-            label="Cancel"
-            className="p-button-text"
-            severity="secondary"
-            onClick={onHide}
-          />
-          <Button
-            label="Delete"
-            severity="danger"
-            icon="pi pi-trash"
-            onClick={handleDelete}
-            autoFocus
-          />
-        </div>
       </div>
     </Dialog>
   );

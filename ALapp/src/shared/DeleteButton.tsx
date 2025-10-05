@@ -1,5 +1,6 @@
-import React from 'react';
-import { Button } from 'primereact/button';
+import React from "react";
+import { Button } from "primereact/button";
+import { FaTrash } from "react-icons/fa";
 
 type DeleteButtonProps = {
   onClick: React.MouseEventHandler<HTMLButtonElement>;
@@ -9,25 +10,29 @@ type DeleteButtonProps = {
 
 const DeleteButton: React.FC<DeleteButtonProps> = ({ onClick, disabled, tooltip }) => (
   <Button
-    icon="pi pi-trash"
-    rounded
-    text={false}
-    severity="danger"
-    size="large"
-    className="font-medium"
     onClick={onClick}
     disabled={disabled}
     aria-label="Delete"
     tooltip={tooltip || "Delete"}
-    tooltipOptions={{ position: 'bottom' }}
+    tooltipOptions={{ position: "bottom" }}
+    rounded
+    text={false}
+    className="font-medium mr-1"
     style={{
-      backgroundColor: '#f8d7da',
-      borderColor: '#f5c6cb',
-      color: '#721c24',
-      borderWidth: '1.5px',
-      borderStyle: 'solid'
+      backgroundColor: "#f8d7da",  // pastel red
+      color: "#721c24",            // deeper red for icon
+      border: "none",
+      boxShadow: "none",
+      width: 40,
+      height: 40,
+      padding: 0,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
     }}
-  />
+  >
+    <FaTrash style={{ color: "#721c24", fontSize: 20 }} />
+  </Button>
 );
 
 export default DeleteButton;

@@ -5,7 +5,8 @@ import { Button } from 'primereact/button';
 import { Toast } from 'primereact/toast';
 import { lookupService } from '../services/lookupService';
 import { ValidationError } from '../types/lookupTypes';
-
+import DialogButton from '../../../shared/DialogAddEditButton';
+import { FaCheck } from "react-icons/fa";
 interface AddLookupFormProps {
   visible: boolean;
   onHide: () => void;
@@ -135,19 +136,20 @@ export const AddLookupForm: React.FC<AddLookupFormProps> = ({
 
   const dialogFooter = (
     <div>
-      <Button
+      <DialogButton
         label="Cancel"
-        icon="pi pi-times"
+        severity="secondary"
         onClick={handleHide}
-        className="p-button-text"
+        className="w-auto"
         disabled={loading}
       />
-      <Button
-        label="Save"
-        icon="pi pi-check"
+      <DialogButton
+        label="Add Lookup"
+        severity="success"
+        icon={<FaCheck style={{ fontSize: 16, marginRight: 8, marginLeft: 4}}/>}
         onClick={handleSubmit}
+        className="w-auto"
         loading={loading}
-        autoFocus
       />
     </div>
   );

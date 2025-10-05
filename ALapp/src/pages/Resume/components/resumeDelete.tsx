@@ -4,6 +4,7 @@ import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { deleteCandidate } from "../services/useResume";
 import { ResumeDeleteProps } from "../types/resumeTypes";
+import DialogDeleteButton from "../../../shared/DialogDeleteButton";
 
 const ResumeDelete: React.FC<ResumeDeleteProps> = ({
   visible, //dialgoue visibility
@@ -36,17 +37,9 @@ const ResumeDelete: React.FC<ResumeDeleteProps> = ({
 
   const dialogFooter = (
     <div className="flex justify-content-end gap-2">
-      <Button
-        label="Cancel"
-        icon="pi pi-times"
-        outlined
-        onClick={handleCancel}
-      />
-      <Button
-        label="Delete"
-        icon="pi pi-trash"
-        severity="danger"
-        onClick={handleDelete}
+      <DialogDeleteButton
+        onCancel={handleCancel}
+        onDelete={handleDelete}
       />
     </div>
   );
@@ -62,13 +55,8 @@ const ResumeDelete: React.FC<ResumeDeleteProps> = ({
       className="p-fluid"
     >
       <div className="confirmation-content">
-        <i 
-          className="pi pi-exclamation-triangle mr-3" 
-          style={{ fontSize: "2rem", color: "var(--yellow-500)" }} 
-        />
         <div>
-          <div className="font-bold text-xl mb-2">Confirm Deletion</div>
-          <p className="mb-3">
+          <p className="mb-1">
             Are you sure you want to delete candidate{" "}
             <strong>"{selectedResume?.candidateName}"</strong>?
           </p>

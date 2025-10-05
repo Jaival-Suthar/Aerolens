@@ -1,8 +1,7 @@
 import React from "react";
 import { Dialog } from "primereact/dialog";
-import { Button } from "primereact/button";
 import type { ClientDeleteProps } from "../types/clientTypes";
-
+import DialogDeleteButton from "../../../shared/DialogDeleteButton";
 
 const ClientDelete: React.FC<ClientDeleteProps> = ({
   visible,
@@ -10,9 +9,22 @@ const ClientDelete: React.FC<ClientDeleteProps> = ({
   onDelete,
   client
 }) => {
+  const dialogFooter = (
+    <div className="flex justify-content-end gap-2">
+      <DialogDeleteButton
+          onCancel={onHide}
+          onDelete={() => {
+            onDelete(client);
+            onHide();
+          }}
+        // loading={loading} // optional, pass if you have loading state
+      />
+    </div>
+  );
   return (
     <Dialog
       header="Confirm Delete"
+      footer={dialogFooter}
       visible={visible}
       modal
       onHide={onHide}
@@ -22,24 +34,6 @@ const ClientDelete: React.FC<ClientDeleteProps> = ({
         Are you sure you want to delete client{" "}
         <strong>{client?.clientName || "this client"}</strong>?
       </p>
-      <div className="flex justify-end gap-2 mt-4">
-        <Button
-          label="Cancel"
-          className="p-button-text"
-          severity="secondary"
-          onClick={onHide}
-        />
-        <Button
-          label="Delete"
-          severity="danger"
-          icon="pi pi-trash"
-          onClick={() => {
-            onDelete(client);
-            onHide();
-          }}
-          autoFocus
-        />
-      </div>
     </Dialog>
   );
 };

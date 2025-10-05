@@ -8,7 +8,7 @@ import JobProfile from './pages/JobProfile/page';
 import Resume from './pages/Resume/page';
 import LookupPage from './pages/Lookup/page';
 import { PrimeReactProvider } from 'primereact/api';
-// import 'primereact/resources/themes/saga-blue/theme.css';
+import 'primereact/resources/themes/saga-blue/theme.css';
 import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
 import 'primeflex/primeflex.css';
