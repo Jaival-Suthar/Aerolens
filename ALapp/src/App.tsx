@@ -1,17 +1,20 @@
 // App.tsx
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import AppNavbar from './AppNavbar';
-import Client from './pages/ClientPage/page';
-import Home from './pages/Dashboard/page';
-import JobProfile from './pages/JobProfile/page';
-import Resume from './pages/Resume/page';
-import LookupPage from './pages/Lookup/page';
+const AppNavbar = lazy(() => import('./AppNavbar'));
+const Client = lazy(() => import('./pages/ClientPage/page'));
+const Home = lazy(() => import('./pages/Dashboard/page'));
+const JobProfile = lazy(() => import('./pages/JobProfile/page'));
+const Resume = lazy(() => import('./pages/Resume/page'));
+const LookupPage = lazy(() => import('./pages/Lookup/page'));
 import { PrimeReactProvider } from 'primereact/api';
 import 'primereact/resources/themes/saga-blue/theme.css';
-import 'primereact/resources/primereact.min.css';
-import 'primeicons/primeicons.css';
-import 'primeflex/primeflex.css';
+
+const LoadingSpinner = () => (
+  <div className="flex align-items-center justify-content-center h-screen">
+    <i className="pi pi-spin pi-spinner text-4xl text-primary"></i>
+  </div>
+);
 
 const NotFound: React.FC = () => (
   <div className="flex flex-column align-items-center justify-content-center h-screen">
@@ -31,6 +34,7 @@ const App = (): JSX.Element => {
   return (
     <PrimeReactProvider>
       <Router>
+        <Suspense fallback={<LoadingSpinner />}>
         <div className="app">
           <AppNavbar />
           <main className="main-content p-2" style={{ background: "#fff", minHeight: "100vh" }}>
@@ -46,6 +50,7 @@ const App = (): JSX.Element => {
             </Routes>
           </main>
         </div>
+        </Suspense>
       </Router>
     </PrimeReactProvider>
   );

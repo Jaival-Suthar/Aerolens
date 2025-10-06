@@ -1,17 +1,8 @@
-import React, { useCallback } from "react";
+import React, { useCallback, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Menubar } from "primereact/menubar";
 import { Button } from "primereact/button";
-import { 
-  FaIdCard, 
-  FaBriefcase, 
-  FaUsers, 
-  FaDatabase, 
-  FaFile, 
-  FaChartBar, 
-  FaCog, 
-  FaUser 
-} from "react-icons/fa";
+import { FaBriefcase, FaUsers, FaDatabase, FaFile, FaChartBar, FaIdCard, FaCog, FaUser } from "react-icons/fa";
 
 
 const AppNavbar: React.FC = () => {
