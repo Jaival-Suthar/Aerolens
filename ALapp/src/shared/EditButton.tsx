@@ -1,5 +1,6 @@
-import React from 'react';
-import { Button } from 'primereact/button';
+import React from "react";
+import { Button } from "primereact/button";
+import { FaPencilAlt } from "react-icons/fa"; // Use FontAwesome pencil icon
 
 type EditButtonProps = {
   onClick: React.MouseEventHandler<HTMLButtonElement>;
@@ -9,25 +10,29 @@ type EditButtonProps = {
 
 const EditButton: React.FC<EditButtonProps> = ({ onClick, disabled, tooltip }) => (
   <Button
-    icon="pi pi-pencil"
-    rounded
-    text={false}
-    severity="info"
-    size="large"
-    className="font-medium mr-1"
     onClick={onClick}
     disabled={disabled}
     aria-label="Edit"
     tooltip={tooltip || "Edit"}
-    tooltipOptions={{ position: 'bottom' }}
+    tooltipOptions={{ position: "bottom" }}
+    rounded
+    text={false}
+    className="font-medium mr-1"
     style={{
-      backgroundColor: '#d1ecf1',
-      borderColor: '#bee5eb',
-      color: '#0c5460',
-      borderWidth: '1.5px',
-      borderStyle: 'solid'
+      backgroundColor: "#d1ecf1",   // light blue for edit
+      color: "#0c5460",             // dark blue/teal for icon
+      border: "none",               // no border
+      boxShadow: "none",
+      width: 40,                    // perfect circle
+      height: 40,
+      padding: 0,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
     }}
-  />
+  >
+    <FaPencilAlt style={{ color: "#0c5460", fontSize: 20 }} />
+  </Button>
 );
 
 export default EditButton;

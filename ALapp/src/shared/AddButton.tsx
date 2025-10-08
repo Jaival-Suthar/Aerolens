@@ -1,5 +1,6 @@
-import React from 'react';
-import { Button } from 'primereact/button';
+import React from "react";
+import { Button } from "primereact/button";
+import { FaPlus } from "react-icons/fa";
 
 type AddButtonProps = {
   onClick: React.MouseEventHandler<HTMLButtonElement>;
@@ -9,25 +10,29 @@ type AddButtonProps = {
 
 const AddButton: React.FC<AddButtonProps> = ({ onClick, disabled, tooltip }) => (
   <Button
-    icon="pi pi-plus"
-    rounded
-    text={false}
-    severity="success"
-    size="large"
-    className="font-medium mr-1"
     onClick={onClick}
     disabled={disabled}
     aria-label="Add"
     tooltip={tooltip || "Add"}
-    tooltipOptions={{ position: 'bottom' }}
+    tooltipOptions={{ position: "bottom" }}
+    rounded
+    text={false}
+    className="font-medium mr-1"
     style={{
-      backgroundColor: '#cce5ff', 
-      borderColor: '#99ccff',
-      color: '#004085',
-      borderWidth: '1.5px',
-      borderStyle: 'solid'
+      backgroundColor: "#e3f1fc",
+      color: "#1976d2",
+      border: "none",
+      boxShadow: "none",
+      width: 40,
+      height: 40,
+      padding: 0,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
     }}
-  />
+  >
+    <FaPlus style={{ color: "#1976d2", fontSize: 20 }} />
+  </Button>
 );
 
 export default AddButton;

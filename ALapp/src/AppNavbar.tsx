@@ -1,7 +1,9 @@
-import React, { useCallback } from "react";
+import React, { useCallback, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Menubar } from "primereact/menubar";
 import { Button } from "primereact/button";
+import { FaBriefcase, FaUsers, FaDatabase, FaFile, FaChartBar, FaIdCard, FaCog, FaUser } from "react-icons/fa";
+
 
 const AppNavbar: React.FC = () => {
   const navigate = useNavigate();
@@ -27,7 +29,6 @@ const AppNavbar: React.FC = () => {
   const items = [
     {
       label: "Home",
-      icon: "pi pi-id-card",
       command: () => handleNavigation("/home"),
       className: isMenuActive("/home") ? "nav-item-active" : "",
     },
@@ -37,25 +38,25 @@ const AppNavbar: React.FC = () => {
       items: [
         {
           label: "Client",
-          icon: "pi pi-id-card",
+          icon: <FaIdCard style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/client"),
           className: isMenuActive("/client") ? "nav-subitem-active" : "",
         },
         {
           label: "Job Profile",
-          icon: "pi pi-briefcase",
+          icon: <FaBriefcase style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/job-profile"),
           className: isMenuActive("/job-profile") ? "nav-subitem-active" : "",
         },
         {
           label: "Members",
-          icon: "pi pi-users",
+          icon: <FaUsers style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/members"),
           className: isMenuActive("/members") ? "nav-subitem-active" : "",
         },
         {
           label: "Lookup Data",
-          icon: "pi pi-database",
+          icon: <FaDatabase style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/lookup-data"),
           className: isMenuActive("/lookup-data") ? "nav-subitem-active" : "",
         }
@@ -67,7 +68,7 @@ const AppNavbar: React.FC = () => {
       items: [
         {
           label: "Resume",
-          icon: "pi pi-file",
+          icon: <FaFile style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/resume"),
           className: isMenuActive("/resume") ? "nav-subitem-active" : "",
         },
@@ -79,7 +80,7 @@ const AppNavbar: React.FC = () => {
       items: [
         {
           label: "Reports",
-          icon: "pi pi-chart-bar",}
+          icon: <FaChartBar style={{ marginRight: 8, marginLeft: 4 }} />,}
       ]
     },
   ];
@@ -121,7 +122,7 @@ const AppNavbar: React.FC = () => {
       }}
     >
       <Button
-        icon="pi pi-cog"
+        icon={<FaCog />}
         className="p-button-rounded p-button-text large"
         tooltip="Settings"
         tooltipOptions={{ position: "bottom" }}
@@ -133,7 +134,7 @@ const AppNavbar: React.FC = () => {
         }}
       />
       <Button
-        icon="pi pi-user"
+        icon={<FaUser />}
         className="p-button-rounded p-button-text large"
         tooltip="User Profile"
         tooltipOptions={{ position: "bottom" }}

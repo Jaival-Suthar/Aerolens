@@ -7,7 +7,7 @@ import { InputNumber, type InputNumberValueChangeEvent } from 'primereact/inputn
 import { Dropdown, type DropdownChangeEvent } from 'primereact/dropdown';
 import { Calendar } from 'primereact/calendar';
 import { classNames } from 'primereact/utils';
-
+import DialogButton from '../../../shared/DialogAddEditButton';
 import { validateJobProfileRequest } from '../services/jobProfileService';
 import type {
   JobProfile,
@@ -17,6 +17,7 @@ import type {
   DepartmentOption,
   JobStatus
 } from '../types/jobProfileTypes';
+import { FaCheck } from 'react-icons/fa';
 
 interface Props {
   visible: boolean;
@@ -203,20 +204,20 @@ const JobProfileAddEdit: React.FC<Props> = ({
 
   const footer = (
     <div className="flex justify-content-end gap-2">
-      <Button
-        label="Cancel"
-        icon="pi pi-times"
-        outlined
-        onClick={onHide}
-        disabled={submitting || loading}
+      <DialogButton 
+        label="Cancel" 
+        onClick={onHide} 
+        severity="secondary" 
       />
-      <Button
-        label={jobProfile ? 'Update' : 'Save'}
-        icon="pi pi-check"
+      <DialogButton
+        label={jobProfile ? 'Update Job Profile' : 'Add Job Profile'}
+        severity="success"
+        icon={<FaCheck style={{ fontSize: 16, marginRight: 8, marginLeft: 4 }}/>}  
         onClick={handleSubmit}
         loading={submitting}
         disabled={loading}
       />
+      
     </div>
   );
 

@@ -5,6 +5,7 @@ import { Paginator, type PaginatorPageChangeEvent } from "primereact/paginator";
 import { useClientData } from "../hooks/useClientData";
 import { usePagination } from "../hooks/usePagination";
 import type { ClientTableProps, ClientType } from "../types/clientTypes";
+import { FaTimesCircle } from "react-icons/fa";
 
 const ClientTable: React.FC<ClientTableProps> = ({
   dtRef,
@@ -86,7 +87,7 @@ const ClientTable: React.FC<ClientTableProps> = ({
           aria-live="assertive"
         >
           <div className="p-message-wrapper">
-            <div className="p-message-icon pi pi-times-circle" />
+            <FaTimesCircle aria-hidden="true" style={{ fontSize: 20, color: "#f44336" }} />
             <div className="p-message-text">Error loading clients: {error}</div>
           </div>
         </div>

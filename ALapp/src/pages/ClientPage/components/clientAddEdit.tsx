@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
-import { Button } from "primereact/button";
 import { ClientAddEditProps, ClientType, ClientAddType } from "../types/clientTypes";
-
-
+import { FaCheck } from 'react-icons/fa';
+import DialogButton from "../../../shared/DialogAddEditButton";
 
 const ClientAddEdit: React.FC<ClientAddEditProps> = ({ 
     visible, 
@@ -86,10 +85,28 @@ const ClientAddEdit: React.FC<ClientAddEditProps> = ({
   };
 
   const dialogHeader = mode === "add" ? "Add New Client" : "Edit Client";
+  const dialogFooter = (
+    <div className="flex justify-content-end gap-2">
+      <DialogButton
+        label="Cancel"
+            severity="secondary"
+            onClick={handleCancel}
+            className="w-auto"
+          />
+          <DialogButton
+            label={mode === "add" ? "Add Client" : "Update Client"}
+            severity="success"
+            icon={<FaCheck style={{ fontSize: 16, marginRight: 8, marginLeft: 4 }} />}
+            onClick={handleSubmit}
+            className="w-auto"
+          />
+    </div>
+  );
 
   return (
     <Dialog
       header={dialogHeader}
+      footer={dialogFooter}
       visible={visible}
       modal
       onHide={handleCancel}
@@ -138,39 +155,6 @@ const ClientAddEdit: React.FC<ClientAddEditProps> = ({
           {errors.address && (
             <small className="p-error block mt-1">{errors.address}</small>
           )}
-        </div>
-
-        <div className="flex justify-end gap-2 mt-4">
-          <Button
-            label="Cancel"
-            text
-            severity="secondary"
-            size="small"
-            onClick={handleCancel}
-            className="w-auto"
-            style={{
-              borderWidth: "1.5px",
-              borderColor: "#6c757d",
-              color: "#6c757d",
-              backgroundColor: "transparent",
-              padding: "0.4rem 1rem",
-              borderRadius: "6px",
-              fontWeight: "500",
-            }}
-          />
-          <Button
-            label={mode === "add" ? "Add Client" : "Save Changes"}
-            severity="success"
-            icon="pi pi-check"
-            size="small"
-            onClick={handleSubmit}
-            className="w-auto"
-            style={{
-              padding: "0.4rem 1rem",
-              borderRadius: "6px",
-              fontWeight: "600",
-            }}
-          />
         </div>
       </div>
     </Dialog>

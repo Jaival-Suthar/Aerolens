@@ -3,7 +3,7 @@ import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
 import { Message } from 'primereact/message';
 import type { JobProfile, ClientOption } from '../types/jobProfileTypes';
-
+import DialogDeleteButton from '../../../shared/DialogDeleteButton';
 interface Props {
   visible: boolean;
   onHide: () => void;
@@ -34,19 +34,11 @@ const JobProfileDelete: React.FC<Props> = ({
 
   const footer = (
     <div className="flex justify-content-end gap-2">
-      <Button
-        label="Cancel"
-        icon="pi pi-times"
-        outlined
-        onClick={handleHide}
-        disabled={loading}
-      />
-      <Button
-        label="Delete"
-        icon="pi pi-trash"
-        severity="danger"
-        onClick={handleDelete}
-        disabled={loading}
+      <DialogDeleteButton
+        onCancel={handleHide}
+        onDelete={handleDelete}
+        cancelDisabled={loading}
+        deleteDisabled={loading}
       />
     </div>
   );
@@ -69,13 +61,6 @@ const JobProfileDelete: React.FC<Props> = ({
       draggable={false}
       resizable={false}
     >
-      <div className="flex align-items-center gap-3 mb-4">
-        <i className="pi pi-exclamation-triangle text-orange-500" style={{ fontSize: '2rem' }}></i>
-        <div>
-          <div className="font-bold text-lg">Confirm Deletion</div>
-          <div className="text-color-secondary">This action cannot be undone.</div>
-        </div>
-      </div>
 
       {error && (
         <Message severity="error" text={error} className="mb-3 w-full" />

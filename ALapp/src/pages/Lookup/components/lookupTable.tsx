@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
-import { DataTable, DataTablePageEvent } from 'primereact/datatable';
+import React, { useState, useCallback } from 'react';
+import {
+  DataTable,
+  type DataTablePageEvent,
+} from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { LookupEntry } from '../types/lookupTypes';
 import AddButton from '../../../shared/AddButton';
@@ -39,52 +42,58 @@ const LookupTable: React.FC<LookupTableProps> = ({
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const handleSelectionChange = (e: { value: LookupEntry | null }) => {
-    setSelectedLookup(e.value);
-    onSelectionChange?.(e.value);
-  };
+  // Memoized selection handler with strict typing
+  const onSelectionChangeHandler = useCallback(
+    (e: any) => {
+      // Defensive check and normalization
+      const selected = e?.value && typeof e.value === 'object' && 'lookupKey' in e.value ? e.value : null;
+      setSelectedLookup(selected);
+      onSelectionChange?.(selected);
+    },
+    [onSelectionChange]
+  );
 
-  const handlePageChange = (event: DataTablePageEvent) => {
-  const newPage = (event.first / event.rows) + 1;
-  const newLimit = event.rows;
-  onPageChange(newPage, newLimit); // This now updates URL + localStorage
-};
 
-  const handleAddClick = () => {
-    setShowAddDialog(true);
-  };
+  // Page change handler, calculates new page and limit correctly
+  const handlePageChange = useCallback(
+    (event: DataTablePageEvent) => {
+      const newPage = Math.floor(event.first / event.rows) + 1;
+      const newLimit = event.rows;
+      onPageChange(newPage, newLimit);
+    },
+    [onPageChange]
+  );
 
-  // const handleDeleteClick = () => {
-  //   if (selectedLookup) {
-  //     setShowDeleteDialog(true);
-  //   }
-  // };
+  const handleAddClick = () => setShowAddDialog(true);
 
-  const handleAddSuccess = () => {
+  // Add success callback resets relevant data
+  const handleAddSuccess = useCallback(() => {
     onDataChange?.();
-  };
+  }, [onDataChange]);
 
-  const handleDeleteSuccess = () => {
+  // Delete success callback clears selection and refreshes data
+  const handleDeleteSuccess = useCallback(() => {
     setSelectedLookup(null);
     onSelectionChange?.(null);
     onDataChange?.();
-  };
+  }, [onSelectionChange, onDataChange]);
 
-  // Calculate first record index for PrimeReact DataTable
+  // Calculate index of first record for paginator
   const first = meta ? (meta.currentPage - 1) * meta.limit : 0;
-  // const totalRecords = meta?.totalRecords || 0;
-  // Add right before the return statement
-//console.log('🔍 Pagination Debug:', { first, totalRecords, limit: meta?.limit, meta });
+
   return (
     <div className="card">
       <div className="flex justify-content-between align-items-center mb-2">
         <h2>Lookup Data</h2>
         <div className="flex gap-2">
           <AddButton onClick={handleAddClick} />
-          {/* <DeleteButton
-            onClick={handleDeleteClick}
-            disabled={!selectedLookup}
-          /> */}
+          {/* 
+            Uncomment when Delete functionality is ready
+            <DeleteButton
+              onClick={() => showDeleteDialog && setShowDeleteDialog(true)}
+              disabled={!selectedLookup}
+            /> 
+          */}
         </div>
       </div>
 
@@ -101,18 +110,14 @@ const LookupTable: React.FC<LookupTableProps> = ({
         className="p-datatable-sm"
         selectionMode="single"
         selection={selectedLookup}
-        onSelectionChange={handleSelectionChange}
+        onSelectionChange={onSelectionChangeHandler}
         dataKey="lookupKey"
         emptyMessage="No lookup entries found"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
         rowsPerPageOptions={[5, 10, 25, 50]}
       >
-        <Column
-          selectionMode="single"
-          headerStyle={{ width: '3rem' }}
-          frozen
-        />
+        <Column selectionMode="single" headerStyle={{ width: '3rem' }} frozen />
         <Column field="lookupKey" header="Key" sortable />
         <Column field="tag" header="Tag" sortable />
         <Column field="value" header="Value" />

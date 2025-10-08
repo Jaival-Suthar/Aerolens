@@ -14,6 +14,8 @@ import { createClient, updateClient, deleteClient } from "./services/clientServi
 import { ClientType, ClientAddType } from "./types/clientTypes";
 import ExportExcelButton from "../../shared/ExportExcelButton";
 import { DataTable } from "primereact/datatable";
+import { FaCog } from 'react-icons/fa';
+
 
 
 // type ClientType = {
@@ -149,13 +151,14 @@ const Client: React.FC = () => {
             <>
               <div className="flex align-items-center gap-3">
                 <SplitButton
-                  icon="pi pi-cog"
+                  icon={<FaCog style={{ fontSize: 16 }} />}
                   model={menuItems}
                   tooltip="Settings"
                   tooltipOptions={{ position: "bottom" }}
                   disabled={!selectedClient || loading}
                   aria-label="Settings"
                 />
+
               </div>
               <div className="flex gap-2 mr-6">
                 <ExportExcelButton dtRef={dt} />

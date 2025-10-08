@@ -4,6 +4,7 @@ import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { deleteDepartment } from "../services/useDepartment";
 import { DepartmentDeleteProps } from "../types/departmentTypes";
+import DialogDeleteButton from "../../../shared/DialogDeleteButton";
 
 const DepartmentDelete: React.FC<DepartmentDeleteProps> = ({
   visible,
@@ -39,18 +40,9 @@ const DepartmentDelete: React.FC<DepartmentDeleteProps> = ({
 
   const dialogFooter = (
     <div className="flex justify-content-end gap-2">
-      <Button
-        label="Cancel"
-        icon="pi pi-times"
-        outlined
-        onClick={handleCancel}
-        disabled={loading}
-      />
-      <Button
-        label="Delete"
-        icon="pi pi-trash"
-        severity="danger"
-        onClick={handleDelete}
+      <DialogDeleteButton
+        onCancel={handleCancel}
+        onDelete={handleDelete}
         loading={loading}
       />
     </div>
@@ -67,13 +59,8 @@ const DepartmentDelete: React.FC<DepartmentDeleteProps> = ({
       className="p-fluid"
     >
       <div className="confirmation-content">
-        <i 
-          className="pi pi-exclamation-triangle mr-3" 
-          style={{ fontSize: "2rem", color: "var(--yellow-500)" }} 
-        />
         <div>
-          <div className="font-bold text-xl mb-2">Confirm Deletion</div>
-          <p className="mb-3">
+          <p className="mb-1">
             Are you sure you want to delete department{" "}
             <strong>"{selectedDepartment?.departmentName}"</strong>?
           </p>

@@ -7,6 +7,8 @@ import { FileUpload } from "primereact/fileupload";
 import { InputNumber } from "primereact/inputnumber";
 import { ResumeAddEditProps, AddEditCandidate } from "../types/resumeTypes";
 import { createCandidate, updateCandidate, uploadResume } from "../services/useResume";
+import DialogButton from "../../../shared/DialogAddEditButton";
+import { FaCheck } from "react-icons/fa";
 
 const statusOptions = [
   { label: "Selected", value: "Selected" },
@@ -336,11 +338,18 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
 
   const dialogFooter = (
     <div className="flex justify-content-end gap-2">
-      <Button label="Cancel" icon="pi pi-times" outlined onClick={handleCancel} />
-      <Button
-        label={isEditMode ? "Update" : "Save"}
-        icon={isEditMode ? "pi pi-check" : "pi pi-plus"}
+      <DialogButton
+        label="Cancel"
+        severity="secondary"
+        onClick={handleCancel}
+        className="w-auto"
+      />
+      <DialogButton
+        label={isEditMode ? "Update Candidate" : "Add Candidate"}
+        severity="success"
+        icon={<FaCheck style={{ fontSize: 16, marginRight: 8, marginLeft: 4 }} />}
         onClick={handleSave}
+        className="w-auto"
       />
     </div>
   );

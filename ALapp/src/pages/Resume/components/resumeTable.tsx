@@ -10,6 +10,7 @@ import { getCandidates } from "../services/useResume";
 import ResumeDelete from "./resumeDelete";
 import ExportExcelButton from "../../../shared/ExportExcelButton";
 import { Button } from "primereact/button";
+import { FaDownload, FaEye } from "react-icons/fa";
 
 const ResumeTable: React.FC<any> = () => {
   const [resumes, setResumes] = useState<Candidate[]>([]);
@@ -61,13 +62,17 @@ const ResumeTable: React.FC<any> = () => {
     return (
       <div className="flex gap-1">
         <Button
-          icon="pi pi-download"
-          className="p-button-sm p-button-outlined"
+          icon={<span style={{ fontSize: 16, lineHeight: 0 }}>
+            <FaDownload />
+          </span>}
+          className="p-button-outlined"
           tooltip="Download Resume"
           onClick={() => handleDownloadResume(candidate.candidateId)}
         />
         <Button
-          icon="pi pi-eye"
+          icon={<span style={{ fontSize: 16, lineHeight: 0 }}>
+            <FaEye />
+          </span>}
           className="p-button-sm p-button-outlined"
           tooltip="Preview Resume"
           onClick={() => handlePreviewResume(candidate.candidateId)}
