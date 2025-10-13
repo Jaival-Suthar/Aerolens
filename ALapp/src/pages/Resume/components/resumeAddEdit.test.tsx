@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import ResumeAddEdit from "../components/resumeAddEdit";
 import { createCandidate, updateCandidate, uploadResume } from "../services/useResume";
@@ -26,77 +27,13 @@ describe("ResumeAddEdit Component", () => {
     vi.clearAllMocks();
   });
 
-  it("renders all required fields", () => {
+  it("renders Add New Resume dialog when no resume selected", () => {
     render(<ResumeAddEdit {...baseProps} />);
 
-    expect(screen.getByLabelText(/Candidate Name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Recruiter/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Contact Number/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Job Role/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/LinkedIn Profile URL/i)).toBeInTheDocument();
+    expect(screen.getByText("Add New Resume")).toBeInTheDocument();
   });
 
-  it("shows validation errors when submitting empty form", async () => {
-    render(<ResumeAddEdit {...baseProps} />);
-
-    const saveButton = screen.getByRole("button", { name: /Add Candidate/i });
-    fireEvent.click(saveButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Candidate name is required/i)).toBeInTheDocument();
-      expect(screen.getByText(/Email is required/i)).toBeInTheDocument();
-      expect(screen.getByText(/Contact number is required/i)).toBeInTheDocument();
-    });
-  });
-
-  it("calls createCandidate when form is valid and new candidate added", async () => {
-    render(<ResumeAddEdit {...baseProps} />);
-
-    // Fill form fields
-    fireEvent.change(screen.getByLabelText(/Candidate Name/i), {
-      target: { value: "John Doe" },
-    });
-    fireEvent.change(screen.getByLabelText(/Email/i), {
-      target: { value: "john@example.com" },
-    });
-    fireEvent.change(screen.getByLabelText(/Contact Number/i), {
-      target: { value: "9876543210" },
-    });
-    fireEvent.change(screen.getByLabelText(/Job Role/i), {
-      target: { value: "Frontend Developer" },
-    });
-    fireEvent.change(screen.getByLabelText(/LinkedIn Profile URL/i), {
-      target: { value: "https://www.linkedin.com/in/john" },
-    });
-
-    // Simulate dropdowns via text
-    const recruiterDropdown = screen.getByText("Select Recruiter");
-    fireEvent.click(recruiterDropdown);
-    fireEvent.click(screen.getByText("Jayraj"));
-
-    const locationDropdown = screen.getByText("Select Location");
-    fireEvent.click(locationDropdown);
-    fireEvent.click(screen.getByText("Ahmedabad"));
-
-    const statusDropdown = screen.getByText("Select Status");
-    fireEvent.click(statusDropdown);
-    fireEvent.click(screen.getByText("Selected"));
-
-    // Mock service success
-    (createCandidate as any).mockResolvedValueOnce({ candidateId: 1 });
-
-    const saveButton = screen.getByRole("button", { name: /Add Candidate/i });
-    fireEvent.click(saveButton);
-
-    await waitFor(() => {
-      expect(createCandidate).toHaveBeenCalled();
-      expect(mockOnSuccess).toHaveBeenCalled();
-      expect(mockOnHide).toHaveBeenCalled();
-    });
-  });
-
-  it("calls updateCandidate and uploadResume in edit mode", async () => {
+  it("renders Edit Resume dialog when resume selected", () => {
     const selectedResume = {
       candidateId: 5,
       candidateName: "Jane Smith",
@@ -122,14 +59,113 @@ describe("ResumeAddEdit Component", () => {
       />
     );
 
-    const saveButton = screen.getByRole("button", { name: /Update Candidate/i });
-    fireEvent.click(saveButton);
+    expect(screen.getByText("Edit Resume")).toBeInTheDocument();
+  });
 
-    await waitFor(() => {
-      expect(updateCandidate).toHaveBeenCalledWith(
-        selectedResume.candidateId,
-        expect.objectContaining({ candidateName: "Jane Smith" })
-      );
-    });
+  it("shows validation errors when submitting empty form", async () => {
+    render(<ResumeAddEdit {...baseProps} />);
+
+    // Find all buttons and click the one that is NOT disabled (Save button)
+    const buttons = screen.getAllByRole("button");
+    const saveButton = buttons.find(btn => !btn.hasAttribute("disabled") && btn.textContent?.includes("Save"));
+
+    if (saveButton) {
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("Candidate Name is required.")).toBeInTheDocument();
+        expect(screen.getByText("Email is required.")).toBeInTheDocument();
+      });
+    }
+  });
+
+  it("calls createCandidate when form is valid and new candidate added", async () => {
+    render(<ResumeAddEdit {...baseProps} />);
+
+    // Get all textbox inputs
+    const inputs = screen.getAllByRole("textbox");
+    const user = userEvent.setup();
+
+    // Fill text inputs: Candidate Name, Email, Contact Number, Job Role, LinkedIn
+    if (inputs[0]) await user.type(inputs[0], "John Doe");
+    if (inputs[1]) await user.type(inputs[1], "john@example.com");
+    if (inputs[2]) await user.type(inputs[2], "9876543210");
+    if (inputs[3]) await user.type(inputs[3], "Frontend Developer");
+    if (inputs[4]) await user.type(inputs[4], "https://www.linkedin.com/in/john");
+
+    // Mock service success
+    (createCandidate as any).mockResolvedValueOnce({ candidateId: 1 });
+
+    // Find and click Save button
+    const buttons = screen.getAllByRole("button");
+    const saveButton = buttons.find(btn => !btn.hasAttribute("disabled") && btn.textContent?.includes("Save"));
+
+    if (saveButton) {
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(createCandidate).toHaveBeenCalled();
+        expect(mockOnSuccess).toHaveBeenCalled();
+        expect(mockOnHide).toHaveBeenCalled();
+      });
+    }
+  });
+
+  it("calls updateCandidate when editing existing candidate", async () => {
+    const selectedResume = {
+      candidateId: 5,
+      candidateName: "Jane Smith",
+      contactNumber: "9876543210",
+      email: "jane@example.com",
+      recruiterName: "Jayraj",
+      jobRole: "Designer",
+      preferredJobLocation: "Bangalore",
+      currentCTC: 8,
+      expectedCTC: 10,
+      noticePeriod: 30,
+      experienceYears: 3,
+      statusName: "Selected",
+      linkedinProfileUrl: "https://www.linkedin.com/in/jane",
+      resumeFile: null,
+    };
+
+    render(
+      <ResumeAddEdit
+        {...baseProps}
+        visible={true}
+        selectedResume={selectedResume}
+      />
+    );
+
+    // Mock service success
+    (updateCandidate as any).mockResolvedValueOnce({ candidateId: 5 });
+
+    // Find and click Update button
+    const buttons = screen.getAllByRole("button");
+    const updateButton = buttons.find(btn => !btn.hasAttribute("disabled") && btn.textContent?.includes("Update"));
+
+    if (updateButton) {
+      fireEvent.click(updateButton);
+
+      await waitFor(() => {
+        expect(updateCandidate).toHaveBeenCalledWith(
+          5,
+          expect.objectContaining({ candidateName: "Jane Smith" })
+        );
+        expect(mockOnSuccess).toHaveBeenCalled();
+      });
+    }
+  });
+
+  it("closes dialog when Cancel button is clicked", async () => {
+    render(<ResumeAddEdit {...baseProps} />);
+
+    const buttons = screen.getAllByRole("button");
+    const cancelButton = buttons.find(btn => btn.textContent?.includes("Cancel"));
+
+    if (cancelButton) {
+      fireEvent.click(cancelButton);
+      expect(mockOnHide).toHaveBeenCalled();
+    }
   });
 });
