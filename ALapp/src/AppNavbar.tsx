@@ -1,9 +1,17 @@
-import React, { useCallback, lazy, Suspense } from "react";
+import React, { useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Menubar } from "primereact/menubar";
 import { Button } from "primereact/button";
-import { FaBriefcase, FaUsers, FaDatabase, FaFile, FaChartBar, FaIdCard, FaCog, FaUser } from "react-icons/fa";
-
+import {
+  FaBriefcase,
+  FaUsers,
+  FaDatabase,
+  FaFile,
+  FaChartBar,
+  FaIdCard,
+  FaCog,
+  FaUser,
+} from "react-icons/fa";
 
 const AppNavbar: React.FC = () => {
   const navigate = useNavigate();
@@ -16,16 +24,14 @@ const AppNavbar: React.FC = () => {
     [navigate]
   );
 
-  // Helper function to check if a menu item or its children are active
+  // Highlight active items
   const isMenuActive = (path?: string, childrenPaths?: string[]) => {
     if (path && location.pathname === path) return true;
-    if (childrenPaths) {
-      return childrenPaths.some(childPath => location.pathname === childPath);
-    }
+    if (childrenPaths) return childrenPaths.includes(location.pathname);
     return false;
   };
 
-  // Menubar items configuration with active state classes
+  // Menubar items
   const items = [
     {
       label: "Home",
@@ -34,41 +40,45 @@ const AppNavbar: React.FC = () => {
     },
     {
       label: "Master",
-      className: isMenuActive(undefined, ["/client", "/job-profile"]) ? "nav-item-active nav-dropdown-active" : "",
+      className: isMenuActive(undefined, ["/client", "/job-profile", "/members", "/lookup-data"])
+        ? "nav-item-active nav-dropdown-active"
+        : "",
       items: [
         {
           label: "Client",
-          icon: <FaIdCard style={{ marginRight: 8, marginLeft: 4 }} />,
+          icon: <FaIdCard aria-hidden="true" style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/client"),
           className: isMenuActive("/client") ? "nav-subitem-active" : "",
         },
         {
           label: "Job Profile",
-          icon: <FaBriefcase style={{ marginRight: 8, marginLeft: 4 }} />,
+          icon: <FaBriefcase aria-hidden="true" style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/job-profile"),
           className: isMenuActive("/job-profile") ? "nav-subitem-active" : "",
         },
         {
           label: "Members",
-          icon: <FaUsers style={{ marginRight: 8, marginLeft: 4 }} />,
+          icon: <FaUsers aria-hidden="true" style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/members"),
           className: isMenuActive("/members") ? "nav-subitem-active" : "",
         },
         {
           label: "Lookup Data",
-          icon: <FaDatabase style={{ marginRight: 8, marginLeft: 4 }} />,
+          icon: <FaDatabase aria-hidden="true" style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/lookup-data"),
           className: isMenuActive("/lookup-data") ? "nav-subitem-active" : "",
-        }
+        },
       ],
     },
     {
       label: "Transaction",
-      className: isMenuActive(undefined, ["/resume"]) ? "nav-item-active nav-dropdown-active" : "",
+      className: isMenuActive(undefined, ["/resume"])
+        ? "nav-item-active nav-dropdown-active"
+        : "",
       items: [
         {
           label: "Resume",
-          icon: <FaFile style={{ marginRight: 8, marginLeft: 4 }} />,
+          icon: <FaFile aria-hidden="true" style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/resume"),
           className: isMenuActive("/resume") ? "nav-subitem-active" : "",
         },
@@ -76,12 +86,17 @@ const AppNavbar: React.FC = () => {
     },
     {
       label: "Reports",
-      className: isMenuActive(undefined, ["/reports"]) ? "nav-item-active nav-dropdown-active" : "",
+      className: isMenuActive(undefined, ["/reports"])
+        ? "nav-item-active nav-dropdown-active"
+        : "",
       items: [
         {
           label: "Reports",
-          icon: <FaChartBar style={{ marginRight: 8, marginLeft: 4 }} />,}
-      ]
+          icon: <FaChartBar aria-hidden="true" style={{ marginRight: 8, marginLeft: 4 }} />,
+          command: () => handleNavigation("/reports"),
+          className: isMenuActive("/reports") ? "nav-subitem-active" : "",
+        },
+      ],
     },
   ];
 
@@ -108,6 +123,7 @@ const AppNavbar: React.FC = () => {
           filter: "brightness(0) saturate(100%) invert(0%)",
         }}
       />
+      Aerolens
     </div>
   );
 
@@ -118,12 +134,12 @@ const AppNavbar: React.FC = () => {
         alignItems: "center",
         height: "40px",
         paddingRight: 24,
-        gap: 2,
+        gap: 4,
       }}
     >
       <Button
-        icon={<FaCog />}
-        className="p-button-rounded p-button-text large"
+        icon={<FaCog aria-hidden="true" />}
+        className="p-button-rounded p-button-text"
         tooltip="Settings"
         tooltipOptions={{ position: "bottom" }}
         style={{
@@ -132,10 +148,11 @@ const AppNavbar: React.FC = () => {
           color: "#666666",
           fontSize: 15,
         }}
+        onClick={() => handleNavigation("/settings")}
       />
       <Button
-        icon={<FaUser />}
-        className="p-button-rounded p-button-text large"
+        icon={<FaUser aria-hidden="true" />}
+        className="p-button-rounded p-button-text"
         tooltip="User Profile"
         tooltipOptions={{ position: "bottom" }}
         style={{
@@ -144,6 +161,7 @@ const AppNavbar: React.FC = () => {
           color: "#666666",
           fontSize: 15,
         }}
+        onClick={() => handleNavigation("/profile")}
       />
     </div>
   );
@@ -151,67 +169,67 @@ const AppNavbar: React.FC = () => {
   return (
     <>
       <style>{`
+        /* --- Base Menubar Customization --- */
         .p-menubar-root-list > li > .p-menuitem-link .p-menuitem-text {
-          padding-right: 1.5rem; /* Adjust padding for no arrow */
+          padding-right: 1.5rem;
         }
         .p-menubar-root-list > li > ul {
-          top: 58px !important; /* Align dropdown right below navbar */
+          top: 58px !important;
         }
         .p-menubar-root-list > li > .p-menuitem-link > .pi-angle-down {
-          display: none !important; /* Hide dropdown arrow */
+          display: none !important;
         }
-        
-        /* Active state for direct menu items */
+
+        /* --- Active States --- */
         .nav-item-active > .p-menuitem-link {
           font-weight: 600 !important;
-          color: #000000 !important;
-          border-bottom: 2px solid #000000 !important;
+          color: #000 !important;
+          border-bottom: 2px solid #000 !important;
           background: rgba(0, 0, 0, 0.02) !important;
         }
-        
-        /* Active state for dropdown parent items */
         .nav-dropdown-active > .p-menuitem-link {
           font-weight: 600 !important;
-          color: #000000 !important;
+          color: #000 !important;
           background: rgba(0, 0, 0, 0.04) !important;
-          border-bottom: 2px solid #3b82f6 !important; /* Blue indicator for dropdown parents */
+          border-bottom: 2px solid #3b82f6 !important;
         }
-        
-        /* Active state for submenu items */
         .nav-subitem-active > .p-menuitem-link {
           font-weight: 600 !important;
           color: #3b82f6 !important;
           background: rgba(59, 130, 246, 0.1) !important;
         }
-        
-        /* Hover states */
+
+        /* --- Hover States --- */
         .p-menubar-root-list > li > .p-menuitem-link:hover {
           background: rgba(0, 0, 0, 0.03) !important;
         }
-        
         .p-menubar-submenu .p-menuitem-link:hover {
           background: rgba(59, 130, 246, 0.05) !important;
         }
-        
-        /* Ensure active states override hover */
         .nav-item-active > .p-menuitem-link:hover,
         .nav-dropdown-active > .p-menuitem-link:hover {
           background: rgba(0, 0, 0, 0.06) !important;
         }
-        
         .nav-subitem-active > .p-menuitem-link:hover {
           background: rgba(59, 130, 246, 0.15) !important;
         }
-        
-        /* Smooth transitions */
+
+        /* --- Transition --- */
         .p-menuitem-link {
           transition: all 0.2s ease !important;
+        }
+
+        /* --- Responsive (optional tweak) --- */
+        @media (max-width: 768px) {
+          .p-menubar {
+            font-size: 14px;
+          }
         }
       `}</style>
 
       <div
         style={{
-          background: "#ffffff",
+          background: "#fff",
           borderBottom: "1px solid #e5e7eb",
           position: "sticky",
           top: 0,
