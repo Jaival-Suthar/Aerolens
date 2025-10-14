@@ -1,11 +1,12 @@
 import React from 'react';
 import { Card } from 'primereact/card';
+import { FaUsers, FaUser, FaClock, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 
 interface DashboardStat {
     id: number;
     title: string;
     value: number;
-    icon: string;
+    icon: JSX.Element;
     color: string;
     bgColor: string;
     trend: string;
@@ -14,13 +15,13 @@ interface DashboardStat {
 }
 
 const Dashboard: React.FC = () => {
-    // Static data for dashboard cards
+    // Static data for dashboard cards with icon components
     const dashboardStats: DashboardStat[] = [
         {
             id: 1,
             title: 'Active Clients',
             value: 46,
-            icon: 'pi pi-users',
+            icon: <FaUsers />,
             color: '#3b82f6',
             bgColor: '#eff6ff',
             trend: '+12%',
@@ -31,7 +32,7 @@ const Dashboard: React.FC = () => {
             id: 2,
             title: 'Available Candidates',
             value: 100,
-            icon: 'pi pi-user',
+            icon: <FaUser />,
             color: '#10b981',
             bgColor: '#f0fdf4',
             trend: '+8%',
@@ -42,7 +43,7 @@ const Dashboard: React.FC = () => {
             id: 3,
             title: 'Pending Reviews',
             value: 7,
-            icon: 'pi pi-clock',
+            icon: <FaClock />,
             color: '#ef4444',
             bgColor: '#fef2f2',
             trend: '-2%',
@@ -93,7 +94,7 @@ const Dashboard: React.FC = () => {
                         fontSize: '1.25rem'
                     }}
                 >
-                    <i className={stat.icon}></i>
+                    {stat.icon}
                 </div>
             </div>
 
@@ -132,7 +133,7 @@ const Dashboard: React.FC = () => {
                 fontWeight: '500',
                 color: stat.trendColor
             }}>
-                <i className={stat.trend.startsWith('+') ? 'pi pi-arrow-up' : 'pi pi-arrow-down'}></i>
+                {stat.trend.startsWith('+') ? <FaArrowUp /> : <FaArrowDown />}
                 <span>{stat.trend} from last month</span>
             </div>
         </div>
