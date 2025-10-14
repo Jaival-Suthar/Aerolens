@@ -84,9 +84,8 @@ describe("AppNavbar", () => {
   };
 
   describe("Rendering", () => {
-    it("should render the navbar with logo and brand name", () => {
+    it("should render the navbar with logo", () => {
       renderComponent();
-      expect(screen.getByText("Aerolens")).toBeInTheDocument();
       expect(screen.getByAltText("Aerolens Logo")).toBeInTheDocument();
     });
 
@@ -334,11 +333,6 @@ describe("AppNavbar", () => {
       expect(mockNavigate).toHaveBeenNthCalledWith(2, "/client");
     });
 
-    it("should render correctly when pathname is root", () => {
-      renderComponent("/");
-      expect(screen.getByText("Aerolens")).toBeInTheDocument();
-    });
-
     it("should handle Settings navigation", async () => {
       const user = userEvent.setup();
       renderComponent();
@@ -380,11 +374,6 @@ describe("AppNavbar", () => {
       const endSection = screen.getByTestId("menubar-end");
       const buttons = endSection.querySelectorAll("button");
       expect(buttons).toHaveLength(2);
-    });
-
-    it("should render brand text correctly", () => {
-      renderComponent();
-      expect(screen.getByText("Aerolens")).toBeInTheDocument();
     });
   });
 
