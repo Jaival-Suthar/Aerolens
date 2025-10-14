@@ -123,7 +123,6 @@ const AppNavbar: React.FC = () => {
           filter: "brightness(0) saturate(100%) invert(0%)",
         }}
       />
-      Aerolens
     </div>
   );
 
