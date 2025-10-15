@@ -1,0 +1,179 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Dashboard Component > matches snapshot 1`] = `
+<DocumentFragment>
+  <div
+    class="p-4"
+  >
+    <div
+      class="mb-4"
+    >
+      <h1
+        style="font-size: 2rem; font-weight: 600; color: rgb(17, 24, 39); margin: 0px 0px 0.5rem;"
+      >
+        Welcome to the Aerolens Portal
+      </h1>
+    </div>
+    <div
+      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;"
+    >
+      <div
+        class="shadow-2"
+        data-testid="mock-card"
+        style="border-radius: 0.75rem; overflow: hidden; transition: all 0.2s ease; cursor: default;"
+      >
+        <div
+          style="padding: 1.5rem; display: flex; flex-direction: column; height: 100%; min-height: 180px;"
+        >
+          <div
+            style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;"
+          >
+            <div>
+              <h3
+                style="margin: 0px; font-size: 0.875rem; font-weight: 500; color: rgb(107, 114, 128); text-transform: uppercase; letter-spacing: 0.05em;"
+              >
+                Active Clients
+              </h3>
+            </div>
+            <div
+              style="width: 3rem; height: 3rem; border-radius: 0.75rem; background-color: rgb(239, 246, 255); display: flex; align-items: center; justify-content: center; color: rgb(59, 130, 246); font-size: 1.25rem;"
+            >
+              <span
+                data-testid="icon-users"
+              />
+            </div>
+          </div>
+          <div
+            style="flex: 1 1 0%; display: flex; flex-direction: column; justify-content: center;"
+          >
+            <div
+              style="font-size: 2.5rem; font-weight: 700; color: rgb(17, 24, 39); line-height: 1; margin-bottom: 0.5rem;"
+            >
+              46
+            </div>
+            <div
+              style="font-size: 0.875rem; color: rgb(107, 114, 128); margin-bottom: 0.75rem;"
+            >
+              Total active clients
+            </div>
+          </div>
+          <div
+            style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 500; color: rgb(16, 185, 129);"
+          >
+            <span
+              data-testid="icon-up"
+            />
+            <span>
+              +12% from last month
+            </span>
+          </div>
+        </div>
+      </div>
+      <div
+        class="shadow-2"
+        data-testid="mock-card"
+        style="border-radius: 0.75rem; overflow: hidden; transition: all 0.2s ease; cursor: default;"
+      >
+        <div
+          style="padding: 1.5rem; display: flex; flex-direction: column; height: 100%; min-height: 180px;"
+        >
+          <div
+            style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;"
+          >
+            <div>
+              <h3
+                style="margin: 0px; font-size: 0.875rem; font-weight: 500; color: rgb(107, 114, 128); text-transform: uppercase; letter-spacing: 0.05em;"
+              >
+                Available Candidates
+              </h3>
+            </div>
+            <div
+              style="width: 3rem; height: 3rem; border-radius: 0.75rem; background-color: rgb(240, 253, 244); display: flex; align-items: center; justify-content: center; color: rgb(16, 185, 129); font-size: 1.25rem;"
+            >
+              <span
+                data-testid="icon-user"
+              />
+            </div>
+          </div>
+          <div
+            style="flex: 1 1 0%; display: flex; flex-direction: column; justify-content: center;"
+          >
+            <div
+              style="font-size: 2.5rem; font-weight: 700; color: rgb(17, 24, 39); line-height: 1; margin-bottom: 0.5rem;"
+            >
+              100
+            </div>
+            <div
+              style="font-size: 0.875rem; color: rgb(107, 114, 128); margin-bottom: 0.75rem;"
+            >
+              Ready for placement
+            </div>
+          </div>
+          <div
+            style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 500; color: rgb(16, 185, 129);"
+          >
+            <span
+              data-testid="icon-up"
+            />
+            <span>
+              +8% from last month
+            </span>
+          </div>
+        </div>
+      </div>
+      <div
+        class="shadow-2"
+        data-testid="mock-card"
+        style="border-radius: 0.75rem; overflow: hidden; transition: all 0.2s ease; cursor: default;"
+      >
+        <div
+          style="padding: 1.5rem; display: flex; flex-direction: column; height: 100%; min-height: 180px;"
+        >
+          <div
+            style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;"
+          >
+            <div>
+              <h3
+                style="margin: 0px; font-size: 0.875rem; font-weight: 500; color: rgb(107, 114, 128); text-transform: uppercase; letter-spacing: 0.05em;"
+              >
+                Pending Reviews
+              </h3>
+            </div>
+            <div
+              style="width: 3rem; height: 3rem; border-radius: 0.75rem; background-color: rgb(254, 242, 242); display: flex; align-items: center; justify-content: center; color: rgb(239, 68, 68); font-size: 1.25rem;"
+            >
+              <span
+                data-testid="icon-clock"
+              />
+            </div>
+          </div>
+          <div
+            style="flex: 1 1 0%; display: flex; flex-direction: column; justify-content: center;"
+          >
+            <div
+              style="font-size: 2.5rem; font-weight: 700; color: rgb(17, 24, 39); line-height: 1; margin-bottom: 0.5rem;"
+            >
+              7
+            </div>
+            <div
+              style="font-size: 0.875rem; color: rgb(107, 114, 128); margin-bottom: 0.75rem;"
+            >
+              Awaiting review
+            </div>
+          </div>
+          <div
+            style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 500; color: rgb(239, 68, 68);"
+          >
+            <span
+              data-testid="icon-down"
+            />
+            <span>
+              -2% from last month
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</DocumentFragment>
+`;
