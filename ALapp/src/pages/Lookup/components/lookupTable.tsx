@@ -8,7 +8,7 @@ import { LookupEntry } from '../types/lookupTypes';
 import AddButton from '../../../shared/AddButton';
 //import DeleteButton from '../../../shared/DeleteButton';
 import { AddLookupForm } from './AddLookupForm';
-import { DeleteLookupForm } from './DeleteLookupForm';
+// import { DeleteLookupForm } from './DeleteLookupForm';
 
 interface PaginationMeta {
   currentPage: number;
@@ -40,7 +40,7 @@ const LookupTable: React.FC<LookupTableProps> = ({
 }) => {
   const [selectedLookup, setSelectedLookup] = useState<LookupEntry | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  // const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Memoized selection handler with strict typing
   const onSelectionChangeHandler = useCallback(
@@ -72,11 +72,11 @@ const LookupTable: React.FC<LookupTableProps> = ({
   }, [onDataChange]);
 
   // Delete success callback clears selection and refreshes data
-  const handleDeleteSuccess = useCallback(() => {
-    setSelectedLookup(null);
-    onSelectionChange?.(null);
-    onDataChange?.();
-  }, [onSelectionChange, onDataChange]);
+  // const handleDeleteSuccess = useCallback(() => {
+  //   setSelectedLookup(null);
+  //   onSelectionChange?.(null);
+  //   onDataChange?.();
+  // }, [onSelectionChange, onDataChange]);
 
   // Calculate index of first record for paginator
   const first = meta ? (meta.currentPage - 1) * meta.limit : 0;
@@ -129,12 +129,12 @@ const LookupTable: React.FC<LookupTableProps> = ({
         onSuccess={handleAddSuccess}
       />
 
-      <DeleteLookupForm
+      {/* <DeleteLookupForm
         visible={showDeleteDialog}
         lookup={selectedLookup}
         onHide={() => setShowDeleteDialog(false)}
         onSuccess={handleDeleteSuccess}
-      />
+      /> */}
     </div>
   );
 };
