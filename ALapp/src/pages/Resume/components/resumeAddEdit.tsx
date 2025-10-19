@@ -1,565 +1,429 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Dialog } from "primereact/dialog";
-import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { Dropdown } from "primereact/dropdown";
-import { FileUpload } from "primereact/fileupload";
 import { InputNumber } from "primereact/inputnumber";
-import { ResumeAddEditProps, AddEditCandidate } from "../types/resumeTypes";
-import { createCandidate, updateCandidate, uploadResume } from "../services/useResume";
-import DialogButton from "../../../shared/DialogAddEditButton";
+import { FileUpload } from "primereact/fileupload";
 import { FaCheck } from "react-icons/fa";
+import DialogButton from "../../../shared/DialogAddEditButton";
 
-const statusOptions = [
+import {
+  createCandidate,
+  updateCandidate,
+  uploadResume,
+} from "../services/useResume";
+import { ResumeAddEditProps, AddEditCandidate } from "../types/resumeTypes";
+
+// ---------- CONSTANTS ----------
+const STATUS_OPTIONS = [
   { label: "Selected", value: "Selected" },
   { label: "Rejected", value: "Rejected" },
   { label: "Interview Pending", value: "Interview Pending" },
 ];
-const recruitorsOptions = [
+
+const RECRUITER_OPTIONS = [
   { label: "Jayraj", value: "Jayraj" },
   { label: "Khushi", value: "Khushi" },
   { label: "Yash", value: "Yash" },
 ];
-const locationOptions = [
+
+const LOCATION_OPTIONS = [
   { label: "Ahmedabad", value: "Ahmedabad" },
   { label: "Bangalore", value: "Bangalore" },
   { label: "San Francisco", value: "San Francisco" },
 ];
 
+// ---------- HELPERS ----------
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const phoneRegex = /^(\+?91|91)?[6-9]\d{9}$|^(\+?1)?[2-9]\d{9}$/;
+const linkedinRegex = /^https:\/\/(www\.)?linkedin\.com\/.*$/i;
+
+const INITIAL_FORM: AddEditCandidate = {
+  candidateName: "",
+  contactNumber: "",
+  email: "",
+  recruiterName: "",
+  jobRole: "",
+  preferredJobLocation: "",
+  currentCTC: 0,
+  expectedCTC: 0,
+  noticePeriod: 0,
+  experienceYears: 0,
+  statusName: "",
+  linkedinProfileUrl: "",
+  resumeFile: null,
+};
+
+// ---------- VALIDATION ----------
+const validateField = (field: keyof AddEditCandidate, value: any) => {
+  switch (field) {
+    case "candidateName":
+      return value.trim() ? "" : "Candidate name is required.";
+    case "recruiterName":
+      return value ? "" : "Recruiter is required.";
+    case "contactNumber":
+      if (!value) return "Contact number is required.";
+      if (!phoneRegex.test(value.replace(/[\s-]/g, "")))
+        return "Enter a valid Indian or US phone number.";
+      return "";
+    case "email":
+      if (!value) return "Email is required.";
+      if (!emailRegex.test(value)) return "Enter a valid email.";
+      return "";
+    case "jobRole":
+      return value.trim() ? "" : "Job role is required.";
+    case "preferredJobLocation":
+      return value ? "" : "Location is required.";
+    case "currentCTC":
+      return value > 0 ? "" : "Current CTC must be greater than 0.";
+    case "expectedCTC":
+      return value > 0 ? "" : "Expected CTC must be greater than 0.";
+    case "noticePeriod":
+      return value >= 0 ? "" : "Notice period is required.";
+    case "experienceYears":
+      return value >= 0 ? "" : "Experience is required.";
+    case "statusName":
+      return value ? "" : "Status is required.";
+    case "linkedinProfileUrl":
+      if (!value) return "LinkedIn URL is required.";
+      if (!linkedinRegex.test(value)) return "Enter a valid LinkedIn URL.";
+      return "";
+    case "resumeFile":
+      if (!value) return "";
+      if (!value.name.toLowerCase().endsWith(".pdf"))
+        return "Only PDF files are allowed.";
+      if (value.size > 5 * 1024 * 1024)
+        return "File must be smaller than 5MB.";
+      return "";
+    default:
+      return "";
+  }
+};
+
+// ---------- COMPONENT ----------
 const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   visible,
   onHide,
   selectedResume,
   onSuccess,
 }) => {
-  const [formData, setFormData] = useState<AddEditCandidate>({
-    candidateName: "",
-    contactNumber: "",
-    email: "",
-    recruiterName: "",
-    jobRole: "",
-    preferredJobLocation: "",
-    currentCTC: 0,
-    expectedCTC: 0,
-    noticePeriod: 0,
-    experienceYears: 0,
-    statusName: "",
-    linkedinProfileUrl: "",
-    resumeFile: null,
-  });
+  const isEditMode = Boolean(selectedResume);
+
+  const [formData, setFormData] = useState<AddEditCandidate>(INITIAL_FORM);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
 
-  const isEditMode = selectedResume !== null;
-
+  // Initialize / Reset form
   useEffect(() => {
-    if (isEditMode) {
-      setFormData({ ...selectedResume, resumeFile: null });
-    } else {
-      setFormData({
-        candidateName: "",
-        contactNumber: "",
-        email: "",
-        recruiterName: "",
-        jobRole: "",
-        preferredJobLocation: "",
-        currentCTC: 0,
-        expectedCTC: 0,
-        noticePeriod: 0,
-        experienceYears: 0,
-        statusName: "",
-        linkedinProfileUrl: "",
-        resumeFile: null,
-      });
-    }
+    setFormData(
+      isEditMode ? { ...selectedResume!, resumeFile: null } : INITIAL_FORM
+    );
     setErrors({});
-    setTouched({});
     setSubmitted(false);
-  }, [selectedResume, visible, isEditMode]);
+  }, [visible, selectedResume, isEditMode]);
 
-  const handleChange = (field: keyof AddEditCandidate, value: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-    
-    // Clear error for this field when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
+  const handleChange = useCallback(
+    (field: keyof AddEditCandidate, value: any) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+      if (errors[field]) {
+        const newErrors = { ...errors };
         delete newErrors[field];
-        return newErrors;
-      });
-    }
-  };
-
-  const handleBlur = (field: keyof AddEditCandidate) => {
-    setTouched((prev) => ({ ...prev, [field]: true }));
-    validateField(field);
-  };
-
-  const validateField = (field: keyof AddEditCandidate) => {
-    const newErrors: { [key: string]: string } = { ...errors };
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    // Updated regex for Indian (10 digits) and American (10 digits) phone numbers
-    // Supports formats: 1234567890, +911234567890, +11234567890
-    const phoneRegex = /^(\+?91|91)?[6-9]\d{9}$|^(\+?1)?[2-9]\d{9}$/;
-    const linkedinRegex = /^https:\/\/(www\.)?linkedin\.com\/.*$/i;
-
-    switch (field) {
-      case "candidateName":
-        if (!formData.candidateName.trim()) {
-          newErrors.candidateName = "Candidate name is required.";
-        } else {
-          delete newErrors.candidateName;
-        }
-        break;
-      
-      case "recruiterName":
-        if (!formData.recruiterName) {
-          newErrors.recruiterName = "Recruiter is required.";
-        } else {
-          delete newErrors.recruiterName;
-        }
-        break;
-
-      case "contactNumber":
-        if (!formData.contactNumber) {
-          newErrors.contactNumber = "Contact number is required.";
-        } else if (!phoneRegex.test(formData.contactNumber.replace(/[\s-]/g, ""))) {
-          newErrors.contactNumber = "Enter a valid Indian (10 digits starting with 6-9) or American (10 digits) phone number.";
-        } else {
-          delete newErrors.contactNumber;
-        }
-        break;
-
-      case "email":
-        if (!formData.email) {
-          newErrors.email = "Email is required.";
-        } else if (!emailRegex.test(formData.email)) {
-          newErrors.email = "Enter a valid email address.";
-        } else {
-          delete newErrors.email;
-        }
-        break;
-
-      case "jobRole":
-        if (!formData.jobRole.trim()) {
-          newErrors.jobRole = "Job role is required.";
-        } else {
-          delete newErrors.jobRole;
-        }
-        break;
-
-      case "preferredJobLocation":
-        if (!formData.preferredJobLocation) {
-          newErrors.preferredJobLocation = "Location is required.";
-        } else {
-          delete newErrors.preferredJobLocation;
-        }
-        break;
-
-      case "currentCTC":
-        if (!formData.currentCTC || formData.currentCTC <= 0) {
-          newErrors.currentCTC = "Current CTC is required and must be greater than 0.";
-        } else {
-          delete newErrors.currentCTC;
-        }
-        break;
-
-      case "expectedCTC":
-        if (!formData.expectedCTC || formData.expectedCTC <= 0) {
-          newErrors.expectedCTC = "Expected CTC is required and must be greater than 0.";
-        } else {
-          delete newErrors.expectedCTC;
-        }
-        break;
-
-      case "noticePeriod":
-        if (formData.noticePeriod === null || formData.noticePeriod === undefined || formData.noticePeriod < 0) {
-          newErrors.noticePeriod = "Notice period is required.";
-        } else {
-          delete newErrors.noticePeriod;
-        }
-        break;
-
-      case "experienceYears":
-        if (formData.experienceYears === null || formData.experienceYears === undefined || formData.experienceYears < 0) {
-          newErrors.experienceYears = "Experience is required.";
-        } else {
-          delete newErrors.experienceYears;
-        }
-        break;
-
-      case "statusName":
-        if (!formData.statusName) {
-          newErrors.statusName = "Status is required.";
-        } else {
-          delete newErrors.statusName;
-        }
-        break;
-
-      case "linkedinProfileUrl":
-        if (!formData.linkedinProfileUrl) {
-          newErrors.linkedinProfileUrl = "LinkedIn URL is required.";
-        } else if (!linkedinRegex.test(formData.linkedinProfileUrl)) {
-          newErrors.linkedinProfileUrl = "Enter a valid LinkedIn profile URL.";
-        } else {
-          delete newErrors.linkedinProfileUrl;
-        }
-        break;
-
-      case "resumeFile":
-        if (formData.resumeFile) {
-          if (!formData.resumeFile.name.toLowerCase().endsWith(".pdf")) {
-            newErrors.resumeFile = "Only PDF files are allowed.";
-          } else if (formData.resumeFile.size > 5 * 1024 * 1024) {
-            newErrors.resumeFile = "File must be less than 5MB.";
-          } else {
-            delete newErrors.resumeFile;
-          }
-        }
-        break;
-    }
-
-    setErrors(newErrors);
-  };
-
-  const validateForm = async () => {
-    const newErrors: { [key: string]: string } = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^(\+?91|91)?[6-9]\d{9}$|^(\+?1)?[2-9]\d{9}$/;
-    const linkedinRegex = /^https:\/\/(www\.)?linkedin\.com\/.*$/i;
-
-    if (!formData.candidateName.trim()) newErrors.candidateName = "Candidate name is required.";
-    if (!formData.recruiterName) newErrors.recruiterName = "Recruiter is required.";
-
-    if (!formData.contactNumber) {
-      newErrors.contactNumber = "Contact number is required.";
-    } else if (!phoneRegex.test(formData.contactNumber.replace(/[\s-]/g, ""))) {
-      newErrors.contactNumber = "Enter a valid Indian (10 digits starting with 6-9) or American (10 digits) phone number.";
-    }
-
-    if (!formData.email) {
-      newErrors.email = "Email is required.";
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = "Enter a valid email address.";
-    }
-
-    if (!formData.jobRole.trim()) newErrors.jobRole = "Job role is required.";
-    if (!formData.preferredJobLocation) newErrors.preferredJobLocation = "Location is required.";
-    
-    if (!formData.currentCTC || formData.currentCTC <= 0) {
-      newErrors.currentCTC = "Current CTC is required and must be greater than 0.";
-    }
-    if (!formData.expectedCTC || formData.expectedCTC <= 0) {
-      newErrors.expectedCTC = "Expected CTC is required and must be greater than 0.";
-    }
-    if (formData.noticePeriod === null || formData.noticePeriod === undefined || formData.noticePeriod < 0) {
-      newErrors.noticePeriod = "Notice period is required.";
-    }
-    if (formData.experienceYears === null || formData.experienceYears === undefined || formData.experienceYears < 0) {
-      newErrors.experienceYears = "Experience is required.";
-    }
-    if (!formData.statusName) newErrors.statusName = "Status is required.";
-
-    if (!formData.linkedinProfileUrl) {
-      newErrors.linkedinProfileUrl = "LinkedIn URL is required.";
-    } else if (!linkedinRegex.test(formData.linkedinProfileUrl)) {
-      newErrors.linkedinProfileUrl = "Enter a valid LinkedIn profile URL.";
-    }
-
-    if (formData.resumeFile) {
-      if (!formData.resumeFile.name.toLowerCase().endsWith(".pdf")) {
-        newErrors.resumeFile = "Only PDF files are allowed.";
-      } else if (formData.resumeFile.size > 5 * 1024 * 1024) {
-        newErrors.resumeFile = "File must be less than 5MB.";
+        setErrors(newErrors);
       }
-    }
+    },
+    [errors]
+  );
 
-    // Simulated duplicate check (backend should also validate)
-    if (formData.email === "duplicate@example.com") {
-      newErrors.email = "This email already exists.";
-    }
-    if (formData.contactNumber === "9999999999") {
-      newErrors.contactNumber = "This contact number already exists.";
-    }
+  const handleBlur = useCallback(
+    (field: keyof AddEditCandidate) => {
+      const errorMsg = validateField(field, formData[field]);
+      if (errorMsg) setErrors((prev) => ({ ...prev, [field]: errorMsg }));
+      else {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors[field];
+          return newErrors;
+        });
+      }
+    },
+    [formData]
+  );
 
-    setErrors(newErrors);
-    
-    // Mark all fields as touched
-    const allTouched: { [key: string]: boolean } = {};
-    Object.keys(formData).forEach(key => {
-      allTouched[key] = true;
+  const validateForm = useCallback(() => {
+    const newErrors: Record<string, string> = {};
+    (Object.keys(formData) as (keyof AddEditCandidate)[]).forEach((key) => {
+      const errorMsg = validateField(key, formData[key]);
+      if (errorMsg) newErrors[key] = errorMsg;
     });
-    setTouched(allTouched);
-
+    setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [formData]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     setSubmitted(true);
-    const isValid = await validateForm();
-    if (!isValid) return;
+    if (!validateForm()) return;
 
     try {
       if (isEditMode && selectedResume) {
         const { resumeFile, ...updateData } = formData;
-      
-        // ✅ Do NOT include resume in payload (backend update should only handle text fields)
         await updateCandidate(selectedResume.candidateId, updateData);
-      
-        // ✅ Upload file only if user selected one
-        if (resumeFile) {
-          await uploadResume(selectedResume.candidateId, resumeFile);
-        }
+        if (resumeFile) await uploadResume(selectedResume.candidateId, resumeFile);
       } else {
-        // For new candidate, pass full formData including resumeFile
         await createCandidate(formData);
       }
-      
-
       onSuccess();
       onHide();
-    } catch (error) {
-      console.error("Error saving candidate:", error);
+    } catch (err) {
+      console.error("Error saving candidate:", err);
     } finally {
       setSubmitted(false);
     }
-  };
+  }, [formData, isEditMode, onHide, onSuccess, selectedResume, validateForm]);
 
-  const handleCancel = () => {
-    setSubmitted(false);
-    setErrors({});
-    setTouched({});
-    onHide();
-  };
+  const prefixSymbol = useMemo(
+    () => (formData.preferredJobLocation === "San Francisco" ? "$" : "₹"),
+    [formData.preferredJobLocation]
+  );
+
+  const shouldShowError = (field: string) =>
+    (submitted || errors[field]) && errors[field];
 
   const dialogFooter = (
     <div className="flex justify-content-end gap-2">
-      <DialogButton
-        label="Cancel"
-        severity="secondary"
-        onClick={handleCancel}
-        className="w-auto"
-      />
+      <DialogButton label="Cancel" severity="secondary" onClick={onHide} />
       <DialogButton
         label={isEditMode ? "Update Candidate" : "Add Candidate"}
         severity="success"
-        icon={<FaCheck style={{ fontSize: 16, marginRight: 8, marginLeft: 4 }} />}
+        icon={<FaCheck className="mr-2" />}
         onClick={handleSave}
-        className="w-auto"
       />
     </div>
   );
 
-  const shouldShowError = (field: string) => {
-    return (touched[field] || submitted) && errors[field];
-  };
-
   return (
     <Dialog
       visible={visible}
-      onHide={handleCancel}
       header={isEditMode ? "Edit Resume" : "Add New Resume"}
+      onHide={onHide}
       footer={dialogFooter}
       style={{ width: "900px", maxHeight: "90vh" }}
       modal
       className="p-fluid"
     >
       <div className="formgrid grid">
-        {/* Candidate Name */}
-        <div className="field col-12 md:col-6">
-          <label className="font-bold">Candidate Name *</label>
-          <InputText
-            value={formData.candidateName}
-            onChange={(e) => handleChange("candidateName", e.target.value)}
-            onBlur={() => handleBlur("candidateName")}
-            className={shouldShowError("candidateName") ? "p-invalid" : ""}
-          />
-          {shouldShowError("candidateName") && <small className="p-error">{errors.candidateName}</small>}
-        </div>
+        {/* Candidate Info */}
+        <InputField
+          id="candidateName"
+          label="Candidate Name"
+          value={formData.candidateName}
+          onChange={(e) => handleChange("candidateName", e.target.value)}
+          onBlur={() => handleBlur("candidateName")}
+          error={shouldShowError("candidateName")}
+        />
 
-        {/* Recruiter */}
-        <div className="field col-12 md:col-6">
-          <label className="font-bold">Recruiter *</label>
-          <Dropdown
-            value={formData.recruiterName}
-            options={recruitorsOptions}
-            onChange={(e) => handleChange("recruiterName", e.value)}
-            onBlur={() => handleBlur("recruiterName")}
-            placeholder="Select Recruiter"
-            className={shouldShowError("recruiterName") ? "p-invalid" : ""}
-          />
-          {shouldShowError("recruiterName") && <small className="p-error">{errors.recruiterName}</small>}
-        </div>
+        <DropdownField
+          id="recruiterName"
+          label="Recruiter"
+          value={formData.recruiterName}
+          options={RECRUITER_OPTIONS}
+          onChange={(e: { value: string }) => handleChange("recruiterName", e.value)}
+          onBlur={() => handleBlur("recruiterName")}
+          error={shouldShowError("recruiterName")}
+        />
 
-        {/* Contact Number */}
-        <div className="field col-12 md:col-6">
-          <label className="font-bold">Contact Number *</label>
-          <InputText
-            value={formData.contactNumber}
-            onChange={(e) => handleChange("contactNumber", e.target.value)}
-            onBlur={() => handleBlur("contactNumber")}
-            placeholder="e.g., 9876543210 or 2125551234"
-            className={shouldShowError("contactNumber") ? "p-invalid" : ""}
-          />
-          {shouldShowError("contactNumber") && <small className="p-error">{errors.contactNumber}</small>}
-        </div>
+        <InputField
+          id="contactNumber"
+          label="Contact Number"
+          value={formData.contactNumber}
+          placeholder="e.g. 9876543210"
+          onChange={(e) => handleChange("contactNumber", e.target.value)}
+          onBlur={() => handleBlur("contactNumber")}
+          error={shouldShowError("contactNumber")}
+        />
 
-        {/* Email */}
-        <div className="field col-12 md:col-6">
-          <label className="font-bold">Email *</label>
-          <InputText
-            value={formData.email}
-            onChange={(e) => handleChange("email", e.target.value)}
-            onBlur={() => handleBlur("email")}
-            className={shouldShowError("email") ? "p-invalid" : ""}
-          />
-          {shouldShowError("email") && <small className="p-error">{errors.email}</small>}
-        </div>
+        <InputField
+          id="email"
+          label="Email"
+          value={formData.email}
+          onChange={(e) => handleChange("email", e.target.value)}
+          onBlur={() => handleBlur("email")}
+          error={shouldShowError("email")}
+        />
 
-        {/* Job Role */}
-        <div className="field col-12 md:col-6">
-          <label className="font-bold">Job Role *</label>
-          <InputText
-            value={formData.jobRole}
-            onChange={(e) => handleChange("jobRole", e.target.value)}
-            onBlur={() => handleBlur("jobRole")}
-            className={shouldShowError("jobRole") ? "p-invalid" : ""}
-          />
-          {shouldShowError("jobRole") && <small className="p-error">{errors.jobRole}</small>}
-        </div>
+        <InputField
+          id="jobRole"
+          label="Job Role"
+          value={formData.jobRole}
+          onChange={(e) => handleChange("jobRole", e.target.value)}
+          onBlur={() => handleBlur("jobRole")}
+          error={shouldShowError("jobRole")}
+        />
 
-        {/* Preferred Job Location */}
-        <div className="field col-12 md:col-6">
-          <label className="font-bold">Preferred Job Location *</label>
-          <Dropdown
-            value={formData.preferredJobLocation}
-            options={locationOptions}
-            onChange={(e) => handleChange("preferredJobLocation", e.value)}
-            onBlur={() => handleBlur("preferredJobLocation")}
-            placeholder="Select Location"
-            className={shouldShowError("preferredJobLocation") ? "p-invalid" : ""}
-          />
-          {shouldShowError("preferredJobLocation") && <small className="p-error">{errors.preferredJobLocation}</small>}
-        </div>
+        <DropdownField
+          id="preferredJobLocation"
+          label="Preferred Location"
+          value={formData.preferredJobLocation}
+          options={LOCATION_OPTIONS}
+          onChange={(e: { value: string }) => handleChange("preferredJobLocation", e.value)}
+          onBlur={() => handleBlur("preferredJobLocation")}
+          error={shouldShowError("preferredJobLocation")}
+        />
 
-        {/* Current CTC */}
-<div className="field col-12 md:col-6">
-  <label className="font-bold">Current CTC *</label>
-  <InputNumber
-    value={formData.currentCTC}
-    onChange={(e) => handleChange("currentCTC", Number(e.value))}
-    onBlur={() => handleBlur("currentCTC")}
-    className={shouldShowError("currentCTC") ? "p-invalid" : ""}
-    prefix={formData.preferredJobLocation === "San Francisco" ? "$" : "₹"}
-  />
-  {shouldShowError("currentCTC") && <small className="p-error">{errors.currentCTC}</small>}
-</div>
+        <InputNumberField
+          id="currentCTC"
+          label="Current CTC"
+          value={formData.currentCTC}
+          onChange={(val: number | null) => handleChange("currentCTC", val)}
+          prefix={prefixSymbol}
+          onBlur={() => handleBlur("currentCTC")}
+          error={shouldShowError("currentCTC")}
+        />
 
-{/* Expected CTC */}
-<div className="field col-12 md:col-6">
-  <label className="font-bold">Expected CTC *</label>
-  <InputNumber
-    value={formData.expectedCTC}
-    onChange={(e) => handleChange("expectedCTC", Number(e.value))}
-    onBlur={() => handleBlur("expectedCTC")}
-    className={shouldShowError("expectedCTC") ? "p-invalid" : ""}
-    prefix={formData.preferredJobLocation === "San Francisco" ? "$" : "₹"}
-  />
-  {shouldShowError("expectedCTC") && <small className="p-error">{errors.expectedCTC}</small>}
-</div>
+        <InputNumberField
+          id="expectedCTC"
+          label="Expected CTC"
+          value={formData.expectedCTC}
+          onChange={(val: number | null) => handleChange("expectedCTC", val)}
+          prefix={prefixSymbol}
+          onBlur={() => handleBlur("expectedCTC")}
+          error={shouldShowError("expectedCTC")}
+        />
 
-        {/* Notice Period */}
-        <div className="field col-12 md:col-6">
-          <label className="font-bold">Notice Period (Days) *</label>
-          <InputNumber
-            value={formData.noticePeriod}
-            onChange={(e) => handleChange("noticePeriod", Number(e.value))}
-            onBlur={() => handleBlur("noticePeriod")}
-            min={0}
-            className={shouldShowError("noticePeriod") ? "p-invalid" : ""}
-          />
-          {shouldShowError("noticePeriod") && <small className="p-error">{errors.noticePeriod}</small>}
-        </div>
+        <InputNumberField
+          id="noticePeriod"
+          label="Notice Period (Days)"
+          value={formData.noticePeriod}
+          onChange={(val: number | null) => handleChange("noticePeriod", val)}
+          onBlur={() => handleBlur("noticePeriod")}
+          error={shouldShowError("noticePeriod")}
+        />
 
-        {/* Experience */}
-        <div className="field col-12 md:col-6">
-          <label className="font-bold">Experience (Years) *</label>
-          <InputNumber
-            value={formData.experienceYears}
-            onChange={(e) => handleChange("experienceYears", Number(e.value))}
-            onBlur={() => handleBlur("experienceYears")}
-            min={0}
-            className={shouldShowError("experienceYears") ? "p-invalid" : ""}
-          />
-          {shouldShowError("experienceYears") && <small className="p-error">{errors.experienceYears}</small>}
-        </div>
+        <InputNumberField
+          id="experienceYears"
+          label="Experience (Years)"
+          value={formData.experienceYears}
+          onChange={(val: number | null) => handleChange("experienceYears", val)}
+          onBlur={() => handleBlur("experienceYears")}
+          error={shouldShowError("experienceYears")}
+        />
 
-        {/* Status */}
-        <div className="field col-12 md:col-6">
-          <label className="font-bold">Status *</label>
-          <Dropdown
-            value={formData.statusName}
-            options={statusOptions}
-            onChange={(e) => handleChange("statusName", e.value)}
-            onBlur={() => handleBlur("statusName")}
-            placeholder="Select Status"
-            className={shouldShowError("statusName") ? "p-invalid" : ""}
-          />
-          {shouldShowError("statusName") && <small className="p-error">{errors.statusName}</small>}
-        </div>
+        <DropdownField
+          id="statusName"
+          label="Status"
+          value={formData.statusName}
+          options={STATUS_OPTIONS}
+          onChange={(e: { value: string }) => handleChange("statusName", e.value)}
+          onBlur={() => handleBlur("statusName")}
+          error={shouldShowError("statusName")}
+        />
 
-        {/* LinkedIn URL */}
-        <div className="field col-12 md:col-6">
-          <label className="font-bold">LinkedIn Profile URL *</label>
-          <InputText
-            value={formData.linkedinProfileUrl}
-            onChange={(e) => handleChange("linkedinProfileUrl", e.target.value)}
-            onBlur={() => handleBlur("linkedinProfileUrl")}
-            placeholder="https://www.linkedin.com/in/..."
-            className={shouldShowError("linkedinProfileUrl") ? "p-invalid" : ""}
-          />
-          {shouldShowError("linkedinProfileUrl") && <small className="p-error">{errors.linkedinProfileUrl}</small>}
-        </div>
+        <InputField
+          id="linkedinProfileUrl"
+          label="LinkedIn URL"
+          value={formData.linkedinProfileUrl}
+          onChange={(e) =>
+            handleChange("linkedinProfileUrl", e.target.value)
+          }
+          onBlur={() => handleBlur("linkedinProfileUrl")}
+          placeholder="https://www.linkedin.com/in/..."
+          error={shouldShowError("linkedinProfileUrl")}
+        />
 
-        {/* Resume Upload */}
-        <div className="field col-12 md:col-6">
-          <label className="font-bold">Upload Resume (PDF Only)</label>
-          <FileUpload
-            mode="basic"
-            name="resume"
-            accept=".pdf"
-            maxFileSize={5 * 1024 * 1024}
-            auto={false}
-            customUpload
-            onSelect={(e) => {
-              if (e.files && e.files.length > 0) {
-                setFormData((prev) => ({
-                  ...prev,
-                  resumeFile: e.files[0],
-                }));
-                validateField("resumeFile");
-              }
-            }}
-            chooseLabel="Select File"
-            chooseOptions={{
-              icon: "pi pi-file-pdf",
-              label: "Upload PDF",
-              className: "p-button-danger p-button-sm",
-            }}
-            className={shouldShowError("resumeFile") ? "p-invalid" : ""}
-          />
-          {formData.resumeFile && (
-            <small className="p-success">File selected: {formData.resumeFile.name}</small>
-          )}
-          {shouldShowError("resumeFile") && <small className="p-error">{errors.resumeFile}</small>}
-        </div>
+        <FileUploadField
+          file={formData.resumeFile}
+          onSelect={(file) => handleChange("resumeFile", file)}
+          error={shouldShowError("resumeFile")}
+        />
       </div>
     </Dialog>
   );
 };
+
+// ---------- REUSABLE FIELD COMPONENTS ----------
+interface InputFieldProps {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur: () => void;
+  placeholder?: string;
+  error?: string;
+}
+
+const InputField = ({ id, label, value, onChange, onBlur, placeholder, error }: InputFieldProps) => (
+  <div className="field col-12 md:col-6">
+    <label htmlFor={id} className="font-bold">{label} *</label>
+    <InputText 
+      id={id}
+      value={value} 
+      onChange={onChange} 
+      onBlur={onBlur} 
+      placeholder={placeholder} 
+      className={error ? "p-invalid" : ""} 
+    />
+    {error && <small className="p-error">{error}</small>}
+  </div>
+);
+
+const DropdownField = ({ id, label, value, options, onChange, onBlur, placeholder, error }: any) => (
+  <div className="field col-12 md:col-6">
+    <label htmlFor={id} className="font-bold">{label} *</label>
+    <Dropdown 
+      id={id}
+      value={value} 
+      options={options} 
+      onChange={onChange} 
+      onBlur={onBlur} 
+      placeholder={placeholder} 
+      className={error ? "p-invalid" : ""} 
+    />
+    {error && <small className="p-error">{error}</small>}
+  </div>
+);
+
+const InputNumberField = ({ id, label, value, onChange, onBlur, prefix, error }: any) => (
+  <div className="field col-12 md:col-6">
+    <label htmlFor={id} className="font-bold">{label} *</label>
+    <InputNumber 
+      id={id}
+      value={value} 
+      onValueChange={(e) => onChange(e.value)} 
+      onBlur={onBlur} 
+      prefix={prefix} 
+      className={error ? "p-invalid" : ""} 
+    />
+    {error && <small className="p-error">{error}</small>}
+  </div>
+);
+
+interface FileUploadFieldProps {
+  file: File | null;
+  onSelect: (file: File) => void;
+  error?: string;
+}
+
+const FileUploadField = ({ file, onSelect, error }: FileUploadFieldProps) => (
+  <div className="field col-12 md:col-6">
+    <label className="font-bold">Upload Resume (PDF Only)</label>
+    <FileUpload
+      mode="basic"
+      name="resume"
+      accept=".pdf"
+      maxFileSize={5 * 1024 * 1024}
+      auto={false}
+      customUpload
+      onSelect={(e) => e.files[0] && onSelect(e.files[0])}
+      chooseLabel="Select File"
+      chooseOptions={{
+        icon: "pi pi-file-pdf",
+        label: "Upload PDF",
+        className: "p-button-danger p-button-sm",
+      }}
+      className={error ? "p-invalid" : ""}
+    />
+    {file && <small className="p-success">File selected: {file.name}</small>}
+    {error && <small className="p-error">{error}</small>}
+  </div>
+);
 
 export default ResumeAddEdit;
