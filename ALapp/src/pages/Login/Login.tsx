@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../shared/auth/AuthContext';
 import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
@@ -67,7 +68,7 @@ const LoginPage: React.FC = () => {
     }}>
       <h2
         style={{
-          marginBottom: 38,
+          marginBottom: 28,
           fontSize: 28,
           fontWeight: 700,
           letterSpacing: 0.6,
@@ -81,7 +82,7 @@ const LoginPage: React.FC = () => {
       </h2>
 
       <form onSubmit={handleSubmit}>
-        <div className="p-float-label" style={{ marginBottom: 28 }}>
+        <div className="p-float-label" style={{ marginBottom: 24 }}>
           <InputText
             id="email-field"
             value={email}
@@ -90,15 +91,20 @@ const LoginPage: React.FC = () => {
               setEmail(e.target.value);
               if (error) setError('');
             }}
-            style={{ width: '100%', borderRadius: 25, color: '#000000ff' }}
+            style={{ width: '100%', borderRadius: 25 }}
             className="p-inputtext-sm"
             list="email-history"
             autoComplete="email"
           />
-          <label htmlFor="email-field" style={{ marginLeft:6  ,color: '#000000ff' }}>Email</label>
+          <label htmlFor="email-field">Email</label>
+          {/* <datalist id="email-history">
+            {getEmailSuggestions().map((e, i) => (
+              <option key={i} value={e} />
+            ))}
+          </datalist> */}
         </div>
         
-        <div className="p-float-label" style={{ marginBottom: 24, position: 'relative', color: '#000000ff', }}>
+        <div className="p-float-label" style={{ marginBottom: 24, position: 'relative' }}>
         <InputText
           id="password-field"
           value={password}
@@ -111,7 +117,7 @@ const LoginPage: React.FC = () => {
           className="p-inputtext-sm"
           onKeyDown={e => e.key === 'Enter' && handleSubmit(e)}
         />
-        <label htmlFor="password-field" style={{ marginLeft:6  ,color: '#000000ff' }}>Password</label>
+        <label htmlFor="password-field">Password</label>
         <span
           style={{
             position: 'absolute',
@@ -120,7 +126,7 @@ const LoginPage: React.FC = () => {
             transform: 'translateY(-50%)',
             cursor: 'pointer',
             fontSize: 20,
-            color: '#000000ff',
+            color: '#888',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
