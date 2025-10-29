@@ -162,9 +162,14 @@ export const AddLookupForm: React.FC<AddLookupFormProps> = ({
         visible={visible}
         style={{ width: '450px' }}
         footer={dialogFooter}
-        onHide={handleHide}
+          onHide={() => {
+          // Ensure consistent reset behavior and trigger parent hide callback
+          resetForm();
+          onHide();
+        }}
         draggable={false}
         modal
+        data-testid="lookup-dialog"
       >
         <div className="p-fluid">
           <div className="field mb-4">

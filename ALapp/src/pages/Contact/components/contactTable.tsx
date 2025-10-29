@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import type { DataTablePageEvent, DataTableRowClickEvent, DataTableSelectionSingleChangeEvent } from 'primereact/datatable';
@@ -18,34 +18,40 @@ const ContactTable: React.FC<ContactTableProps> = ({
     setRowsPerPage(event.rows);
   }, []);
 
-  const onSelectionChangeHandler = useCallback((e: DataTableSelectionSingleChangeEvent<Contact[]>) => {
-    if (onSelectionChange) {
-      onSelectionChange(e.value as Contact | null);
-    }
-  }, [onSelectionChange]);
+  const onSelectionChangeHandler = useCallback(
+    (e: DataTableSelectionSingleChangeEvent<Contact[]>) => {
+      onSelectionChange?.(e.value as Contact | null);
+    },
+    [onSelectionChange]
+  );
 
-  const onRowDoubleClickHandler = useCallback((e: DataTableRowClickEvent) => {
-    if (onRowDoubleClick && e.data) {
-      onRowDoubleClick(e.data as Contact);
-    }
-  }, [onRowDoubleClick]);
+  const onRowDoubleClickHandler = useCallback(
+    (e: DataTableRowClickEvent) => {
+      if (e.data) {
+        onRowDoubleClick?.(e.data as Contact);
+      }
+    },
+    [onRowDoubleClick]
+  );
 
-  const cellClass = "py-1 px-2";
-  const headerClass = "py-1 px-2 font-semibold";
-
-  const contactPersonTemplate = (rowData: Contact) => (
+  // Memoize template functions to prevent unnecessary re-renders
+  const contactPersonTemplate = useCallback((rowData: Contact) => (
     <div>
       <div className="font-medium">{rowData.contactPersonName}</div>
       <div className="text-sm text-gray-600">{rowData.email}</div>
     </div>
-  );
+  ), []);
 
-  const designationTemplate = (rowData: Contact) => (
+  const designationTemplate = useCallback((rowData: Contact) => (
     <div>
       <div className="font-medium">{rowData.designation}</div>
       <div className="text-sm text-gray-600">{rowData.phone}</div>
     </div>
-  );
+  ), []);
+
+  // Memoize constants
+  const cellClass = useMemo(() => "py-1 px-2", []);
+  const headerClass = useMemo(() => "py-1 px-2 font-semibold", []);
 
   return (
     <section className="contact-table" aria-label="Contact data table">
