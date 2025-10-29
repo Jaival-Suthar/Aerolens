@@ -1,18 +1,32 @@
 const API_URL: string = import.meta.env.VITE_BASE_URL;
 import type { ClientType, ClientsApiResponse } from "../types/clientTypes";
 
+// Helper to create headers with token if provided
+const makeHeaders = (accessToken?: string) => {
+  const headers: HeadersInit = { "Content-Type": "application/json" };
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+  return headers;
+};
+
 // Fetch paginated clients
 export const getClients = async (
+  accessToken: string | null,
   page = 1,
   limit = 10
 ): Promise<ClientsApiResponse> => {
   try {
-    const response = await fetch(`${API_URL}/client?page=${page}&limit=${limit}`);
-
+    const response = await fetch(
+      `${API_URL}/client?page=${page}&limit=${limit}`,
+      {
+        credentials: "include",
+        headers: makeHeaders(accessToken || undefined),
+      }
+    );
     if (!response.ok) {
-      throw new Error(`Failed to fetch clients: ${response.status} ${await response.text()}`);
+      throw new Error(
+        `Failed to fetch clients: ${response.status} ${await response.text()}`
+      );
     }
-
     const json: ClientsApiResponse = await response.json();
     return json;
   } catch (error) {
@@ -22,10 +36,10 @@ export const getClients = async (
 };
 
 // Create new client
-export const createClient = async (payload: {
-  name: string;
-  address: string;
-}): Promise<ClientType> => {
+export const createClient = async (
+  accessToken: string | null,
+  payload: { name: string; address: string }
+): Promise<ClientType> => {
   try {
     if (!payload.name || !payload.address) {
       throw new Error("Name and address are required to create a client");
@@ -33,13 +47,16 @@ export const createClient = async (payload: {
 
     const response = await fetch(`${API_URL}/client`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: makeHeaders(accessToken || undefined),
+      credentials: "include",
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
       const errorBody = await response.text();
-      throw new Error(`Failed to create client: ${response.status} ${errorBody}`);
+      throw new Error(
+        `Failed to create client: ${response.status} ${errorBody}`
+      );
     }
 
     const data: ClientType = await response.json();
@@ -51,11 +68,10 @@ export const createClient = async (payload: {
 };
 
 // Update existing client
-export const updateClient = async (payload: {
-  id: number;
-  name?: string;
-  address?: string;
-}): Promise<ClientType> => {
+export const updateClient = async (
+  accessToken: string | null,
+  payload: { id: number; name?: string; address?: string }
+): Promise<ClientType> => {
   const { id, name, address } = payload;
 
   if (!id || typeof id !== "number") {
@@ -71,10 +87,10 @@ export const updateClient = async (payload: {
 
   try {
     const url = `${API_URL}/client/${id}`;
-
     const response = await fetch(url, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: makeHeaders(accessToken || undefined),
+      credentials: "include",
       body: JSON.stringify(body),
     });
 
@@ -92,13 +108,18 @@ export const updateClient = async (payload: {
 };
 
 // Delete client by ID
-export const deleteClient = async (id: number): Promise<void> => {
+export const deleteClient = async (
+  accessToken: string | null,
+  id: number
+): Promise<void> => {
   if (!id || typeof id !== "number") {
     throw new Error("Valid client ID is required for deletion");
   }
   try {
     const response = await fetch(`${API_URL}/client/${id}`, {
       method: "DELETE",
+      headers: makeHeaders(accessToken || undefined),
+      credentials: "include",
     });
 
     if (!response.ok) {

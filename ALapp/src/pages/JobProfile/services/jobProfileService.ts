@@ -9,9 +9,15 @@ import {
 
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
 
+// Helper to create headers with token if provided
+const makeHeaders = (accessToken?: string) => {
+  const headers: HeadersInit = { "Content-Type": "application/json" };
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+  return headers;
+};
+
 // Data mapping function to transform API response to frontend format
 function mapApiJobProfile(data: any): JobProfile {
-  //console.log('Mapping API job profile:', data);
   const mapped = {
     jobProfileId: data.jobProfileId,
     clientId: data.clientId || 0,
@@ -24,201 +30,257 @@ function mapApiJobProfile(data: any): JobProfile {
     positions: data.positions,
     receivedOn: data.receivedOn,
     estimatedCloseDate: data.estimatedCloseDate,
-    // locationId: data.locationId || 0,
-    location: data.locationName || data.location || '', // Fallback logic
+    location: data.locationName || data.location || '',
     status: (data.statusName || data.status || 'Pending') as JobStatus,
     statusName: data.statusName
   };
-  //console.log('Mapped job profile:', mapped);
   return mapped;
 }
 
 // Get clients from the new /client/all endpoint
-export const getClients = async (): Promise<ClientOption[]> => {
-  //console.log('Fetching clients from:', `${API_BASE_URL}/client/all`);
-  const response = await fetch(`${API_BASE_URL}/client/all`);
-  //console.log('Client response status:', response.status);
-  if (!response.ok) throw new Error(`Failed to fetch clients: ${response.status}`);
-  const data = await response.json();
-  //console.log('Client response data:', data);
-  if (!data.success) throw new Error(data.message || 'Failed to fetch clients');
-  
-  const clients = data.data.map((client: any): ClientOption => {
-    const mappedClient = {
+export const getClients = async (accessToken: string | null): Promise<ClientOption[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/client/all`, {
+      credentials: 'include',
+      headers: makeHeaders(accessToken || undefined),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch clients: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    if (!data.success) throw new Error(data.message || 'Failed to fetch clients');
+    
+    const clients = data.data.map((client: any): ClientOption => ({
       clientId: client.clientId,
       clientName: client.clientName,
       departments: client.departments.map((dept: any): DepartmentOption => ({
         departmentId: dept.departmentId,
         departmentName: dept.departmentName
       }))
-    };
-    //console.log('Mapped client:', mappedClient);
-    return mappedClient;
-  });
-  //console.log('All mapped clients:', clients);
-  return clients;
+    }));
+    
+    return clients;
+  } catch (error) {
+    console.error('Error in getClients:', error);
+    throw error;
+  }
 };
 
-// Get departments from API (keeping for backward compatibility if needed)
-export const getDepartments = async (): Promise<DepartmentOption[]> => {
-  //console.log('Fetching departments from:', `${API_BASE_URL}/departments`);
-  const response = await fetch(`${API_BASE_URL}/departments`);
-  //console.log('Department response status:', response.status);
-  if (!response.ok) throw new Error(`Failed to fetch departments: ${response.status}`);
-  const data = await response.json();
-  //console.log('Department response data:', data);
-  if (!data.success) throw new Error(data.message || 'Failed to fetch departments');
-  //console.log('Departments:', data.departments);
-  return data.departments as DepartmentOption[];
+// Get departments from API
+export const getDepartments = async (accessToken: string | null): Promise<DepartmentOption[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/departments`, {
+      credentials: 'include',
+      headers: makeHeaders(accessToken || undefined),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch departments: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    if (!data.success) throw new Error(data.message || 'Failed to fetch departments');
+    
+    return data.departments as DepartmentOption[];
+  } catch (error) {
+    console.error('Error in getDepartments:', error);
+    throw error;
+  }
 };
 
 // Fetch all job profiles and then fetch clients
-export const getJobProfiles = async (): Promise<{ jobProfiles: ApiResponse<JobProfile[]>, clients: ClientOption[] }> => {
-  //console.log('Fetching job profiles from:', `${API_BASE_URL}/jobProfile`);
-  const jobProfileResponse = await fetch(`${API_BASE_URL}/jobProfile`);
-  //console.log('Job profile response status:', jobProfileResponse.status);
-  if (!jobProfileResponse.ok) throw new Error(`Failed to fetch job profiles: ${jobProfileResponse.status}`);
-  const jobProfileData = await jobProfileResponse.json();
-  //console.log('Job profile response data:', jobProfileData); // (1)
-  if (!jobProfileData.success) throw new Error(jobProfileData.message || 'Failed to fetch job profiles');
+export const getJobProfiles = async (
+  accessToken: string | null
+): Promise<{ jobProfiles: ApiResponse<JobProfile[]>, clients: ClientOption[] }> => {
+  try {
+    const jobProfileResponse = await fetch(`${API_BASE_URL}/jobProfile`, {
+      credentials: 'include',
+      headers: makeHeaders(accessToken || undefined),
+    });
+    
+    if (!jobProfileResponse.ok) {
+      throw new Error(`Failed to fetch job profiles: ${jobProfileResponse.status}`);
+    }
+    
+    const jobProfileData = await jobProfileResponse.json();
+    if (!jobProfileData.success) {
+      throw new Error(jobProfileData.message || 'Failed to fetch job profiles');
+    }
 
-  const mappedJobProfiles = jobProfileData.data.map(mapApiJobProfile);
-  //console.log('Mapped job profiles:', mappedJobProfiles);
+    const mappedJobProfiles = jobProfileData.data.map(mapApiJobProfile);
 
-  const jobProfilesResult: ApiResponse<JobProfile[]> = {
-    success: true,
-    message: jobProfileData.message,
-    data: mappedJobProfiles,
-  };
-  //console.log('Job profiles result:', jobProfilesResult);
+    const jobProfilesResult: ApiResponse<JobProfile[]> = {
+      success: true,
+      message: jobProfileData.message,
+      data: mappedJobProfiles,
+    };
 
-  const clients = await getClients();
-  //console.log('Fetched clients:', clients);
+    const clients = await getClients(accessToken);
 
-  return {
-    jobProfiles: jobProfilesResult,
-    clients: clients
-  };
+    return {
+      jobProfiles: jobProfilesResult,
+      clients: clients
+    };
+  } catch (error) {
+    console.error('Error in getJobProfiles:', error);
+    throw error;
+  }
 };
 
 // Fetch job profile by ID
-export const getJobProfileById = async (id: number): Promise<ApiResponse<JobProfile>> => {
-  //console.log('Fetching job profile with ID:', id);
-  const response = await fetch(`${API_BASE_URL}/jobProfile/${id}`);
-  //console.log('Job profile response status:', response.status);
-  if (!response.ok) throw new Error(`Failed to fetch job profile: ${response.status}`);
-  const data = await response.json();
-  //console.log('Job profile response data:', data);
-  if (!data.success) throw new Error(data.message || 'Job profile not found');
+export const getJobProfileById = async (
+  accessToken: string | null,
+  id: number
+): Promise<ApiResponse<JobProfile>> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/jobProfile/${id}`, {
+      credentials: 'include',
+      headers: makeHeaders(accessToken || undefined),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch job profile: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    if (!data.success) throw new Error(data.message || 'Job profile not found');
 
-  const mappedData = mapApiJobProfile(data.data);
-  //console.log('Mapped job profile by ID:', mappedData);
+    const mappedData = mapApiJobProfile(data.data);
 
-  return {
-    success: true,
-    message: data.message,
-    data: mappedData,
-  };
+    return {
+      success: true,
+      message: data.message,
+      data: mappedData,
+    };
+  } catch (error) {
+    console.error('Error in getJobProfileById:', error);
+    throw error;
+  }
 };
 
 // Create a new job profile
 export const createJobProfile = async (
+  accessToken: string | null,
   jobProfileData: Omit<JobProfilePayload, 'jobProfileId'>
 ): Promise<ApiResponse<JobProfile>> => {
-  //console.log('Creating job profile with data:', jobProfileData);
-  const req = {
-    ...jobProfileData,
-    receivedOn: undefined, // Backend sets this automatically
-  };
-  //console.log('Request payload for create:', req);
+  try {
+    const req = {
+      ...jobProfileData,
+      receivedOn: undefined, // Backend sets this automatically
+    };
 
-  const response = await fetch(`${API_BASE_URL}/jobProfile`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(req),
-  });
-  //console.log('Create job profile response status:', response.status);
+    const response = await fetch(`${API_BASE_URL}/jobProfile`, {
+      method: 'POST',
+      headers: makeHeaders(accessToken || undefined),
+      body: JSON.stringify(req),
+      credentials: 'include'
+    });
 
-  if (!response.ok) throw new Error(`Failed to create job profile: ${response.status}`);
-  const data = await response.json();
-  //console.log('Create job profile response data:', data);
-  if (!data.success) {
-    if (data.error === 'VALIDATION_ERROR' && data.details) {
-      const errMsg = data.details.map((d: any) => d.message).join(', ');
-      //console.log('Validation error details:', errMsg);
-      throw new Error(errMsg);
+    if (!response.ok) {
+      throw new Error(`Failed to create job profile: ${response.status}`);
     }
-    throw new Error(data.message || 'Failed to create job profile');
+    
+    const data = await response.json();
+    if (!data.success) {
+      if (data.error === 'VALIDATION_ERROR' && data.details) {
+        const errMsg = data.details.map((d: any) => d.message).join(', ');
+        throw new Error(errMsg);
+      }
+      throw new Error(data.message || 'Failed to create job profile');
+    }
+
+    const mappedData = mapApiJobProfile(data.data);
+
+    return {
+      success: true,
+      message: data.message,
+      data: mappedData,
+    };
+  } catch (error) {
+    console.error('Error in createJobProfile:', error);
+    throw error;
   }
-
-  const mappedData = mapApiJobProfile(data.data);
-  //console.log('Mapped created job profile:', mappedData);
-
-  return {
-    success: true,
-    message: data.message,
-    data: mappedData,
-  };
 };
 
 // Update a job profile
 export const updateJobProfile = async (
+  accessToken: string | null,
   id: number,
   jobProfileData: Partial<Omit<JobProfilePayload, 'jobProfileId'>>
 ): Promise<ApiResponse<JobProfile>> => {
-  //console.log('Updating job profile ID:', id, 'with data:', jobProfileData);
-  const response = await fetch(`${API_BASE_URL}/jobProfile/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(jobProfileData),
-  });
-  //console.log('Update job profile response status:', response.status);
+  try {
+    const response = await fetch(`${API_BASE_URL}/jobProfile/${id}`, {
+      method: 'PATCH',
+      headers: makeHeaders(accessToken || undefined),
+      body: JSON.stringify(jobProfileData),
+      credentials: 'include'
+    });
 
-  if (!response.ok) throw new Error(`Failed to update job profile: ${response.status}`);
-  const data = await response.json();
-  //console.log('Update job profile response data:', data);
-  if (!data.success) {
-    if (data.error === 'VALIDATION_ERROR' && data.details) {
-      const errMsg = data.details.map((d: any) => d.message).join(', ');
-      //console.log('Validation error details:', errMsg);
-      throw new Error(errMsg);
+    if (!response.ok) {
+      throw new Error(`Failed to update job profile: ${response.status}`);
     }
-    throw new Error(data.message || 'Failed to update job profile');
+    
+    const data = await response.json();
+    if (!data.success) {
+      if (data.error === 'VALIDATION_ERROR' && data.details) {
+        const errMsg = data.details.map((d: any) => d.message).join(', ');
+        throw new Error(errMsg);
+      }
+      throw new Error(data.message || 'Failed to update job profile');
+    }
+
+    const mappedData = mapApiJobProfile(data.data);
+
+    return {
+      success: true,
+      message: data.message,
+      data: mappedData,
+    };
+  } catch (error) {
+    console.error('Error in updateJobProfile:', error);
+    throw error;
   }
-
-  const mappedData = mapApiJobProfile(data.data);
-  //console.log('Mapped updated job profile:', mappedData);
-
-  return {
-    success: true,
-    message: data.message,
-    data: mappedData,
-  };
 };
 
 // Delete job profile by ID
-export const deleteJobProfile = async (id: number): Promise<ApiResponse<null>> => {
-  //console.log('Deleting job profile with ID:', id);
-  const response = await fetch(`${API_BASE_URL}/jobProfile/${id}`, {
-    method: 'DELETE',
-  });
-  //console.log('Delete job profile response status:', response.status);
+export const deleteJobProfile = async (
+  accessToken: string | null,
+  id: number
+): Promise<ApiResponse<null>> => {
+  try {
+    if (!id || typeof id !== 'number') {
+      throw new Error('Valid job profile ID is required for deletion');
+    }
 
-  if (!response.ok) throw new Error(`Failed to delete job profile: ${response.status}`);
-  const data = await response.json();
-  //console.log('Delete job profile response data:', data);
-  if (!data.success) throw new Error(data.message || 'Failed to delete job profile');
+    const response = await fetch(`${API_BASE_URL}/jobProfile/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: makeHeaders(accessToken || undefined),
+    });
 
-  return {
-    success: true,
-    message: data.message,
-    data: null,
-  };
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to delete job profile: ${errorText}`);
+    }
+    
+    const data = await response.json();
+    if (!data.success) throw new Error(data.message || 'Failed to delete job profile');
+
+    return {
+      success: true,
+      message: data.message,
+      data: null,
+    };
+  } catch (error) {
+    console.error('Error in deleteJobProfile:', error);
+    throw error;
+  }
 };
 
 // Validation for job profile data
 export const validateJobProfileRequest = (data: Partial<JobProfilePayload>): string[] => {
-  //console.log('Validating job profile data:', data);
   const errors: string[] = [];
 
   if (!data.clientId) errors.push('Client is required');
@@ -248,6 +310,5 @@ export const validateJobProfileRequest = (data: Partial<JobProfilePayload>): str
     }
   }
 
-  //console.log('Validation errors:', errors);
   return errors;
 };

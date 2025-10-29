@@ -1,8 +1,6 @@
 import { LookupApiResponse } from '../types/lookupTypes';
 
-// ✅ Load backend URL from environment
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
-//console.log("✅ API_BASE_URL:", API_BASE_URL);
 
 /**
  * ✅ Checks response status and returns parsed JSON or throws an error
@@ -15,22 +13,20 @@ async function checkStatus(res: Response): Promise<LookupApiResponse> {
   return res.json();
 }
 
-/**
- * ✅ Lookup Service — Handles all API calls related to Lookup
- */
 export const lookupService = {
   /**
-   * 🔹 Get all lookup entries (paginated)
-   * @param page Current page number (default: 1)
-   * @param limit Records per page (default: 10)
+   * 🔹 Get all lookups with pagination
    */
-  async getAll(page = 1, limit = 10): Promise<LookupApiResponse> {
+  async getAll(accessToken: string, page = 1, limit = 10): Promise<LookupApiResponse> {
     const url = `${API_BASE_URL}/lookup?page=${page}&limit=${limit}`;
-    //console.log("📡 GET:", url);
 
     const res = await fetch(url, {
       method: 'GET',
-      headers: { 'Accept': 'application/json' },
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      credentials: 'include',
     });
 
     return checkStatus(res);
@@ -38,17 +34,19 @@ export const lookupService = {
 
   /**
    * 🔹 Get a single lookup entry by key
-   * @param lookupKey The lookup key to retrieve
    */
-  async getByKey(lookupKey: number): Promise<LookupApiResponse> {
+  async getByKey(accessToken: string, lookupKey: number): Promise<LookupApiResponse> {
     if (lookupKey <= 0) throw new Error('Invalid lookupKey provided');
 
     const url = `${API_BASE_URL}/lookup/${lookupKey}`;
-    //console.log("📡 GET BY KEY:", url);
 
     const res = await fetch(url, {
       method: 'GET',
-      headers: { 'Accept': 'application/json' },
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      credentials: 'include',
     });
 
     return checkStatus(res);
@@ -56,20 +54,22 @@ export const lookupService = {
 
   /**
    * 🔹 Create a new lookup entry
-   * @param payload Object containing tag and value
    */
-  async create(payload: { tag: string; value: string }): Promise<LookupApiResponse> {
+  async create(accessToken: string, payload: { tag: string; value: string }): Promise<LookupApiResponse> {
     if (!payload.tag?.trim() || !payload.value?.trim()) {
       throw new Error('Payload validation failed: tag and value are required');
     }
 
     const url = `${API_BASE_URL}/lookup`;
-    //console.log("📡 POST:", url, payload);
 
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
       body: JSON.stringify(payload),
+      credentials: 'include',
     });
 
     return checkStatus(res);
@@ -77,15 +77,20 @@ export const lookupService = {
 
   /**
    * 🔹 Delete a lookup entry by key
-   * @param lookupKey ID of the lookup to delete
    */
-  async delete(lookupKey: number): Promise<LookupApiResponse> {
+  async delete(accessToken: string, lookupKey: number): Promise<LookupApiResponse> {
     if (lookupKey <= 0) throw new Error('Invalid lookupKey provided');
 
     const url = `${API_BASE_URL}/lookup/${lookupKey}`;
-    //console.log("📡 DELETE:", url);
 
-    const res = await fetch(url, { method: 'DELETE' });
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      credentials: 'include',
+    });
+
     return checkStatus(res);
   },
 };
