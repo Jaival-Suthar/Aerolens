@@ -10,15 +10,21 @@ const ResumeDelete: React.FC<ResumeDeleteProps> = ({
   onHide,
   selectedResume,
   onSuccess,
-  onClearSelection
+  onClearSelection,
 }) => {
+  // ✅ Retrieve access token from localStorage (or context if you have one)
+  const accessToken = localStorage.getItem("accessToken");
 
   const handleDelete = async (): Promise<void> => {
-    if (!selectedResume) return;
-    const id = selectedResume.candidateId;
+    if (!selectedResume?.candidateId) {
+      console.error("No candidate ID found for deletion");
+      return;
+    }
+
+    const id = Number(selectedResume.candidateId); // ✅ ensure numeric ID
 
     try {
-      await Promise.resolve(deleteCandidate(id)); // make sure it’s awaited synchronously
+      await deleteCandidate(accessToken, id); // ✅ correctly pass token and ID
       onClearSelection();
       onSuccess();
       onHide();

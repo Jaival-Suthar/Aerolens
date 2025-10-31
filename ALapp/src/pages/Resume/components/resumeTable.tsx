@@ -1,161 +1,169 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import ResumeAddEdit from "../components/resumeAddEdit";
-import AddButton from "../../../shared/AddButton";
-import EditButton from "../../../shared/EditButton";
-import DeleteButton from "../../../shared/DeleteButton";
-import { Candidate } from "../types/resumeTypes";
-import { getCandidates } from "../services/useResume";
-import ResumeDelete from "./resumeDelete";
-import ExportExcelButton from "../../../shared/ExportExcelButton";
 import { Button } from "primereact/button";
 import { FaDownload, FaEye } from "react-icons/fa";
 
-import { useAuth } from "../../../shared/auth/AuthContext";
-const ResumeTable: React.FC<any> = () => {
-  const { accessToken } = useAuth();
+import ResumeAddEdit from "../components/resumeAddEdit";
+import ResumeDelete from "./resumeDelete";
+import AddButton from "../../../shared/AddButton";
+import EditButton from "../../../shared/EditButton";
+import DeleteButton from "../../../shared/DeleteButton";
+import ExportExcelButton from "../../../shared/ExportExcelButton";
 
+import { Candidate } from "../types/resumeTypes";
+import { getCandidates, downloadResume } from "../services/useResume";
+import { useAuth } from "../../../shared/auth/AuthContext";
+
+const ResumeTable: React.FC = () => {
+  const { accessToken } = useAuth(); // ✅ from AuthContext
   const [resumes, setResumes] = useState<Candidate[]>([]);
   const [selectedResume, setSelectedResume] = useState<Candidate | null>(null);
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editingResume, setEditingResume] = useState<Candidate | null>(null);
+  const [loading, setLoading] = useState(false);
   const dt = useRef<DataTable<any>>(null);
+
+  /** ------------------- Data Loading ------------------- */
   const loadResumes = useCallback(async () => {
+    if (!accessToken) return;
+    setLoading(true);
     try {
-      
-      // TODO pass dynamic pagenumber and pageSize
-      const data = await getCandidates(1, 10000);
-      setResumes(Array.isArray(data) ? data : []); // Add safety check
+      const { candidates } = await getCandidates(accessToken, 1, 10000);
+      setResumes(Array.isArray(candidates) ? candidates : []);
     } catch (error) {
       console.error("Error loading resumes:", error);
-      setResumes([]); // Set empty array on error
+      setResumes([]);
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [accessToken]);
 
   useEffect(() => {
     loadResumes();
-  }, []);
+  }, [loadResumes]);
 
+  /** ------------------- CRUD Handlers ------------------- */
   const handleAdd = () => {
     setEditingResume(null);
     setShowAddEditDialog(true);
   };
 
   const handleEdit = () => {
-    if (!selectedResume) return;
-    setEditingResume(selectedResume);
-    setShowAddEditDialog(true);
+    if (selectedResume) {
+      setEditingResume(selectedResume);
+      setShowAddEditDialog(true);
+    }
   };
 
   const handleDelete = () => {
-    if (!selectedResume) return;
-    setShowDeleteDialog(true);
+    if (selectedResume) {
+      setShowDeleteDialog(true);
+    }
   };
 
-  const handleAddEditSuccess = () => loadResumes();
-  const handleDeleteSuccess = () => loadResumes();
-  const handleClearSelection = () => setSelectedResume(null);
+  const handleAddEditSuccess = () => {
+    setShowAddEditDialog(false);
+    loadResumes();
+  };
+
+  const handleDeleteSuccess = () => {
+    setShowDeleteDialog(false);
+    setSelectedResume(null);
+    loadResumes();
+  };
+
+  /** ------------------- Resume Actions ------------------- */
+  const handleDownloadResume = async (candidateId: number) => {
+    try {
+      if (!accessToken) throw new Error("Unauthorized");
+      const blob = await downloadResume(accessToken, candidateId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `resume_${candidateId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Resume download failed:", error);
+    }
+  };
+
+  const handlePreviewResume = async (candidateId: number) => {
+  try {
+    if (!accessToken) throw new Error("Unauthorized");
+    
+    const previewUrl = `${import.meta.env.VITE_BASE_URL}/candidate/${candidateId}/resume/preview`;
+    
+    const response = await fetch(previewUrl, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) throw new Error("Preview failed");
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+    
+    // Clean up after a delay to ensure the window opens
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (error) {
+    console.error("Resume preview failed:", error);
+  }
+};
+
+
+
+  /** ------------------- Column Templates ------------------- */
   const resumeActionTemplate = (candidate: Candidate) => {
     if (!candidate.resumeFilename) {
       return <span className="text-400">No Resume</span>;
     }
-  
+
     return (
       <div className="flex gap-1">
         <Button
-          icon={<span style={{ fontSize: 16, lineHeight: 0 }}>
-            <FaDownload />
-          </span>}
-          className="p-button-outlined"
+          icon={<FaDownload />}
+          className="p-button-outlined p-button-sm"
           tooltip="Download Resume"
           onClick={() => handleDownloadResume(candidate.candidateId)}
         />
         <Button
-          icon={<span style={{ fontSize: 16, lineHeight: 0 }}>
-            <FaEye />
-          </span>}
-          className="p-button-sm p-button-outlined"
+          icon={<FaEye />}
+          className="p-button-outlined p-button-sm"
           tooltip="Preview Resume"
           onClick={() => handlePreviewResume(candidate.candidateId)}
         />
       </div>
     );
   };
-  const handleDownloadResume = async (candidateId: number) => {
-    if (!accessToken) {
-      alert("You are not authenticated. Please log in first.");
-      return;
+
+  const linkedInTemplate = (rowData: Candidate) => {
+    if (!rowData.linkedinProfileUrl) {
+      return <span className="text-400">N/A</span>;
     }
-  
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_BASE_URL}/candidate/${candidateId}/resume`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-  
-      if (!response.ok) {
-        throw new Error("Failed to download resume");
-      }
-  
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-  
-      // Optional: extract filename from headers
-      const contentDisposition = response.headers.get("Content-Disposition");
-      const filenameMatch = contentDisposition?.match(/filename="?([^"]+)"?/);
-      link.download = filenameMatch ? filenameMatch[1] : "resume.pdf";
-  
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("❌ Error downloading resume:", error);
-      alert("Failed to download resume. Please try again.");
-    }
+    return (
+      <a
+        href={rowData.linkedinProfileUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 underline hover:text-blue-800"
+      >
+        View Profile
+      </a>
+    );
   };
-  
- 
-  const handlePreviewResume = async (candidateId: number) => {
-    if (!accessToken) {
-      alert("You are not authenticated. Please log in first.");
-      return;
-    }
-  
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_BASE_URL}/candidate/${candidateId}/resume/preview`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-  
-      if (!response.ok) {
-        throw new Error("Failed to preview resume");
-      }
-  
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      window.open(url, "_blank");
-    } catch (error) {
-      console.error("❌ Error previewing resume:", error);
-      alert("Failed to preview resume. Please try again.");
-    }
-  };
-  
+
+  /** ------------------- JSX ------------------- */
   return (
     <>
-      <div className="flex justify-content-between mb-2">
+      <div className="flex justify-content-between align-items-center mb-2">
         <h2>Candidate Resume Management</h2>
         <div className="flex gap-2">
           <ExportExcelButton dtRef={dt} />
@@ -165,7 +173,6 @@ const ResumeTable: React.FC<any> = () => {
         </div>
       </div>
 
-      {/* <h4>Resumes for: {candidateName}</h4> */}
       <DataTable
         ref={dt}
         value={resumes}
@@ -175,47 +182,36 @@ const ResumeTable: React.FC<any> = () => {
         selectionMode="single"
         selection={selectedResume}
         dataKey="candidateId"
-        onSelectionChange={(e: any) => setSelectedResume(e.value)}
+        onSelectionChange={(e) => setSelectedResume(e.value)}
         tableStyle={{ minWidth: "80rem" }}
+        loading={loading}
+        emptyMessage="No candidates found."
       >
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
-        <Column field="candidateName" sortable header="Candidate Name" />
-        <Column field="contactNumber" sortable header="Contact Number" />
-        <Column field="email" sortable header="Email" />
-        <Column field="recruiterName" sortable header="Recruiter" />
-        <Column field="jobRole" sortable header="Role" />
-        <Column field="preferredJobLocation" sortable header="Preferable Location" />
-        <Column field="currentCTC" sortable header="Current CTC" />
-        <Column field="expectedCTC" sortable header="Expected CTC" />
-        <Column field="noticePeriod" header="Notice Period" />
-        <Column field="experienceYears" header="Experience" />
-        <Column field="statusName" header="Status" />
+        <Column field="candidateName" header="Candidate Name" sortable />
+        <Column field="contactNumber" header="Contact Number" sortable />
+        <Column field="email" header="Email" sortable />
+        <Column field="recruiterName" header="Recruiter" sortable />
+        <Column field="jobRole" header="Role" sortable />
         <Column
-  field="linkedinProfileUrl"
-  header="LinkedIn Profile"
-  body={(rowData: Candidate) =>
-    rowData.linkedinProfileUrl ? (
-      <a
-        href={rowData.linkedinProfileUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-blue-600 underline hover:text-blue-800"
-      >
-        {rowData.linkedinProfileUrl}
-      </a>
-    ) : (
-      <span className="text-400">N/A</span>
-    )
-  }
-/>
-
-        <Column 
-          header="Resume" 
-          body={(rowData: Candidate) => resumeActionTemplate(rowData)}
-          style={{ width: '8rem' }}
+          field="preferredJobLocation"
+          header="Preferred Location"
+          sortable
         />
-
+        <Column field="currentCTC" header="Current CTC" sortable />
+        <Column field="expectedCTC" header="Expected CTC" sortable />
+        <Column field="noticePeriod" header="Notice Period" sortable />
+        <Column field="experienceYears" header="Experience" sortable />
+        <Column field="statusName" header="Status" sortable />
+        <Column
+          field="linkedinProfileUrl"
+          header="LinkedIn Profile"
+          body={linkedInTemplate}
+        />
+        <Column header="Resume" body={resumeActionTemplate} style={{ width: "8rem" }} />
       </DataTable>
+
+      {/* ------------------- Dialogs ------------------- */}
       <ResumeAddEdit
         visible={showAddEditDialog}
         onHide={() => setShowAddEditDialog(false)}
@@ -228,7 +224,7 @@ const ResumeTable: React.FC<any> = () => {
         onHide={() => setShowDeleteDialog(false)}
         selectedResume={selectedResume}
         onSuccess={handleDeleteSuccess}
-        onClearSelection={handleClearSelection}
+        onClearSelection={() => setSelectedResume(null)}
       />
     </>
   );

@@ -13,6 +13,8 @@ import {
   uploadResume,
 } from "../services/useResume";
 import { ResumeAddEditProps, AddEditCandidate } from "../types/resumeTypes";
+import { useAuth } from "../../../shared/auth/AuthContext";
+
 
 // ---------- CONSTANTS ----------
 const STATUS_OPTIONS = [
@@ -107,12 +109,14 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   selectedResume,
   onSuccess,
 }) => {
+  const { accessToken } = useAuth();
   const isEditMode = Boolean(selectedResume);
 
   const [formData, setFormData] = useState<AddEditCandidate>(INITIAL_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
-
+  
+  
   // Initialize / Reset form
   useEffect(() => {
     setFormData(
@@ -160,25 +164,68 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   }, [formData]);
 
   const handleSave = useCallback(async () => {
-    setSubmitted(true);
-    if (!validateForm()) return;
+  setSubmitted(true);
+  if (!validateForm()) return;
 
-    try {
-      if (isEditMode && selectedResume) {
-        const { resumeFile, ...updateData } = formData;
-        await updateCandidate(selectedResume.candidateId, updateData);
-        if (resumeFile) await uploadResume(selectedResume.candidateId, resumeFile);
-      } else {
-        await createCandidate(formData);
+  try {
+    if (isEditMode && selectedResume) {
+      // ✅ Explicit and typed update data
+      const updateData: {
+        candidateName: string;
+        contactNumber: string;
+        email: string;
+        recruiterName: string;
+        jobRole: string;
+        preferredJobLocation: string;
+        currentCTC: number;
+        expectedCTC: number;
+        noticePeriod: number;
+        experienceYears: number;
+        statusName: string;
+        linkedinProfileUrl: string;
+      } = {
+        candidateName: formData.candidateName,
+        contactNumber: formData.contactNumber,
+        email: formData.email,
+        recruiterName: formData.recruiterName,
+        jobRole: formData.jobRole,
+        preferredJobLocation: formData.preferredJobLocation,
+        currentCTC: formData.currentCTC,
+        expectedCTC: formData.expectedCTC,
+        noticePeriod: formData.noticePeriod,
+        experienceYears: formData.experienceYears,
+        statusName: formData.statusName,
+        linkedinProfileUrl: formData.linkedinProfileUrl,
+      };
+
+      await updateCandidate(accessToken, selectedResume.candidateId, updateData);
+
+      // ✅ Optional resume upload
+      if (formData.resumeFile) {
+        await uploadResume(accessToken, selectedResume.candidateId, formData.resumeFile);
       }
-      onSuccess();
-      onHide();
-    } catch (err) {
-      console.error("Error saving candidate:", err);
-    } finally {
-      setSubmitted(false);
+    } else {
+      // ✅ Create new candidate
+      await createCandidate(accessToken, formData);
     }
-  }, [formData, isEditMode, onHide, onSuccess, selectedResume, validateForm]);
+
+    onSuccess();
+    onHide();
+  } catch (err) {
+    console.error("Error saving candidate:", err);
+  } finally {
+    setSubmitted(false);
+  }
+}, [
+  formData,
+  isEditMode,
+  onHide,
+  onSuccess,
+  selectedResume,
+  validateForm,
+  accessToken,
+]);
+
 
   const prefixSymbol = useMemo(
     () => (formData.preferredJobLocation === "San Francisco" ? "$" : "₹"),
