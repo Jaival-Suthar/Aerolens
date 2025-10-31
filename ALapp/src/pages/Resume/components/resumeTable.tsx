@@ -12,7 +12,10 @@ import ExportExcelButton from "../../../shared/ExportExcelButton";
 import { Button } from "primereact/button";
 import { FaDownload, FaEye } from "react-icons/fa";
 
+import { useAuth } from "../../../shared/auth/AuthContext";
 const ResumeTable: React.FC<any> = () => {
+  const { accessToken } = useAuth();
+
   const [resumes, setResumes] = useState<Candidate[]>([]);
   const [selectedResume, setSelectedResume] = useState<Candidate | null>(null);
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
@@ -80,21 +83,76 @@ const ResumeTable: React.FC<any> = () => {
       </div>
     );
   };
+  const handleDownloadResume = async (candidateId: number) => {
+    if (!accessToken) {
+      alert("You are not authenticated. Please log in first.");
+      return;
+    }
   
-  const handleDownloadResume = (candidateId: number) => {
-    const downloadUrl = `${import.meta.env.VITE_BASE_URL}/candidate/${candidateId}/resume`;
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = '';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_BASE_URL}/candidate/${candidateId}/resume`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+  
+      if (!response.ok) {
+        throw new Error("Failed to download resume");
+      }
+  
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+  
+      // Optional: extract filename from headers
+      const contentDisposition = response.headers.get("Content-Disposition");
+      const filenameMatch = contentDisposition?.match(/filename="?([^"]+)"?/);
+      link.download = filenameMatch ? filenameMatch[1] : "resume.pdf";
+  
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("❌ Error downloading resume:", error);
+      alert("Failed to download resume. Please try again.");
+    }
   };
   
-  const handlePreviewResume = (candidateId: number) => {
-    const previewUrl = `${import.meta.env.VITE_BASE_URL}/candidate/${candidateId}/resume/preview`;
-    window.open(previewUrl, '_blank');
+ 
+  const handlePreviewResume = async (candidateId: number) => {
+    if (!accessToken) {
+      alert("You are not authenticated. Please log in first.");
+      return;
+    }
+  
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_BASE_URL}/candidate/${candidateId}/resume/preview`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+  
+      if (!response.ok) {
+        throw new Error("Failed to preview resume");
+      }
+  
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank");
+    } catch (error) {
+      console.error("❌ Error previewing resume:", error);
+      alert("Failed to preview resume. Please try again.");
+    }
   };
+  
   return (
     <>
       <div className="flex justify-content-between mb-2">
