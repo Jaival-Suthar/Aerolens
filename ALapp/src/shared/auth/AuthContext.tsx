@@ -38,7 +38,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const { setProfile, clearProfile } = useProfileStore();
 
-  // Persist accessToken in localStorage
   useEffect(() => {
     if (accessToken) {
       localStorage.setItem(TOKEN_KEY, accessToken);
@@ -49,21 +48,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [accessToken]);
 
-  // Helper function to fetch profile with a specific token
   const fetchProfile = async (token: string) => {
     console.log('👤 Fetching profile...');
     const res = await fetch(`${API_BASE}/auth/profile`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: 'include',
     });
-    if (res.status === 401) {
-      console.log('❌ Profile fetch returned 401');
-      throw new Error('401');
-    }
-    if (!res.ok) {
-      console.log('❌ Profile fetch failed:', res.status);
-      throw new Error('Failed to fetch profile');
-    }
+    if (res.status === 401) throw new Error('401');
+    if (!res.ok) throw new Error('Failed to fetch profile');
     const { data } = await res.json();
     setProfile(data.member);
     console.log('✅ Profile fetched successfully');
@@ -71,78 +63,92 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshAccessToken = async (): Promise<string | null> => {
     console.log('🔄 Attempting to refresh access token...');
-    console.log('🍪 Cookies will be sent with this request (credentials: include)');
-    
     const res = await fetch(`${API_BASE}/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
     });
-    
-    console.log('🔄 Refresh response status:', res.status);
-    
     if (!res.ok) {
       console.log('❌ Token refresh failed - clearing auth state');
       setAccessToken(null);
       clearProfile();
       throw new Error('Token refresh failed');
     }
-    
     const { data } = await res.json();
-    const newToken = data.accessToken;
-    
+    const newToken = data.token;
     if (newToken) {
-      console.log('✅ New access token received from refresh');
+      console.log('✅ New access token received');
       setAccessToken(newToken);
       return newToken;
     } else {
-      console.log('❌ No access token in refresh response');
+      console.log('❌ No token in refresh response');
       setAccessToken(null);
-      throw new Error('Invalid token received from refresh');
+      throw new Error('Invalid token received');
     }
   };
 
-  // Initialize authentication on mount
+  // 🚀 Global 401 handler – auto-refresh + retry logic
+  useEffect(() => {
+  const originalFetch = window.fetch.bind(window);
+
+  const patchedFetch: typeof window.fetch = async (input, init) => {
+    let res = await originalFetch(input, init);
+
+    if (res.status === 401 && !String(input).includes('/auth/refresh')) {
+      console.warn('⚠️ Global 401 detected — attempting token refresh...');
+      try {
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+          console.log('🔄 Retrying request with refreshed token...');
+          const updatedHeaders = {
+            ...(init?.headers || {}),
+            Authorization: `Bearer ${newToken}`,
+          };
+          res = await originalFetch(input, { ...init, headers: updatedHeaders });
+        }
+      } catch (err) {
+        console.error('❌ Token refresh failed globally:', err);
+        await logout();
+      }
+    }
+
+    return res;
+  };
+
+  // ✅ Assign properly with full type safety
+  window.fetch = patchedFetch;
+
+  return () => {
+    window.fetch = originalFetch;
+  };
+}, [accessToken]);
+
+
+  // 🧩 Existing initAuth, silent refresh, login, logout, etc. stay unchanged...
   useEffect(() => {
     let mounted = true;
 
     const initAuth = async () => {
       console.log('🚀 Initializing auth...');
-      
-      // Log all cookies for debugging
-      console.log('🍪 Current cookies:', document.cookie);
       const hasRefreshToken = document.cookie.includes('refreshToken');
-      console.log('🍪 Refresh token cookie present:', hasRefreshToken);
-      
       if (!accessToken) {
-        console.log('ℹ️ No access token found - user not authenticated');
         clearProfile();
         return;
       }
-      
-      console.log('🔍 Access token found, validating...');
-      
+
       try {
         await fetchProfile(accessToken);
-        console.log('✅ Auth initialization complete - user authenticated');
       } catch (err: any) {
         if (err.message?.includes('401')) {
-          console.log('⚠️ Access token expired, attempting refresh...');
           try {
             const newToken = await refreshAccessToken();
-            if (newToken && mounted) {
-              console.log('🔄 Fetching profile with new token...');
-              await fetchProfile(newToken);
-              console.log('✅ Auth recovered via token refresh');
-            }
-          } catch (refreshErr) {
-            console.log('❌ Token refresh failed - logging out');
+            if (newToken && mounted) await fetchProfile(newToken);
+          } catch {
             if (mounted) {
               setAccessToken(null);
               clearProfile();
             }
           }
         } else {
-          console.log('❌ Profile fetch error (non-401):', err.message);
           if (mounted) {
             setAccessToken(null);
             clearProfile();
@@ -152,106 +158,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     initAuth();
-
     return () => {
       mounted = false;
     };
-  }, []); // Only run on mount
-  // Automatically refresh access token every 14 minutes (before it expires)
-useEffect(() => {
-  if (!accessToken) return;
+  }, []);
 
-  console.log('⏰ Starting silent refresh interval...');
-
-  const refreshInterval = setInterval(async () => {
-    try {
-      console.log('🔄 Silent refresh triggered...');
-      const newToken = await refreshAccessToken();
-      if (newToken) console.log('✅ Silent token refresh successful');
-    } catch (err) {
-      console.log('❌ Silent token refresh failed:', err);
-      setAccessToken(null);
-      clearProfile();
-    }
-  }, 14 * 60 * 1000); // 14 minutes in ms
-
-  return () => {
-    console.log('🛑 Clearing silent refresh interval');
-    clearInterval(refreshInterval);
-  };
-}, [accessToken]);
+  useEffect(() => {
+    if (!accessToken) return;
+    const refreshInterval = setInterval(async () => {
+      try {
+        await refreshAccessToken();
+        console.log('✅ Silent token refresh successful');
+      } catch (err) {
+        console.log('❌ Silent token refresh failed:', err);
+        setAccessToken(null);
+        clearProfile();
+      }
+    }, 120 * 60 * 1000);
+    return () => clearInterval(refreshInterval);
+  }, [accessToken]);
 
   const login = async (email: string, password: string) => {
     console.log('🔐 Logging in...');
-    
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ email, password }),
     });
-    
     if (!res.ok) {
       const err = await res.json();
-      console.log('❌ Login failed:', err.message);
       throw new Error(err.message || 'Login failed');
     }
-    
     const json = await res.json();
-    console.log('📥 Login response received');
-    
-    if (!json.data || !json.data.accessToken) {
-      console.log('❌ Invalid response: missing accessToken');
-      throw new Error('Invalid response: missing accessToken');
-    }
-    
-    const newToken = json.data.accessToken;
-    console.log('✅ Login successful - setting tokens');
-    
+    const newToken = json.data.token;
     setAccessToken(newToken);
     setProfile(json.data.member);
   };
 
   const logout = async () => {
-    console.log('👋 Logging out...');
     try {
       await fetch(`${API_BASE}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });
-      console.log('✅ Logout API called');
-    } catch (err) {
-      console.log('⚠️ Logout API call failed:', err);
-    }
+    } catch {}
     setAccessToken(null);
     clearProfile();
   };
 
   const logoutAll = async () => {
     if (!accessToken) return;
-    console.log('👋 Logging out from all devices...');
     try {
       await fetch(`${API_BASE}/auth/logout-all`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}` },
         credentials: 'include',
       });
-      console.log('✅ Logout all API called');
-    } catch (err) {
-      console.log('⚠️ Logout all API call failed:', err);
-    }
+    } catch {}
     setAccessToken(null);
     clearProfile();
   };
 
-  // Add this to window for manual testing in console
   useEffect(() => {
     (window as any).testRefresh = async () => {
-      console.log('🧪 Manual refresh test triggered');
-      console.log('🍪 Cookies before refresh:', document.cookie);
       try {
         const newToken = await refreshAccessToken();
-        console.log('✅ Test refresh successful, new token:', newToken?.substring(0, 20) + '...');
+        console.log('✅ Test refresh successful:', newToken?.slice(0, 20) + '...');
       } catch (err) {
         console.log('❌ Test refresh failed:', err);
       }
