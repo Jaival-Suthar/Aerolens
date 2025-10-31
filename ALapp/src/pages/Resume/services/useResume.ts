@@ -262,7 +262,7 @@ export const downloadResume = async (
       const text = await response.text();
       throw new Error(`Failed to download resume: ${text}`);
     }
-
+//this is a comment
     return await response.blob();
   } catch (error) {
     logger.error("Error in downloadResume:", error);
