@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Dropdown } from "primereact/dropdown";
 import { InputNumber } from "primereact/inputnumber";
 import { FileUpload } from "primereact/fileupload";
 import { FaCheck } from "react-icons/fa";
+import { Toast } from "primereact/toast";
 import DialogButton from "../../../shared/DialogAddEditButton";
 
 import {
@@ -115,7 +116,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   const [formData, setFormData] = useState<AddEditCandidate>(INITIAL_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
-  
+  const toast = useRef<Toast>(null);
   
   // Initialize / Reset form
   useEffect(() => {
@@ -164,68 +165,73 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   }, [formData]);
 
   const handleSave = useCallback(async () => {
-  setSubmitted(true);
-  if (!validateForm()) return;
+    setSubmitted(true);
+    if (!validateForm()) return;
 
-  try {
-    if (isEditMode && selectedResume) {
-      // ✅ Explicit and typed update data
-      const updateData: {
-        candidateName: string;
-        contactNumber: string;
-        email: string;
-        recruiterName: string;
-        jobRole: string;
-        preferredJobLocation: string;
-        currentCTC: number;
-        expectedCTC: number;
-        noticePeriod: number;
-        experienceYears: number;
-        statusName: string;
-        linkedinProfileUrl: string;
-      } = {
-        candidateName: formData.candidateName,
-        contactNumber: formData.contactNumber,
-        email: formData.email,
-        recruiterName: formData.recruiterName,
-        jobRole: formData.jobRole,
-        preferredJobLocation: formData.preferredJobLocation,
-        currentCTC: formData.currentCTC,
-        expectedCTC: formData.expectedCTC,
-        noticePeriod: formData.noticePeriod,
-        experienceYears: formData.experienceYears,
-        statusName: formData.statusName,
-        linkedinProfileUrl: formData.linkedinProfileUrl,
-      };
+    try {
+      if (isEditMode && selectedResume) {
+        const updateData = {
+          candidateName: formData.candidateName,
+          contactNumber: formData.contactNumber,
+          email: formData.email,
+          recruiterName: formData.recruiterName,
+          jobRole: formData.jobRole,
+          preferredJobLocation: formData.preferredJobLocation,
+          currentCTC: formData.currentCTC,
+          expectedCTC: formData.expectedCTC,
+          noticePeriod: formData.noticePeriod,
+          experienceYears: formData.experienceYears,
+          statusName: formData.statusName,
+          linkedinProfileUrl: formData.linkedinProfileUrl,
+        };
 
-      await updateCandidate(accessToken, selectedResume.candidateId, updateData);
+        await updateCandidate(accessToken, selectedResume.candidateId, updateData);
 
-      // ✅ Optional resume upload
-      if (formData.resumeFile) {
-        await uploadResume(accessToken, selectedResume.candidateId, formData.resumeFile);
+        if (formData.resumeFile) {
+          await uploadResume(accessToken, selectedResume.candidateId, formData.resumeFile);
+        }
+
+        toast.current?.show({
+          severity: "success",
+          summary: "Success",
+          detail: "Candidate updated successfully!",
+          life: 3000,
+        });
+      } else {
+        await createCandidate(accessToken, formData);
+        toast.current?.show({
+          severity: "success",
+          summary: "Success",
+          detail: "Candidate added successfully!",
+          life: 3000,
+        });
       }
-    } else {
-      // ✅ Create new candidate
-      await createCandidate(accessToken, formData);
+
+      onSuccess();
+      onHide();
+    } catch (err: any) {
+      console.error("Error saving candidate:", err);
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Something went wrong. Please try again.",
+        life: 5000,
+      });
+    } finally {
+      setSubmitted(false);
     }
-
-    onSuccess();
-    onHide();
-  } catch (err) {
-    console.error("Error saving candidate:", err);
-  } finally {
-    setSubmitted(false);
-  }
-}, [
-  formData,
-  isEditMode,
-  onHide,
-  onSuccess,
-  selectedResume,
-  validateForm,
-  accessToken,
-]);
-
+  }, [
+    formData,
+    isEditMode,
+    onHide,
+    onSuccess,
+    selectedResume,
+    validateForm,
+    accessToken,
+  ]);
 
   const prefixSymbol = useMemo(
     () => (formData.preferredJobLocation === "San Francisco" ? "$" : "₹"),
@@ -248,141 +254,144 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   );
 
   return (
-    <Dialog
-      visible={visible}
-      header={isEditMode ? "Edit Resume" : "Add New Resume"}
-      onHide={onHide}
-      footer={dialogFooter}
-      style={{ width: "900px", maxHeight: "90vh" }}
-      modal
-      className="p-fluid"
-    >
-      <div className="formgrid grid">
-        {/* Candidate Info */}
-        <InputField
-          id="candidateName"
-          label="Candidate Name"
-          value={formData.candidateName}
-          onChange={(e) => handleChange("candidateName", e.target.value)}
-          onBlur={() => handleBlur("candidateName")}
-          error={shouldShowError("candidateName")}
-        />
+    <>
+      <Toast ref={toast} />
+      <Dialog
+        visible={visible}
+        header={isEditMode ? "Edit Resume" : "Add New Resume"}
+        onHide={onHide}
+        footer={dialogFooter}
+        style={{ width: "900px", maxHeight: "90vh" }}
+        modal
+        className="p-fluid"
+      >
+        <div className="formgrid grid">
+          {/* Candidate Info */}
+          <InputField
+            id="candidateName"
+            label="Candidate Name"
+            value={formData.candidateName}
+            onChange={(e) => handleChange("candidateName", e.target.value)}
+            onBlur={() => handleBlur("candidateName")}
+            error={shouldShowError("candidateName")}
+          />
 
-        <DropdownField
-          id="recruiterName"
-          label="Recruiter"
-          value={formData.recruiterName}
-          options={RECRUITER_OPTIONS}
-          onChange={(e: { value: string }) => handleChange("recruiterName", e.value)}
-          onBlur={() => handleBlur("recruiterName")}
-          error={shouldShowError("recruiterName")}
-        />
+          <DropdownField
+            id="recruiterName"
+            label="Recruiter"
+            value={formData.recruiterName}
+            options={RECRUITER_OPTIONS}
+            onChange={(e: { value: string }) => handleChange("recruiterName", e.value)}
+            onBlur={() => handleBlur("recruiterName")}
+            error={shouldShowError("recruiterName")}
+          />
 
-        <InputField
-          id="contactNumber"
-          label="Contact Number"
-          value={formData.contactNumber}
-          placeholder="e.g. 9876543210"
-          onChange={(e) => handleChange("contactNumber", e.target.value)}
-          onBlur={() => handleBlur("contactNumber")}
-          error={shouldShowError("contactNumber")}
-        />
+          <InputField
+            id="contactNumber"
+            label="Contact Number"
+            value={formData.contactNumber}
+            placeholder="e.g. 9876543210"
+            onChange={(e) => handleChange("contactNumber", e.target.value)}
+            onBlur={() => handleBlur("contactNumber")}
+            error={shouldShowError("contactNumber")}
+          />
 
-        <InputField
-          id="email"
-          label="Email"
-          value={formData.email}
-          onChange={(e) => handleChange("email", e.target.value)}
-          onBlur={() => handleBlur("email")}
-          error={shouldShowError("email")}
-        />
+          <InputField
+            id="email"
+            label="Email"
+            value={formData.email}
+            onChange={(e) => handleChange("email", e.target.value)}
+            onBlur={() => handleBlur("email")}
+            error={shouldShowError("email")}
+          />
 
-        <InputField
-          id="jobRole"
-          label="Job Role"
-          value={formData.jobRole}
-          onChange={(e) => handleChange("jobRole", e.target.value)}
-          onBlur={() => handleBlur("jobRole")}
-          error={shouldShowError("jobRole")}
-        />
+          <InputField
+            id="jobRole"
+            label="Job Role"
+            value={formData.jobRole}
+            onChange={(e) => handleChange("jobRole", e.target.value)}
+            onBlur={() => handleBlur("jobRole")}
+            error={shouldShowError("jobRole")}
+          />
 
-        <DropdownField
-          id="preferredJobLocation"
-          label="Preferred Location"
-          value={formData.preferredJobLocation}
-          options={LOCATION_OPTIONS}
-          onChange={(e: { value: string }) => handleChange("preferredJobLocation", e.value)}
-          onBlur={() => handleBlur("preferredJobLocation")}
-          error={shouldShowError("preferredJobLocation")}
-        />
+          <DropdownField
+            id="preferredJobLocation"
+            label="Preferred Location"
+            value={formData.preferredJobLocation}
+            options={LOCATION_OPTIONS}
+            onChange={(e: { value: string }) => handleChange("preferredJobLocation", e.value)}
+            onBlur={() => handleBlur("preferredJobLocation")}
+            error={shouldShowError("preferredJobLocation")}
+          />
 
-        <InputNumberField
-          id="currentCTC"
-          label="Current CTC"
-          value={formData.currentCTC}
-          onChange={(val: number | null) => handleChange("currentCTC", val)}
-          prefix={prefixSymbol}
-          onBlur={() => handleBlur("currentCTC")}
-          error={shouldShowError("currentCTC")}
-        />
+          <InputNumberField
+            id="currentCTC"
+            label="Current CTC"
+            value={formData.currentCTC}
+            onChange={(val: number | null) => handleChange("currentCTC", val)}
+            prefix={prefixSymbol}
+            onBlur={() => handleBlur("currentCTC")}
+            error={shouldShowError("currentCTC")}
+          />
 
-        <InputNumberField
-          id="expectedCTC"
-          label="Expected CTC"
-          value={formData.expectedCTC}
-          onChange={(val: number | null) => handleChange("expectedCTC", val)}
-          prefix={prefixSymbol}
-          onBlur={() => handleBlur("expectedCTC")}
-          error={shouldShowError("expectedCTC")}
-        />
+          <InputNumberField
+            id="expectedCTC"
+            label="Expected CTC"
+            value={formData.expectedCTC}
+            onChange={(val: number | null) => handleChange("expectedCTC", val)}
+            prefix={prefixSymbol}
+            onBlur={() => handleBlur("expectedCTC")}
+            error={shouldShowError("expectedCTC")}
+          />
 
-        <InputNumberField
-          id="noticePeriod"
-          label="Notice Period (Days)"
-          value={formData.noticePeriod}
-          onChange={(val: number | null) => handleChange("noticePeriod", val)}
-          onBlur={() => handleBlur("noticePeriod")}
-          error={shouldShowError("noticePeriod")}
-        />
+          <InputNumberField
+            id="noticePeriod"
+            label="Notice Period (Days)"
+            value={formData.noticePeriod}
+            onChange={(val: number | null) => handleChange("noticePeriod", val)}
+            onBlur={() => handleBlur("noticePeriod")}
+            error={shouldShowError("noticePeriod")}
+          />
 
-        <InputNumberField
-          id="experienceYears"
-          label="Experience (Years)"
-          value={formData.experienceYears}
-          onChange={(val: number | null) => handleChange("experienceYears", val)}
-          onBlur={() => handleBlur("experienceYears")}
-          error={shouldShowError("experienceYears")}
-        />
+          <InputNumberField
+            id="experienceYears"
+            label="Experience (Years)"
+            value={formData.experienceYears}
+            onChange={(val: number | null) => handleChange("experienceYears", val)}
+            onBlur={() => handleBlur("experienceYears")}
+            error={shouldShowError("experienceYears")}
+          />
 
-        <DropdownField
-          id="statusName"
-          label="Status"
-          value={formData.statusName}
-          options={STATUS_OPTIONS}
-          onChange={(e: { value: string }) => handleChange("statusName", e.value)}
-          onBlur={() => handleBlur("statusName")}
-          error={shouldShowError("statusName")}
-        />
+          <DropdownField
+            id="statusName"
+            label="Status"
+            value={formData.statusName}
+            options={STATUS_OPTIONS}
+            onChange={(e: { value: string }) => handleChange("statusName", e.value)}
+            onBlur={() => handleBlur("statusName")}
+            error={shouldShowError("statusName")}
+          />
 
-        <InputField
-          id="linkedinProfileUrl"
-          label="LinkedIn URL"
-          value={formData.linkedinProfileUrl}
-          onChange={(e) =>
-            handleChange("linkedinProfileUrl", e.target.value)
-          }
-          onBlur={() => handleBlur("linkedinProfileUrl")}
-          placeholder="https://www.linkedin.com/in/..."
-          error={shouldShowError("linkedinProfileUrl")}
-        />
+          <InputField
+            id="linkedinProfileUrl"
+            label="LinkedIn URL"
+            value={formData.linkedinProfileUrl}
+            onChange={(e) =>
+              handleChange("linkedinProfileUrl", e.target.value)
+            }
+            onBlur={() => handleBlur("linkedinProfileUrl")}
+            placeholder="https://www.linkedin.com/in/..."
+            error={shouldShowError("linkedinProfileUrl")}
+          />
 
-        <FileUploadField
-          file={formData.resumeFile}
-          onSelect={(file) => handleChange("resumeFile", file)}
-          error={shouldShowError("resumeFile")}
-        />
-      </div>
-    </Dialog>
+          <FileUploadField
+            file={formData.resumeFile}
+            onSelect={(file) => handleChange("resumeFile", file)}
+            error={shouldShowError("resumeFile")}
+          />
+        </div>
+      </Dialog>
+    </>
   );
 };
 
