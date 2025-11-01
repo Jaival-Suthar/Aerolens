@@ -1,100 +1,152 @@
-// src/pages/Department/services/departmentService.ts
-import {
+// src/pages/Department/services/useDepartment.ts
+import type {
   Department,
   DepartmentsResponse,
   AddDepartmentPayload,
   UpdateDepartmentPayload,
   ApiResponse,
   ErrorResponse,
-} from '../types/departmentTypes';
-//thisdd sd
-const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
+} from "../types/departmentTypes";
 
-export default API_BASE_URL;
+const API_URL: string = import.meta.env.VITE_BASE_URL;
+const IS_DEV = import.meta.env.DEV;
 
-// Get all departments for a client
-export const getDepartments = async (clientId: number): Promise<DepartmentsResponse> => {
-  try {
-    const response: Response = await fetch(`${API_BASE_URL}/client/${clientId}`);
-    if (!response.ok) throw new Error('Failed to fetch departments');
-
-    const result: ApiResponse<DepartmentsResponse> = await response.json();
-    return result?.data || { departments: [], clientName: '' };
-  } catch (error) {
-    console.error('Error fetching departments:', error);
-    throw error;
-  }
+const logger = {
+  log: (...args: any[]) => IS_DEV && console.log("DEPARTMENT LOG:", ...args),
+  error: (...args: any[]) => console.error("DEPARTMENT ERROR:", ...args),
 };
 
-// Add a new department
-export const addDepartment = async (payload: AddDepartmentPayload): Promise<ApiResponse<Department>> => {
+/* ------------------------------------------------------------------------- */
+/*  HEADER BUILDER                                                           */
+/* ------------------------------------------------------------------------- */
+const makeHeaders = (accessToken?: string, isFormData = false): HeadersInit => {
+  const headers: HeadersInit = {};
+  if (!isFormData) headers["Content-Type"] = "application/json";
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+  return headers;
+};
+
+/* ------------------------------------------------------------------------- */
+/*  GLOBAL API FETCH HELPER                                                  */
+/* ------------------------------------------------------------------------- */
+async function apiFetch<T>(
+  endpoint: string,
+  options: RequestInit = {},
+  accessToken?: string
+): Promise<T> {
+  const url = `${API_URL}${endpoint}`;
+  const headers = new Headers(options.headers);
+
+  if (accessToken && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+
+  const isFormData = options.body instanceof FormData;
+  if (!isFormData && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
   try {
-    const response: Response = await fetch(`${API_BASE_URL}/department`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    const response = await fetch(url, { ...options, headers, credentials: "include" });
 
     if (!response.ok) {
-      const errData: ErrorResponse = await response.json();
-      throw new Error(errData.message || 'Failed to add department');
+      const errorText = await response.text();
+      throw new Error(`API Error (${response.status}) – ${errorText || response.statusText}`);
     }
 
-    return await response.json();
+    if (response.status === 204) return {} as T;
+    const data = await response.json();
+    return (data.data ?? data) as T;
   } catch (error) {
-    console.error('Error adding department:', error);
+    logger.error("Network/API failure:", error);
+    throw error;
+  }
+}
+
+/* ========================================================================= */
+/*  CRUD OPERATIONS                                                          */
+/* ========================================================================= */
+
+// -------------------- GET DEPARTMENTS --------------------
+export const getDepartments = async (
+  accessToken: string | null,
+  clientId: number
+): Promise<DepartmentsResponse> => {
+  try {
+    const endpoint = `/client/${clientId}`;
+    const response = await apiFetch<DepartmentsResponse>(
+      endpoint,
+      { method: "GET" },
+      accessToken || undefined
+    );
+
+    return response;
+  } catch (error) {
+    logger.error("Error in getDepartments:", error);
     throw error;
   }
 };
 
-// Update an existing department
-export const updateDepartment = async (payload: UpdateDepartmentPayload): Promise<ApiResponse<Department>> => {
+// -------------------- ADD DEPARTMENT --------------------
+export const addDepartment = async (
+  accessToken: string | null,
+  payload: AddDepartmentPayload
+): Promise<ApiResponse<Department>> => {
+  try {
+    return await apiFetch<ApiResponse<Department>>(
+      `/department`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+      accessToken || undefined
+    );
+  } catch (error) {
+    logger.error("Error in addDepartment:", error);
+    throw error;
+  }
+};
+
+// -------------------- UPDATE DEPARTMENT --------------------
+export const updateDepartment = async (
+  accessToken: string | null,
+  payload: UpdateDepartmentPayload
+): Promise<ApiResponse<Department>> => {
   try {
     const { departmentId, departmentName, departmentDescription } = payload;
 
-    // Build update body with required fields only
-    const updateBody: Partial<Omit<Department, 'departmentId'>> = {};
-
+    const updateBody: Partial<Omit<Department, "departmentId">> = {};
     if (departmentName) updateBody.departmentName = departmentName;
     if (departmentDescription) updateBody.departmentDescription = departmentDescription;
 
     if (!departmentName && !departmentDescription) {
-      throw new Error('At least one of departmentName or departmentDescription must be provided for update');
+      throw new Error("At least one field required for update");
     }
-
-    const response: Response = await fetch(`${API_BASE_URL}/department/${departmentId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updateBody),
-    });
-
-    if (!response.ok) {
-      const errData: ErrorResponse = await response.json();
-      throw new Error(errData.message || 'Failed to update department');
-    }
-
-    return await response.json();
+    return await apiFetch<ApiResponse<Department>>(
+      `/department/${departmentId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(updateBody),
+      },
+      accessToken || undefined
+    );
   } catch (error) {
-    console.error('Error updating department:', error);
+    logger.error("Error in updateDepartment:", error);
     throw error;
   }
 };
 
-// Delete department by id
-export const deleteDepartment = async (id: number): Promise<boolean> => {
+// -------------------- DELETE DEPARTMENT --------------------
+export const deleteDepartment = async (
+  accessToken: string | null,
+  id: number
+): Promise<void> => {
   try {
-    const response: Response = await fetch(`${API_BASE_URL}/department/${id}`, {
-      method: 'DELETE',
-    });
+    if (!id || typeof id !== "number") throw new Error("Valid department ID required");
 
-    if (!response.ok) {
-      const errData: ErrorResponse = await response.json();
-      throw new Error(errData.message || 'Failed to delete department');
-    }
-
-    return true;
+    await apiFetch(`/department/${id}`, { method: "DELETE" }, accessToken || undefined);
   } catch (error) {
-    console.error('Error deleting department:', error);
+    logger.error("Error in deleteDepartment:", error);
     throw error;
   }
 };
