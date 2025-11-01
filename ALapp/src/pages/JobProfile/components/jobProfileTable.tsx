@@ -22,10 +22,12 @@ import type {
   ClientOption, 
   JobProfilePayload
 } from '../types/jobProfileTypes';
+import { useAuth } from '../../../shared/auth/AuthContext'; // Import auth context
 
 const JobProfileMain: React.FC = () => {
   const toast = useRef<Toast>(null);
   const dt = useRef<DataTable<any>>(null);
+  const { accessToken } = useAuth(); // Get access token from auth context
   
   const [jobProfiles, setJobProfiles] = useState<JobProfile[]>([]);
   const [clients, setClients] = useState<ClientOption[]>([]);
@@ -58,7 +60,7 @@ const JobProfileMain: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const { jobProfiles: jobProfilesResponse, clients: clientsData } = await getJobProfiles();
+      const { jobProfiles: jobProfilesResponse, clients: clientsData } = await getJobProfiles(accessToken);
       
       if (!jobProfilesResponse.success) {
         throw new Error(jobProfilesResponse.message || 'Failed to load job profiles');
@@ -82,7 +84,7 @@ const JobProfileMain: React.FC = () => {
   const handleEdit = async (jobProfile: JobProfile) => {
     setLoading(true);
     try {
-      const response = await getJobProfileById(jobProfile.jobProfileId);
+      const response = await getJobProfileById(accessToken, jobProfile.jobProfileId);
       
       if (!response.success) {
         throw new Error(response.message || 'Failed to fetch job profile');
@@ -107,8 +109,8 @@ const JobProfileMain: React.FC = () => {
     try {
       // Simplified: single flow with ternary
       const response = selectedJobProfile?.jobProfileId
-        ? await updateJobProfile(selectedJobProfile.jobProfileId, jobProfileData)
-        : await createJobProfile(jobProfileData);
+        ? await updateJobProfile(accessToken, selectedJobProfile.jobProfileId, jobProfileData)
+        : await createJobProfile(accessToken, jobProfileData);
 
       if (!response.success) {
         throw new Error(response.message || 'Failed to save job profile');
@@ -127,7 +129,7 @@ const JobProfileMain: React.FC = () => {
     if (!selectedJobProfile) return;
 
     try {
-      const response = await deleteJobProfile(selectedJobProfile.jobProfileId);
+      const response = await deleteJobProfile(accessToken, selectedJobProfile.jobProfileId);
       
       if (!response.success) {
         throw new Error(response.message || 'Failed to delete job profile');

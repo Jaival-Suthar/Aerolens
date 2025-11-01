@@ -15,13 +15,14 @@ import ExportExcelButton from "../../shared/ExportExcelButton";
 import { createClient, updateClient, deleteClient } from "./services/clientService";
 import { VIEW_MODES, getMenuItems } from "../Contact/constants/contactConstants";
 import { ClientType, ClientAddType } from "./types/clientTypes";
+import { useAuth } from '../../shared/auth/AuthContext';
 
 const Client: React.FC = () => {
   // --- Dialog States ---
   const [dialogVisible, setDialogVisible] = useState(false);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
   const [dialogMode, setDialogMode] = useState<"add" | "edit">("add");
-
+  const { accessToken } = useAuth();
   // --- Data States ---
   const [selectedClient, setSelectedClient] = useState<ClientType | null>(null);
   const [editClient, setEditClient] = useState<ClientAddType | ClientType | null>(null);
@@ -90,66 +91,64 @@ const Client: React.FC = () => {
 
   // --- API Handlers ---
   const handleSaveClient = useCallback(
-    async (client: ClientType | ClientAddType) => {
-      setLoading(true);
-      try {
-        if (dialogMode === "add") {
-          const newClient = client as ClientAddType;
-          await createClient({
-            name: newClient.clientName.trim(),
-            address: newClient.address.trim(),
-          });
-          showToast("success", "Success", "Client added successfully");
-        } else {
-          const existingClient = client as ClientType;
-          if (!existingClient.clientId) {
-            throw new Error("Invalid client ID");
-          }
-          await updateClient({
-            id: existingClient.clientId,
-            name: existingClient.clientName.trim(),
-            address: existingClient.address.trim(),
-          });
-          showToast("success", "Success", "Client updated successfully");
+  async (client: ClientType | ClientAddType) => {
+    setLoading(true);
+    try {
+      if (dialogMode === "add") {
+        const newClient = client as ClientAddType;
+        await createClient(accessToken, {
+          name: newClient.clientName.trim(),
+          address: newClient.address.trim(),
+        });
+        showToast("success", "Success", "Client added successfully");
+      } else {
+        const existingClient = client as ClientType;
+        if (!existingClient.clientId) {
+          throw new Error("Invalid client ID");
         }
-        setRefreshTrigger((prev) => prev + 1);
-        closeAddEditDialog();
-      } catch (error) {
-        console.error("Save client error:", error);
-        showToast("error", "Error", "Failed to save client. Retry.");
-      } finally {
-        setLoading(false);
+        await updateClient(accessToken, {
+          id: existingClient.clientId,
+          name: existingClient.clientName.trim(),
+          address: existingClient.address.trim(),
+        });
+        showToast("success", "Success", "Client updated successfully");
       }
-    },
-    [dialogMode, showToast, closeAddEditDialog]
-  );
+      setRefreshTrigger((prev) => prev + 1);
+      closeAddEditDialog();
+    } catch (error) {
+      console.error("Save client error:", error);
+      showToast("error", "Error", "Failed to save client. Retry.");
+    } finally {
+      setLoading(false);
+    }
+  },
+  [dialogMode, showToast, closeAddEditDialog, accessToken]
+);
+
 
   const handleDeleteClient = useCallback(
-    async (client?: ClientType | null) => {
-      if (!client || client.clientId === undefined) {
-        showToast("error", "Error", "Invalid client selected.");
-        return;
-      }
-      setLoading(true);
-      try {
-        await deleteClient(Number(client.clientId));
-        showToast("success", "Success", "Client deleted successfully");
-        setRefreshTrigger((prev) => prev + 1);
-        setSelectedClient(null);
-        closeDeleteDialog();
-      } catch (error) {
-        console.error("Delete client error:", error);
-        showToast("error", "Error", "Failed to delete client. Retry.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [showToast, closeDeleteDialog]
-  );
+  async (client?: ClientType | null) => {
+    if (!client || client.clientId === undefined) {
+      showToast("error", "Error", "Invalid client selected.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await deleteClient(accessToken, Number(client.clientId));
+      showToast("success", "Success", "Client deleted successfully");
+      setRefreshTrigger((prev) => prev + 1);
+      setSelectedClient(null);
+      closeDeleteDialog();
+    } catch (error) {
+      console.error("Delete client error:", error);
+      showToast("error", "Error", "Failed to delete client. Retry.");
+    } finally {
+      setLoading(false);
+    }
+  },
+  [showToast, closeDeleteDialog, accessToken]
+);
 
-  const handleSelectionChange = useCallback((client: ClientType | null) => {
-    setSelectedClient(client);
-  }, []);
 
   const handleEditSelected = useCallback(() => {
     if (selectedClient) {
@@ -161,6 +160,10 @@ const Client: React.FC = () => {
   const isTableView = activeView === VIEW_MODES.TABLE;
   const isContactsView = activeView === VIEW_MODES.CONTACTS && selectedClient;
   const isDepartmentView = activeView === VIEW_MODES.DEPARTMENT && selectedClient;
+  const handleSelectionChange = useCallback((client: ClientType | null) => {
+  setSelectedClient(client);
+}, []);
+
 
   return (
     <div

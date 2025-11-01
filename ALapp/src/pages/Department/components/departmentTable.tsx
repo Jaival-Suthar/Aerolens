@@ -9,15 +9,12 @@ import DepartmentDelete from "../components/departmentDelete";
 import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
-import { 
-  Department, 
-  DepartmentTableProps 
-} from "../types/departmentTypes";
-
-const DepartmentTable: React.FC<DepartmentTableProps> = ({ 
-  clientId, 
-  clientName, 
-  onBackClick 
+import { Department, DepartmentTableProps } from "../types/departmentTypes";
+import { useAuth } from "../../../shared/auth/AuthContext";
+const DepartmentTable: React.FC<DepartmentTableProps> = ({
+  clientId,
+  clientName,
+  onBackClick,
 }) => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
@@ -25,20 +22,26 @@ const DepartmentTable: React.FC<DepartmentTableProps> = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
 
-  const loadDepartments = useCallback(async () => {
-  try {
-    const data = await getDepartments(clientId);
-    setDepartments(data.departments);
-  } catch (error) {
-    console.error("Error loading departments:", error);
-  }
-}, [clientId]);
+  // ✅ Add Auth Hook
+  const { accessToken } = useAuth();
 
-useEffect(() => {
-  if (clientId) {
+  // ✅ Load departments
+  const loadDepartments = useCallback(async () => {
+    console.log("Access Token inside loadDepartments:", accessToken);
+    if (!clientId || !accessToken) return;
+
+    try {
+      const data = await getDepartments(accessToken, clientId); // ✅ fixed param order
+      setDepartments(data.departments || []);
+    } catch (error) {
+      console.error("Error loading departments:", error);
+    }
+  }, [clientId, accessToken]);
+
+  useEffect(() => {
     loadDepartments();
-  }
-}, [clientId, loadDepartments]);
+  }, [loadDepartments]);
+
   const handleAdd = (): void => {
     setEditingDepartment(null);
     setShowAddEditDialog(true);
@@ -46,7 +49,6 @@ useEffect(() => {
 
   const handleEdit = (): void => {
     if (!selectedDepartment) return;
-    // Set selected department for edit mode
     setEditingDepartment(selectedDepartment);
     setShowAddEditDialog(true);
   };
@@ -57,25 +59,19 @@ useEffect(() => {
   };
 
   const handleAddEditSuccess = (): void => {
-    loadDepartments();
+    void loadDepartments();
   };
-
+  
   const handleDeleteSuccess = (): void => {
-    loadDepartments();
+    void loadDepartments();
   };
-
-  const handleClearSelection = (): void => {
-    setSelectedDepartment(null);
-  };
-
+  
+  const handleClearSelection = (): void => setSelectedDepartment(null);
   const handleAddEditDialogHide = (): void => {
     setShowAddEditDialog(false);
     setEditingDepartment(null);
   };
-
-  const handleDeleteDialogHide = (): void => {
-    setShowDeleteDialog(false);
-  };
+  const handleDeleteDialogHide = (): void => setShowDeleteDialog(false);
 
   const handleSelectionChange = (e: DataTableSelectionSingleChangeEvent<Department[]>): void => {
     setSelectedDepartment(e.value);
@@ -94,25 +90,16 @@ useEffect(() => {
             size="large"
           />
         </div>
-        
+
         <div className="flex gap-2 ml-auto mr-6">
-          <AddButton
-            onClick={handleAdd}
-            disabled={!clientId}
-          />
-          <EditButton
-            onClick={handleEdit}
-            disabled={!selectedDepartment}
-          />
-          <DeleteButton
-            onClick={handleDelete}
-            disabled={!selectedDepartment}
-          />
+          <AddButton onClick={handleAdd} disabled={!clientId} />
+          <EditButton onClick={handleEdit} disabled={!selectedDepartment} />
+          <DeleteButton onClick={handleDelete} disabled={!selectedDepartment} />
         </div>
       </div>
 
       <h4 className="mb-3">Departments for: {clientName}</h4>
-      
+
       <DataTable
         value={departments}
         paginator
@@ -129,7 +116,6 @@ useEffect(() => {
         <Column field="departmentName" header="Department Name" />
         <Column field="departmentDescription" header="Description" />
       </DataTable>
-
       {/* Add/Edit Dialog */}
       <DepartmentAddEdit
         visible={showAddEditDialog}
@@ -138,7 +124,6 @@ useEffect(() => {
         clientId={clientId}
         onSuccess={handleAddEditSuccess}
       />
-
       {/* Delete Dialog */}
       <DepartmentDelete
         visible={showDeleteDialog}

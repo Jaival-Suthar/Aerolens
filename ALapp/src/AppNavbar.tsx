@@ -12,11 +12,12 @@ import {
   FaCog,
   FaUser,
 } from "react-icons/fa";
+import { useProfileStore } from "./shared/store/profile";
 
 const AppNavbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-
+  const { toggleSidebar } = useProfileStore();
   const handleNavigation = useCallback(
     (path: string) => {
       navigate(path);
@@ -160,7 +161,7 @@ const AppNavbar: React.FC = () => {
           color: "#666666",
           fontSize: 15,
         }}
-        onClick={() => handleNavigation("/profile")}
+        onClick={toggleSidebar}
       />
     </div>
   );
