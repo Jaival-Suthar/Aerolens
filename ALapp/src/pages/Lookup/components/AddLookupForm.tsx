@@ -1,12 +1,13 @@
-import React, { useState, useRef } from 'react';
-import { Dialog } from 'primereact/dialog';
-import { InputText } from 'primereact/inputtext';
-import { Button } from 'primereact/button';
-import { Toast } from 'primereact/toast';
-import { lookupService } from '../services/lookupService';
-import { ValidationError } from '../types/lookupTypes';
-import DialogButton from '../../../shared/DialogAddEditButton';
+import React, { useState, useRef } from "react";
+import { Dialog } from "primereact/dialog";
+import { InputText } from "primereact/inputtext";
+import { Toast } from "primereact/toast";
+import { lookupService } from "../services/lookupService";
+import { ValidationError } from "../types/lookupTypes";
+import DialogButton from "../../../shared/DialogAddEditButton";
 import { FaCheck } from "react-icons/fa";
+import { useAuth } from "../../../shared/auth/AuthContext"; // ✅ get token
+
 interface AddLookupFormProps {
   visible: boolean;
   onHide: () => void;
@@ -29,83 +30,85 @@ export const AddLookupForm: React.FC<AddLookupFormProps> = ({
   onSuccess,
 }) => {
   const toast = useRef<Toast>(null);
+  const { accessToken } = useAuth(); // ✅ bring in token from context
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<FormData>({
-    tag: '',
-    value: '',
-  });
+  const [formData, setFormData] = useState<FormData>({ tag: "", value: "" });
   const [errors, setErrors] = useState<ValidationErrors>({});
 
-  // Client-side validation
+  // --- Validation ---
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
 
-    if (!formData.tag.trim()) {
-      newErrors.tag = 'Tag is required';
-    } else if (formData.tag.length > 100) {
-      newErrors.tag = 'Tag must be 100 characters or less';
-    }
+    if (!formData.tag.trim()) newErrors.tag = "Tag is required";
+    else if (formData.tag.length > 100)
+      newErrors.tag = "Tag must be 100 characters or less";
 
-    if (!formData.value.trim()) {
-      newErrors.value = 'Value is required';
-    } else if (formData.value.length > 500) {
-      newErrors.value = 'Value must be 500 characters or less';
-    }
+    if (!formData.value.trim()) newErrors.value = "Value is required";
+    else if (formData.value.length > 500)
+      newErrors.value = "Value must be 500 characters or less";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle form submission
+  // --- Submit Handler ---
   const handleSubmit = async () => {
-    if (!validateForm()) {
+    if (!validateForm()) return;
+
+    if (!accessToken) {
+      toast.current?.show({
+        severity: "warn",
+        summary: "Authentication Required",
+        detail: "Please log in again to continue.",
+        life: 3000,
+      });
       return;
     }
 
     setLoading(true);
     try {
-      const response = await lookupService.create({
+      const response = await lookupService.create(accessToken, {
         tag: formData.tag.trim(),
         value: formData.value.trim(),
       });
 
       if (response.success) {
         toast.current?.show({
-          severity: 'success',
-          summary: 'Success',
-          detail: response.message || 'Lookup entry created successfully',
+          severity: "success",
+          summary: "Success",
+          detail: response.message || "Lookup entry created successfully",
           life: 3000,
         });
-
-        // Reset form and close dialog
         resetForm();
         onSuccess();
         onHide();
       } else {
-        // Handle API response with success: false
-        if (response.error === 'VALIDATION_ERROR' && response.details?.validationErrors) {
+        // Handle validation errors from backend
+        if (
+          response.error === "VALIDATION_ERROR" &&
+          response.details?.validationErrors
+        ) {
           const backendErrors: ValidationErrors = {};
           response.details.validationErrors.forEach((err: ValidationError) => {
-            if (err.field === 'tag' || err.field === 'value') {
-              backendErrors[err.field as keyof ValidationErrors] = err.message;
+            if (err.field === "tag" || err.field === "value") {
+              backendErrors[err.field] = err.message;
             }
           });
           setErrors(backendErrors);
         }
 
         toast.current?.show({
-          severity: 'error',
-          summary: 'Error',
-          detail: response.message || 'Failed to create lookup entry',
+          severity: "error",
+          summary: "Error",
+          detail: response.message || "Failed to create lookup entry",
           life: 3000,
         });
       }
     } catch (error: any) {
-      // Handle network or unexpected errors
       toast.current?.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: error.message || 'Failed to create lookup entry',
+        severity: "error",
+        summary: "Error",
+        detail: error.message || "Failed to create lookup entry",
         life: 3000,
       });
     } finally {
@@ -113,27 +116,23 @@ export const AddLookupForm: React.FC<AddLookupFormProps> = ({
     }
   };
 
-  // Reset form
+  // --- Helpers ---
   const resetForm = () => {
-    setFormData({ tag: '', value: '' });
+    setFormData({ tag: "", value: "" });
     setErrors({});
   };
 
-  // Handle dialog hide
   const handleHide = () => {
     resetForm();
     onHide();
   };
 
-  // Handle input change
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear error for this field when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
+  // --- Dialog Footer ---
   const dialogFooter = (
     <div>
       <DialogButton
@@ -146,7 +145,7 @@ export const AddLookupForm: React.FC<AddLookupFormProps> = ({
       <DialogButton
         label="Add Lookup"
         severity="success"
-        icon={<FaCheck style={{ fontSize: 16, marginRight: 8, marginLeft: 4}}/>}
+        icon={<FaCheck style={{ fontSize: 16, marginRight: 8, marginLeft: 4 }} />}
         onClick={handleSubmit}
         className="w-auto"
         loading={loading}
@@ -160,13 +159,9 @@ export const AddLookupForm: React.FC<AddLookupFormProps> = ({
       <Dialog
         header="Add New Lookup Entry"
         visible={visible}
-        style={{ width: '450px' }}
+        style={{ width: "450px" }}
         footer={dialogFooter}
-          onHide={() => {
-          // Ensure consistent reset behavior and trigger parent hide callback
-          resetForm();
-          onHide();
-        }}
+        onHide={handleHide}
         draggable={false}
         modal
         data-testid="lookup-dialog"
@@ -179,15 +174,13 @@ export const AddLookupForm: React.FC<AddLookupFormProps> = ({
             <InputText
               id="tag"
               value={formData.tag}
-              onChange={(e) => handleInputChange('tag', e.target.value)}
+              onChange={(e) => handleInputChange("tag", e.target.value)}
               placeholder="Enter tag (e.g., status)"
               maxLength={100}
-              className={errors.tag ? 'p-invalid' : ''}
+              className={errors.tag ? "p-invalid" : ""}
               disabled={loading}
             />
-            {errors.tag && (
-              <small className="p-error">{errors.tag}</small>
-            )}
+            {errors.tag && <small className="p-error">{errors.tag}</small>}
             <small className="text-500">
               {formData.tag.length}/100 characters
             </small>
@@ -200,15 +193,13 @@ export const AddLookupForm: React.FC<AddLookupFormProps> = ({
             <InputText
               id="value"
               value={formData.value}
-              onChange={(e) => handleInputChange('value', e.target.value)}
+              onChange={(e) => handleInputChange("value", e.target.value)}
               placeholder="Enter value (e.g., active)"
               maxLength={500}
-              className={errors.value ? 'p-invalid' : ''}
+              className={errors.value ? "p-invalid" : ""}
               disabled={loading}
             />
-            {errors.value && (
-              <small className="p-error">{errors.value}</small>
-            )}
+            {errors.value && <small className="p-error">{errors.value}</small>}
             <small className="text-500">
               {formData.value.length}/500 characters
             </small>
