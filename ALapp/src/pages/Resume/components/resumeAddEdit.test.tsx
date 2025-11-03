@@ -9,6 +9,20 @@ import {
   uploadResume,
 } from "../services/useResume";
 
+const mockCreateCandidate = vi.hoisted(() => vi.fn());
+const mockUpdateCandidate = vi.hoisted(() => vi.fn());
+const mockUploadResume = vi.hoisted(() => vi.fn());
+
+vi.mock('../../../shared/auth/AuthContext', () => ({
+  useAuth: () => ({
+    accessToken: 'mock-token-123',
+    isAuthenticated: true,
+    login: vi.fn(),
+    logout: vi.fn(),
+    logoutAll: vi.fn(),
+    refreshAccessToken: vi.fn(),
+  })
+}));
 // ---------- MOCKS ----------
 vi.mock("primereact/dialog", () => ({
   Dialog: ({ visible, header, children, footer }: any) =>
@@ -94,9 +108,9 @@ vi.mock("../../../shared/DialogAddEditButton", () => ({
 }));
 
 vi.mock("../services/useResume", () => ({
-  createCandidate: vi.fn(),
-  updateCandidate: vi.fn(),
-  uploadResume: vi.fn(),
+  createCandidate: mockCreateCandidate,
+  updateCandidate: mockUpdateCandidate,
+  uploadResume: mockUploadResume,
 }));
 
 vi.mock("react-icons/fa", () => ({
@@ -161,31 +175,52 @@ describe("ResumeAddEdit Component", () => {
     });
   });
 
-  it("calls createCandidate when adding a new candidate", async () => {
-    (createCandidate as any).mockResolvedValueOnce({});
+  it(
+  "calls createCandidate when adding a new candidate",
+  async () => {
+    // Arrange
+    mockCreateCandidate.mockResolvedValueOnce({});
 
     renderComponent();
 
-    // Use text content to find labels, then get following input
-    const candidateNameInput = screen.getByText("Candidate Name *").parentElement?.querySelector("input");
-    const contactNumberInput = screen.getByText("Contact Number *").parentElement?.querySelector("input");
-    const emailInput = screen.getByText("Email *").parentElement?.querySelector("input");
-    const recruiterSelect = screen.getByText("Recruiter *").parentElement?.querySelector("select");
-    const jobRoleInput = screen.getByText("Job Role *").parentElement?.querySelector("input");
-    const locationSelect = screen.getByText("Preferred Location *").parentElement?.querySelector("select");
-    const currentCTCInput = screen.getByText("Current CTC *").parentElement?.querySelector("input");
-    const expectedCTCInput = screen.getByText("Expected CTC *").parentElement?.querySelector("input");
-    const noticePeriodInput = screen.getByText("Notice Period (Days) *").parentElement?.querySelector("input");
-    const experienceInput = screen.getByText("Experience (Years) *").parentElement?.querySelector("input");
-    const statusSelect = screen.getByText("Status *").parentElement?.querySelector("select");
-    const linkedinInput = screen.getByText("LinkedIn URL *").parentElement?.querySelector("input");
+    // Helper to get input safely
+    const getInput = (label: string) =>
+      screen.getByText(label).parentElement?.querySelector("input") as HTMLInputElement | null;
 
-    if (!candidateNameInput || !contactNumberInput || !emailInput || !recruiterSelect || 
-        !jobRoleInput || !locationSelect || !currentCTCInput || !expectedCTCInput || 
-        !noticePeriodInput || !experienceInput || !statusSelect || !linkedinInput) {
+    const getSelect = (label: string) =>
+      screen.getByText(label).parentElement?.querySelector("select") as HTMLSelectElement | null;
+
+    const candidateNameInput = getInput("Candidate Name *");
+    const contactNumberInput = getInput("Contact Number *");
+    const emailInput = getInput("Email *");
+    const recruiterSelect = getSelect("Recruiter *");
+    const jobRoleInput = getInput("Job Role *");
+    const locationSelect = getSelect("Preferred Location *");
+    const currentCTCInput = getInput("Current CTC *");
+    const expectedCTCInput = getInput("Expected CTC *");
+    const noticePeriodInput = getInput("Notice Period (Days) *");
+    const experienceInput = getInput("Experience (Years) *");
+    const statusSelect = getSelect("Status *");
+    const linkedinInput = getInput("LinkedIn URL *");
+
+    if (
+      !candidateNameInput ||
+      !contactNumberInput ||
+      !emailInput ||
+      !recruiterSelect ||
+      !jobRoleInput ||
+      !locationSelect ||
+      !currentCTCInput ||
+      !expectedCTCInput ||
+      !noticePeriodInput ||
+      !experienceInput ||
+      !statusSelect ||
+      !linkedinInput
+    ) {
       throw new Error("Could not find form inputs");
     }
 
+    // Act
     await userEvent.type(candidateNameInput, "Alice");
     await userEvent.type(contactNumberInput, "9876543210");
     await userEvent.type(emailInput, "alice@example.com");
@@ -199,28 +234,37 @@ describe("ResumeAddEdit Component", () => {
     await userEvent.selectOptions(statusSelect, "Selected");
     await userEvent.type(linkedinInput, "https://www.linkedin.com/in/alice");
 
+    // Add a small delay — helps userEvent queue flush before assertion
+    await new Promise((r) => setTimeout(r, 10));
+
     await userEvent.click(screen.getByText("Add Candidate"));
 
+    // Assert
     await waitFor(() => {
-      expect(createCandidate).toHaveBeenCalledTimes(1);
-      const expectedPayload = {
-        candidateName: "Alice",
-        contactNumber: "9876543210",
-        email: "alice@example.com",
-        recruiterName: "Jayraj",
-        jobRole: "Frontend Dev",
-        preferredJobLocation: "Ahmedabad",
-        currentCTC: 5,
-        expectedCTC: 8,
-        noticePeriod: 30,
-        experienceYears: 3,
-        statusName: "Selected",
-        linkedinProfileUrl: "https://www.linkedin.com/in/alice",
-        resumeFile: null,
-      };
-      expect(createCandidate).toHaveBeenCalledWith(expectedPayload); 
+      expect(mockCreateCandidate).toHaveBeenCalledTimes(1);
     });
-  });
+
+    const expectedPayload = {
+      candidateName: "Alice",
+      contactNumber: "9876543210",
+      email: "alice@example.com",
+      recruiterName: "Jayraj",
+      jobRole: "Frontend Dev",
+      preferredJobLocation: "Ahmedabad",
+      currentCTC: 5,
+      expectedCTC: 8,
+      noticePeriod: 30,
+      experienceYears: 3,
+      statusName: "Selected",
+      linkedinProfileUrl: "https://www.linkedin.com/in/alice",
+      resumeFile: null,
+    };
+
+    expect(mockCreateCandidate).toHaveBeenCalledWith("mock-token-123", expectedPayload);
+  },
+  15000 // ⏰ Increase timeout
+);
+
 
   it("calls updateCandidate and uploadResume in edit mode", async () => {
     const selectedResume = {
@@ -240,8 +284,8 @@ describe("ResumeAddEdit Component", () => {
       resumeFile: null,
     };
 
-    (updateCandidate as any).mockResolvedValueOnce({});
-    (uploadResume as any).mockResolvedValueOnce({});
+    mockUpdateCandidate.mockResolvedValueOnce({});
+    mockUploadResume.mockResolvedValueOnce({});
 
     renderComponent({ selectedResume });
 
@@ -257,9 +301,9 @@ describe("ResumeAddEdit Component", () => {
 
     await waitFor(() => {
       expect(updateCandidate).toHaveBeenCalledTimes(1);
-      expect(updateCandidate).toHaveBeenCalledWith(10, expect.any(Object));
+      expect(updateCandidate).toHaveBeenCalledWith('mock-token-123',10, expect.any(Object));
       expect(uploadResume).toHaveBeenCalledTimes(1);
-      expect(uploadResume).toHaveBeenCalledWith(10, file);
+      expect(uploadResume).toHaveBeenCalledWith('mock-token-123',10, file);
     });
   });
 

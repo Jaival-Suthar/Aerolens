@@ -4,13 +4,35 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import ResumeDelete from "../components/resumeDelete";
 
-// ---- Mock deleteCandidate ----
-const mockDeleteCandidate = vi.fn();
+// ---- Hoisted mocks (must be declared before vi.mock calls) ----
+const mockDeleteCandidate = vi.hoisted(() => vi.fn());
 
-vi.mock("../../services/useResume", async () => {
-  const actual = await vi.importActual<any>("../../services/useResume");
-  return { ...actual, deleteCandidate: mockDeleteCandidate };
-});
+// ---- Mock AuthContext ----
+vi.mock("../../../shared/auth/AuthContext", () => ({
+  useAuth: () => ({
+    accessToken: "mock-token-123",
+    isAuthenticated: true,
+    login: vi.fn(),
+    logout: vi.fn(),
+    logoutAll: vi.fn(),
+    refreshAccessToken: vi.fn(),
+  }),
+}));
+
+// ---- Mock deleteCandidate ----
+vi.mock("../services/useResume", () => ({
+  deleteCandidate: mockDeleteCandidate,
+}));
+
+// ---- Mock Toast ----
+vi.mock("primereact/toast", () => ({
+  Toast: React.forwardRef((_props: any, ref: any) => {
+    React.useImperativeHandle(ref, () => ({
+      show: vi.fn(),
+    }));
+    return <div data-testid="toast" />;
+  }),
+}));
 
 // ---- Mock Dialog + Button ----
 vi.mock("primereact/dialog", () => ({
@@ -87,56 +109,90 @@ describe("ResumeDelete Component", () => {
     expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
   });
 
-//   it("calls deleteCandidate and callbacks on success", async () => {
-//     mockDeleteCandidate.mockResolvedValueOnce({});
+  it("calls deleteCandidate and callbacks on success", async () => {
+    mockDeleteCandidate.mockResolvedValueOnce({});
 
-//     render(
-//       <ResumeDelete
-//         visible={true}
-//         onHide={mockOnHide}
-//         selectedResume={candidate}
-//         onSuccess={mockOnSuccess}
-//         onClearSelection={mockOnClearSelection}
-//       />
-//     );
+    render(
+      <ResumeDelete
+        visible={true}
+        onHide={mockOnHide}
+        selectedResume={candidate}
+        onSuccess={mockOnSuccess}
+        onClearSelection={mockOnClearSelection}
+      />
+    );
 
-//     await userEvent.click(screen.getByText("Delete"));
+    await userEvent.click(screen.getByText("Delete"));
 
-//     await waitFor(() => {
-//       expect(mockDeleteCandidate).toHaveBeenCalledWith(candidate.candidateId);
-//       expect(mockOnClearSelection).toHaveBeenCalled();
-//       expect(mockOnSuccess).toHaveBeenCalled();
-//       expect(mockOnHide).toHaveBeenCalled();
-//     });
-//   });
+    await waitFor(() => {
+      expect(mockDeleteCandidate).toHaveBeenCalledWith("mock-token-123", 1);
+      expect(mockOnClearSelection).toHaveBeenCalled();
+      expect(mockOnSuccess).toHaveBeenCalled();
+      expect(mockOnHide).toHaveBeenCalled();
+    });
+  });
 
-//   it("handles error correctly when deleteCandidate rejects", async () => {
-//     const error = new Error("Failed to delete");
-//     mockDeleteCandidate.mockRejectedValueOnce(error);
-//     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  it("handles error correctly when deleteCandidate rejects", async () => {
+    const error = new Error("Failed to delete");
+    mockDeleteCandidate.mockRejectedValueOnce(error);
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-//     render(
-//       <ResumeDelete
-//         visible={true}
-//         onHide={mockOnHide}
-//         selectedResume={candidate}
-//         onSuccess={mockOnSuccess}
-//         onClearSelection={mockOnClearSelection}
-//       />
-//     );
+    render(
+      <ResumeDelete
+        visible={true}
+        onHide={mockOnHide}
+        selectedResume={candidate}
+        onSuccess={mockOnSuccess}
+        onClearSelection={mockOnClearSelection}
+      />
+    );
 
-//     await userEvent.click(screen.getByText("Delete"));
+    await userEvent.click(screen.getByText("Delete"));
 
-//     await waitFor(() => {
-//       expect(mockDeleteCandidate).toHaveBeenCalledWith(candidate.candidateId);
-//       expect(consoleErrorSpy).toHaveBeenCalledWith(
-//         "Error deleting candidate:",
-//         error
-//       );
-//     });
+    await waitFor(() => {
+      expect(mockDeleteCandidate).toHaveBeenCalledWith("mock-token-123", 1);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "Error deleting candidate:",
+        error
+      );
+    });
 
-//     consoleErrorSpy.mockRestore();
-//   });
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("handles API error with response data message", async () => {
+    const error = {
+      response: {
+        data: {
+          message: "Candidate not found in database",
+        },
+      },
+    };
+    mockDeleteCandidate.mockRejectedValueOnce(error);
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    render(
+      <ResumeDelete
+        visible={true}
+        onHide={mockOnHide}
+        selectedResume={candidate}
+        onSuccess={mockOnSuccess}
+        onClearSelection={mockOnClearSelection}
+      />
+    );
+
+    await userEvent.click(screen.getByText("Delete"));
+
+    await waitFor(() => {
+      expect(mockDeleteCandidate).toHaveBeenCalledWith("mock-token-123", 1);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "Error deleting candidate:",
+        error
+      );
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
 
   it("calls onHide when cancel is clicked", async () => {
     render(
@@ -153,12 +209,29 @@ describe("ResumeDelete Component", () => {
     expect(mockOnHide).toHaveBeenCalled();
   });
 
-  it("does nothing when delete clicked but no selectedResume", async () => {
+  it("does nothing when delete clicked but selectedResume is null", async () => {
     render(
       <ResumeDelete
         visible={true}
         onHide={mockOnHide}
         selectedResume={null}
+        onSuccess={mockOnSuccess}
+        onClearSelection={mockOnClearSelection}
+      />
+    );
+
+    await userEvent.click(screen.getByText("Delete"));
+    expect(mockDeleteCandidate).not.toHaveBeenCalled();
+  });
+
+  it("does nothing when delete clicked but candidateId is missing", async () => {
+    const candidateWithoutId = { ...candidate, candidateId: undefined };
+
+    render(
+      <ResumeDelete
+        visible={true}
+        onHide={mockOnHide}
+        selectedResume={candidateWithoutId as any}
         onSuccess={mockOnSuccess}
         onClearSelection={mockOnClearSelection}
       />

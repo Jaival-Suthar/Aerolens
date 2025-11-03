@@ -6,6 +6,10 @@ import * as useResumeService from "../services/useResume";
 import { vi } from "vitest";
 import { cleanup } from "@testing-library/react";
 
+vi.mock("../../../shared/auth/AuthContext", () => ({
+  useAuth: () => ({ accessToken: "mock-token-123" }),
+}));
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -152,7 +156,8 @@ describe("ResumeTable Component", () => {
   });
 
   it("loads and displays resumes", async () => {
-    vi.spyOn(useResumeService, "getCandidates").mockResolvedValue(mockCandidates);
+    vi.spyOn(useResumeService, "getCandidates").mockResolvedValue({ candidates: mockCandidates });
+
 
     render(<ResumeTable />);
 
@@ -181,7 +186,8 @@ describe("ResumeTable Component", () => {
   });
 
   it("opens Add dialog when Add button clicked", async () => {
-  vi.spyOn(useResumeService, "getCandidates").mockResolvedValue([]);
+  vi.spyOn(useResumeService, "getCandidates").mockResolvedValue({ candidates: [] });
+
 
   render(<ResumeTable />);
   await waitFor(() => screen.getByTestId("add-button"));
@@ -194,7 +200,8 @@ describe("ResumeTable Component", () => {
 });
 
   it("opens Edit dialog only when a resume is selected", async () => {
-    vi.spyOn(useResumeService, "getCandidates").mockResolvedValue(mockCandidates);
+    vi.spyOn(useResumeService, "getCandidates").mockResolvedValue({ candidates: mockCandidates });
+
 
     render(<ResumeTable />);
     await waitFor(() => screen.getByText("John Doe"));
@@ -256,23 +263,23 @@ describe("ResumeTable Component", () => {
 //   removeChildSpy.mockRestore();
 // });
 
-//   it("opens preview window when clicking Preview button", async () => {
-//     vi.spyOn(useResumeService, "getCandidates").mockResolvedValue([mockCandidates[0]]);
+  // it("opens preview window when clicking Preview button", async () => {
+  //   vi.spyOn(useResumeService, "getCandidates").mockResolvedValue([mockCandidates[0]]);
 
-//     render(<ResumeTable />);
-//     await waitFor(() => screen.getByText("John Doe"));
+  //   render(<ResumeTable />);
+  //   await waitFor(() => screen.getByText("John Doe"));
 
-//     const windowOpenSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+  //   const windowOpenSpy = vi.spyOn(window, "open").mockImplementation(() => null);
 
-//     const previewButton = screen.getByRole("button", { name: /Preview Resume/i }) || screen.getAllByRole("button")[1];
-//     expect(previewButton).toBeInTheDocument();
+  //   const previewButton = screen.getByRole("button", { name: /Preview Resume/i }) || screen.getAllByRole("button")[1];
+  //   expect(previewButton).toBeInTheDocument();
 
-//     userEvent.click(previewButton);
+  //   userEvent.click(previewButton);
 
-//     expect(windowOpenSpy).toHaveBeenCalled();
+  //   expect(windowOpenSpy).toHaveBeenCalled();
 
-//     windowOpenSpy.mockRestore();
-//   });
+  //   windowOpenSpy.mockRestore();
+  // });
 
 //   it("renders ExportExcelButton with dt ref", async () => {
 //   vi.spyOn(useResumeService, "getCandidates").mockResolvedValue([]);
@@ -288,4 +295,5 @@ describe("ResumeTable Component", () => {
 
 //   appendChildSpy.mockRestore();
 // });
+
 });
