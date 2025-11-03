@@ -5,6 +5,7 @@ import { Toast } from "primereact/toast";
 import { deleteCandidate } from "../services/useResume";
 import { ResumeDeleteProps } from "../types/resumeTypes";
 import DialogDeleteButton from "../../../shared/DialogDeleteButton";
+import { useAuth } from "../../../shared/auth/AuthContext";
 
 const ResumeDelete: React.FC<ResumeDeleteProps> = ({
   visible,
@@ -13,7 +14,7 @@ const ResumeDelete: React.FC<ResumeDeleteProps> = ({
   onSuccess,
   onClearSelection,
 }) => {
-  const accessToken = localStorage.getItem("accessToken");
+  const { accessToken } = useAuth();
 
   // ✅ Toast ref
   const toast = useRef<Toast>(null);
