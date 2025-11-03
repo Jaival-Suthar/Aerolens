@@ -7,7 +7,35 @@ import React from 'react';
 vi.mock('./AppContent', () => ({
   default: () => <div data-testid="app-content">AppContent</div>,
 }));
+// Mock ProfileSidebar component
+vi.mock('./ProfileSideBar', () => ({
+  ProfileSidebar: () => <div data-testid="profile-sidebar">ProfileSidebar</div>,
+}));
+// Mock AuthContext (required by ProfileSidebar)
+vi.mock('./shared/auth/AuthContext', () => ({
+  useAuth: () => ({
+    accessToken: 'mock-token-123',
+    isAuthenticated: true,
+    login: vi.fn(),
+    logout: vi.fn(),
+    logoutAll: vi.fn(),
+    refreshAccessToken: vi.fn(),
+  }),
+  AuthProvider: ({ children }: any) => <div>{children}</div>,
+}));
 
+// Mock Profile Store (required by ProfileSidebar)
+vi.mock('./shared/store/profile', () => ({
+  useProfileStore: () => ({
+    member: null,
+    isSidebarOpen: false,
+    closeSidebar: vi.fn(),
+    openSidebar: vi.fn(),
+    toggleSidebar: vi.fn(),
+    setProfile: vi.fn(),
+    clearProfile: vi.fn(),
+  }),
+}));
 // Mock PrimeReactProvider
 vi.mock('primereact/api', () => ({
   PrimeReactProvider: ({ children }: any) => (
@@ -17,6 +45,12 @@ vi.mock('primereact/api', () => ({
 
 // Mock theme CSS
 vi.mock('primereact/resources/themes/saga-blue/theme.css', () => ({}));
+// Mock BrowserRouter
+vi.mock('react-router-dom', () => ({
+  BrowserRouter: ({ children }: any) => (
+    <div data-testid="browser-router">{children}</div>
+  ),
+}));
 
 describe('App', () => {
   beforeEach(() => {
@@ -25,9 +59,10 @@ describe('App', () => {
 
   describe('Structure & Providers', () => {
     it('renders App component without errors', () => {
-      render(<App />);
-      expect(screen.getByTestId('app-content')).toBeInTheDocument();
-    });
+        render(<App />);
+        expect(screen.getByTestId('app-content')).toBeInTheDocument();
+        expect(screen.getByTestId('profile-sidebar')).toBeInTheDocument();
+      });
 
     it('wraps content with PrimeReactProvider', () => {
       render(<App />);
@@ -35,6 +70,10 @@ describe('App', () => {
       const provider = screen.getByTestId('prime-react-provider');
       expect(provider).toBeInTheDocument();
     });
+    it('renders ProfileSidebar component', () => {
+  render(<App />);
+  expect(screen.getByTestId('profile-sidebar')).toBeInTheDocument();
+});
 
     it('renders AppContent component', async () => {
       render(<App />);
