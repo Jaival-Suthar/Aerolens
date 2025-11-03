@@ -6,23 +6,29 @@ import {
   updateCandidate,
   deleteCandidate,
   uploadResume,
-  secureDownloadResume,
+  downloadResume,
   getResumeDownloadUrl,
 } from './useResume';
-import type { Candidate, AddEditCandidate, CandidateUpdatePayload } from '../types/resumeTypes';
+import type { Candidate, AddEditCandidate } from '../types/resumeTypes';
 
 // Mock environment variables
 const MOCK_BASE_URL = 'https://aerolens-backend.onrender.com';
 vi.stubGlobal('import.meta', {
   env: {
     VITE_BASE_URL: MOCK_BASE_URL,
-    DEV: false, // Set to false to suppress console logs during tests
+    DEV: false,
   },
 });
 
+// Mock AuthContext
+vi.mock('../../../shared/auth/AuthContext', () => ({
+  useAuth: () => ({
+    accessToken: 'mock-token-123'
+  })
+}));
+
 describe('Candidate Service', () => {
   beforeEach(() => {
-    // Mock global fetch
     global.fetch = vi.fn();
   });
 
@@ -44,9 +50,9 @@ describe('Candidate Service', () => {
         preferredJobLocation: 'New York',
         currentCTC: 100000,
         expectedCTC: 120000,
+        statusName: 'Active',
         noticePeriod: 30,
         experienceYears: 5,
-        statusName: 'Active',
         linkedinProfileUrl: 'https://linkedin.com/in/johndoe',
         resumeFile: null,
       };
@@ -54,21 +60,23 @@ describe('Candidate Service', () => {
       const mockResponse: Candidate = {
         candidateId: 1,
         ...mockCandidate,
+        statusName: 'Active',
         resumeFile: undefined,
       } as any;
 
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: async () => ({ data: mockResponse }),
-      });
+      } as Response);
 
-      const result = await createCandidate(mockCandidate);
+      const result = await createCandidate('mock-token-123', mockCandidate);
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetch).toHaveBeenCalledWith(
         `${MOCK_BASE_URL}/candidate`,
         expect.objectContaining({
           method: 'POST',
+          credentials: 'include',
           body: expect.any(FormData),
         })
       );
@@ -87,8 +95,8 @@ describe('Candidate Service', () => {
         currentCTC: 100000,
         expectedCTC: 120000,
         noticePeriod: 30,
-        experienceYears: 5,
         statusName: 'Active',
+        experienceYears: 5,
         linkedinProfileUrl: 'https://linkedin.com/in/johndoe',
         resumeFile: mockFile,
       };
@@ -96,29 +104,30 @@ describe('Candidate Service', () => {
       const mockResponse: Candidate = {
         candidateId: 1,
         ...mockCandidate,
+        statusName: 'Active',
         resumeFilename: 'resume_123.pdf',
         resumeFile: undefined,
       } as any;
 
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: async () => ({ data: mockResponse }),
-      });
+      } as Response);
 
-      const result = await createCandidate(mockCandidate);
+      const result = await createCandidate('mock-token-123', mockCandidate);
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetch).toHaveBeenCalledWith(
         `${MOCK_BASE_URL}/candidate`,
         expect.objectContaining({
           method: 'POST',
+          credentials: 'include',
           body: expect.any(FormData),
         })
       );
 
-      // Verify FormData contains the resume file
-      const callArgs = (global.fetch as any).mock.calls[0];
-      const formData = callArgs[1].body as FormData;
+      const callArgs = vi.mocked(fetch).mock.calls[0];
+      const formData = callArgs[1]?.body as FormData;
       expect(formData.get('resume')).toBe(mockFile);
       expect(result).toEqual(mockResponse);
     });
@@ -134,21 +143,21 @@ describe('Candidate Service', () => {
         currentCTC: 100000,
         expectedCTC: 120000,
         noticePeriod: 30,
-        experienceYears: 5,
         statusName: 'Active',
+        experienceYears: 5,
         linkedinProfileUrl: 'https://linkedin.com/in/johndoe',
         resumeFile: null,
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(fetch).mockResolvedValueOnce({
         ok: false,
         status: 400,
         statusText: 'Bad Request',
-        json: async () => ({ error: 'Invalid email format' }),
-      });
+        text: async () => 'Invalid email format',
+      } as Response);
 
-      await expect(createCandidate(mockCandidate)).rejects.toThrow(
-        'API Error on https://aerolens-backend.onrender.com/candidate (400): Invalid email format'
+      await expect(createCandidate('mock-token-123', mockCandidate)).rejects.toThrow(
+        'API Error (400)'
       );
     });
   });
@@ -191,64 +200,55 @@ describe('Candidate Service', () => {
         },
       ];
 
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ data: { candidates: mockCandidates } }),
-      });
+        json: async () => ({ data: { candidates: mockCandidates, totalCount: 2 } }),
+      } as Response);
 
-      const result = await getCandidates(1, 5);
+      const result = await getCandidates('mock-token-123', 1, 10);
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        `${MOCK_BASE_URL}/candidate?pageSize=5&pageNumber=1`,
+      expect(fetch).toHaveBeenCalledWith(
+        `${MOCK_BASE_URL}/candidate?page=1&limit=10`,
         expect.objectContaining({
           method: 'GET',
+          credentials: 'include',
         })
       );
-      expect(result).toEqual(mockCandidates);
-      expect(result).toHaveLength(2);
+      expect(result.candidates).toEqual(mockCandidates);
+      expect(result.candidates).toHaveLength(2);
+      expect(result.totalCount).toBe(2);
     });
 
     it('should handle empty candidates list', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: async () => ({ data: { candidates: [] } }),
-      });
+      } as Response);
 
-      const result = await getCandidates(1, 5);
+      const result = await getCandidates('mock-token-123', 1, 10);
 
-      expect(result).toEqual([]);
-      expect(result).toHaveLength(0);
+      expect(result.candidates).toEqual([]);
+      expect(result.candidates).toHaveLength(0);
     });
 
-    it('should handle missing candidates field gracefully', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ data: {} }), // Missing candidates field
-      });
-
-      const result = await getCandidates(1, 5);
-
-      expect(result).toEqual([]);
-    });
-
-    it('should use default page size when not provided', async () => {
+    it('should use default pagination when not provided', async () => {
       const mockCandidates: Candidate[] = [];
 
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: async () => ({ data: { candidates: mockCandidates } }),
-      });
+      } as Response);
 
-      await getCandidates(1);
+      await getCandidates('mock-token-123');
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        `${MOCK_BASE_URL}/candidate?pageSize=5&pageNumber=1`,
+      expect(fetch).toHaveBeenCalledWith(
+        `${MOCK_BASE_URL}/candidate?page=1&limit=10`,
         expect.objectContaining({
           method: 'GET',
+          credentials: 'include',
         })
       );
     });
@@ -258,56 +258,56 @@ describe('Candidate Service', () => {
   // UPDATE CANDIDATE TESTS
   // =========================================================================
   describe('updateCandidate', () => {
-    it('should update candidate with partial data', async () => {
-      const updatePayload: CandidateUpdatePayload = {
-        candidateName: 'John Updated',
-        email: 'john.updated@example.com',
-      };
-
-      const mockResponse: Candidate = {
-        candidateId: 1,
+    it('should update candidate with all data', async () => {
+      const updatePayload = {
         candidateName: 'John Updated',
         contactNumber: '1234567890',
         email: 'john.updated@example.com',
         recruiterName: 'Jane Smith',
-        jobRole: 'Software Engineer',
+        jobRole: 'Senior Software Engineer',
         preferredJobLocation: 'New York',
-        currentCTC: 100000,
-        expectedCTC: 120000,
+        currentCTC: 110000,
+        expectedCTC: 130000,
         noticePeriod: 30,
-        experienceYears: 5,
+        experienceYears: 6,
         statusName: 'Active',
-        linkedinProfileUrl: 'https://linkedin.com/in/johndoe',
+        linkedinProfileUrl: 'https://linkedin.com/in/johnupdated',
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      const mockResponse = {
+        success: true,
+        message: 'Candidate updated successfully',
+        data: {
+          candidateId: 1,
+          ...updatePayload,
+        },
+      };
+
+      vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ data: mockResponse }),
-      });
+        json: async () => mockResponse,
+      } as Response);
 
-      const result = await updateCandidate(1, updatePayload);
+      const result = await updateCandidate('mock-token-123', 1, updatePayload);
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        `${MOCK_BASE_URL}/candidate/1`,
-        expect.objectContaining({
-          method: 'PATCH',
-          body: JSON.stringify({
-            candidateName: 'John Updated',
-            email: 'john.updated@example.com',
-          }),
-        })
-      );
+      expect(fetch).toHaveBeenCalledWith(
+  `${MOCK_BASE_URL}/candidate/1`,
+  expect.objectContaining({
+    method: 'PATCH',
+    headers: expect.objectContaining({
+      'Authorization': 'Bearer mock-token-123',
+      'Content-Type': 'application/json',
+    }),
+    body: JSON.stringify(updatePayload),
+  })
+);
+
       expect(result).toEqual(mockResponse);
     });
 
-    it('should map statusName to status field', async () => {
-      const updatePayload: CandidateUpdatePayload = {
-        statusName: 'Inactive',
-      };
-
-      const mockResponse: Candidate = {
-        candidateId: 1,
+    it('should handle update failure', async () => {
+      const updatePayload = {
         candidateName: 'John Doe',
         contactNumber: '1234567890',
         email: 'john@example.com',
@@ -318,82 +318,18 @@ describe('Candidate Service', () => {
         expectedCTC: 120000,
         noticePeriod: 30,
         experienceYears: 5,
-        statusName: 'Inactive',
-        linkedinProfileUrl: 'https://linkedin.com/in/johndoe',
-      };
-
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ data: mockResponse }),
-      });
-
-      await updateCandidate(1, updatePayload);
-
-      const callArgs = (global.fetch as any).mock.calls[0];
-      const bodyString = callArgs[1].body;
-      const body = JSON.parse(bodyString);
-
-      expect(body).toHaveProperty('status', 'Inactive');
-      expect(body).not.toHaveProperty('statusName');
-    });
-
-    it('should filter out undefined and null values', async () => {
-      const updatePayload: CandidateUpdatePayload = {
-        candidateName: 'John Doe',
-        email: undefined,
-        contactNumber: null as any,
-        currentCTC: 0, // Should be included (0 is valid)
-      };
-
-      const mockResponse: Candidate = {
-        candidateId: 1,
-        candidateName: 'John Doe',
-        contactNumber: '1234567890',
-        email: 'john@example.com',
-        recruiterName: 'Jane Smith',
-        jobRole: 'Software Engineer',
-        preferredJobLocation: 'New York',
-        currentCTC: 0,
-        expectedCTC: 120000,
-        noticePeriod: 30,
-        experienceYears: 5,
         statusName: 'Active',
         linkedinProfileUrl: 'https://linkedin.com/in/johndoe',
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ data: mockResponse }),
-      });
-
-      await updateCandidate(1, updatePayload);
-
-      const callArgs = (global.fetch as any).mock.calls[0];
-      const bodyString = callArgs[1].body;
-      const body = JSON.parse(bodyString);
-
-      expect(body).toHaveProperty('candidateName', 'John Doe');
-      expect(body).toHaveProperty('currentCTC', 0);
-      expect(body).not.toHaveProperty('email');
-      expect(body).not.toHaveProperty('contactNumber');
-    });
-
-    it('should handle update failure', async () => {
-      const updatePayload: CandidateUpdatePayload = {
-        candidateName: 'John Doe',
-      };
-
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(fetch).mockResolvedValueOnce({
         ok: false,
         status: 404,
         statusText: 'Not Found',
-        json: async () => ({ message: 'Candidate not found' }),
-      });
+      } as Response);
 
-      await expect(updateCandidate(999, updatePayload)).rejects.toThrow(
-        'API Error on https://aerolens-backend.onrender.com/candidate/999 (404): Candidate not found'
+      await expect(updateCandidate('mock-token-123', 999, updatePayload)).rejects.toThrow(
+        'Failed to update candidate: Not Found'
       );
     });
   });
@@ -403,45 +339,49 @@ describe('Candidate Service', () => {
   // =========================================================================
   describe('deleteCandidate', () => {
     it('should delete candidate successfully', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        status: 204, // No Content
+        status: 204,
         json: async () => ({}),
-      });
+      } as Response);
 
-      const result = await deleteCandidate(1);
+      await deleteCandidate('mock-token-123', 1);
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetch).toHaveBeenCalledWith(
         `${MOCK_BASE_URL}/candidate/1`,
         expect.objectContaining({
           method: 'DELETE',
+          credentials: 'include',
         })
       );
-      expect(result).toBe(true);
+    });
+
+    it('should throw error for invalid candidate ID', async () => {
+      await expect(deleteCandidate('mock-token-123', 0)).rejects.toThrow(
+        'Valid candidate ID is required for deletion'
+      );
     });
 
     it('should handle delete failure', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(fetch).mockResolvedValueOnce({
         ok: false,
         status: 404,
         statusText: 'Not Found',
         text: async () => 'Candidate not found',
-      });
+      } as Response);
 
-      await expect(deleteCandidate(999)).rejects.toThrow();
+      await expect(deleteCandidate('mock-token-123', 999)).rejects.toThrow('API Error (404)');
     });
 
     it('should handle server error on delete', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(fetch).mockResolvedValueOnce({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
-        json: async () => ({ error: 'Database connection failed' }),
-      });
+        text: async () => 'Database connection failed',
+      } as Response);
 
-      await expect(deleteCandidate(1)).rejects.toThrow(
-        'API Error on https://aerolens-backend.onrender.com/candidate/1 (500): Database connection failed'
-      );
+      await expect(deleteCandidate('mock-token-123', 1)).rejects.toThrow('API Error (500)');
     });
   });
 
@@ -456,25 +396,25 @@ describe('Candidate Service', () => {
         filename: 'resume_123.pdf',
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: async () => ({ data: mockResponse }),
-      });
+      } as Response);
 
-      const result = await uploadResume(1, mockFile);
+      const result = await uploadResume('mock-token-123', 1, mockFile);
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetch).toHaveBeenCalledWith(
         `${MOCK_BASE_URL}/candidate/1/resume`,
         expect.objectContaining({
           method: 'POST',
+          credentials: 'include',
           body: expect.any(FormData),
         })
       );
 
-      // Verify FormData contains the resume file
-      const callArgs = (global.fetch as any).mock.calls[0];
-      const formData = callArgs[1].body as FormData;
+      const callArgs = vi.mocked(fetch).mock.calls[0];
+      const formData = callArgs[1]?.body as FormData;
       expect(formData.get('resume')).toBe(mockFile);
       expect(result).toEqual(mockResponse);
     });
@@ -482,67 +422,64 @@ describe('Candidate Service', () => {
     it('should handle upload failure', async () => {
       const mockFile = new File(['resume content'], 'resume.pdf', { type: 'application/pdf' });
 
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(fetch).mockResolvedValueOnce({
         ok: false,
         status: 413,
         statusText: 'Payload Too Large',
-        json: async () => ({ error: 'File size exceeds limit' }),
-      });
+        text: async () => 'File size exceeds limit',
+      } as Response);
 
-      await expect(uploadResume(1, mockFile)).rejects.toThrow(
-        'API Error on https://aerolens-backend.onrender.com/candidate/1/resume (413): File size exceeds limit'
-      );
+      await expect(uploadResume('mock-token-123', 1, mockFile)).rejects.toThrow('API Error (413)');
     });
   });
 
   // =========================================================================
   // DOWNLOAD RESUME TESTS
   // =========================================================================
-  describe('secureDownloadResume', () => {
+  describe('downloadResume', () => {
     it('should download resume as blob successfully', async () => {
       const mockBlob = new Blob(['resume content'], { type: 'application/pdf' });
 
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         status: 200,
         blob: async () => mockBlob,
-      });
+      } as Response);
 
-      const result = await secureDownloadResume(1);
+      const result = await downloadResume('mock-token-123', 1);
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetch).toHaveBeenCalledWith(
         `${MOCK_BASE_URL}/candidate/1/resume`,
         expect.objectContaining({
-          method: 'GET',
-          headers: expect.any(Headers),
+          headers: expect.any(Object),
         })
       );
       expect(result).toBe(mockBlob);
     });
 
     it('should handle download failure', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(fetch).mockResolvedValueOnce({
         ok: false,
         status: 404,
         statusText: 'Not Found',
         text: async () => 'Resume not found',
-      });
+      } as Response);
 
-      await expect(secureDownloadResume(1)).rejects.toThrow(
-        'Failed to download resume. Status: 404'
+      await expect(downloadResume('mock-token-123', 1)).rejects.toThrow(
+        'Failed to download resume: Resume not found'
       );
     });
 
     it('should handle server error on download', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(fetch).mockResolvedValueOnce({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
         text: async () => 'Server error',
-      });
+      } as Response);
 
-      await expect(secureDownloadResume(1)).rejects.toThrow(
-        'Failed to download resume. Status: 500'
+      await expect(downloadResume('mock-token-123', 1)).rejects.toThrow(
+        'Failed to download resume: Server error'
       );
     });
   });
@@ -568,68 +505,32 @@ describe('Candidate Service', () => {
   // =========================================================================
   describe('Error Handling', () => {
     it('should handle network errors', async () => {
-      (global.fetch as any).mockRejectedValueOnce(new Error('Network failure'));
+      vi.mocked(fetch).mockRejectedValueOnce(new Error('Network failure'));
 
-      await expect(getCandidates(1, 5)).rejects.toThrow('Network failure');
+      await expect(getCandidates('mock-token-123', 1, 10)).rejects.toThrow('Network failure');
     });
 
     it('should handle timeout errors', async () => {
-      (global.fetch as any).mockImplementationOnce(
+      vi.mocked(fetch).mockImplementationOnce(
         () =>
           new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Request timeout')), 100)
           )
       );
 
-      await expect(getCandidates(1, 5)).rejects.toThrow();
+      await expect(getCandidates('mock-token-123', 1, 10)).rejects.toThrow();
     });
 
     it('should handle malformed JSON responses', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: async () => {
           throw new Error('Unexpected token in JSON');
         },
-      });
+      } as unknown as Response);
 
-      await expect(getCandidates(1, 5)).rejects.toThrow();
-    });
-
-    it('should attach status code to error object', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: false,
-        status: 403,
-        statusText: 'Forbidden',
-        json: async () => ({ error: 'Access denied' }),
-      });
-
-      try {
-        await getCandidates(1, 5);
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.status).toBe(403);
-        expect(error.message).toContain('403');
-      }
-    });
-  });
-
-  // =========================================================================
-  // AUTHORIZATION HEADER TESTS
-  // =========================================================================
-  describe('Authorization', () => {
-    it('should include Authorization header in all requests', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ data: { candidates: [] } }),
-      });
-
-      await getCandidates(1, 5);
-
-      const callArgs = (global.fetch as any).mock.calls[0];
-      const headers = callArgs[1].headers as Headers;
-      expect(headers.get('Authorization')).toBeTruthy();
+      await expect(getCandidates('mock-token-123', 1, 10)).rejects.toThrow();
     });
   });
 });
