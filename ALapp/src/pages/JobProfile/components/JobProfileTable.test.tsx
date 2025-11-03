@@ -6,6 +6,11 @@ import JobProfileMain from '../components/jobProfileTable';
 import * as jobProfileService from '../services/jobProfileService';
 import type { JobProfile, ClientOption, ApiResponse } from '../types/jobProfileTypes';
 
+vi.mock('../../../shared/auth/AuthContext', () => ({
+  useAuth: () => ({
+    accessToken: 'mock-token-123'
+  })
+}));
 // Mock the service
 vi.mock('../services/jobProfileService');
 
@@ -178,11 +183,10 @@ describe('JobProfileMain Component - Full Coverage', () => {
   describe('Initial Load', () => {
     test('renders component and loads data on mount', async () => {
       render(<JobProfileMain />);
-
       expect(screen.getByText('Job Profiles Requirements')).toBeInTheDocument();
       
       await waitFor(() => {
-        expect(mockGetJobProfiles).toHaveBeenCalledTimes(1);
+        expect(mockGetJobProfiles).toHaveBeenCalledWith('mock-token-123');
       });
 
       await waitFor(() => {
@@ -427,7 +431,7 @@ test('displays different statuses with correct severity', async () => {
       await userEvent.click(screen.getByTestId('edit-button'));
 
       await waitFor(() => {
-        expect(mockGetJobProfileById).toHaveBeenCalledWith(1);
+        expect(mockGetJobProfileById).toHaveBeenCalledWith('mock-token-123', 1);
       });
 
       await waitFor(() => {
@@ -450,7 +454,7 @@ test('handles network error during job profile fetch for edit', async () => {
   await userEvent.click(screen.getByTestId('edit-button'));
 
   await waitFor(() => {
-    expect(mockGetJobProfileById).toHaveBeenCalledWith(1);
+    expect(mockGetJobProfileById).toHaveBeenCalledWith('mock-token-123',1);
     // The error handling path (catch block) is covered here.
   });
 });
@@ -515,7 +519,7 @@ test('handles network error during job profile update', async () => {
       await userEvent.click(screen.getByTestId('dialog-save'));
 
       await waitFor(() => {
-        expect(mockUpdateJobProfile).toHaveBeenCalledWith(1, expect.any(Object));
+        expect(mockUpdateJobProfile).toHaveBeenCalledWith('mock-token-123', 1, expect.any(Object));
       });
 
       await waitFor(() => {
@@ -536,7 +540,7 @@ test('handles network error during job profile update', async () => {
       await userEvent.click(screen.getByTestId('edit-button'));
 
       await waitFor(() => {
-        expect(mockGetJobProfileById).toHaveBeenCalledWith(1);
+        expect(mockGetJobProfileById).toHaveBeenCalledWith('mock-token-123', 1);
       });
     });
 
@@ -557,7 +561,7 @@ test('handles network error during job profile update', async () => {
       await userEvent.click(screen.getByTestId('edit-button'));
 
       await waitFor(() => {
-        expect(mockGetJobProfileById).toHaveBeenCalledWith(1);
+        expect(mockGetJobProfileById).toHaveBeenCalledWith('mock-token-123', 1);
       });
     });
 
@@ -656,7 +660,7 @@ test('handles network error during job profile update', async () => {
       await userEvent.click(screen.getByTestId('dialog-confirm-delete'));
 
       await waitFor(() => {
-        expect(mockDeleteJobProfile).toHaveBeenCalledWith(1);
+        expect(mockDeleteJobProfile).toHaveBeenCalledWith('mock-token-123', 1);
       });
 
       await waitFor(() => {
@@ -685,22 +689,23 @@ test('handles network error during job profile deletion', async () => {
 });
 
     test('handles error during job profile deletion', async () => {
-      mockDeleteJobProfile.mockRejectedValue(new Error('Delete failed'));
+  mockDeleteJobProfile.mockRejectedValue(new Error('Delete failed'));
 
-      render(<JobProfileMain />);
+  render(<JobProfileMain />);
 
-      await waitFor(() => {
-        expect(screen.getByTestId('row-1')).toBeInTheDocument();
-      });
+  await waitFor(() => {
+    expect(screen.getByTestId('row-1')).toBeInTheDocument();
+  });
 
-      await userEvent.click(screen.getByTestId('row-1'));
-      await userEvent.click(screen.getByTestId('delete-button'));
-      await userEvent.click(screen.getByTestId('dialog-confirm-delete'));
+  await userEvent.click(screen.getByTestId('row-1'));
+  await userEvent.click(screen.getByTestId('delete-button'));
+  await userEvent.click(screen.getByTestId('dialog-confirm-delete'));
 
-      await waitFor(() => {
-        expect(mockDeleteJobProfile).toHaveBeenCalledTimes(1);
-      });
-    });
+  await waitFor(() => {
+    // ✅ FIXED: Check for mockDeleteJobProfile, not mockGetJobProfileById
+    expect(mockDeleteJobProfile).toHaveBeenCalledWith('mock-token-123', 1);
+  });
+});
 
     test('handles unsuccessful API response during deletion', async () => {
       mockDeleteJobProfile.mockResolvedValue({
@@ -840,7 +845,7 @@ describe('Additional Coverage Tests', () => {
     await userEvent.click(screen.getByTestId('edit-button'));
 
     await waitFor(() => {
-      expect(mockGetJobProfileById).toHaveBeenCalledWith(1);
+      expect(mockGetJobProfileById).toHaveBeenCalledWith('mock-token-123', 1);
       // Tests the catch block with non-Error instance
     });
   });
@@ -934,7 +939,7 @@ describe('Additional Coverage Tests', () => {
     await userEvent.click(screen.getByTestId('dialog-save'));
 
     await waitFor(() => {
-      expect(mockUpdateJobProfile).toHaveBeenCalledWith(1, expect.any(Object));
+      expect(mockUpdateJobProfile).toHaveBeenCalledWith('mock-token-123', 1, expect.any(Object));
       expect(mockGetJobProfiles).toHaveBeenCalledTimes(2); // Initial + after update
     });
   });
