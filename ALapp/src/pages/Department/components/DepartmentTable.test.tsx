@@ -12,7 +12,12 @@ import { getDepartments } from '../services/useDepartment';
 import { Department } from '../types/departmentTypes';
 
 // --- MOCK EXTERNAL COMPONENTS AND SERVICES ---
-
+// Mock AuthContext
+vi.mock('../../../shared/auth/AuthContext', () => ({
+  useAuth: () => ({
+    accessToken: 'mock-token-123'
+  })
+}));
 // ✅ PrimeReact components mock
 vi.mock('primereact/datatable', () => ({
   DataTable: vi.fn(({ value, selection, onSelectionChange, children }) => (
@@ -142,7 +147,7 @@ describe('DepartmentTable - Logic Verification (Coverage > 90%)', () => {
 
     expect(screen.getByText(`Departments for: ${defaultProps.clientName}`)).toBeInTheDocument();
     expect(screen.getByTestId('button-back-to-clients')).toBeInTheDocument();
-    expect(getDepartments).toHaveBeenCalledWith(defaultProps.clientId);
+    expect(getDepartments).toHaveBeenCalledWith('mock-token-123',defaultProps.clientId);
 
     await waitFor(() => {
       expect(screen.getByText('Engineering')).toBeInTheDocument();
@@ -206,7 +211,9 @@ describe('DepartmentTable - Logic Verification (Coverage > 90%)', () => {
 
     await user.click(screen.getByTestId('add-edit-success-mock'));
 
-    await waitFor(() => expect(getDepartments).toHaveBeenCalledTimes(1));
+    await waitFor(() => {
+      expect(getDepartments).toHaveBeenCalledWith('mock-token-123', defaultProps.clientId);
+    });
     expect(screen.queryByTestId('add-edit-dialog')).toBeNull();
   });
 
@@ -238,7 +245,7 @@ describe('DepartmentTable - Logic Verification (Coverage > 90%)', () => {
     await user.click(screen.getByTestId('delete-success-mock'));
 
     await waitFor(() => expect(screen.queryByTestId('delete-dialog')).toBeNull());
-    expect(getDepartments).toHaveBeenCalledTimes(1);
+    expect(getDepartments).toHaveBeenCalledWith('mock-token-123', defaultProps.clientId);
     await waitFor(() => expect(screen.getByTestId('edit-button')).toBeDisabled());
   });
 
