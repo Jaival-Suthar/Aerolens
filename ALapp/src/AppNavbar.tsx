@@ -1,7 +1,8 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Menubar } from "primereact/menubar";
 import { Button } from "primereact/button";
+import { Menu } from "primereact/menu";
 import {
   FaBriefcase,
   FaUsers,
@@ -18,6 +19,7 @@ const AppNavbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toggleSidebar } = useProfileStore();
+
   const handleNavigation = useCallback(
     (path: string) => {
       navigate(path);
@@ -25,14 +27,22 @@ const AppNavbar: React.FC = () => {
     [navigate]
   );
 
-  // Highlight active items
   const isMenuActive = (path?: string, childrenPaths?: string[]) => {
     if (path && location.pathname === path) return true;
     if (childrenPaths) return childrenPaths.includes(location.pathname);
     return false;
   };
 
-  // Menubar items
+  // Settings dropdown
+  const settingsMenu = useRef<Menu>(null);
+  const settingsItems = [
+    {
+      label: "Create User",
+      icon: <FaUser style={{ marginRight: 8, marginLeft: 4 }} />,
+      command: () => handleNavigation("/signup"),
+    },
+  ];
+
   const items = [
     {
       label: "Home",
@@ -47,25 +57,25 @@ const AppNavbar: React.FC = () => {
       items: [
         {
           label: "Client",
-          icon: <FaIdCard aria-hidden="true" style={{ marginRight: 8, marginLeft: 4 }} />,
+          icon: <FaIdCard style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/client"),
           className: isMenuActive("/client") ? "nav-subitem-active" : "",
         },
         {
           label: "Job Profile",
-          icon: <FaBriefcase aria-hidden="true" style={{ marginRight: 8, marginLeft: 4 }} />,
+          icon: <FaBriefcase style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/job-profile"),
           className: isMenuActive("/job-profile") ? "nav-subitem-active" : "",
         },
         {
           label: "Members",
-          icon: <FaUsers aria-hidden="true" style={{ marginRight: 8, marginLeft: 4 }} />,
+          icon: <FaUsers style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/members"),
           className: isMenuActive("/members") ? "nav-subitem-active" : "",
         },
         {
           label: "Lookup Data",
-          icon: <FaDatabase aria-hidden="true" style={{ marginRight: 8, marginLeft: 4 }} />,
+          icon: <FaDatabase style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/lookup-data"),
           className: isMenuActive("/lookup-data") ? "nav-subitem-active" : "",
         },
@@ -79,7 +89,7 @@ const AppNavbar: React.FC = () => {
       items: [
         {
           label: "Resume",
-          icon: <FaFile aria-hidden="true" style={{ marginRight: 8, marginLeft: 4 }} />,
+          icon: <FaFile style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/resume"),
           className: isMenuActive("/resume") ? "nav-subitem-active" : "",
         },
@@ -93,7 +103,7 @@ const AppNavbar: React.FC = () => {
       items: [
         {
           label: "Reports",
-          icon: <FaChartBar aria-hidden="true" style={{ marginRight: 8, marginLeft: 4 }} />,
+          icon: <FaChartBar style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/reports"),
           className: isMenuActive("/reports") ? "nav-subitem-active" : "",
         },
@@ -137,21 +147,25 @@ const AppNavbar: React.FC = () => {
         gap: 4,
       }}
     >
+      <div style={{ position: "relative" }}>
+        <Menu model={settingsItems} popup ref={settingsMenu} />
+        <Button
+          icon={<FaCog />}
+          className="p-button-rounded p-button-text"
+          tooltip="Settings"
+          tooltipOptions={{ position: "bottom" }}
+          style={{
+            width: 32,
+            height: 32,
+            color: "#666666",
+            fontSize: 15,
+          }}
+          onClick={(event) => settingsMenu.current?.toggle(event)}
+        />
+      </div>
+
       <Button
-        icon={<FaCog aria-hidden="true" />}
-        className="p-button-rounded p-button-text"
-        tooltip="Settings"
-        tooltipOptions={{ position: "bottom" }}
-        style={{
-          width: 32,
-          height: 32,
-          color: "#666666",
-          fontSize: 15,
-        }}
-        onClick={() => handleNavigation("/settings")}
-      />
-      <Button
-        icon={<FaUser aria-hidden="true" />}
+        icon={<FaUser />}
         className="p-button-rounded p-button-text"
         tooltip="User Profile"
         tooltipOptions={{ position: "bottom" }}

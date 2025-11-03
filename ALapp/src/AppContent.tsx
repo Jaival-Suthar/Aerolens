@@ -7,7 +7,10 @@ const Home = lazy(() => import('./pages/Dashboard/page'));
 const JobProfile = lazy(() => import('./pages/JobProfile/page'));
 const Resume = lazy(() => import('./pages/Resume/page'));
 const LookupPage = lazy(() => import('./pages/Lookup/page'));
-const LoginPage = lazy(() => import('./pages/Login/Login')); 
+const LoginPage = lazy(() => import('./pages/Login/Login'));
+
+const SignUpPage = lazy(() => import('./pages/Signup/page'));
+
 import { useAuth } from './shared/auth/AuthContext';
 
 const LoadingSpinner = () => (
@@ -48,7 +51,8 @@ const AppContent: React.FC = () => {
         <Route path="/login" element={
           isAuthenticated ? <Navigate to="/home" replace /> : <LoginPage />
         } />
-        
+            <Route path="/signup" element={<SignUpPage />} />
+
         {isAuthenticated ? (
           <>
             <Route path="/" element={
