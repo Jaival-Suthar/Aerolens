@@ -9,6 +9,11 @@ const mockCreateContact = vi.fn();
 const mockUpdateContact = vi.fn();
 const mockDeleteContact = vi.fn();
 
+vi.mock('../../../shared/auth/AuthContext', () => ({
+  useAuth: () => ({
+    accessToken: 'mock-token-123'
+  })
+}));
 // Mock the useContact hook dependency
 vi.mock('../services/useContact', () => ({
   default: () => ({
@@ -75,21 +80,23 @@ describe('useContactOperations', () => {
 
   describe('handleSaveContact - ADD Mode', () => {
     it('successfully calls createContact, shows success, and refreshes', async () => {
-      const { result } = setupHook();
-      
-      const response = await act(() =>
-        result.current.handleSaveContact(MOCK_CONTACT_PAYLOAD, 'add', MOCK_CLIENT)
-      );
+  const { result } = setupHook();
+  
+  const response = await act(() =>
+    result.current.handleSaveContact(MOCK_CONTACT_PAYLOAD, 'add', MOCK_CLIENT)
+  );
 
-      expect(response.success).toBe(true);
-      expect(mockCreateContact).toHaveBeenCalledWith({
-        ...MOCK_CONTACT_PAYLOAD,
-        clientId: MOCK_CLIENT.clientId, // Ensure clientId is added
-      });
-      expect(mockShowSuccess).toHaveBeenCalledWith('Contact added successfully');
-      // Verify refreshTrigger has incremented
-      expect(result.current.refreshTrigger).toBe(1); 
-    });
+  expect(response.success).toBe(true);
+  expect(mockCreateContact).toHaveBeenCalledWith(
+    'mock-token-123',  // ✅ Add token as first param
+    {
+      ...MOCK_CONTACT_PAYLOAD,
+      clientId: MOCK_CLIENT.clientId,
+    }
+  );
+  expect(mockShowSuccess).toHaveBeenCalledWith('Contact added successfully');
+  expect(result.current.refreshTrigger).toBe(1); 
+});
 
     it('returns success: false and shows error on createContact failure', async () => {
       const errorMessage = 'API error during create.';
@@ -127,37 +134,41 @@ describe('useContactOperations', () => {
     };
 
     it('successfully calls updateContact, shows success, and refreshes', async () => {
-      const { result } = setupHook();
-      
-      const response = await act(() =>
-        result.current.handleSaveContact(UPDATE_PAYLOAD, 'edit', MOCK_CLIENT)
-      );
+  const { result } = setupHook();
+  
+  const response = await act(() =>
+    result.current.handleSaveContact(UPDATE_PAYLOAD, 'edit', MOCK_CLIENT)
+  );
 
-      expect(response.success).toBe(true);
-      expect(mockUpdateContact).toHaveBeenCalledWith({
-        clientContactId: MOCK_EDIT_CONTACT.clientContactId,
-        designation: 'VP of Sales',
-        clientId: MOCK_CLIENT.clientId, // Ensure clientId is included in update payload
-      });
-      expect(mockShowSuccess).toHaveBeenCalledWith('Contact updated successfully');
-      expect(result.current.refreshTrigger).toBe(1);
-    });
-    
-    it('handles backwards compatibility using contactId fallback', async () => {
-      const { result } = setupHook();
-      const payloadWithContactId = {
-        contactId: 99,
-        designation: 'Old School',
-      };
-      
-      await act(() =>
-        result.current.handleSaveContact(payloadWithContactId, 'edit', MOCK_CLIENT)
-      );
+  expect(response.success).toBe(true);
+  expect(mockUpdateContact).toHaveBeenCalledWith(
+    'mock-token-123',  // ✅ Add token as first param
+    {
+      clientContactId: MOCK_EDIT_CONTACT.clientContactId,
+      designation: 'VP of Sales',
+      clientId: MOCK_CLIENT.clientId,
+    }
+  );
+  expect(mockShowSuccess).toHaveBeenCalledWith('Contact updated successfully');
+  expect(result.current.refreshTrigger).toBe(1);
+});
 
-      expect(mockUpdateContact).toHaveBeenCalledWith(
-        expect.objectContaining({ clientContactId: 99 })
-      );
-    });
+it('handles backwards compatibility using contactId fallback', async () => {
+  const { result } = setupHook();
+  const payloadWithContactId = {
+    contactId: 99,
+    designation: 'Old School',
+  };
+  
+  await act(() =>
+    result.current.handleSaveContact(payloadWithContactId, 'edit', MOCK_CLIENT)
+  );
+
+  expect(mockUpdateContact).toHaveBeenCalledWith(
+    'mock-token-123',  // ✅ Add token as first param
+    expect.objectContaining({ clientContactId: 99 })
+  );
+});
 
     it('returns success: false and shows error on updateContact failure', async () => {
       const errorMessage = 'API error during update.';
@@ -191,17 +202,20 @@ describe('useContactOperations', () => {
 
   describe('handleDeleteContact', () => {
     it('successfully calls deleteContact, shows success, and refreshes', async () => {
-      const { result } = setupHook();
-      
-      const response = await act(() =>
-        result.current.handleDeleteContact(MOCK_EDIT_CONTACT)
-      );
+  const { result } = setupHook();
+  
+  const response = await act(() =>
+    result.current.handleDeleteContact(MOCK_EDIT_CONTACT)
+  );
 
-      expect(response.success).toBe(true);
-      expect(mockDeleteContact).toHaveBeenCalledWith(MOCK_EDIT_CONTACT.clientContactId);
-      expect(mockShowSuccess).toHaveBeenCalledWith('Contact deleted successfully');
-      expect(result.current.refreshTrigger).toBe(1);
-    });
+  expect(response.success).toBe(true);
+  expect(mockDeleteContact).toHaveBeenCalledWith(
+    'mock-token-123',  // ✅ Add token as first param
+    MOCK_EDIT_CONTACT.clientContactId
+  );
+  expect(mockShowSuccess).toHaveBeenCalledWith('Contact deleted successfully');
+  expect(result.current.refreshTrigger).toBe(1);
+});
 
     it('returns success: false and shows error on deleteContact failure', async () => {
       const errorMessage = 'API error during delete.';
