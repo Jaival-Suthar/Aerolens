@@ -118,7 +118,7 @@ const LoginPage: React.FC = () => {
           onKeyDown={e => e.key === 'Enter' && handleSubmit(e)}
         />
         <label htmlFor="password-field">Password</label>
-        <span
+        <span data-testid="toggle-password"
           style={{
             position: 'absolute',
             right: 12,
