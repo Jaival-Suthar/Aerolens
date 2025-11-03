@@ -3,7 +3,11 @@ import { describe, it, vi, beforeEach, expect } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AddLookupForm } from "./AddLookupForm";
 import { lookupService } from "../services/lookupService";
-
+vi.mock('../../../shared/auth/AuthContext', () => ({
+  useAuth: () => ({
+    accessToken: 'mock-token-123'
+  })
+}));
 // Mock lookupService
 vi.mock("../services/lookupService", () => ({
   lookupService: {
@@ -76,7 +80,7 @@ describe("AddLookupForm Component", () => {
     fireEvent.click(addButton);
 
     await waitFor(() => {
-      expect(lookupService.create).toHaveBeenCalledWith({
+      expect(lookupService.create).toHaveBeenCalledWith('mock-token-123', {
         tag: "status",
         value: "active",
       });

@@ -8,7 +8,11 @@ import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import AddButton from '../../../shared/AddButton';
 import { AddLookupForm } from './AddLookupForm';
-
+vi.mock('../../../shared/auth/AuthContext', () => ({
+  useAuth: () => ({
+    accessToken: 'mock-token-123'
+  })
+}));
 // Mock PrimeReact components
 vi.mock('primereact/datatable', () => ({
   DataTable: vi.fn(({ children, value, emptyMessage, ...props }) => (
