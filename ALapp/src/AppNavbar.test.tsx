@@ -7,7 +7,20 @@ import AppNavbar from "./AppNavbar";
 // Mock variables must be defined before vi.mock
 const mockNavigate = vi.fn();
 let mockPathname = "/home";
+// Mock profile store
+const mockToggleSidebar = vi.fn();
 
+vi.mock('./shared/store/profile', () => ({
+  useProfileStore: () => ({
+    toggleSidebar: mockToggleSidebar,
+    openSidebar: vi.fn(),
+    closeSidebar: vi.fn(),
+    member: null,
+    isSidebarOpen: false,
+    setProfile: vi.fn(),
+    clearProfile: vi.fn(),
+  }),
+}));
 // Mock react-router-dom
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
@@ -72,6 +85,7 @@ describe("AppNavbar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockPathname = "/home";
+    mockToggleSidebar.mockClear();
   });
 
   const renderComponent = (pathname = "/home") => {
@@ -213,14 +227,15 @@ describe("AppNavbar", () => {
       expect(mockNavigate).toHaveBeenCalledWith("/settings");
     });
 
-    it("should navigate to profile when User Profile button is clicked", async () => {
-      const user = userEvent.setup();
-      renderComponent();
-      
-      await user.click(screen.getByTestId("button-User Profile"));
-      
-      expect(mockNavigate).toHaveBeenCalledWith("/profile");
-    });
+    it("should toggle sidebar instead of navigate for Profile button", async () => {
+  const user = userEvent.setup();
+  renderComponent();
+  
+  await user.click(screen.getByTestId("button-User Profile"));
+  
+  expect(mockToggleSidebar).toHaveBeenCalledTimes(1);
+  expect(mockNavigate).not.toHaveBeenCalled();
+});
   });
 
   describe("Active State Highlighting", () => {
@@ -343,15 +358,15 @@ describe("AppNavbar", () => {
       expect(mockNavigate).toHaveBeenCalledTimes(1);
     });
 
-    it("should handle Profile navigation", async () => {
-      const user = userEvent.setup();
-      renderComponent();
-      
-      await user.click(screen.getByTestId("button-User Profile"));
-      
-      expect(mockNavigate).toHaveBeenCalledWith("/profile");
-      expect(mockNavigate).toHaveBeenCalledTimes(1);
-    });
+    it("should toggle sidebar instead of navigate for Profile button", async () => {
+  const user = userEvent.setup();
+  renderComponent();
+  
+  await user.click(screen.getByTestId("button-User Profile"));
+  
+  expect(mockToggleSidebar).toHaveBeenCalledTimes(1);
+  expect(mockNavigate).not.toHaveBeenCalled();
+});
   });
 
   describe("Component Structure", () => {
