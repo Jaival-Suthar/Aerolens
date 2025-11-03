@@ -2,6 +2,11 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { lookupService } from './lookupService';
 import type { LookupApiResponse, LookupEntry, PaginationMeta } from '../types/lookupTypes';
 
+vi.mock('../../../shared/auth/AuthContext', () => ({
+  useAuth: () => ({
+    accessToken: 'mock-token-123',
+  }),
+}));
 // Helper to force global fetch to type any
 global.fetch = vi.fn();
 
@@ -40,13 +45,16 @@ describe('lookupService', () => {
         json: vi.fn().mockResolvedValue(mockResponse),
       });
 
-      const result = await lookupService.getAll();
+      const result = await lookupService.getAll('mock-token-123');
 
       expect(global.fetch).toHaveBeenCalledWith(
         `${import.meta.env.VITE_BASE_URL}/lookup?page=1&limit=10`,
         {
           method: 'GET',
-          headers: { Accept: 'application/json' },
+          headers: {
+  'Authorization': 'Bearer mock-token-123',
+  'Content-Type': 'application/json',
+}
         }
       );
       expect(result).toEqual(mockResponse);
@@ -76,13 +84,16 @@ describe('lookupService', () => {
         json: vi.fn().mockResolvedValue(mockResponse),
       });
 
-      const result = await lookupService.getAll(2, 20);
+      const result = await lookupService.getAll('mock-token-123',2, 20);
 
       expect(global.fetch).toHaveBeenCalledWith(
         `${import.meta.env.VITE_BASE_URL}/lookup?page=2&limit=20`,
         expect.objectContaining({
           method: 'GET',
-          headers: expect.any(Object),
+          headers: {
+  'Authorization': 'Bearer mock-token-123',
+  'Content-Type': 'application/json',
+}
         })
       );
       expect(result.meta?.currentPage).toBe(2);
@@ -111,7 +122,7 @@ describe('lookupService', () => {
         json: vi.fn().mockResolvedValue(mockResponse),
       });
 
-      const result = await lookupService.getAll();
+      const result = await lookupService.getAll('mock-token-123');
 
       expect(result.data).toEqual([]);
       expect(result.meta?.totalRecords).toBe(0);
@@ -124,15 +135,15 @@ describe('lookupService', () => {
         text: vi.fn().mockResolvedValue('Server error'),
       });
 
-      await expect(lookupService.getAll()).rejects.toThrow(
-        /HTTP error! status: 500, body: Server error/
+      await expect(lookupService.getAll('mock-token-123')).rejects.toThrow(
+        /HTTP 500: Server erro/
       );
     });
 
     it('should handle network errors', async () => {
       global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
-      await expect(lookupService.getAll()).rejects.toThrow('Network error');
+      await expect(lookupService.getAll('mock-token-123')).rejects.toThrow('Network error');
     });
   });
 
@@ -149,27 +160,30 @@ describe('lookupService', () => {
         json: vi.fn().mockResolvedValue(mockResponse),
       });
 
-      const result = await lookupService.getByKey(1);
+      const result = await lookupService.getByKey('mock-token-123',1);
 
       expect(global.fetch).toHaveBeenCalledWith(
         `${import.meta.env.VITE_BASE_URL}/lookup/1`,
         {
           method: 'GET',
-          headers: { Accept: 'application/json' },
+          headers: {
+  'Authorization': 'Bearer mock-token-123',
+  'Content-Type': 'application/json',
+}
         }
       );
       expect(result).toEqual(mockResponse);
     });
 
     it('should throw error for invalid lookupKey (zero)', async () => {
-      await expect(lookupService.getByKey(0)).rejects.toThrow(
+      await expect(lookupService.getByKey('mock-token-123',0)).rejects.toThrow(
         /Invalid lookupKey provided/
       );
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
     it('should throw error for invalid lookupKey (negative)', async () => {
-      await expect(lookupService.getByKey(-1)).rejects.toThrow(
+      await expect(lookupService.getByKey('mock-token-123',-1)).rejects.toThrow(
         /Invalid lookupKey provided/
       );
       expect(global.fetch).not.toHaveBeenCalled();
@@ -182,8 +196,8 @@ describe('lookupService', () => {
         text: vi.fn().mockResolvedValue('Lookup not found'),
       });
 
-      await expect(lookupService.getByKey(999)).rejects.toThrow(
-        /HTTP error! status: 404, body: Lookup not found/
+      await expect(lookupService.getByKey('mock-token-123',999)).rejects.toThrow(
+        /HTTP 404: Lookup not found/
       );
     });
   });
@@ -202,13 +216,16 @@ describe('lookupService', () => {
         json: vi.fn().mockResolvedValue(mockResponse),
       });
 
-      const result = await lookupService.create(payload);
+      const result = await lookupService.create('mock-token-123',payload);
 
       expect(global.fetch).toHaveBeenCalledWith(
         `${import.meta.env.VITE_BASE_URL}/lookup`,
         expect.objectContaining({
           method: 'POST',
-          headers: expect.any(Object),
+          headers: {
+  'Authorization': 'Bearer mock-token-123',
+  'Content-Type': 'application/json',
+},
           body: JSON.stringify(payload),
         })
       );
@@ -217,35 +234,35 @@ describe('lookupService', () => {
 
     it('should throw error when tag is empty', async () => {
       await expect(
-        lookupService.create({ tag: '', value: 'VALUE' })
+        lookupService.create('mock-token-123',{ tag: '', value: 'VALUE' })
       ).rejects.toThrow(/Payload validation failed: tag and value are required/);
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
     it('should throw error when tag is whitespace only', async () => {
       await expect(
-        lookupService.create({ tag: '   ', value: 'VALUE' })
+        lookupService.create('mock-token-123',{ tag: '   ', value: 'VALUE' })
       ).rejects.toThrow(/Payload validation failed: tag and value are required/);
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
     it('should throw error when value is empty', async () => {
       await expect(
-        lookupService.create({ tag: 'TAG', value: '' })
+        lookupService.create('mock-token-123',{ tag: 'TAG', value: '' })
       ).rejects.toThrow(/Payload validation failed: tag and value are required/);
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
     it('should throw error when value is whitespace only', async () => {
       await expect(
-        lookupService.create({ tag: 'TAG', value: '   ' })
+        lookupService.create('mock-token-123',{ tag: 'TAG', value: '   ' })
       ).rejects.toThrow(/Payload validation failed: tag and value are required/);
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
     it('should throw error when both tag and value are empty', async () => {
       await expect(
-        lookupService.create({ tag: '', value: '' })
+        lookupService.create('mock-token-123',{ tag: '', value: '' })
       ).rejects.toThrow(/Payload validation failed: tag and value are required/);
       expect(global.fetch).not.toHaveBeenCalled();
     });
@@ -259,8 +276,8 @@ describe('lookupService', () => {
         text: vi.fn().mockResolvedValue('Duplicate entry'),
       });
 
-      await expect(lookupService.create(payload)).rejects.toThrow(
-        /HTTP error! status: 409, body: Duplicate entry/
+      await expect(lookupService.create('mock-token-123',payload)).rejects.toThrow(
+        /HTTP 409: Duplicate entry/
       );
     });
 
@@ -273,8 +290,8 @@ describe('lookupService', () => {
         text: vi.fn().mockResolvedValue('Invalid data format'),
       });
 
-      await expect(lookupService.create(payload)).rejects.toThrow(
-        /HTTP error! status: 400, body: Invalid data format/
+      await expect(lookupService.create('mock-token-123',payload)).rejects.toThrow(
+        /HTTP 400: Invalid data format/
       );
     });
 
@@ -287,8 +304,8 @@ describe('lookupService', () => {
         text: vi.fn().mockResolvedValue('Internal server error'),
       });
 
-      await expect(lookupService.create(payload)).rejects.toThrow(
-        /HTTP error! status: 500, body: Internal server error/
+      await expect(lookupService.create('mock-token-123',payload)).rejects.toThrow(
+        /HTTP 500: Internal server error/
       );
     });
   });
@@ -303,7 +320,7 @@ describe('lookupService', () => {
         }),
       });
 
-      const result = await lookupService.delete(1);
+      const result = await lookupService.delete('mock-token-123',1);
 
       expect(global.fetch).toHaveBeenCalledWith(
         `${import.meta.env.VITE_BASE_URL}/lookup/1`,
@@ -313,14 +330,14 @@ describe('lookupService', () => {
     });
 
     it('should throw error for invalid lookupKey (zero)', async () => {
-      await expect(lookupService.delete(0)).rejects.toThrow(
+      await expect(lookupService.delete('mock-token-123',0)).rejects.toThrow(
         /Invalid lookupKey provided/
       );
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
     it('should throw error for invalid lookupKey (negative)', async () => {
-      await expect(lookupService.delete(-5)).rejects.toThrow(
+      await expect(lookupService.delete('mock-token-123',-5)).rejects.toThrow(
         /Invalid lookupKey provided/
       );
       expect(global.fetch).not.toHaveBeenCalled();
@@ -333,8 +350,8 @@ describe('lookupService', () => {
         text: vi.fn().mockResolvedValue('Lookup not found'),
       });
 
-      await expect(lookupService.delete(999)).rejects.toThrow(
-        /HTTP error! status: 404, body: Lookup not found/
+      await expect(lookupService.delete('mock-token-123',999)).rejects.toThrow(
+        /HTTP 404: Lookup not found/
       );
     });
 
@@ -345,8 +362,8 @@ describe('lookupService', () => {
         text: vi.fn().mockResolvedValue('Forbidden'),
       });
 
-      await expect(lookupService.delete(1)).rejects.toThrow(
-        /HTTP error! status: 403, body: Forbidden/
+      await expect(lookupService.delete('mock-token-123',1)).rejects.toThrow(
+        /HTTP 403: Forbidden/
       );
     });
 
@@ -357,8 +374,8 @@ describe('lookupService', () => {
         text: vi.fn().mockResolvedValue('Internal server error'),
       });
 
-      await expect(lookupService.delete(1)).rejects.toThrow(
-        /HTTP error! status: 500, body: Internal server error/
+      await expect(lookupService.delete('mock-token-123',1)).rejects.toThrow(
+        /HTTP 500: Internal server error/
       );
     });
   });
@@ -386,7 +403,7 @@ describe('lookupService', () => {
         json: vi.fn().mockResolvedValue(mockResponse),
       });
 
-      const result = await lookupService.getAll(9999, 10);
+      const result = await lookupService.getAll('mock-token-123',9999, 10);
 
       expect(global.fetch).toHaveBeenCalledWith(
         `${import.meta.env.VITE_BASE_URL}/lookup?page=9999&limit=10`,
@@ -418,7 +435,7 @@ describe('lookupService', () => {
         json: vi.fn().mockResolvedValue(mockResponse),
       });
 
-      await lookupService.getAll(1, 1000);
+      await lookupService.getAll('mock-token-123',1, 1000);
 
       expect(global.fetch).toHaveBeenCalledWith(
         `${import.meta.env.VITE_BASE_URL}/lookup?page=1&limit=1000`,
@@ -447,13 +464,16 @@ describe('lookupService', () => {
         json: vi.fn().mockResolvedValue(mockResponse),
       });
 
-      const result = await lookupService.create(payload);
+      const result = await lookupService.create('mock-token-123',payload);
 
       expect(global.fetch).toHaveBeenCalledWith(
         `${import.meta.env.VITE_BASE_URL}/lookup`,
         expect.objectContaining({
           method: 'POST',
-          headers: expect.any(Object),
+          headers: {
+  'Authorization': 'Bearer mock-token-123',
+  'Content-Type': 'application/json',
+},
           body: JSON.stringify(payload),
         })
       );
@@ -463,7 +483,7 @@ describe('lookupService', () => {
     it('should handle timeout errors', async () => {
       global.fetch = vi.fn().mockRejectedValue(new Error('Request timeout'));
 
-      await expect(lookupService.getAll()).rejects.toThrow('Request timeout');
+      await expect(lookupService.getAll('mock-token-123')).rejects.toThrow('Request timeout');
     });
 
     it('should handle malformed JSON response', async () => {
@@ -472,7 +492,7 @@ describe('lookupService', () => {
         json: vi.fn().mockRejectedValue(new Error('Invalid JSON')),
       });
 
-      await expect(lookupService.getAll()).rejects.toThrow('Invalid JSON');
+      await expect(lookupService.getAll('mock-token-123')).rejects.toThrow('Invalid JSON');
     });
 
     it('should handle empty error response body', async () => {
@@ -482,8 +502,8 @@ describe('lookupService', () => {
         text: vi.fn().mockResolvedValue(''),
       });
 
-      await expect(lookupService.getAll()).rejects.toThrow(
-        /HTTP error! status: 500, body: /
+      await expect(lookupService.getAll('mock-token-123')).rejects.toThrow(
+        "HTTP 500: undefined"
       );
     });
   });
