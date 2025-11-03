@@ -11,6 +11,12 @@ import {
 } from '../services/jobProfileService';
 import type { JobProfilePayload } from '../types/jobProfileTypes';
 
+// ✅ Mock AuthContext FIRST
+vi.mock('../../../shared/auth/AuthContext', () => ({
+  useAuth: () => ({
+    accessToken: 'mock-token-123'
+  })
+}));
 // Mock fetch globally
 global.fetch = vi.fn();
 
@@ -27,6 +33,7 @@ describe('jobProfileService', () => {
     ok,
     status: ok ? 200 : 400,
     json: async () => data,
+    text: async () => JSON.stringify(data),
   });
 
   describe('getClients', () => {
@@ -54,9 +61,15 @@ describe('jobProfileService', () => {
 
       mockFetch.mockResolvedValueOnce(createMockResponse(mockData));
 
-      const result = await getClients();
+      const result = await getClients('mock-token-123');
 
-      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE_URL}/client/all`);
+      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE_URL}/client/all`, {
+  credentials: 'include',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer mock-token-123'
+  }
+});
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({
         clientId: 1,
@@ -72,7 +85,7 @@ describe('jobProfileService', () => {
     test('throws error when fetch fails', async () => {
       mockFetch.mockResolvedValueOnce(createMockResponse({}, false));
 
-      await expect(getClients()).rejects.toThrow('Failed to fetch clients: 400');
+      await expect(getClients('mock-token-123')).rejects.toThrow('Failed to fetch clients: 400');
     });
 
     test('throws error when API returns success: false', async () => {
@@ -83,7 +96,7 @@ describe('jobProfileService', () => {
         })
       );
 
-      await expect(getClients()).rejects.toThrow('Database connection error');
+      await expect(getClients('mock-token-123')).rejects.toThrow('Database connection error');
     });
 
     test('throws default error message when no message provided', async () => {
@@ -93,7 +106,7 @@ describe('jobProfileService', () => {
         })
       );
 
-      await expect(getClients()).rejects.toThrow('Failed to fetch clients');
+      await expect(getClients('mock-token-123')).rejects.toThrow('Failed to fetch clients');
     });
   });
 
@@ -109,9 +122,15 @@ describe('jobProfileService', () => {
 
       mockFetch.mockResolvedValueOnce(createMockResponse(mockData));
 
-      const result = await getDepartments();
+      const result = await getDepartments('mock-token-123');
 
-      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE_URL}/departments`);
+      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE_URL}/departments`, {
+  credentials: 'include',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer mock-token-123'
+  }
+});
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({ departmentId: 1, departmentName: 'Engineering' });
     });
@@ -119,7 +138,7 @@ describe('jobProfileService', () => {
     test('throws error when fetch fails', async () => {
       mockFetch.mockResolvedValueOnce(createMockResponse({}, false));
 
-      await expect(getDepartments()).rejects.toThrow('Failed to fetch departments: 400');
+      await expect(getDepartments('mock-token-123')).rejects.toThrow('Failed to fetch departments: 400');
     });
 
     test('throws error when API returns success: false', async () => {
@@ -130,7 +149,7 @@ describe('jobProfileService', () => {
         })
       );
 
-      await expect(getDepartments()).rejects.toThrow('Unauthorized access');
+      await expect(getDepartments('mock-token-123')).rejects.toThrow('Unauthorized access');
     });
   });
 
@@ -173,11 +192,23 @@ describe('jobProfileService', () => {
         .mockResolvedValueOnce(createMockResponse(mockJobProfileData))
         .mockResolvedValueOnce(createMockResponse(mockClientData));
 
-      const result = await getJobProfiles();
+      const result = await getJobProfiles('mock-token-123');
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
-      expect(mockFetch).toHaveBeenNthCalledWith(1, `${API_BASE_URL}/jobProfile`);
-      expect(mockFetch).toHaveBeenNthCalledWith(2, `${API_BASE_URL}/client/all`);
+      expect(mockFetch).toHaveBeenNthCalledWith(1, `${API_BASE_URL}/jobProfile`, {
+  credentials: 'include',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer mock-token-123'
+  }
+});
+expect(mockFetch).toHaveBeenNthCalledWith(2, `${API_BASE_URL}/client/all`, {
+  credentials: 'include',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer mock-token-123'
+  }
+});
       
       expect(result.jobProfiles.success).toBe(true);
       expect(result.jobProfiles.data).toHaveLength(1);
@@ -215,7 +246,7 @@ describe('jobProfileService', () => {
         .mockResolvedValueOnce(createMockResponse(mockData))
         .mockResolvedValueOnce(createMockResponse(mockClientData));
 
-      const result = await getJobProfiles();
+      const result = await getJobProfiles('mock-token-123');
 
       expect(result.jobProfiles.data[0].location).toBe('Onsite');
       expect(result.jobProfiles.data[0].status).toBe('Pending');
@@ -245,7 +276,7 @@ describe('jobProfileService', () => {
         .mockResolvedValueOnce(createMockResponse(mockData))
         .mockResolvedValueOnce(createMockResponse(mockClientData));
 
-      const result = await getJobProfiles();
+      const result = await getJobProfiles('mock-token-123');
 
       expect(result.jobProfiles.data[0].clientId).toBe(0);
       expect(result.jobProfiles.data[0].departmentId).toBe(0);
@@ -258,7 +289,7 @@ describe('jobProfileService', () => {
     test('throws error when job profiles fetch fails', async () => {
       mockFetch.mockResolvedValueOnce(createMockResponse({}, false));
 
-      await expect(getJobProfiles()).rejects.toThrow('Failed to fetch job profiles: 400');
+      await expect(getJobProfiles('mock-token-123')).rejects.toThrow('Failed to fetch job profiles: 400');
     });
 
     test('throws error when job profiles API returns success: false', async () => {
@@ -269,7 +300,7 @@ describe('jobProfileService', () => {
         })
       );
 
-      await expect(getJobProfiles()).rejects.toThrow('Server error');
+      await expect(getJobProfiles('mock-token-123')).rejects.toThrow('Server error');
     });
 
     test('throws error when clients fetch fails after successful job profiles fetch', async () => {
@@ -283,7 +314,7 @@ describe('jobProfileService', () => {
         .mockResolvedValueOnce(createMockResponse(mockJobProfileData))
         .mockResolvedValueOnce(createMockResponse({}, false));
 
-      await expect(getJobProfiles()).rejects.toThrow('Failed to fetch clients: 400');
+      await expect(getJobProfiles('mock-token-123')).rejects.toThrow('Failed to fetch clients: 400');
     });
   });
 
@@ -311,9 +342,15 @@ describe('jobProfileService', () => {
 
       mockFetch.mockResolvedValueOnce(createMockResponse(mockData));
 
-      const result = await getJobProfileById(1);
+      const result = await getJobProfileById('mock-token-123',1);
 
-      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE_URL}/jobProfile/1`);
+      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE_URL}/jobProfile/1`, {
+  credentials: 'include',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer mock-token-123'
+  }
+});
       expect(result.success).toBe(true);
       expect(result.data.jobProfileId).toBe(1);
       expect(result.data.location).toBe('Remote');
@@ -323,7 +360,7 @@ describe('jobProfileService', () => {
     test('throws error when fetch fails', async () => {
       mockFetch.mockResolvedValueOnce(createMockResponse({}, false));
 
-      await expect(getJobProfileById(1)).rejects.toThrow('Failed to fetch job profile: 400');
+      await expect(getJobProfileById('mock-token-123',1)).rejects.toThrow('Failed to fetch job profile: 400');
     });
 
     test('throws error when API returns success: false', async () => {
@@ -334,7 +371,7 @@ describe('jobProfileService', () => {
         })
       );
 
-      await expect(getJobProfileById(1)).rejects.toThrow('Job profile not found');
+      await expect(getJobProfileById('mock-token-123',1)).rejects.toThrow('Job profile not found');
     });
 
     test('throws default error when no message provided', async () => {
@@ -344,7 +381,7 @@ describe('jobProfileService', () => {
         })
       );
 
-      await expect(getJobProfileById(1)).rejects.toThrow('Job profile not found');
+      await expect(getJobProfileById('mock-token-123',1)).rejects.toThrow('Job profile not found');
     });
   });
 
@@ -378,15 +415,16 @@ describe('jobProfileService', () => {
 
       mockFetch.mockResolvedValueOnce(createMockResponse(mockResponse));
 
-      const result = await createJobProfile(validJobProfileData);
+      const result = await createJobProfile('mock-token-123',validJobProfileData);
 
       expect(mockFetch).toHaveBeenCalledWith(`${API_BASE_URL}/jobProfile`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mock-token-123'},
         body: JSON.stringify({
           ...validJobProfileData,
           receivedOn: undefined,
         }),
+        credentials: 'include'
       });
       expect(result.success).toBe(true);
       expect(result.data.jobProfileId).toBe(1);
@@ -401,7 +439,7 @@ describe('jobProfileService', () => {
 
       mockFetch.mockResolvedValueOnce(createMockResponse(mockResponse));
 
-      await createJobProfile(validJobProfileData);
+      await createJobProfile('mock-token-123',validJobProfileData);
 
       const callArgs = mockFetch.mock.calls[0][1];
       const requestBody = JSON.parse(callArgs.body);
@@ -411,7 +449,7 @@ describe('jobProfileService', () => {
     test('throws error when fetch fails', async () => {
       mockFetch.mockResolvedValueOnce(createMockResponse({}, false));
 
-      await expect(createJobProfile(validJobProfileData)).rejects.toThrow(
+      await expect(createJobProfile('mock-token-123',validJobProfileData)).rejects.toThrow(
         'Failed to create job profile: 400'
       );
     });
@@ -428,7 +466,7 @@ describe('jobProfileService', () => {
 
       mockFetch.mockResolvedValueOnce(createMockResponse(mockResponse));
 
-      await expect(createJobProfile(validJobProfileData)).rejects.toThrow(
+      await expect(createJobProfile('mock-token-123',validJobProfileData)).rejects.toThrow(
         'Client ID is required, Job role must be at least 2 characters'
       );
     });
@@ -441,7 +479,7 @@ describe('jobProfileService', () => {
         })
       );
 
-      await expect(createJobProfile(validJobProfileData)).rejects.toThrow('Duplicate entry');
+      await expect(createJobProfile('mock-token-123',validJobProfileData)).rejects.toThrow('Duplicate entry');
     });
 
     test('throws default error message when no message provided', async () => {
@@ -451,7 +489,7 @@ describe('jobProfileService', () => {
         })
       );
 
-      await expect(createJobProfile(validJobProfileData)).rejects.toThrow(
+      await expect(createJobProfile('mock-token-123',validJobProfileData)).rejects.toThrow(
         'Failed to create job profile'
       );
     });
@@ -486,12 +524,13 @@ describe('jobProfileService', () => {
 
       mockFetch.mockResolvedValueOnce(createMockResponse(mockResponse));
 
-      const result = await updateJobProfile(1, updateData);
+      const result = await updateJobProfile('mock-token-123',1, updateData);
 
       expect(mockFetch).toHaveBeenCalledWith(`${API_BASE_URL}/jobProfile/1`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mock-token-123' },
         body: JSON.stringify(updateData),
+        credentials: 'include'
       });
       expect(result.success).toBe(true);
       expect(result.data.jobRole).toBe('Senior Developer');
@@ -501,7 +540,7 @@ describe('jobProfileService', () => {
     test('throws error when fetch fails', async () => {
       mockFetch.mockResolvedValueOnce(createMockResponse({}, false));
 
-      await expect(updateJobProfile(1, updateData)).rejects.toThrow(
+      await expect(updateJobProfile('mock-token-123',1, updateData)).rejects.toThrow(
         'Failed to update job profile: 400'
       );
     });
@@ -517,7 +556,7 @@ describe('jobProfileService', () => {
 
       mockFetch.mockResolvedValueOnce(createMockResponse(mockResponse));
 
-      await expect(updateJobProfile(1, updateData)).rejects.toThrow(
+      await expect(updateJobProfile('mock-token-123',1, updateData)).rejects.toThrow(
         'Positions must be at least 1'
       );
     });
@@ -530,7 +569,7 @@ describe('jobProfileService', () => {
         })
       );
 
-      await expect(updateJobProfile(1, updateData)).rejects.toThrow('Job profile not found');
+      await expect(updateJobProfile('mock-token-123',1, updateData)).rejects.toThrow('Job profile not found');
     });
 
     test('throws default error message when no message provided', async () => {
@@ -540,7 +579,7 @@ describe('jobProfileService', () => {
         })
       );
 
-      await expect(updateJobProfile(1, updateData)).rejects.toThrow(
+      await expect(updateJobProfile('mock-token-123',1, updateData)).rejects.toThrow(
         'Failed to update job profile'
       );
     });
@@ -555,11 +594,16 @@ describe('jobProfileService', () => {
 
       mockFetch.mockResolvedValueOnce(createMockResponse(mockResponse));
 
-      const result = await deleteJobProfile(1);
+      const result = await deleteJobProfile('mock-token-123',1);
 
       expect(mockFetch).toHaveBeenCalledWith(`${API_BASE_URL}/jobProfile/1`, {
-        method: 'DELETE',
-      });
+  method: 'DELETE',
+  credentials: 'include',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer mock-token-123'
+  }
+});
       expect(result.success).toBe(true);
       expect(result.data).toBeNull();
     });
@@ -567,7 +611,7 @@ describe('jobProfileService', () => {
     test('throws error when fetch fails', async () => {
       mockFetch.mockResolvedValueOnce(createMockResponse({}, false));
 
-      await expect(deleteJobProfile(1)).rejects.toThrow('Failed to delete job profile: 400');
+      await expect(deleteJobProfile('mock-token-123',1)).rejects.toThrow('Failed to delete job profile: {}');
     });
 
     test('throws error when API returns success: false', async () => {
@@ -578,7 +622,7 @@ describe('jobProfileService', () => {
         })
       );
 
-      await expect(deleteJobProfile(1)).rejects.toThrow(
+      await expect(deleteJobProfile('mock-token-123',1)).rejects.toThrow(
         'Cannot delete job profile with associated candidates'
       );
     });
@@ -590,7 +634,7 @@ describe('jobProfileService', () => {
         })
       );
 
-      await expect(deleteJobProfile(1)).rejects.toThrow('Failed to delete job profile');
+      await expect(deleteJobProfile('mock-token-123',1)).rejects.toThrow('Failed to delete job profile');
     });
   });
 
