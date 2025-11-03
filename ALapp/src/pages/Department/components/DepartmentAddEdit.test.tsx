@@ -5,6 +5,11 @@ import DepartmentAddEdit from '../components/departmentAddEdit';
 import * as useDepartment from '../services/useDepartment';
 import type { Department } from '../types/departmentTypes';
 
+vi.mock('../../../shared/auth/AuthContext', () => ({
+  useAuth: () => ({
+    accessToken: 'mock-token-123'
+  })
+}));
 // Mock PrimeReact components
 vi.mock('primereact/dialog', () => ({
   Dialog: ({ children, visible, onHide, header, footer }: any) => (
@@ -141,11 +146,14 @@ describe('DepartmentAddEdit', () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(useDepartment.addDepartment).toHaveBeenCalledWith({
-          clientId: mockClientId,
-          departmentName: 'HR',
-          departmentDescription: 'Human Resources',
-        });
+        expect(useDepartment.addDepartment).toHaveBeenCalledWith(
+          'mock-token-123',
+          {
+            clientId: mockClientId,
+            departmentName: 'HR',
+            departmentDescription: 'Human Resources',
+          }
+        );
       });
     });
   });
@@ -219,7 +227,8 @@ describe('DepartmentAddEdit', () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(useDepartment.updateDepartment).toHaveBeenCalledWith({
+        expect(useDepartment.updateDepartment).toHaveBeenCalledWith(
+          'mock-token-123',{
           ...mockDepartment,
           departmentName: 'IT Department',
           departmentDescription: 'Engineering Department',
@@ -564,7 +573,8 @@ describe('DepartmentAddEdit', () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(useDepartment.addDepartment).toHaveBeenCalledWith({
+        expect(useDepartment.addDepartment).toHaveBeenCalledWith(
+          'mock-token-123',{
           clientId: mockClientId,
           departmentName: 'Legal',
           departmentDescription: 'Legal Department',

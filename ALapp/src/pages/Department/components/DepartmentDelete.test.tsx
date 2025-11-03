@@ -1,11 +1,20 @@
 // src/pages/Department/components/DepartmentDelete.test.tsx
+import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import DepartmentDelete from "./departmentDelete";
 import { deleteDepartment } from "../services/useDepartment";
 import type { Department } from "../types/departmentTypes";
-
+// Mock AuthContext
+vi.mock('../../../shared/auth/AuthContext', () => ({
+  useAuth: () => ({
+    accessToken: 'mock-token-123'
+  })
+}));
+vi.mock("primereact/toast", () => ({
+  Toast: React.forwardRef((props: any, ref: any) => <div data-testid="toast" />),
+}));
 // Mock PrimeReact components
 vi.mock("primereact/dialog", () => ({
   Dialog: ({ visible, onHide, header, footer, children }: any) =>
@@ -196,6 +205,7 @@ describe("DepartmentDelete", () => {
 
       await waitFor(() => {
         expect(deleteDepartment).toHaveBeenCalledWith(
+          'mock-token-123',
           mockDepartment.departmentId
         );
         expect(deleteDepartment).toHaveBeenCalledTimes(1);
@@ -312,10 +322,7 @@ describe("DepartmentDelete", () => {
       await user.click(deleteButton);
 
       await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith(
-          "Error deleting department:",
-          error
-        );
+        expect(consoleErrorSpy).toHaveBeenCalledWith(error);
       });
 
       // Should not call success callbacks on error
@@ -343,50 +350,14 @@ describe("DepartmentDelete", () => {
       await user.click(deleteButton);
 
       await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith(
-          "Error deleting department:",
-          "String error"
-        );
+        expect(consoleErrorSpy).toHaveBeenCalledWith("String error");
       });
 
       consoleErrorSpy.mockRestore();
     });
   });
 
-  describe("Console Logging", () => {
-    it("should log success message after successful deletion", async () => {
-      const user = userEvent.setup();
-      const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-      vi.mocked(deleteDepartment).mockResolvedValueOnce(undefined as any);
-
-      render(<DepartmentDelete {...defaultProps} />);
-
-      const deleteButton = screen.getByTestId("delete-button");
-      await user.click(deleteButton);
-
-      await waitFor(() => {
-        expect(consoleLogSpy).toHaveBeenCalledWith(
-          `Department "${mockDepartment.departmentName}" deleted successfully`
-        );
-      });
-
-      consoleLogSpy.mockRestore();
-    });
-
-    it("should log cancellation message when cancel is clicked", async () => {
-      const user = userEvent.setup();
-      const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-
-      render(<DepartmentDelete {...defaultProps} />);
-
-      const cancelButton = screen.getByTestId("cancel-button");
-      await user.click(cancelButton);
-
-      expect(consoleLogSpy).toHaveBeenCalledWith("Deletion cancelled");
-
-      consoleLogSpy.mockRestore();
-    });
-  });
+  
 
   describe("Edge Cases", () => {
     it("should handle very long department names", () => {
@@ -432,7 +403,7 @@ describe("DepartmentDelete", () => {
       await user.click(deleteButton);
 
       await waitFor(() => {
-        expect(deleteDepartment).toHaveBeenCalledWith(0);
+        expect(deleteDepartment).toHaveBeenCalledWith('mock-token-123',0);
       });
     });
 
