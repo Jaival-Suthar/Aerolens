@@ -16,6 +16,7 @@ global.fetch = vi.fn();
 
 describe('useContact', () => {
   const mockApiUrl = import.meta.env.VITE_BASE_URL;
+  const mockAccessToken = 'mock-token-123';
 
   describe('getClientDetails', () => {
     const mockClientId = 1;
@@ -39,7 +40,7 @@ describe('useContact', () => {
       message: 'Success'
     };
 
-    it('fetches client details successfully', async () => {
+    it('fetches client details successfully with access token', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
@@ -51,14 +52,46 @@ describe('useContact', () => {
 
       let response;
       await act(async () => {
-        response = await result.current.getClientDetails(mockClientId);
+        response = await result.current.getClientDetails(mockAccessToken, mockClientId);
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
         `${mockApiUrl}/client/${mockClientId}`,
         {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${mockAccessToken}`
+          },
+          credentials: 'include'
+        }
+      );
+      expect(response).toEqual(mockClientDetailsResponse);
+      expect(result.current.loading).toBe(false);
+      expect(result.current.error).toBe(null);
+    });
+
+    it('fetches client details successfully without access token', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: vi.fn().mockResolvedValue(mockClientDetailsResponse)
+      });
+
+      const { result } = renderHook(() => useContact());
+
+      let response;
+      await act(async () => {
+        response = await result.current.getClientDetails(null, mockClientId);
+      });
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${mockApiUrl}/client/${mockClientId}`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include'
         }
       );
       expect(response).toEqual(mockClientDetailsResponse);
@@ -70,7 +103,7 @@ describe('useContact', () => {
       const { result } = renderHook(() => useContact());
 
       await act(async () => {
-        await expect(result.current.getClientDetails(0)).rejects.toThrow(
+        await expect(result.current.getClientDetails(mockAccessToken, 0)).rejects.toThrow(
           /Client ID is required/
         );
       });
@@ -90,7 +123,7 @@ describe('useContact', () => {
       const { result } = renderHook(() => useContact());
 
       await act(async () => {
-        await expect(result.current.getClientDetails(mockClientId)).rejects.toThrow(
+        await expect(result.current.getClientDetails(mockAccessToken, mockClientId)).rejects.toThrow(
           /Expected JSON but got text\/html/
         );
       });
@@ -110,7 +143,7 @@ describe('useContact', () => {
       const { result } = renderHook(() => useContact());
 
       await act(async () => {
-        await expect(result.current.getClientDetails(mockClientId)).rejects.toThrow(
+        await expect(result.current.getClientDetails(mockAccessToken, mockClientId)).rejects.toThrow(
           /Expected JSON but got unknown content type/
         );
       });
@@ -133,7 +166,7 @@ describe('useContact', () => {
       const { result } = renderHook(() => useContact());
 
       await act(async () => {
-        await expect(result.current.getClientDetails(mockClientId)).rejects.toThrow(
+        await expect(result.current.getClientDetails(mockAccessToken, mockClientId)).rejects.toThrow(
           /Client not found/
         );
       });
@@ -148,7 +181,7 @@ describe('useContact', () => {
       const { result } = renderHook(() => useContact());
 
       await act(async () => {
-        await expect(result.current.getClientDetails(mockClientId)).rejects.toThrow(
+        await expect(result.current.getClientDetails(mockAccessToken, mockClientId)).rejects.toThrow(
           /Network error/
         );
       });
@@ -170,7 +203,7 @@ describe('useContact', () => {
       const { result } = renderHook(() => useContact());
 
       await act(async () => {
-        await expect(result.current.getClientDetails(mockClientId)).rejects.toThrow(
+        await expect(result.current.getClientDetails(mockAccessToken, mockClientId)).rejects.toThrow(
           /HTTP error! status: 500/
         );
       });
@@ -198,7 +231,7 @@ describe('useContact', () => {
       message: 'Contact created successfully'
     };
 
-    it('creates contact successfully', async () => {
+    it('creates contact successfully with access token', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         status: 201,
@@ -209,7 +242,38 @@ describe('useContact', () => {
 
       let response;
       await act(async () => {
-        response = await result.current.createContact(mockContactData);
+        response = await result.current.createContact(mockAccessToken, mockContactData);
+      });
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${mockApiUrl}/contact`,
+        {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${mockAccessToken}`
+          },
+          credentials: 'include',
+          body: JSON.stringify(mockContactData)
+        }
+      );
+      expect(response).toEqual(mockCreateResponse);
+      expect(result.current.loading).toBe(false);
+      expect(result.current.error).toBe(null);
+    });
+
+    it('creates contact successfully without access token', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 201,
+        json: vi.fn().mockResolvedValue(mockCreateResponse)
+      });
+
+      const { result } = renderHook(() => useContact());
+
+      let response;
+      await act(async () => {
+        response = await result.current.createContact(null, mockContactData);
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
@@ -217,6 +281,7 @@ describe('useContact', () => {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(mockContactData)
         }
       );
@@ -238,7 +303,7 @@ describe('useContact', () => {
       const { result } = renderHook(() => useContact());
 
       await act(async () => {
-        await expect(result.current.createContact(mockContactData)).rejects.toThrow(
+        await expect(result.current.createContact(mockAccessToken, mockContactData)).rejects.toThrow(
           /Invalid contact data/
         );
       });
@@ -253,7 +318,7 @@ describe('useContact', () => {
       const { result } = renderHook(() => useContact());
 
       await act(async () => {
-        await expect(result.current.createContact(mockContactData)).rejects.toBe(
+        await expect(result.current.createContact(mockAccessToken, mockContactData)).rejects.toBe(
           'Unknown error object'
         );
       });
@@ -278,7 +343,7 @@ describe('useContact', () => {
       message: 'Contact updated successfully'
     };
 
-    it('updates contact successfully with all fields', async () => {
+    it('updates contact successfully with all fields and access token', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
@@ -289,14 +354,18 @@ describe('useContact', () => {
 
       let response;
       await act(async () => {
-        response = await result.current.updateContact(mockUpdateData);
+        response = await result.current.updateContact(mockAccessToken, mockUpdateData);
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
         `${mockApiUrl}/contact/1`,
         expect.objectContaining({
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${mockAccessToken}`
+          },
+          credentials: 'include',
           body: JSON.stringify({
             contactPersonName: 'John Updated',
             designation: 'Senior Manager',
@@ -328,7 +397,36 @@ describe('useContact', () => {
       const { result } = renderHook(() => useContact());
 
       await act(async () => {
-        await result.current.updateContact(partialUpdateData);
+        await result.current.updateContact(mockAccessToken, partialUpdateData);
+      });
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${mockApiUrl}/contact/1`,
+        expect.objectContaining({
+          method: 'PATCH',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${mockAccessToken}`
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            contactPersonName: 'John Partial'
+          })
+        })
+      );
+    });
+
+    it('updates contact without access token', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue(mockUpdateResponse)
+      });
+
+      const { result } = renderHook(() => useContact());
+
+      await act(async () => {
+        await result.current.updateContact(null, mockUpdateData);
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
@@ -336,8 +434,12 @@ describe('useContact', () => {
         expect.objectContaining({
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
-            contactPersonName: 'John Partial'
+            contactPersonName: 'John Updated',
+            designation: 'Senior Manager',
+            phone: '1111111111',
+            email: 'john.updated@example.com'
           })
         })
       );
@@ -351,7 +453,7 @@ describe('useContact', () => {
       const { result } = renderHook(() => useContact());
 
       await act(async () => {
-        await expect(result.current.updateContact(dataWithoutId)).rejects.toThrow(
+        await expect(result.current.updateContact(mockAccessToken, dataWithoutId)).rejects.toThrow(
           /Contact ID is required for update operation/
         );
       });
@@ -373,7 +475,7 @@ describe('useContact', () => {
       const { result } = renderHook(() => useContact());
 
       await act(async () => {
-        await expect(result.current.updateContact(mockUpdateData)).rejects.toThrow(
+        await expect(result.current.updateContact(mockAccessToken, mockUpdateData)).rejects.toThrow(
           /Contact not found/
         );
       });
@@ -390,7 +492,7 @@ describe('useContact', () => {
       message: 'Contact deleted successfully'
     };
 
-    it('deletes contact successfully', async () => {
+    it('deletes contact successfully with access token', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
@@ -401,14 +503,45 @@ describe('useContact', () => {
 
       let response;
       await act(async () => {
-        response = await result.current.deleteContact(mockContactId);
+        response = await result.current.deleteContact(mockAccessToken, mockContactId);
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
         `${mockApiUrl}/contact/${mockContactId}`,
         expect.objectContaining({
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${mockAccessToken}`
+          },
+          credentials: 'include'
+        })
+      );
+      expect(response).toEqual(mockDeleteResponse);
+      expect(result.current.loading).toBe(false);
+      expect(result.current.error).toBe(null);
+    });
+
+    it('deletes contact successfully without access token', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue(mockDeleteResponse)
+      });
+
+      const { result } = renderHook(() => useContact());
+
+      let response;
+      await act(async () => {
+        response = await result.current.deleteContact(null, mockContactId);
+      });
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${mockApiUrl}/contact/${mockContactId}`,
+        expect.objectContaining({
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include'
         })
       );
       expect(response).toEqual(mockDeleteResponse);
@@ -420,7 +553,7 @@ describe('useContact', () => {
       const { result } = renderHook(() => useContact());
 
       await act(async () => {
-        await expect(result.current.deleteContact(0)).rejects.toThrow(
+        await expect(result.current.deleteContact(mockAccessToken, 0)).rejects.toThrow(
           /Contact ID is required for delete operation/
         );
       });
@@ -442,7 +575,7 @@ describe('useContact', () => {
       const { result } = renderHook(() => useContact());
 
       await act(async () => {
-        await expect(result.current.deleteContact(mockContactId)).rejects.toThrow(
+        await expect(result.current.deleteContact(mockAccessToken, mockContactId)).rejects.toThrow(
           /Internal server error/
         );
       });
@@ -463,7 +596,7 @@ describe('useContact', () => {
       const { result } = renderHook(() => useContact());
 
       await act(async () => {
-        await expect(result.current.deleteContact(mockContactId)).rejects.toThrow(
+        await expect(result.current.deleteContact(mockAccessToken, mockContactId)).rejects.toThrow(
           /HTTP error! status: 500/
         );
       });
@@ -481,7 +614,7 @@ describe('useContact', () => {
 
       await act(async () => {
         try {
-          await result.current.deleteContact(1);
+          await result.current.deleteContact(mockAccessToken, 1);
         } catch (error) {
           // Expected error
         }
@@ -511,7 +644,7 @@ describe('useContact', () => {
       const { result } = renderHook(() => useContact());
 
       act(() => {
-        result.current.getClientDetails(1).catch(() => {});
+        result.current.getClientDetails(mockAccessToken, 1).catch(() => {});
       });
 
       await waitFor(() => {
