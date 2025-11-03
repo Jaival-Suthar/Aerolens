@@ -6,6 +6,12 @@ import * as clientService from "./services/clientService";
 import { ClientType } from "./types/clientTypes";
 
 // Mock child components
+// Add this mock at the top with other mocks
+vi.mock('../../shared/auth/AuthContext', () => ({
+  useAuth: () => ({
+    accessToken: 'mock-token-123'
+  })
+}));
 vi.mock("./components/clientTable", () => ({
   default: (props: any) => (
     <div data-testid="ClientTable">
@@ -179,7 +185,19 @@ vi.mock("primereact/datatable", () => ({
   ),
 }));
 
-vi.mock("./services/clientService");
+vi.mock("./services/clientService", () => ({
+  createClient: vi.fn((token, data) => Promise.resolve({
+    clientId: 1,
+    clientName: data.name,
+    address: data.address,
+  })),
+  updateClient: vi.fn((token, data) => Promise.resolve({
+    clientId: data.id,
+    clientName: data.name,
+    address: data.address,
+  })),
+  deleteClient: vi.fn(() => Promise.resolve(undefined)),
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -256,25 +274,25 @@ describe("Client Component", () => {
     });
 
     it("should call createClient when saving in add mode", async () => {
-      const createSpy = vi
-        .spyOn(clientService, "createClient")
-        .mockResolvedValue({
-          clientId: 1,
-          clientName: "Test",
-          address: "Address",
-        });
-
-      render(<Client />);
-      fireEvent.click(screen.getByTestId("AddBtn"));
-      fireEvent.click(screen.getByTestId("SaveBtn"));
-
-      await waitFor(() => {
-        expect(createSpy).toHaveBeenCalledWith({
-          name: "Updated Client",
-          address: "Updated Address",
-        });
-      });
+  const createSpy = vi
+    .spyOn(clientService, "createClient")
+    .mockResolvedValue({
+      clientId: 1,
+      clientName: "Updated Client",
+      address: "Updated Address",
     });
+
+  render(<Client />);
+  fireEvent.click(screen.getByTestId("AddBtn"));
+  fireEvent.click(screen.getByTestId("SaveBtn"));
+
+  await waitFor(() => {
+    expect(createSpy).toHaveBeenCalledWith('mock-token-123', {
+      name: "Updated Client",
+      address: "Updated Address",
+    });
+  });
+});
 
     it("should close dialog after successful save", async () => {
       vi.spyOn(clientService, "createClient").mockResolvedValue({
@@ -309,44 +327,56 @@ describe("Client Component", () => {
       expect(screen.getByTestId("ClientAddEdit")).toBeInTheDocument();
     });
 
-    // it("should call updateClient when saving in edit mode", async () => {
-    //   const updateSpy = vi
-    //     .spyOn(clientService, "updateClient")
-    //     .mockResolvedValue({
-    //       clientId: 1,
-    //       clientName: "Updated",
-    //       address: "Updated",
-    //     });
+//     it("should call updateClient when saving in edit mode", async () => {
+//   const updateSpy = vi
+//     .spyOn(clientService, "updateClient")
+//     .mockResolvedValue({
+//       clientId: 1,
+//       clientName: "Updated Client",
+//       address: "Updated Address",
+//     });
 
-    //   render(<Client />);
-    //   fireEvent.click(screen.getByTestId("TriggerEditBtn"));
-    //   fireEvent.click(screen.getByTestId("SaveBtn"));
+//   render(<Client />);
+//   fireEvent.click(screen.getByTestId("TriggerEditBtn"));
+  
+//   // Wait for dialog
+//   await waitFor(() => {
+//     expect(screen.getByTestId("ClientAddEdit")).toBeInTheDocument();
+//   });
+  
+//   fireEvent.click(screen.getByTestId("SaveBtn"));
 
-    //   await waitFor(() => {
-    //     expect(updateSpy).toHaveBeenCalledWith({
-    //     id: 1,
-    //     name: "Updated Client",
-    //     address: "Updated Address",
-    //     });
+//   await waitFor(() => {
+//     expect(updateSpy).toHaveBeenCalledWith('mock-token-123', {
+//       id: 1,
+//       name: "Updated Client",
+//       address: "Updated Address",
+//     });
+//   }, { timeout: 3000 });
+// });
 
-    //   });
-    // });
+// it("should close dialog after successful update", async () => {
+//   vi.spyOn(clientService, "updateClient").mockResolvedValue({
+//     clientId: 1,
+//     clientName: "Updated Client",
+//     address: "Updated Address",
+//   });
 
-    // it("should close dialog after successful update", async () => {
-    //   vi.spyOn(clientService, "updateClient").mockResolvedValue({
-    //     clientId: 1,
-    //     clientName: "Updated",
-    //     address: "Updated",
-    //   });
+//   render(<Client />);
+//   fireEvent.click(screen.getByTestId("TriggerEditBtn"));
+  
+//   // Wait for dialog to appear first
+//   await waitFor(() => {
+//     expect(screen.getByTestId("ClientAddEdit")).toBeInTheDocument();
+//   });
+  
+//   fireEvent.click(screen.getByTestId("SaveBtn"));
 
-    //   render(<Client />);
-    //   fireEvent.click(screen.getByTestId("TriggerEditBtn"));
-    //   fireEvent.click(screen.getByTestId("SaveBtn"));
-
-    //   await waitFor(() => {
-    //     expect(screen.queryByTestId("ClientAddEdit")).not.toBeInTheDocument();
-    //   }, { timeout: 2000 });
-    // });
+//   // Now wait for it to close
+//   await waitFor(() => {
+//     expect(screen.queryByTestId("ClientAddEdit")).not.toBeInTheDocument();
+//   }, { timeout: 3000 });
+// });
 
     it("should close dialog when Cancel is clicked", () => {
       render(<Client />);
@@ -390,19 +420,19 @@ describe("Client Component", () => {
     });
 
     it("should call deleteClient when confirming delete", async () => {
-      const deleteSpy = vi
-        .spyOn(clientService, "deleteClient")
-        .mockResolvedValue(undefined);
+  const deleteSpy = vi
+    .spyOn(clientService, "deleteClient")
+    .mockResolvedValue(undefined);
 
-      render(<Client />);
-      fireEvent.click(screen.getByTestId("SelectClientBtn"));
-      fireEvent.click(screen.getByTestId("DeleteBtn"));
-      fireEvent.click(screen.getByTestId("ConfirmDeleteBtn"));
+  render(<Client />);
+  fireEvent.click(screen.getByTestId("SelectClientBtn"));
+  fireEvent.click(screen.getByTestId("DeleteBtn"));
+  fireEvent.click(screen.getByTestId("ConfirmDeleteBtn"));
 
-      await waitFor(() => {
-        expect(deleteSpy).toHaveBeenCalledWith(1);
-      });
-    });
+  await waitFor(() => {
+    expect(deleteSpy).toHaveBeenCalledWith('mock-token-123', 1);
+  });
+});
 
     it("should close delete dialog after successful deletion", async () => {
       vi.spyOn(clientService, "deleteClient").mockResolvedValue(undefined);
