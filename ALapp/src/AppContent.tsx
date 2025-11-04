@@ -43,11 +43,10 @@ const AppContent: React.FC = () => {
   const location = useLocation();
 
   React.useEffect(() => {
-    // redirect to login if not authenticated and not on login or signup
-    if (!isAuthenticated && !['/login', '/signup'].includes(location.pathname)) {
+    if (!isAuthenticated) {
       navigate('/login', { replace: true });
     }
-  }, [isAuthenticated, location.pathname, navigate]);
+  }, [isAuthenticated, navigate]);
 
   return (
     <Suspense fallback={<LoadingSpinner />}>

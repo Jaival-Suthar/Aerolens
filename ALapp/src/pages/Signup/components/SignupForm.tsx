@@ -84,7 +84,7 @@ export default function SignupForm() {
       setLoading(true);
       const response: SignupResponse = await registerUser(submitData);
       if (response && response.success) {
-        alert("User created successfully! Redirecting to login page.");
+        alert("User created successfully! Redirecting to Home page.");
         navigate("/login");
       } else {
         setGeneralError(response?.message || "Signup failed.");
