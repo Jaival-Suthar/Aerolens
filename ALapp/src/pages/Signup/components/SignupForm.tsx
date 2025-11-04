@@ -28,10 +28,15 @@ export default function SignupForm() {
   const [loading, setLoading] = useState(false);
 
   const designations = [
+    { label: "QA Automation Developer", value: "qa automation developer" },
     { label: "Software Engineer", value: "software engineer" },
+    { label: "Sr. PHP Developer", value: "sr. php developer" },
+    { label: "Head Of Engineering", value: "head of engineering" },
     { label: "Admin", value: "admin" },
+    { label: "Test Engineer", value: "test-engineer" },
+    { label: "Staff Software Engineer", value: "staff software engineer" },
   ];
-
+  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -246,14 +251,6 @@ export default function SignupForm() {
             cursor: "pointer",
           }}
         />
-
-        {/* Login Link */}
-        <p style={{ textAlign: "center", color: "#555", marginTop: "16px", fontSize: "14px" }}>
-          Already have an account?{" "}
-          <a href="/login" style={{ color: "#2563eb", textDecoration: "underline" }}>
-            Log In
-          </a>
-        </p>
       </div>
     </div>
   );
