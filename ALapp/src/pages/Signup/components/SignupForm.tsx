@@ -130,10 +130,10 @@ export default function SignupForm() {
         }}
       >
         <h2 style={{ textAlign: "center", fontSize: "28px", marginBottom: "8px" }}>
-          Create Your Account
+          Create New Account
         </h2>
         <p style={{ textAlign: "center", color: "#666", marginBottom: "20px" }}>
-          Join our management system and start your journey today 🚀
+          Join our management system and start a new journey today 🚀
         </p>
 
         {generalError && (
