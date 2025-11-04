@@ -36,34 +36,27 @@ export default function SignupForm() {
     { label: "Test Engineer", value: "test-engineer" },
     { label: "Staff Software Engineer", value: "staff software engineer" },
   ];
-  
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => ({ ...prev, [name]: "" }));
+    setFormData(prev => ({ ...prev, [name]: value }));
+    setErrors(prev => ({ ...prev, [name]: "" }));
   };
 
   const handleDropdownChange = (e: { value: string }) => {
-    setFormData((prev) => ({ ...prev, designation: e.value || "" }));
-    setErrors((prev) => ({ ...prev, designation: "" }));
+    setFormData(prev => ({ ...prev, designation: e.value || "" }));
+    setErrors(prev => ({ ...prev, designation: "" }));
   };
 
   const validateFields = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.fullName) newErrors.fullName = "Please enter your full name";
-    if (!formData.contactNumber)
-      newErrors.contactNumber = "Please enter your contact number";
+    if (!formData.contactNumber) newErrors.contactNumber = "Please enter your contact number";
     if (!formData.email) newErrors.email = "Please enter your email address";
-    if (!formData.designation)
-      newErrors.designation = "Please select a designation";
+    if (!formData.designation) newErrors.designation = "Please select a designation";
     if (!formData.password) newErrors.password = "Please enter a password";
-    if (!formData.confirmPassword)
-      newErrors.confirmPassword = "Please confirm your password";
-    if (
-      formData.password &&
-      formData.confirmPassword &&
-      formData.password !== formData.confirmPassword
-    )
+    if (!formData.confirmPassword) newErrors.confirmPassword = "Please confirm your password";
+    if (formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword)
       newErrors.confirmPassword = "Passwords do not match";
 
     setErrors(newErrors);
@@ -83,8 +76,8 @@ export default function SignupForm() {
     try {
       setLoading(true);
       const response: SignupResponse = await registerUser(submitData);
-      if (response && response.success) {
-        alert("User created successfully! Redirecting to Home page.");
+      if (response?.success) {
+        alert("User created successfully! Redirecting to Login page.");
         navigate("/login");
       } else {
         setGeneralError(response?.message || "Signup failed.");
@@ -112,6 +105,7 @@ export default function SignupForm() {
     <div
       style={{
         minHeight: "100vh",
+        position: "relative",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -119,6 +113,21 @@ export default function SignupForm() {
         padding: "20px",
       }}
     >
+      {/* Top-left heading */}
+      <h1
+        style={{
+          position: "absolute",
+          top: "20px",
+          left: "20px",
+          fontSize: "24px",
+          color: "#000000",
+          fontWeight: "bold",
+        }}
+      >
+        Create New User
+      </h1>
+
+      {/* Signup form */}
       <div
         style={{
           background: "white",
@@ -132,7 +141,7 @@ export default function SignupForm() {
         <h2 style={{ textAlign: "center", fontSize: "28px", marginBottom: "8px" }}>
           Create New Account
         </h2>
-        <p style={{ textAlign: "center", color: "#666", marginBottom: "20px" }}>
+        <p style={{ textAlign: "center", color: "#000000", marginBottom: "20px" }}>
           Join our management system and start a new journey today 🚀
         </p>
 
@@ -152,44 +161,26 @@ export default function SignupForm() {
           </div>
         )}
 
-        {/* Full Name */}
-        <div style={inputGroupStyle}>
-          <FaUser style={iconStyle} />
-          <InputText
-            placeholder="Full Name"
-            name="fullName"
-            value={formData.fullName}
-            onChange={handleChange}
-            style={{ width: "100%", border: "none", outline: "none" }}
-          />
-        </div>
-        {errors.fullName && <p style={{ color: "red", marginTop: "-8px" }}>{errors.fullName}</p>}
-
-        {/* Contact Number */}
-        <div style={inputGroupStyle}>
-          <FaPhone style={iconStyle} />
-          <InputText
-            placeholder="Contact Number"
-            name="contactNumber"
-            value={formData.contactNumber}
-            onChange={handleChange}
-            style={{ width: "100%", border: "none", outline: "none" }}
-          />
-        </div>
-        {errors.contactNumber && <p style={{ color: "red", marginTop: "-8px" }}>{errors.contactNumber}</p>}
-
-        {/* Email */}
-        <div style={inputGroupStyle}>
-          <FaEnvelope style={iconStyle} />
-          <InputText
-            placeholder="Email Address"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            style={{ width: "100%", border: "none", outline: "none" }}
-          />
-        </div>
-        {errors.email && <p style={{ color: "red", marginTop: "-8px" }}>{errors.email}</p>}
+        {/** Form Fields **/}
+        {[
+          { icon: FaUser, name: "fullName", placeholder: "Full Name", type: "text" },
+          { icon: FaPhone, name: "contactNumber", placeholder: "Contact Number", type: "text" },
+          { icon: FaEnvelope, name: "email", placeholder: "Email Address", type: "email" },
+        ].map(field => (
+          <div key={field.name}>
+            <div style={inputGroupStyle}>
+              <field.icon style={iconStyle} />
+              <InputText
+                name={field.name}
+                placeholder={field.placeholder}
+                value={(formData as any)[field.name]}
+                onChange={handleChange}
+                style={{ width: "100%", border: "none", outline: "none" }}
+              />
+            </div>
+            {errors[field.name] && <p style={{ color: "red", marginTop: "-8px" }}>{errors[field.name]}</p>}
+          </div>
+        ))}
 
         {/* Designation */}
         <div style={inputGroupStyle}>
@@ -204,34 +195,27 @@ export default function SignupForm() {
         </div>
         {errors.designation && <p style={{ color: "red", marginTop: "-8px" }}>{errors.designation}</p>}
 
-        {/* Password */}
-        <div style={inputGroupStyle}>
-          <FaLock style={iconStyle} />
-          <Password
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            placeholder="Password"
-            toggleMask
-            inputStyle={{ width: "100%", border: "none", outline: "none" }}
-          />
-        </div>
-        {errors.password && <p style={{ color: "red", marginTop: "-8px" }}>{errors.password}</p>}
-
-        {/* Confirm Password */}
-        <div style={inputGroupStyle}>
-          <FaLock style={iconStyle} />
-          <Password
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            placeholder="Confirm Password"
-            feedback={false}
-            toggleMask
-            inputStyle={{ width: "100%", border: "none", outline: "none" }}
-          />
-        </div>
-        {errors.confirmPassword && <p style={{ color: "red", marginTop: "-8px" }}>{errors.confirmPassword}</p>}
+        {/* Password & Confirm Password */}
+        {[
+          { icon: FaLock, name: "password", placeholder: "Password" },
+          { icon: FaLock, name: "confirmPassword", placeholder: "Confirm Password" },
+        ].map(field => (
+          <div key={field.name}>
+            <div style={inputGroupStyle}>
+              <field.icon style={iconStyle} />
+              <Password
+                name={field.name}
+                value={(formData as any)[field.name]}
+                onChange={handleChange}
+                placeholder={field.placeholder}
+                toggleMask
+                feedback={field.name === "confirmPassword" ? false : undefined}
+                inputStyle={{ width: "100%", border: "none", outline: "none" }}
+              />
+            </div>
+            {errors[field.name] && <p style={{ color: "red", marginTop: "-8px" }}>{errors[field.name]}</p>}
+          </div>
+        ))}
 
         {/* Submit Button */}
         <Button
