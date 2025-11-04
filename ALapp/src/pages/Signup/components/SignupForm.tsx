@@ -1,14 +1,14 @@
-import 'primereact/resources/themes/saga-blue/theme.css'; // theme
-import 'primereact/resources/primereact.min.css';         // core css
-import 'primeicons/primeicons.css';                       // icons
 import React, { useState } from "react";
 import { InputText } from "primereact/inputtext";
 import { Password } from "primereact/password";
 import { Dropdown } from "primereact/dropdown";
 import { Button } from "primereact/button";
+import { useNavigate } from "react-router-dom";
 import { SignupFormData, SignupResponse } from "../types/signuptypes";
 import { registerUser } from "../services/useSignup";
-import { useNavigate } from "react-router-dom";
+
+// React Icons
+import { FaUser, FaPhone, FaEnvelope, FaLock, FaBriefcase } from "react-icons/fa";
 
 export default function SignupForm() {
   const navigate = useNavigate();
@@ -91,150 +91,169 @@ export default function SignupForm() {
     }
   };
 
+  const inputGroupStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    border: "1px solid #ccc",
+    borderRadius: "8px",
+    padding: "8px 10px",
+    marginBottom: "10px",
+    background: "#fff",
+  };
+
+  const iconStyle: React.CSSProperties = { marginRight: "10px", color: "#555" };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-blue-100 p-6">
-      <div className="card bg-white p-10 rounded-2xl shadow-2xl w-full max-w-lg">
-        <h2 className="text-3xl font-extrabold text-center text-gray-800 mb-2">
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "linear-gradient(to bottom right, #eef2ff, #ffffff)",
+        padding: "20px",
+      }}
+    >
+      <div
+        style={{
+          background: "white",
+          padding: "40px",
+          borderRadius: "20px",
+          boxShadow: "0 8px 30px rgba(0,0,0,0.1)",
+          width: "100%",
+          maxWidth: "480px",
+        }}
+      >
+        <h2 style={{ textAlign: "center", fontSize: "28px", marginBottom: "8px" }}>
           Create Your Account
         </h2>
-        <p className="text-center text-gray-500 mb-6">
-          Join to Get Acess to our Management system and start your journey today 🚀
+        <p style={{ textAlign: "center", color: "#666", marginBottom: "20px" }}>
+          Join our management system and start your journey today 🚀
         </p>
 
-        {/* General error */}
         {generalError && (
-          <div className="text-center mb-4 text-red-600 font-medium bg-red-50 border border-red-200 rounded-md py-2">
+          <div
+            style={{
+              textAlign: "center",
+              color: "#b91c1c",
+              background: "#fee2e2",
+              border: "1px solid #fecaca",
+              borderRadius: "8px",
+              padding: "8px",
+              marginBottom: "16px",
+            }}
+          >
             {generalError}
           </div>
         )}
 
-        <div className="flex flex-column gap-4">
-          {/* Full Name */}
-          <div className="p-inputgroup">
-            <span className="p-inputgroup-addon">
-              <i className="pi pi-user"></i>
-            </span>
-            <InputText
-              placeholder="Full Name"
-              name="fullName"
-              value={formData.fullName}
-              onChange={handleChange}
-              className={`w-full ${errors.fullName ? "p-invalid" : ""}`}
-            />
-          </div>
-          {errors.fullName && (
-  <p className="!text-red-600 text-sm -mt-2">{errors.fullName}</p>
-)}
-
-
-          {/* Contact Number */}
-          <div className="p-inputgroup">
-            <span className="p-inputgroup-addon">
-              <i className="pi pi-phone"></i>
-            </span>
-            <InputText
-              placeholder="Contact Number"
-              name="contactNumber"
-              value={formData.contactNumber}
-              onChange={handleChange}
-              className={`w-full ${errors.contactNumber ? "p-invalid" : ""}`}
-            />
-          </div>
-          {errors.contactNumber && (
-            <p className="text-red-600 text-sm -mt-2">{errors.contactNumber}</p>
-          )}
-
-          {/* Email */}
-          <div className="p-inputgroup">
-            <span className="p-inputgroup-addon">
-              <i className="pi pi-envelope"></i>
-            </span>
-            <InputText
-              placeholder="Email Address"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className={`w-full ${errors.email ? "p-invalid" : ""}`}
-            />
-          </div>
-          {errors.email && (
-            <p className="text-red-600 text-sm -mt-2">{errors.email}</p>
-          )}
-
-          {/* Designation */}
-          <div className="p-inputgroup">
-            <span className="p-inputgroup-addon">
-              <i className="pi pi-briefcase"></i>
-            </span>
-            <Dropdown
-              value={formData.designation}
-              options={designations}
-              onChange={handleDropdownChange}
-              placeholder="Select Designation"
-              className={`w-full ${errors.designation ? "p-invalid" : ""}`}
-            />
-          </div>
-          {errors.designation && (
-            <p className="text-red-600 text-sm -mt-2">{errors.designation}</p>
-          )}
-
-          {/* Password */}
-          <div className="p-inputgroup">
-            <span className="p-inputgroup-addon">
-              <i className="pi pi-lock"></i>
-            </span>
-            <Password
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Password"
-              toggleMask
-              inputClassName={`w-full ${errors.password ? "p-invalid" : ""}`}
-            />
-          </div>
-          {errors.password && (
-            <p className="text-red-600 text-sm -mt-2">{errors.password}</p>
-          )}
-
-          {/* Confirm Password */}
-          <div className="p-inputgroup">
-            <span className="p-inputgroup-addon">
-              <i className="pi pi-lock"></i>
-            </span>
-            <Password
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              placeholder="Confirm Password"
-              feedback={false}
-              toggleMask
-              inputClassName={`w-full ${errors.confirmPassword ? "p-invalid" : ""}`}
-            />
-          </div>
-          {errors.confirmPassword && (
-            <p className="text-red-600 text-sm -mt-2">
-              {errors.confirmPassword}
-            </p>
-          )}
- 
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            label={loading ? "Creating Account..." : "Sign Up"}
-            icon={loading ? "pi pi-spin pi-spinner" : "pi pi-user-plus"}
-            className="p-button-primary w-full mt-3 py-2"
-            onClick={handleSignupClick}
-            disabled={loading}
+        {/* Full Name */}
+        <div style={inputGroupStyle}>
+          <FaUser style={iconStyle} />
+          <InputText
+            placeholder="Full Name"
+            name="fullName"
+            value={formData.fullName}
+            onChange={handleChange}
+            style={{ width: "100%", border: "none", outline: "none" }}
           />
-
-          {/* Login Link */}
-          <p className="text-center text-gray-600 text-sm mt-6">
-            Already have an account?{" "}
-            <a href="/login" className="text-blue-600 hover:underline font-medium">
-              Log In
-            </a>
-          </p>
         </div>
+        {errors.fullName && <p style={{ color: "red", marginTop: "-8px" }}>{errors.fullName}</p>}
+
+        {/* Contact Number */}
+        <div style={inputGroupStyle}>
+          <FaPhone style={iconStyle} />
+          <InputText
+            placeholder="Contact Number"
+            name="contactNumber"
+            value={formData.contactNumber}
+            onChange={handleChange}
+            style={{ width: "100%", border: "none", outline: "none" }}
+          />
+        </div>
+        {errors.contactNumber && <p style={{ color: "red", marginTop: "-8px" }}>{errors.contactNumber}</p>}
+
+        {/* Email */}
+        <div style={inputGroupStyle}>
+          <FaEnvelope style={iconStyle} />
+          <InputText
+            placeholder="Email Address"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            style={{ width: "100%", border: "none", outline: "none" }}
+          />
+        </div>
+        {errors.email && <p style={{ color: "red", marginTop: "-8px" }}>{errors.email}</p>}
+
+        {/* Designation */}
+        <div style={inputGroupStyle}>
+          <FaBriefcase style={iconStyle} />
+          <Dropdown
+            value={formData.designation}
+            options={designations}
+            onChange={handleDropdownChange}
+            placeholder="Select Designation"
+            style={{ width: "100%", border: "none", outline: "none" }}
+          />
+        </div>
+        {errors.designation && <p style={{ color: "red", marginTop: "-8px" }}>{errors.designation}</p>}
+
+        {/* Password */}
+        <div style={inputGroupStyle}>
+          <FaLock style={iconStyle} />
+          <Password
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            placeholder="Password"
+            toggleMask
+            inputStyle={{ width: "100%", border: "none", outline: "none" }}
+          />
+        </div>
+        {errors.password && <p style={{ color: "red", marginTop: "-8px" }}>{errors.password}</p>}
+
+        {/* Confirm Password */}
+        <div style={inputGroupStyle}>
+          <FaLock style={iconStyle} />
+          <Password
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            placeholder="Confirm Password"
+            feedback={false}
+            toggleMask
+            inputStyle={{ width: "100%", border: "none", outline: "none" }}
+          />
+        </div>
+        {errors.confirmPassword && <p style={{ color: "red", marginTop: "-8px" }}>{errors.confirmPassword}</p>}
+
+        {/* Submit Button */}
+        <Button
+          type="submit"
+          label={loading ? "Creating Account..." : "Sign Up"}
+          icon={loading ? "pi pi-spin pi-spinner" : ""}
+          onClick={handleSignupClick}
+          disabled={loading}
+          style={{
+            width: "100%",
+            background: "#2563eb",
+            border: "none",
+            color: "white",
+            padding: "10px",
+            borderRadius: "10px",
+            marginTop: "10px",
+            cursor: "pointer",
+          }}
+        />
+
+        {/* Login Link */}
+        <p style={{ textAlign: "center", color: "#555", marginTop: "16px", fontSize: "14px" }}>
+          Already have an account?{" "}
+          <a href="/login" style={{ color: "#2563eb", textDecoration: "underline" }}>
+            Log In
+          </a>
+        </p>
       </div>
     </div>
   );
