@@ -89,152 +89,222 @@ export default function SignupForm() {
     }
   };
 
+  const labelStyle: React.CSSProperties = {
+    display: "block",
+    marginBottom: "4px",
+    fontSize: "13px",
+    fontWeight: "500",
+    color: "#374151",
+  };
+
   const inputGroupStyle: React.CSSProperties = {
     display: "flex",
     alignItems: "center",
-    border: "1px solid #ccc",
-    borderRadius: "8px",
-    padding: "8px 10px",
-    marginBottom: "10px",
+    border: "1px solid #d1d5db",
+    borderRadius: "6px",
+    padding: "6px 10px",
     background: "#fff",
   };
 
-  const iconStyle: React.CSSProperties = { marginRight: "10px", color: "#555" };
+  const iconStyle: React.CSSProperties = { 
+    marginRight: "8px", 
+    color: "#6b7280",
+    fontSize: "14px"
+  };
+
+  const fieldContainerStyle: React.CSSProperties = {
+    marginBottom: "12px",
+  };
 
   return (
     <div
       style={{
         minHeight: "100vh",
-        position: "relative",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "linear-gradient(to bottom right, #eef2ff, #ffffff)",
         padding: "20px",
+        display: "flex",
+        alignItems: "flex-start",     
+        justifyContent: "center",
+        paddingTop: "40px",           
       }}
     >
-      {/* Top-left heading */}
-      <h1
-        style={{
-          position: "absolute",
-          top: "20px",
-          left: "20px",
-          fontSize: "24px",
-          color: "#000000",
-          fontWeight: "bold",
-        }}
-      >
-        Create New User
-      </h1>
-
-      {/* Signup form */}
-      <div
-        style={{
-          background: "white",
-          padding: "40px",
-          borderRadius: "20px",
-          boxShadow: "0 8px 30px rgba(0,0,0,0.1)",
-          width: "100%",
-          maxWidth: "480px",
-        }}
-      >
-        <h2 style={{ textAlign: "center", fontSize: "28px", marginBottom: "8px" }}>
-          Create New Account
-        </h2>
-        <p style={{ textAlign: "center", color: "#000000", marginBottom: "20px" }}>
-          Join our management system and start a new journey today 🚀
-        </p>
-
-        {generalError && (
-          <div
+      <div style={{ maxWidth: "1200px"}}>
+        {/* Header */}
+        <div style={{ marginBottom: "12px" }}>
+          <h1
             style={{
-              textAlign: "center",
-              color: "#b91c1c",
-              background: "#fee2e2",
-              border: "1px solid #fecaca",
-              borderRadius: "8px",
-              padding: "8px",
-              marginBottom: "16px",
+              fontSize: "24px",
+              color: "#111827",
+              fontWeight: "600",
+              marginBottom: "2px",
             }}
           >
-            {generalError}
-          </div>
-        )}
-
-        {/** Form Fields **/}
-        {[
-          { icon: FaUser, name: "fullName", placeholder: "Full Name", type: "text" },
-          { icon: FaPhone, name: "contactNumber", placeholder: "Contact Number", type: "text" },
-          { icon: FaEnvelope, name: "email", placeholder: "Email Address", type: "email" },
-        ].map(field => (
-          <div key={field.name}>
-            <div style={inputGroupStyle}>
-              <field.icon style={iconStyle} />
-              <InputText
-                name={field.name}
-                placeholder={field.placeholder}
-                value={(formData as any)[field.name]}
-                onChange={handleChange}
-                style={{ width: "100%", border: "none", outline: "none" }}
-              />
-            </div>
-            {errors[field.name] && <p style={{ color: "red", marginTop: "-8px" }}>{errors[field.name]}</p>}
-          </div>
-        ))}
-
-        {/* Designation */}
-        <div style={inputGroupStyle}>
-          <FaBriefcase style={iconStyle} />
-          <Dropdown
-            value={formData.designation}
-            options={designations}
-            onChange={handleDropdownChange}
-            placeholder="Select Designation"
-            style={{ width: "100%", border: "none", outline: "none" }}
-          />
+            Create New User
+          </h1>
+          <p style={{ color: "#4e535cff", fontSize: "16px", fontWeight: "500" }}>
+            Add a new user to the system
+          </p>
         </div>
-        {errors.designation && <p style={{ color: "red", marginTop: "-8px" }}>{errors.designation}</p>}
 
-        {/* Password & Confirm Password */}
-        {[
-          { icon: FaLock, name: "password", placeholder: "Password" },
-          { icon: FaLock, name: "confirmPassword", placeholder: "Confirm Password" },
-        ].map(field => (
-          <div key={field.name}>
-            <div style={inputGroupStyle}>
-              <field.icon style={iconStyle} />
-              <Password
-                name={field.name}
-                value={(formData as any)[field.name]}
-                onChange={handleChange}
-                placeholder={field.placeholder}
-                toggleMask
-                feedback={field.name === "confirmPassword" ? false : undefined}
-                inputStyle={{ width: "100%", border: "none", outline: "none" }}
-              />
-            </div>
-            {errors[field.name] && <p style={{ color: "red", marginTop: "-8px" }}>{errors[field.name]}</p>}
-          </div>
-        ))}
-
-        {/* Submit Button */}
-        <Button
-          type="submit"
-          label={loading ? "Creating Account..." : "Sign Up"}
-          icon={loading ? "pi pi-spin pi-spinner" : ""}
-          onClick={handleSignupClick}
-          disabled={loading}
+        {/* Main Content */}
+        <div
           style={{
-            width: "100%",
-            background: "#2563eb",
-            border: "none",
-            color: "white",
-            padding: "10px",
-            borderRadius: "10px",
-            marginTop: "10px",
-            cursor: "pointer",
+            background: "white",
+            padding: "20px",
+            borderRadius: "8px",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            maxWidth: "900px",
           }}
-        />
+        >
+          {generalError && (
+            <div
+              style={{
+                color: "#b91c1c",
+                background: "#fee2e2",
+                border: "1px solid #fecaca",
+                borderRadius: "6px",
+                padding: "8px 12px",
+                marginBottom: "16px",
+                fontSize: "13px",
+              }}
+            >
+              {generalError}
+            </div>
+          )}
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+            {/* Full Name */}
+            <div style={fieldContainerStyle}>
+              <label style={labelStyle}>Full Name</label>
+              <div style={inputGroupStyle}>
+                <FaUser style={iconStyle} />
+                <InputText
+                  name="fullName"
+                  placeholder="Enter full name"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  style={{ width: "100%", border: "none", outline: "none", fontSize: "14px" }}
+                />
+              </div>
+              {errors.fullName && <p style={{ color: "#dc2626", marginTop: "3px", fontSize: "12px" }}>{errors.fullName}</p>}
+            </div>
+
+            {/* Contact Number */}
+            <div style={fieldContainerStyle}>
+              <label style={labelStyle}>Contact Number</label>
+              <div style={inputGroupStyle}>
+                <FaPhone style={iconStyle} />
+                <InputText
+                  name="contactNumber"
+                  placeholder="Enter contact number"
+                  value={formData.contactNumber}
+                  onChange={handleChange}
+                  style={{ width: "100%", border: "none", outline: "none", fontSize: "14px" }}
+                />
+              </div>
+              {errors.contactNumber && <p style={{ color: "#dc2626", marginTop: "3px", fontSize: "12px" }}>{errors.contactNumber}</p>}
+            </div>
+
+            {/* Email Address */}
+            <div style={fieldContainerStyle}>
+              <label style={labelStyle}>Email Address</label>
+              <div style={inputGroupStyle}>
+                <FaEnvelope style={iconStyle} />
+                <InputText
+                  name="email"
+                  placeholder="Enter email address"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  style={{ width: "100%", border: "none", outline: "none", fontSize: "14px" }}
+                />
+              </div>
+              {errors.email && <p style={{ color: "#dc2626", marginTop: "3px", fontSize: "12px" }}>{errors.email}</p>}
+            </div>
+
+            {/* Designation */}
+            <div style={fieldContainerStyle}>
+              <label style={labelStyle}>Designation</label>
+              <div style={inputGroupStyle}>
+                <FaBriefcase style={iconStyle} />
+                <Dropdown
+                  value={formData.designation}
+                  options={designations}
+                  onChange={handleDropdownChange}
+                  placeholder="Select designation"
+                  style={{ width: "100%", border: "none", outline: "none", fontSize: "14px" }}
+                />
+              </div>
+              {errors.designation && <p style={{ color: "#dc2626", marginTop: "3px", fontSize: "12px" }}>{errors.designation}</p>}
+            </div>
+
+            {/* Password */}
+            <div style={fieldContainerStyle}>
+              <label style={labelStyle}>Password</label>
+              <div style={inputGroupStyle}>
+                <FaLock style={iconStyle} />
+                <Password
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Enter password"
+                  toggleMask
+                  inputStyle={{ width: "100%", border: "none", outline: "none", fontSize: "14px" }}
+                />
+              </div>
+              {errors.password && <p style={{ color: "#dc2626", marginTop: "3px", fontSize: "12px" }}>{errors.password}</p>}
+            </div>
+
+            {/* Confirm Password */}
+            <div style={fieldContainerStyle}>
+              <label style={labelStyle}>Confirm Password</label>
+              <div style={inputGroupStyle}>
+                <FaLock style={iconStyle} />
+                <Password
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Re-enter password"
+                  toggleMask
+                  feedback={false}
+                  inputStyle={{ width: "100%", border: "none", outline: "none", fontSize: "14px" }}
+                />
+              </div>
+              {errors.confirmPassword && <p style={{ color: "#dc2626", marginTop: "3px", fontSize: "12px" }}>{errors.confirmPassword}</p>}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{ display: "flex", gap: "10px", marginTop: "20px", justifyContent: "flex-end" }}>
+            <Button
+              label="Cancel"
+              onClick={() => navigate(-1)}
+              outlined
+              style={{
+                padding: "8px 20px",
+                borderRadius: "6px",
+                border: "1px solid #d1d5db",
+                background: "white",
+                color: "#374151",
+                fontSize: "14px",
+              }}
+            />
+            <Button
+              label={loading ? "Creating User..." : "Create User"}
+              icon={loading ? "pi pi-spin pi-spinner" : ""}
+              onClick={handleSignupClick}
+              disabled={loading}
+              style={{
+                padding: "8px 20px",
+                background: "#2563eb",
+                border: "none",
+                color: "white",
+                borderRadius: "6px",
+                cursor: loading ? "not-allowed" : "pointer",
+                fontSize: "14px",
+              }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
