@@ -62,30 +62,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const refreshAccessToken = async (): Promise<string | null> => {
-    console.log('🔄 Attempting to refresh access token...');
-    const res = await fetch(`${API_BASE}/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-    if (!res.ok) {
-      console.log('❌ Token refresh failed - clearing auth state');
-      setAccessToken(null);
-      clearProfile();
-      throw new Error('Token refresh failed');
-    }
-    const { data } = await res.json();
-    const newToken = data.token;
-    if (newToken) {
-      console.log('✅ New access token received');
-      setAccessToken(newToken);
-      return newToken;
-    } else {
-      console.log('❌ No token in refresh response');
-      setAccessToken(null);
-      throw new Error('Invalid token received');
-    }
-  };
+  console.log('🔄 Attempting to refresh access token...');
+  
+  // Get the CURRENT token from state or localStorage
+  const currentToken = accessToken || localStorage.getItem(TOKEN_KEY);
+  
+  if (!currentToken) {
+    console.log('❌ No current token to refresh');
+    throw new Error('No token available to refresh');
+  }
 
+  const res = await fetch(`${API_BASE}/auth/refresh`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${currentToken}`,  
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include',
+  });
+
+  if (!res.ok) {
+    console.log('❌ Token refresh failed - clearing auth state');
+    setAccessToken(null);
+    clearProfile();
+    throw new Error('Token refresh failed');
+  }
+
+  const { data } = await res.json();
+  const newToken = data.token;
+  
+  if (newToken) {
+    console.log('✅ New access token received');
+    setAccessToken(newToken);
+    return newToken;
+  } else {
+    console.log('❌ No token in refresh response');
+    setAccessToken(null);
+    throw new Error('Invalid token received');
+  }
+};
   // 🚀 Global 401 handler – auto-refresh + retry logic
   useEffect(() => {
   const originalFetch = window.fetch.bind(window);
@@ -162,21 +177,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mounted = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (!accessToken) return;
-    const refreshInterval = setInterval(async () => {
-      try {
-        await refreshAccessToken();
-        console.log('✅ Silent token refresh successful');
-      } catch (err) {
-        console.log('❌ Silent token refresh failed:', err);
-        setAccessToken(null);
-        clearProfile();
-      }
-    }, 120 * 60 * 1000);
-    return () => clearInterval(refreshInterval);
-  }, [accessToken]);
 
   const login = async (email: string, password: string) => {
     console.log('🔐 Logging in...');
