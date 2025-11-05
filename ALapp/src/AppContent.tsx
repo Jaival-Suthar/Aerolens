@@ -12,17 +12,17 @@ const LoginPage = lazy(() => import('./pages/Login/Login'));
 const SignUpPage = lazy(() => import('./pages/Signup/page'));
 
 const LoadingSpinner = () => (
-  <div className="flex align-items-center justify-content-center h-screen">
+  <div className="flex align-items-center justify-content-center h-screen" data-testid="loading-spinner">
     <i className="pi pi-spin pi-spinner text-4xl text-primary"></i>
   </div>
 );
 
 const NotFound: React.FC = () => (
-  <div className="flex flex-column align-items-center justify-content-center h-screen">
+  <div className="flex flex-column align-items-center justify-content-center h-screen" data-testid="not-found">
     <i className="pi pi-exclamation-triangle text-6xl text-orange-500 mb-3"></i>
     <h1 className="text-4xl font-bold text-900 mb-2">404</h1>
     <p className="text-xl text-600 mb-4">Page not found</p>
-    <button className="p-button p-component" onClick={() => (window.location.href = '/home')}>
+    <button className="p-button p-component" onClick={() => (window.location.href = '/home')} data-testid="go-dashboard-btn">
       <span className="p-button-label">Go to Home Page</span>
     </button>
   </div>
