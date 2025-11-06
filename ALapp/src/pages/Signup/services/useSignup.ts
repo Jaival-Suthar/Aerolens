@@ -20,12 +20,20 @@ export const registerUser = async (
       body: JSON.stringify(payload),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Registration failed");
+      // ✅ Handle structured backend validation error
+      if (data.error === "VALIDATION_ERROR" && Array.isArray(data.details)) {
+        const fieldErrors = data.details
+          .map((d: { field: string; message: string }) => `${d.field}: ${d.message}`)
+          .join(", ");
+        throw new Error(fieldErrors || data.message || "Validation failed");
+      }
+
+      throw new Error(data.message || "Registration failed");
     }
 
-    const data: SignupResponse = await response.json();
     console.log("Registration successful:", data);
     return data;
   } catch (error: any) {
@@ -51,7 +59,6 @@ export const fetchDesignations = async (token: string): Promise<string[]> => {
 
   const result = await response.json();
 
-  // Extract only entries where tag === 'designation'
   const designations = result.data
     .filter((item: any) => item.tag === "designation")
     .map((item: any) => item.value);

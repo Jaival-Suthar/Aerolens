@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { InputText } from "primereact/inputtext";
 import { Password } from "primereact/password";
 import { Dropdown } from "primereact/dropdown";
 import { Button } from "primereact/button";
+import { Toast } from "primereact/toast";
 import { useNavigate } from "react-router-dom";
 import { SignupFormData, SignupResponse } from "../types/signuptypes";
 import { registerUser, fetchDesignations } from "../services/useSignup";
@@ -12,6 +13,7 @@ import { FaUser, FaPhone, FaEnvelope, FaLock, FaBriefcase } from "react-icons/fa
 export default function SignupForm() {
   const navigate = useNavigate();
   const { accessToken, isAuthenticated } = useAuth();
+  const toast = useRef<Toast>(null); // ✅ Toast ref
 
   const [formData, setFormData] = useState<SignupFormData>({
     fullName: "",
@@ -25,46 +27,40 @@ export default function SignupForm() {
 
   const [designations, setDesignations] = useState<{ label: string; value: string }[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [generalError, setGeneralError] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingDesignations, setLoadingDesignations] = useState(false);
 
-  // ✅ Fixed: Only fetch when token is available AND authenticated
   useEffect(() => {
     const loadDesignations = async () => {
-      // Wait for token to be ready
-      if (!accessToken || !isAuthenticated) {
-        console.log("⏳ Waiting for authentication...");
-        return;
-      }
+      if (!accessToken || !isAuthenticated) return;
 
       try {
         setLoadingDesignations(true);
-        console.log("📥 Fetching designations with token:", accessToken.slice(0, 20) + "...");
-        
         const data = await fetchDesignations(accessToken);
-        setDesignations(data.map(d => ({ label: d, value: d })));
-        console.log("✅ Designations loaded:", data);
+        setDesignations(data.map((d) => ({ label: d, value: d })));
       } catch (err: any) {
-        console.error("❌ Error fetching designations:", err.message);
-        setGeneralError("Failed to load designations. Please try again.");
+        toast.current?.show({
+          severity: "error",
+          summary: "Error",
+          detail: err?.message || "Failed to load designations",
+          life: 4000,
+        });
       } finally {
         setLoadingDesignations(false);
       }
     };
-
     loadDesignations();
-  }, [accessToken, isAuthenticated]); // ✅ Added isAuthenticated dependency
+  }, [accessToken, isAuthenticated]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    setErrors(prev => ({ ...prev, [name]: "" }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const handleDropdownChange = (e: { value: string }) => {
-    setFormData(prev => ({ ...prev, designation: e.value || "" }));
-    setErrors(prev => ({ ...prev, designation: "" }));
+    setFormData((prev) => ({ ...prev, designation: e.value || "" }));
+    setErrors((prev) => ({ ...prev, designation: "" }));
   };
 
   const validateFields = () => {
@@ -83,7 +79,6 @@ export default function SignupForm() {
   };
 
   const handleSignupClick = async () => {
-    setGeneralError("");
     if (!validateFields()) return;
 
     const submitData = {
@@ -95,8 +90,16 @@ export default function SignupForm() {
     try {
       setLoading(true);
       const response: SignupResponse = await registerUser(submitData);
-      if (response?.success) {
-        alert("User created successfully!");
+
+      // ✅ Always show toast based on backend message
+      toast.current?.show({
+        severity: response.success ? "success" : "error",
+        summary: response.success ? "Success" : "Error",
+        detail: response.message || (response.success ? "User created successfully!" : "Signup failed."),
+        life: 4000,
+      });
+
+      if (response.success) {
         setFormData({
           fullName: "",
           contactNumber: "",
@@ -106,25 +109,22 @@ export default function SignupForm() {
           designation: "",
           isRecruiter: false,
         });
-      } else {
-        setGeneralError(response?.message || "Signup failed.");
       }
     } catch (err: any) {
-      setGeneralError(err?.message || "Something went wrong. Please try again.");
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: err?.message || "Something went wrong. Please try again.",
+        life: 4000,
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Show loading state if not authenticated yet
   if (!isAuthenticated) {
     return (
-      <div style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center"
-      }}>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ textAlign: "center" }}>
           <i className="pi pi-spin pi-spinner" style={{ fontSize: "2rem" }}></i>
           <p style={{ marginTop: "1rem", color: "#6b7280" }}>Loading...</p>
@@ -150,15 +150,8 @@ export default function SignupForm() {
     background: "#fff",
   };
 
-  const iconStyle: React.CSSProperties = { 
-    marginRight: "8px", 
-    color: "#6b7280",
-    fontSize: "14px"
-  };
-
-  const fieldContainerStyle: React.CSSProperties = {
-    marginBottom: "12px",
-  };
+  const iconStyle: React.CSSProperties = { marginRight: "8px", color: "#6b7280", fontSize: "14px" };
+  const fieldContainerStyle: React.CSSProperties = { marginBottom: "12px" };
 
   return (
     <div
@@ -166,12 +159,15 @@ export default function SignupForm() {
         minHeight: "100vh",
         padding: "20px",
         display: "flex",
-        alignItems: "flex-start",     
+        alignItems: "flex-start",
         justifyContent: "center",
-        paddingTop: "40px",           
+        paddingTop: "40px",
       }}
     >
-      <div style={{ maxWidth: "1200px"}}>
+      {/* ✅ Toast Component */}
+      <Toast ref={toast} position="top-right" />
+
+      <div style={{ maxWidth: "1200px" }}>
         {/* Header */}
         <div style={{ marginBottom: "12px" }}>
           <h1
@@ -199,21 +195,6 @@ export default function SignupForm() {
             maxWidth: "900px",
           }}
         >
-          {generalError && (
-            <div
-              style={{
-                color: "#b91c1c",
-                background: "#fee2e2",
-                border: "1px solid #fecaca",
-                borderRadius: "6px",
-                padding: "8px 12px",
-                marginBottom: "16px",
-                fontSize: "13px",
-              }}
-            >
-              {generalError}
-            </div>
-          )}
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
             {/* Full Name */}
