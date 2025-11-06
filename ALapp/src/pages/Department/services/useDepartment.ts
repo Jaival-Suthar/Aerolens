@@ -12,7 +12,7 @@ const API_URL: string = import.meta.env.VITE_BASE_URL;
 const IS_DEV = import.meta.env.DEV;
 
 const logger = {
-  log: (...args: any[]) => IS_DEV && console.log("DEPARTMENT LOG:", ...args),
+  //log: (...args: any[]) => IS_DEV && console.log("DEPARTMENT LOG:", ...args),
   error: (...args: any[]) => console.error("DEPARTMENT ERROR:", ...args),
 };
 

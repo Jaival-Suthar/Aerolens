@@ -34,7 +34,7 @@ export const registerUser = async (
       throw new Error(data.message || "Registration failed");
     }
 
-    console.log("Registration successful:", data);
+    //console.log("Registration successful:", data);
     return data;
   } catch (error: any) {
     console.error("Registration failed:", error.message);

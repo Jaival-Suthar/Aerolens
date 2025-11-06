@@ -25,7 +25,7 @@ export const useContact = () => {
     const data: ApiResponse<T> = await response.json();
     if (!response.ok)
       throw new Error(data.message || `HTTP error! status: ${response.status}`);
-    console.log("API Response Data:", data);
+    //console.log("API Response Data:", data);
     return data;
   };
 
@@ -35,7 +35,7 @@ export const useContact = () => {
       accessToken: string | null,
       clientId: number
     ): Promise<ApiResponse<ClientDetailsApiResponse>> => {
-      console.log("Fetching client details for clientId:", clientId);
+      //console.log("Fetching client details for clientId:", clientId);
       setLoading(true);
       setError(null);
       try {
