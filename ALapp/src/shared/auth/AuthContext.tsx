@@ -61,46 +61,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('✅ Profile fetched successfully');
   };
 
-  const refreshAccessToken = async (): Promise<string | null> => {
+
+  let refreshPromise: Promise<string | null> | null = null;
+
+const refreshAccessToken = async (): Promise<string | null> => {
+  if (refreshPromise) {
+    console.log('⏳ Waiting for ongoing token refresh...');
+    return refreshPromise;
+  }
+
   console.log('🔄 Attempting to refresh access token...');
-  
-  // Get the CURRENT token from state or localStorage
-  const currentToken = accessToken || localStorage.getItem(TOKEN_KEY);
-  
-  if (!currentToken) {
-    console.log('❌ No current token to refresh');
-    throw new Error('No token available to refresh');
-  }
+  refreshPromise = (async () => {
+    try {
+      const currentToken = accessToken || localStorage.getItem(TOKEN_KEY);
 
-  const res = await fetch(`${API_BASE}/auth/refresh`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${currentToken}`,  
-      'Content-Type': 'application/json'
-    },
-    credentials: 'include',
-  });
+      if (!currentToken) {
+        console.log('❌ No current token to refresh');
+        throw new Error('No token available to refresh');
+      }
 
-  if (!res.ok) {
-    console.log('❌ Token refresh failed - clearing auth state');
-    setAccessToken(null);
-    clearProfile();
-    throw new Error('Token refresh failed');
-  }
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${currentToken}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
 
-  const { data } = await res.json();
-  const newToken = data.token;
-  
-  if (newToken) {
-    console.log('✅ New access token received');
-    setAccessToken(newToken);
-    return newToken;
-  } else {
-    console.log('❌ No token in refresh response');
-    setAccessToken(null);
-    throw new Error('Invalid token received');
-  }
+      if (!res.ok) {
+        console.log('❌ Token refresh failed - clearing auth state');
+        setAccessToken(null);
+        clearProfile();
+        throw new Error('Token refresh failed');
+      }
+
+      const { data } = await res.json();
+      const newToken = data.token;
+
+      if (newToken) {
+        console.log('✅ New access token received');
+        setAccessToken(newToken);
+        return newToken;
+      } else {
+        console.log('❌ No token in refresh response');
+        setAccessToken(null);
+        throw new Error('Invalid token received');
+      }
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
 };
+
   // 🚀 Global 401 handler – auto-refresh + retry logic
   useEffect(() => {
   const originalFetch = window.fetch.bind(window);
