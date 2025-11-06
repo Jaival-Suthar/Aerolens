@@ -1,17 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { InputText } from "primereact/inputtext";
 import { Password } from "primereact/password";
 import { Dropdown } from "primereact/dropdown";
 import { Button } from "primereact/button";
 import { useNavigate } from "react-router-dom";
 import { SignupFormData, SignupResponse } from "../types/signuptypes";
-import { registerUser } from "../services/useSignup";
-
-// React Icons
+import { registerUser, fetchDesignations } from "../services/useSignup";
+import { useAuth } from "../../../shared/auth/AuthContext";
 import { FaUser, FaPhone, FaEnvelope, FaLock, FaBriefcase } from "react-icons/fa";
 
 export default function SignupForm() {
   const navigate = useNavigate();
+  const { accessToken, isAuthenticated } = useAuth();
 
   const [formData, setFormData] = useState<SignupFormData>({
     fullName: "",
@@ -23,19 +23,38 @@ export default function SignupForm() {
     isRecruiter: false,
   });
 
+  const [designations, setDesignations] = useState<{ label: string; value: string }[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingDesignations, setLoadingDesignations] = useState(false);
 
-  const designations = [
-    { label: "QA Automation Developer", value: "qa automation developer" },
-    { label: "Software Engineer", value: "software engineer" },
-    { label: "Sr. PHP Developer", value: "sr. php developer" },
-    { label: "Head Of Engineering", value: "head of engineering" },
-    { label: "Admin", value: "admin" },
-    { label: "Test Engineer", value: "test-engineer" },
-    { label: "Staff Software Engineer", value: "staff software engineer" },
-  ];
+  // ✅ Fixed: Only fetch when token is available AND authenticated
+  useEffect(() => {
+    const loadDesignations = async () => {
+      // Wait for token to be ready
+      if (!accessToken || !isAuthenticated) {
+        console.log("⏳ Waiting for authentication...");
+        return;
+      }
+
+      try {
+        setLoadingDesignations(true);
+        console.log("📥 Fetching designations with token:", accessToken.slice(0, 20) + "...");
+        
+        const data = await fetchDesignations(accessToken);
+        setDesignations(data.map(d => ({ label: d, value: d })));
+        console.log("✅ Designations loaded:", data);
+      } catch (err: any) {
+        console.error("❌ Error fetching designations:", err.message);
+        setGeneralError("Failed to load designations. Please try again.");
+      } finally {
+        setLoadingDesignations(false);
+      }
+    };
+
+    loadDesignations();
+  }, [accessToken, isAuthenticated]); // ✅ Added isAuthenticated dependency
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -77,8 +96,16 @@ export default function SignupForm() {
       setLoading(true);
       const response: SignupResponse = await registerUser(submitData);
       if (response?.success) {
-        alert("User created successfully! Redirecting to Home page.");
-        navigate("/login");
+        alert("User created successfully!");
+        setFormData({
+          fullName: "",
+          contactNumber: "",
+          email: "",
+          password: "",
+          confirmPassword: "",
+          designation: "",
+          isRecruiter: false,
+        });
       } else {
         setGeneralError(response?.message || "Signup failed.");
       }
@@ -88,6 +115,23 @@ export default function SignupForm() {
       setLoading(false);
     }
   };
+
+  // ✅ Show loading state if not authenticated yet
+  if (!isAuthenticated) {
+    return (
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
+      }}>
+        <div style={{ textAlign: "center" }}>
+          <i className="pi pi-spin pi-spinner" style={{ fontSize: "2rem" }}></i>
+          <p style={{ marginTop: "1rem", color: "#6b7280" }}>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const labelStyle: React.CSSProperties = {
     display: "block",
@@ -230,7 +274,8 @@ export default function SignupForm() {
                   value={formData.designation}
                   options={designations}
                   onChange={handleDropdownChange}
-                  placeholder="Select designation"
+                  placeholder={loadingDesignations ? "Loading..." : "Select designation"}
+                  disabled={loadingDesignations}
                   style={{ width: "100%", border: "none", outline: "none", fontSize: "14px" }}
                 />
               </div>
