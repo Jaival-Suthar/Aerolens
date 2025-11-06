@@ -135,7 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return () => {
     window.fetch = originalFetch;
   };
-}, [accessToken]);
+}, []);
 
 
   // 🧩 Existing initAuth, silent refresh, login, logout, etc. stay unchanged...
@@ -144,14 +144,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const initAuth = async () => {
       console.log('🚀 Initializing auth...');
-      const hasRefreshToken = document.cookie.includes('refreshToken');
-      if (!accessToken) {
-        clearProfile();
-        return;
-      }
+      const storedToken = accessToken || localStorage.getItem(TOKEN_KEY);
+        if (!storedToken) {
+          clearProfile();
+          return;
+        }
 
       try {
-        await fetchProfile(accessToken);
+        await fetchProfile(storedToken);
       } catch (err: any) {
         if (err.message?.includes('401')) {
           try {
@@ -221,15 +221,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    (window as any).testRefresh = async () => {
-      try {
-        const newToken = await refreshAccessToken();
-        console.log('✅ Test refresh successful:', newToken?.slice(0, 20) + '...');
-      } catch (err) {
-        console.log('❌ Test refresh failed:', err);
-      }
-    };
-  }, []);
+  (window as any).testRefresh = async () => {
+    try {
+      const newToken = await refreshAccessToken();
+      console.log('✅ Test refresh successful:', newToken?.slice(0, 20) + '...');
+    } catch (err) {
+      console.log('❌ Test refresh failed:', err);
+    }
+  };
+  
+  return () => {
+    delete (window as any).testRefresh;
+  };
+}, []);
 
   return (
     <AuthContext.Provider
