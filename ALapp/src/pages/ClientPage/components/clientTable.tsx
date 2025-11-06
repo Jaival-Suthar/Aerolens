@@ -13,6 +13,7 @@ const ClientTable: React.FC<ClientTableProps> = ({
   refreshTrigger = 0,
   selectedClient,
   onSelectionChange,
+  preSelectClientId
 }) => {
   const { clients, loading, error, loadClients } = useClientData();
   const {
@@ -50,7 +51,15 @@ const ClientTable: React.FC<ClientTableProps> = ({
     updatePaginationFromResponse,
     resetPaginationOnError,
   ]);
-
+  // Auto-select client from URL on mount/refresh
+useEffect(() => {
+  if (preSelectClientId && clients.length > 0 && !selectedClient) {
+    const clientToSelect = clients.find(c => c.clientId === preSelectClientId);
+    if (clientToSelect) {
+      onSelectionChange(clientToSelect);
+    }
+  }
+}, [preSelectClientId, clients, selectedClient, onSelectionChange]);
   const onPageChange = useCallback(
     (event: PaginatorPageChangeEvent) => {
       const newPage = event.page + 1; // zero-based → one-based
