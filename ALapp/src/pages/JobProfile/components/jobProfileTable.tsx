@@ -10,6 +10,7 @@ import AddButton from '../../../shared/AddButton';
 import EditButton from '../../../shared/EditButton';
 import DeleteButton from '../../../shared/DeleteButton';
 import ExportExcelButton from '../../../shared/ExportExcelButton';
+import { useSearchParams } from "react-router-dom";
 import { 
   getJobProfiles, 
   createJobProfile, 
@@ -35,6 +36,11 @@ const JobProfileMain: React.FC = () => {
   const [selectedJobProfile, setSelectedJobProfile] = useState<JobProfile | null>(null);
   const [addEditVisible, setAddEditVisible] = useState(false);
   const [deleteVisible, setDeleteVisible] = useState(false);
+  // ----- Pagination with URL Sync -----
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pageFromUrl = Number(searchParams.get("page")) || 1;
+  const [first, setFirst] = useState((pageFromUrl - 1) * 5); // 5 = default rows
+  const [rows, setRows] = useState(5);
 
   useEffect(() => {
     loadData();
@@ -75,6 +81,13 @@ const JobProfileMain: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const onPageChange = (event: any) => {
+  setFirst(event.first);
+  setRows(event.rows);
+  const newPage = event.page + 1; // PrimeReact page index starts from 0
+  setSearchParams({ page: newPage.toString() });
+};
 
   const handleAddNew = () => {
     setSelectedJobProfile(null);
@@ -204,7 +217,13 @@ const JobProfileMain: React.FC = () => {
         dataKey="jobProfileId"
         responsiveLayout="scroll"
         emptyMessage="No job profiles found"
+        paginator
+        rows={rows}
+        first={first}
+        onPage={onPageChange}
+        rowsPerPageOptions={[5, 10, 20, 50]}
       >
+
         <Column
           selectionMode="single"
           headerStyle={{ width: '3rem' }}
