@@ -10,6 +10,7 @@ import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
 import ExportExcelButton from "../../../shared/ExportExcelButton";
+import { useSearchParams } from "react-router-dom";
 
 import { Candidate } from "../types/resumeTypes";
 import { getCandidates, downloadResume } from "../services/useResume";
@@ -23,6 +24,9 @@ const ResumeTable: React.FC = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editingResume, setEditingResume] = useState<Candidate | null>(null);
   const [loading, setLoading] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pageFromUrl = Number(searchParams.get("page")) || 1;
+  const [first, setFirst] = useState((pageFromUrl - 1) * 5); // 5 = rows per page
   const dt = useRef<DataTable<any>>(null);
 
   /** ------------------- Data Loading ------------------- */
@@ -43,6 +47,12 @@ const ResumeTable: React.FC = () => {
   useEffect(() => {
     loadResumes();
   }, [loadResumes]);
+
+  const onPageChange = (event: any) => {
+  setFirst(event.first);
+  const newPage = event.page + 1; // PrimeReact pages start from 0
+  setSearchParams({ page: newPage.toString() });
+};
 
   /** ------------------- CRUD Handlers ------------------- */
   const handleAdd = () => {
@@ -117,9 +127,6 @@ const ResumeTable: React.FC = () => {
     console.error("Resume preview failed:", error);
   }
 };
-
-
-
   /** ------------------- Column Templates ------------------- */
   const resumeActionTemplate = (candidate: Candidate) => {
     if (!candidate.resumeFilename) {
@@ -178,7 +185,9 @@ const ResumeTable: React.FC = () => {
         value={resumes}
         paginator
         rows={5}
-        rowsPerPageOptions={[5, 10, 20]}
+        first={first}
+        onPage={onPageChange}
+        rowsPerPageOptions={[5, 10, 20, 50]}
         selectionMode="single"
         selection={selectedResume}
         dataKey="candidateId"
@@ -187,6 +196,7 @@ const ResumeTable: React.FC = () => {
         loading={loading}
         emptyMessage="No candidates found."
       >
+
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
         <Column field="candidateName" header="Candidate Name" sortable />
         <Column field="contactNumber" header="Contact Number" sortable />
