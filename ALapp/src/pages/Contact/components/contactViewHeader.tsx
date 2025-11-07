@@ -4,7 +4,7 @@ import AddButton from '../../../shared/AddButton';
 import EditButton from '../../../shared/EditButton';
 import DeleteButton from '../../../shared/DeleteButton';
 import type { Contact, Client } from '../types/contactTypes';
-
+import { FaArrowLeft } from "react-icons/fa";
 interface ContactViewHeaderProps {
   onBackClick: () => void;
   selectedClient?: Client | null;
@@ -24,16 +24,13 @@ const ContactViewHeader: React.FC<ContactViewHeaderProps> = ({
   return (
     <div className="flex justify-content-between align-items-center mb-4 w-full">
       <div className="flex align-items-center gap-3">
-       <Button 
-          icon="pi pi-arrow-left" 
-          label="Back to Clients" 
+       <button
           onClick={onBackClick}
-          severity="secondary"        // Use warning for stronger yellow/orange color
-          text={false}              // Fully filled button for stronger background
-          outlined          // Remove outline for solid fill
-          size="large" 
-          className="font-semibold" // Bold text for better readability
-        />
+          className="flex items-center gap-2 px-4 py-2 text-gray-700 border border-gray-400 rounded-lg hover:bg-gray-100 transition"
+        >
+          <FaArrowLeft />
+          Back to Clients
+        </button>
       </div>
 
       <div className="flex gap-2 mr-6">
