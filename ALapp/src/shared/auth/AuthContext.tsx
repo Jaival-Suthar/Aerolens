@@ -26,7 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const token = localStorage.getItem(TOKEN_KEY);
       if (token) {
-        console.log('🔐 Found access token in localStorage on mount');
+        //console.log('🔐 Found access token in localStorage on mount');
         return token;
       }
       localStorage.removeItem(TOKEN_KEY);
@@ -41,15 +41,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (accessToken) {
       localStorage.setItem(TOKEN_KEY, accessToken);
-      console.log('💾 Access token saved to localStorage');
+      //console.log('💾 Access token saved to localStorage');
     } else {
       localStorage.removeItem(TOKEN_KEY);
-      console.log('🗑️ Access token removed from localStorage');
+      //console.log('🗑️ Access token removed from localStorage');
     }
   }, [accessToken]);
 
   const fetchProfile = async (token: string) => {
-    console.log('👤 Fetching profile...');
+    //console.log('👤 Fetching profile...');
     const res = await fetch(`${API_BASE}/auth/profile`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: 'include',
@@ -58,33 +58,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!res.ok) throw new Error('Failed to fetch profile');
     const { data } = await res.json();
     setProfile(data.member);
-    console.log('✅ Profile fetched successfully');
+    //console.log('✅ Profile fetched successfully');
   };
 
-  const refreshAccessToken = async (): Promise<string | null> => {
-    console.log('🔄 Attempting to refresh access token...');
-    const res = await fetch(`${API_BASE}/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-    if (!res.ok) {
-      console.log('❌ Token refresh failed - clearing auth state');
-      setAccessToken(null);
-      clearProfile();
-      throw new Error('Token refresh failed');
+
+  let refreshPromise: Promise<string | null> | null = null;
+
+const refreshAccessToken = async (): Promise<string | null> => {
+  if (refreshPromise) {
+    //console.log('⏳ Waiting for ongoing token refresh...');
+    return refreshPromise;
+  }
+
+  //console.log('🔄 Attempting to refresh access token...');
+  refreshPromise = (async () => {
+    try {
+      const currentToken = accessToken || localStorage.getItem(TOKEN_KEY);
+
+      if (!currentToken) {
+        //console.log('❌ No current token to refresh');
+        throw new Error('No token available to refresh');
+      }
+
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${currentToken}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (!res.ok) {
+        //console.log('❌ Token refresh failed - clearing auth state');
+        setAccessToken(null);
+        clearProfile();
+        throw new Error('Token refresh failed');
+      }
+
+      const { data } = await res.json();
+      const newToken = data.token;
+
+      if (newToken) {
+        //console.log('✅ New access token received');
+        setAccessToken(newToken);
+        return newToken;
+      } else {
+        //console.log('❌ No token in refresh response');
+        setAccessToken(null);
+        throw new Error('Invalid token received');
+      }
+    } finally {
+      refreshPromise = null;
     }
-    const { data } = await res.json();
-    const newToken = data.token;
-    if (newToken) {
-      console.log('✅ New access token received');
-      setAccessToken(newToken);
-      return newToken;
-    } else {
-      console.log('❌ No token in refresh response');
-      setAccessToken(null);
-      throw new Error('Invalid token received');
-    }
-  };
+  })();
+
+  return refreshPromise;
+};
 
   // 🚀 Global 401 handler – auto-refresh + retry logic
   useEffect(() => {
@@ -94,11 +124,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let res = await originalFetch(input, init);
 
     if (res.status === 401 && !String(input).includes('/auth/refresh')) {
-      console.warn('⚠️ Global 401 detected — attempting token refresh...');
+      //console.warn('⚠️ Global 401 detected — attempting token refresh...');
       try {
         const newToken = await refreshAccessToken();
         if (newToken) {
-          console.log('🔄 Retrying request with refreshed token...');
+          //console.log('🔄 Retrying request with refreshed token...');
           const updatedHeaders = {
             ...(init?.headers || {}),
             Authorization: `Bearer ${newToken}`,
@@ -106,7 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           res = await originalFetch(input, { ...init, headers: updatedHeaders });
         }
       } catch (err) {
-        console.error('❌ Token refresh failed globally:', err);
+        //console.error('❌ Token refresh failed globally:', err);
         await logout();
       }
     }
@@ -120,7 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return () => {
     window.fetch = originalFetch;
   };
-}, [accessToken]);
+}, []);
 
 
   // 🧩 Existing initAuth, silent refresh, login, logout, etc. stay unchanged...
@@ -128,15 +158,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true;
 
     const initAuth = async () => {
-      console.log('🚀 Initializing auth...');
-      const hasRefreshToken = document.cookie.includes('refreshToken');
-      if (!accessToken) {
-        clearProfile();
-        return;
-      }
+      //console.log('🚀 Initializing auth...');
+      const storedToken = accessToken || localStorage.getItem(TOKEN_KEY);
+        if (!storedToken) {
+          clearProfile();
+          return;
+        }
 
       try {
-        await fetchProfile(accessToken);
+        await fetchProfile(storedToken);
       } catch (err: any) {
         if (err.message?.includes('401')) {
           try {
@@ -163,23 +193,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  useEffect(() => {
-    if (!accessToken) return;
-    const refreshInterval = setInterval(async () => {
-      try {
-        await refreshAccessToken();
-        console.log('✅ Silent token refresh successful');
-      } catch (err) {
-        console.log('❌ Silent token refresh failed:', err);
-        setAccessToken(null);
-        clearProfile();
-      }
-    }, 120 * 60 * 1000);
-    return () => clearInterval(refreshInterval);
-  }, [accessToken]);
-
   const login = async (email: string, password: string) => {
-    console.log('🔐 Logging in...');
+    //console.log('🔐 Logging in...');
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -221,15 +236,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    (window as any).testRefresh = async () => {
-      try {
-        const newToken = await refreshAccessToken();
-        console.log('✅ Test refresh successful:', newToken?.slice(0, 20) + '...');
-      } catch (err) {
-        console.log('❌ Test refresh failed:', err);
-      }
-    };
-  }, []);
+  (window as any).testRefresh = async () => {
+    try {
+      const newToken = await refreshAccessToken();
+      //console.log('✅ Test refresh successful:', newToken?.slice(0, 20) + '...');
+    } catch (err) {
+      //console.log('❌ Test refresh failed:', err);
+    }
+  };
+  
+  return () => {
+    delete (window as any).testRefresh;
+  };
+}, []);
 
   return (
     <AuthContext.Provider

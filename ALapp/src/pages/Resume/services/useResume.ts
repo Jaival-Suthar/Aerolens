@@ -27,7 +27,7 @@ const ROUTES = {
 /*  LOGGER                                                                  */
 /* ------------------------------------------------------------------------- */
 const logger = {
-  log: (...args: any[]) => IS_DEV && console.log("CANDIDATE LOG:", ...args),
+  //log: (...args: any[]) => IS_DEV && console.log("CANDIDATE LOG:", ...args),
   error: (...args: any[]) => console.error("CANDIDATE ERROR:", ...args),
 };
 

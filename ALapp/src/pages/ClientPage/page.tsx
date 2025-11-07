@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Toast } from "primereact/toast";
 import { SplitButton } from "primereact/splitbutton";
 import { DataTable } from "primereact/datatable";
@@ -12,10 +12,11 @@ import AddButton from "../../shared/AddButton";
 import EditButton from "../../shared/EditButton";
 import DeleteButton from "../../shared/DeleteButton";
 import ExportExcelButton from "../../shared/ExportExcelButton";
-import { createClient, updateClient, deleteClient } from "./services/clientService";
+import { createClient, updateClient, deleteClient, getClients } from "./services/clientService";
 import { VIEW_MODES, getMenuItems } from "../Contact/constants/contactConstants";
 import { ClientType, ClientAddType } from "./types/clientTypes";
 import { useAuth } from '../../shared/auth/AuthContext';
+import { useSearchParams } from 'react-router-dom';
 
 const Client: React.FC = () => {
   // --- Dialog States ---
@@ -23,13 +24,16 @@ const Client: React.FC = () => {
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
   const [dialogMode, setDialogMode] = useState<"add" | "edit">("add");
   const { accessToken } = useAuth();
+
   // --- Data States ---
-  const [selectedClient, setSelectedClient] = useState<ClientType | null>(null);
   const [editClient, setEditClient] = useState<ClientAddType | ClientType | null>(null);
   const [clientToDelete, setClientToDelete] = useState<ClientType | null>(null);
 
   // --- UI States ---
-  const [activeView, setActiveView] = useState<string>(VIEW_MODES.TABLE);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeView = searchParams.get('view') || VIEW_MODES.TABLE;
+  const selectedClientId = searchParams.get('clientId');
+  const [selectedClient, setSelectedClient] = useState<ClientType | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -44,6 +48,33 @@ const Client: React.FC = () => {
     },
     []
   );
+
+  // ✅ *** ADD THIS - Load client from URL on refresh ***
+  useEffect(() => {
+    const loadClientFromUrl = async () => {
+      if (selectedClientId && !selectedClient && activeView !== VIEW_MODES.TABLE) {
+        setLoading(true);
+        try {
+          const response = await getClients(accessToken, 1, 1000);
+          const client = response.data.find((c: ClientType) => c.clientId === Number(selectedClientId));
+
+          if (client) {
+            setSelectedClient(client);
+          } else {
+            showToast('error', 'Error', 'Client not found');
+            setSearchParams({});
+          }
+        } catch (error) {
+          console.error('Failed to load client:', error);
+          showToast('error', 'Error', 'Failed to load client');
+          setSearchParams({});
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    loadClientFromUrl();
+  }, [selectedClientId, activeView, accessToken]);
 
   // --- Dialog Handlers ---
   const openAddDialog = useCallback(() => {
@@ -77,78 +108,76 @@ const Client: React.FC = () => {
 
   // --- View Navigation ---
   const handleBackToClients = useCallback(() => {
-    setActiveView(VIEW_MODES.TABLE);
+    setSearchParams({});
     setSelectedClient(null);
-  }, []);
+  }, [setSearchParams]);
 
   const menuItems = getMenuItems((view: string) => {
     if ((view === VIEW_MODES.CONTACTS || view === VIEW_MODES.DEPARTMENT) && !selectedClient) {
       alert("Select a client first.");
       return;
     }
-    setActiveView(view);
+    setSearchParams({ view, clientId: String(selectedClient?.clientId || '') });
   });
 
   // --- API Handlers ---
   const handleSaveClient = useCallback(
-  async (client: ClientType | ClientAddType) => {
-    setLoading(true);
-    try {
-      if (dialogMode === "add") {
-        const newClient = client as ClientAddType;
-        await createClient(accessToken, {
-          name: newClient.clientName.trim(),
-          address: newClient.address.trim(),
-        });
-        showToast("success", "Success", "Client added successfully");
-      } else {
-        const existingClient = client as ClientType;
-        if (!existingClient.clientId) {
-          throw new Error("Invalid client ID");
+    async (client: ClientType | ClientAddType) => {
+      setLoading(true);
+      try {
+        if (dialogMode === "add") {
+          const newClient = client as ClientAddType;
+          await createClient(accessToken, {
+            name: newClient.clientName.trim(),
+            address: newClient.address.trim(),
+          });
+          showToast("success", "Success", "Client added successfully");
+        } else {
+          const existingClient = client as ClientType;
+          if (!existingClient.clientId) {
+            throw new Error("Invalid client ID");
+          }
+          await updateClient(accessToken, {
+            id: existingClient.clientId,
+            name: existingClient.clientName.trim(),
+            address: existingClient.address.trim(),
+          });
+          showToast("success", "Success", "Client updated successfully");
         }
-        await updateClient(accessToken, {
-          id: existingClient.clientId,
-          name: existingClient.clientName.trim(),
-          address: existingClient.address.trim(),
-        });
-        showToast("success", "Success", "Client updated successfully");
+        setRefreshTrigger((prev) => prev + 1);
+        closeAddEditDialog();
+      } catch (error) {
+        console.error("Save client error:", error);
+        showToast("error", "Error", "Failed to save client. Retry.");
+      } finally {
+        setLoading(false);
       }
-      setRefreshTrigger((prev) => prev + 1);
-      closeAddEditDialog();
-    } catch (error) {
-      console.error("Save client error:", error);
-      showToast("error", "Error", "Failed to save client. Retry.");
-    } finally {
-      setLoading(false);
-    }
-  },
-  [dialogMode, showToast, closeAddEditDialog, accessToken]
-);
-
+    },
+    [dialogMode, showToast, closeAddEditDialog, accessToken]
+  );
 
   const handleDeleteClient = useCallback(
-  async (client?: ClientType | null) => {
-    if (!client || client.clientId === undefined) {
-      showToast("error", "Error", "Invalid client selected.");
-      return;
-    }
-    setLoading(true);
-    try {
-      await deleteClient(accessToken, Number(client.clientId));
-      showToast("success", "Success", "Client deleted successfully");
-      setRefreshTrigger((prev) => prev + 1);
-      setSelectedClient(null);
-      closeDeleteDialog();
-    } catch (error) {
-      console.error("Delete client error:", error);
-      showToast("error", "Error", "Failed to delete client. Retry.");
-    } finally {
-      setLoading(false);
-    }
-  },
-  [showToast, closeDeleteDialog, accessToken]
-);
-
+    async (client?: ClientType | null) => {
+      if (!client || client.clientId === undefined) {
+        showToast("error", "Error", "Invalid client selected.");
+        return;
+      }
+      setLoading(true);
+      try {
+        await deleteClient(accessToken, Number(client.clientId));
+        showToast("success", "Success", "Client deleted successfully");
+        setRefreshTrigger((prev) => prev + 1);
+        setSelectedClient(null);
+        closeDeleteDialog();
+      } catch (error) {
+        console.error("Delete client error:", error);
+        showToast("error", "Error", "Failed to delete client. Retry.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [showToast, closeDeleteDialog, accessToken]
+  );
 
   const handleEditSelected = useCallback(() => {
     if (selectedClient) {
@@ -156,23 +185,20 @@ const Client: React.FC = () => {
     }
   }, [selectedClient, openEditDialog]);
 
-  // --- Render ---
-  const isTableView = activeView === VIEW_MODES.TABLE;
-  const isContactsView = activeView === VIEW_MODES.CONTACTS && selectedClient;
-  const isDepartmentView = activeView === VIEW_MODES.DEPARTMENT && selectedClient;
   const handleSelectionChange = useCallback((client: ClientType | null) => {
-  setSelectedClient(client);
-}, []);
+    setSelectedClient(client);
+    if (client && activeView !== VIEW_MODES.TABLE) {
+      setSearchParams({ view: activeView, clientId: String(client.clientId) });
+    }
+  }, [activeView, setSearchParams]);
 
+  const isTableView = activeView === VIEW_MODES.TABLE;
 
   return (
-    <div
-      className="dashboard-container shadow-3 p-4"
-      style={{ width: "100%", maxWidth: "100%" }}
-    >
+    <div className="dashboard-container shadow-3 p-4" style={{ width: "100%", maxWidth: "100%" }}>
       <Toast ref={toast} />
 
-      {isTableView && (
+      {(isTableView || (selectedClientId && !selectedClient)) && (
         <div className="flex justify-content-between align-items-center mb-4 w-full">
           <div className="flex align-items-center gap-3">
             <SplitButton
@@ -187,25 +213,14 @@ const Client: React.FC = () => {
           </div>
           <div className="flex gap-2 mr-6">
             <ExportExcelButton dtRef={dt} />
-            <AddButton
-              onClick={openAddDialog}
-              disabled={loading}
-              data-testid="AddBtn"
-            />
-            <EditButton
-              onClick={handleEditSelected}
-              disabled={!selectedClient || loading}
-              data-testid="EditBtn"
-            />
-            <DeleteButton
-              onClick={openDeleteDialog}
-              disabled={!selectedClient || loading}
-              data-testid="DeleteBtn"
-            />
+            <AddButton onClick={openAddDialog} disabled={loading} data-testid="AddBtn" />
+            <EditButton onClick={handleEditSelected} disabled={!selectedClient || loading} data-testid="EditBtn" />
+            <DeleteButton onClick={openDeleteDialog} disabled={!selectedClient || loading} data-testid="DeleteBtn" />
           </div>
         </div>
       )}
 
+      {/* ✅ Only this render block replaced */}
       <div className="card">
         {isTableView && (
           <ClientTable
@@ -215,22 +230,30 @@ const Client: React.FC = () => {
             selectedClient={selectedClient}
             onSelectionChange={handleSelectionChange}
             loading={loading}
+            preSelectClientId={selectedClientId ? Number(selectedClientId) : undefined}
           />
         )}
 
-        {isContactsView && (
-          <ClientContactsView
-            selectedClient={selectedClient}
-            onBackClick={handleBackToClients}
-          />
+        {activeView === VIEW_MODES.CONTACTS && (
+          loading && !selectedClient ? (
+            <div className="text-center p-4">
+              <i className="pi pi-spin pi-spinner" style={{ fontSize: '2rem' }}></i>
+              <p className="mt-3">Loading...</p>
+            </div>
+          ) : selectedClient ? (
+            <ClientContactsView selectedClient={selectedClient} onBackClick={handleBackToClients} />
+          ) : null
         )}
 
-        {isDepartmentView && (
-          <DepartmentTable
-            clientId={selectedClient.clientId}
-            clientName={selectedClient.clientName}
-            onBackClick={handleBackToClients}
-          />
+        {activeView === VIEW_MODES.DEPARTMENT && (
+          loading && !selectedClient ? (
+            <div className="text-center p-4">
+              <i className="pi pi-spin pi-spinner" style={{ fontSize: '2rem' }}></i>
+              <p className="mt-3">Loading...</p>
+            </div>
+          ) : selectedClient ? (
+            <DepartmentTable clientId={selectedClient.clientId} clientName={selectedClient.clientName} onBackClick={handleBackToClients} />
+          ) : null
         )}
       </div>
 

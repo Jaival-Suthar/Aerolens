@@ -27,7 +27,6 @@ const DepartmentTable: React.FC<DepartmentTableProps> = ({
 
   // ✅ Load departments
   const loadDepartments = useCallback(async () => {
-    console.log("Access Token inside loadDepartments:", accessToken);
     if (!clientId || !accessToken) return;
 
     try {

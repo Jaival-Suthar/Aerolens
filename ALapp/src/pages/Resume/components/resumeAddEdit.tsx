@@ -8,6 +8,7 @@ import { FaCheck } from "react-icons/fa";
 import { Toast } from "primereact/toast";
 import DialogButton from "../../../shared/DialogAddEditButton";
 
+
 import {
   createCandidate,
   updateCandidate,
@@ -24,11 +25,13 @@ const STATUS_OPTIONS = [
   { label: "Interview Pending", value: "Interview Pending" },
 ];
 
+
 const RECRUITER_OPTIONS = [
   { label: "Jayraj", value: "Jayraj" },
   { label: "Khushi", value: "Khushi" },
   { label: "Yash", value: "Yash" },
 ];
+
 
 const LOCATION_OPTIONS = [
   { label: "Ahmedabad", value: "Ahmedabad" },
@@ -36,10 +39,12 @@ const LOCATION_OPTIONS = [
   { label: "San Francisco", value: "San Francisco" },
 ];
 
+
 // ---------- HELPERS ----------
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRegex = /^(\+?91|91)?[6-9]\d{9}$|^(\+?1)?[2-9]\d{9}$/;
 const linkedinRegex = /^https:\/\/(www\.)?linkedin\.com\/.*$/i;
+
 
 const INITIAL_FORM: AddEditCandidate = {
   candidateName: "",
@@ -56,6 +61,7 @@ const INITIAL_FORM: AddEditCandidate = {
   linkedinProfileUrl: "",
   resumeFile: null,
 };
+
 
 // ---------- VALIDATION ----------
 const validateField = (field: keyof AddEditCandidate, value: any) => {
@@ -103,6 +109,7 @@ const validateField = (field: keyof AddEditCandidate, value: any) => {
   }
 };
 
+
 // ---------- COMPONENT ----------
 const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   visible,
@@ -112,6 +119,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
 }) => {
   const { accessToken } = useAuth();
   const isEditMode = Boolean(selectedResume);
+
 
   const [formData, setFormData] = useState<AddEditCandidate>(INITIAL_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -127,32 +135,20 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     setSubmitted(false);
   }, [visible, selectedResume, isEditMode]);
 
+
   const handleChange = useCallback(
     (field: keyof AddEditCandidate, value: any) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
-      if (errors[field]) {
-        const newErrors = { ...errors };
-        delete newErrors[field];
-        setErrors(newErrors);
-      }
     },
-    [errors]
+    []
   );
 
   const handleBlur = useCallback(
-    (field: keyof AddEditCandidate) => {
-      const errorMsg = validateField(field, formData[field]);
-      if (errorMsg) setErrors((prev) => ({ ...prev, [field]: errorMsg }));
-      else {
-        setErrors((prev) => {
-          const newErrors = { ...prev };
-          delete newErrors[field];
-          return newErrors;
-        });
-      }
+    (field: keyof AddEditCandidate, currentValue?: any) => {
     },
-    [formData]
+    []
   );
+
 
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
@@ -164,9 +160,17 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
+
   const handleSave = useCallback(async () => {
+    // 1. Set submitted to true to enable error display
     setSubmitted(true);
-    if (!validateForm()) return;
+    
+    // 2. Validate the form and check the result
+    if (!validateForm()) {
+      // If validation fails, stop here. Errors are now set in state and visible.
+      return; 
+    }
+
 
     try {
       if (isEditMode && selectedResume) {
@@ -185,11 +189,14 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
           linkedinProfileUrl: formData.linkedinProfileUrl,
         };
 
+
         await updateCandidate(accessToken, selectedResume.candidateId, updateData);
+
 
         if (formData.resumeFile) {
           await uploadResume(accessToken, selectedResume.candidateId, formData.resumeFile);
         }
+
 
         toast.current?.show({
           severity: "success",
@@ -207,6 +214,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
         });
       }
 
+
       onSuccess();
       onHide();
     } catch (err: any) {
@@ -221,7 +229,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
         life: 5000,
       });
     } finally {
-      setSubmitted(false);
     }
   }, [
     formData,
@@ -233,13 +240,15 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     accessToken,
   ]);
 
+
   const prefixSymbol = useMemo(
     () => (formData.preferredJobLocation === "San Francisco" ? "$" : "₹"),
     [formData.preferredJobLocation]
   );
 
-  const shouldShowError = (field: string) =>
-    (submitted || errors[field]) && errors[field];
+  const shouldShowError = (field: string): string | undefined =>
+  submitted ? errors[field] : undefined;
+
 
   const dialogFooter = (
     <div className="flex justify-content-end gap-2">
@@ -252,6 +261,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
       />
     </div>
   );
+
 
   return (
     <>
@@ -272,9 +282,10 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             label="Candidate Name"
             value={formData.candidateName}
             onChange={(e) => handleChange("candidateName", e.target.value)}
-            onBlur={() => handleBlur("candidateName")}
+            onBlur={() => handleBlur("candidateName", formData.candidateName)}
             error={shouldShowError("candidateName")}
           />
+
 
           <DropdownField
             id="recruiterName"
@@ -282,9 +293,10 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             value={formData.recruiterName}
             options={RECRUITER_OPTIONS}
             onChange={(e: { value: string }) => handleChange("recruiterName", e.value)}
-            onBlur={() => handleBlur("recruiterName")}
+            onBlur={() => handleBlur("recruiterName", formData.recruiterName)}
             error={shouldShowError("recruiterName")}
           />
+
 
           <InputField
             id="contactNumber"
@@ -292,27 +304,30 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             value={formData.contactNumber}
             placeholder="e.g. 9876543210"
             onChange={(e) => handleChange("contactNumber", e.target.value)}
-            onBlur={() => handleBlur("contactNumber")}
+            onBlur={() => handleBlur("contactNumber", formData.contactNumber)}
             error={shouldShowError("contactNumber")}
           />
+
 
           <InputField
             id="email"
             label="Email"
             value={formData.email}
             onChange={(e) => handleChange("email", e.target.value)}
-            onBlur={() => handleBlur("email")}
+            onBlur={() => handleBlur("email", formData.email)}
             error={shouldShowError("email")}
           />
+
 
           <InputField
             id="jobRole"
             label="Job Role"
             value={formData.jobRole}
             onChange={(e) => handleChange("jobRole", e.target.value)}
-            onBlur={() => handleBlur("jobRole")}
+            onBlur={() => handleBlur("jobRole", formData.jobRole)}
             error={shouldShowError("jobRole")}
           />
+
 
           <DropdownField
             id="preferredJobLocation"
@@ -320,9 +335,10 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             value={formData.preferredJobLocation}
             options={LOCATION_OPTIONS}
             onChange={(e: { value: string }) => handleChange("preferredJobLocation", e.value)}
-            onBlur={() => handleBlur("preferredJobLocation")}
+            onBlur={() => handleBlur("preferredJobLocation", formData.preferredJobLocation)}
             error={shouldShowError("preferredJobLocation")}
           />
+
 
           <InputNumberField
             id="currentCTC"
@@ -330,9 +346,10 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             value={formData.currentCTC}
             onChange={(val: number | null) => handleChange("currentCTC", val)}
             prefix={prefixSymbol}
-            onBlur={() => handleBlur("currentCTC")}
+            onBlur={() => handleBlur("currentCTC", formData.currentCTC)}
             error={shouldShowError("currentCTC")}
           />
+
 
           <InputNumberField
             id="expectedCTC"
@@ -340,27 +357,30 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             value={formData.expectedCTC}
             onChange={(val: number | null) => handleChange("expectedCTC", val)}
             prefix={prefixSymbol}
-            onBlur={() => handleBlur("expectedCTC")}
+            onBlur={() => handleBlur("expectedCTC", formData.expectedCTC)}
             error={shouldShowError("expectedCTC")}
           />
+
 
           <InputNumberField
             id="noticePeriod"
             label="Notice Period (Days)"
             value={formData.noticePeriod}
             onChange={(val: number | null) => handleChange("noticePeriod", val)}
-            onBlur={() => handleBlur("noticePeriod")}
+            onBlur={() => handleBlur("noticePeriod", formData.noticePeriod)}
             error={shouldShowError("noticePeriod")}
           />
+
 
           <InputNumberField
             id="experienceYears"
             label="Experience (Years)"
             value={formData.experienceYears}
             onChange={(val: number | null) => handleChange("experienceYears", val)}
-            onBlur={() => handleBlur("experienceYears")}
+            onBlur={() => handleBlur("experienceYears", formData.experienceYears)}
             error={shouldShowError("experienceYears")}
           />
+
 
           <DropdownField
             id="statusName"
@@ -368,9 +388,10 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             value={formData.statusName}
             options={STATUS_OPTIONS}
             onChange={(e: { value: string }) => handleChange("statusName", e.value)}
-            onBlur={() => handleBlur("statusName")}
+            onBlur={() => handleBlur("statusName", formData.statusName)}
             error={shouldShowError("statusName")}
           />
+
 
           <InputField
             id="linkedinProfileUrl"
@@ -379,10 +400,11 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             onChange={(e) =>
               handleChange("linkedinProfileUrl", e.target.value)
             }
-            onBlur={() => handleBlur("linkedinProfileUrl")}
+            onBlur={() => handleBlur("linkedinProfileUrl", formData.linkedinProfileUrl)}
             placeholder="https://www.linkedin.com/in/..."
             error={shouldShowError("linkedinProfileUrl")}
           />
+
 
           <FileUploadField
             file={formData.resumeFile}
@@ -395,6 +417,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   );
 };
 
+
 // ---------- REUSABLE FIELD COMPONENTS ----------
 interface InputFieldProps {
   id: string;
@@ -405,6 +428,7 @@ interface InputFieldProps {
   placeholder?: string;
   error?: string;
 }
+
 
 const InputField = ({ id, label, value, onChange, onBlur, placeholder, error }: InputFieldProps) => (
   <div className="field col-12 md:col-6">
@@ -420,6 +444,7 @@ const InputField = ({ id, label, value, onChange, onBlur, placeholder, error }: 
     {error && <small className="p-error">{error}</small>}
   </div>
 );
+
 
 const DropdownField = ({ id, label, value, options, onChange, onBlur, placeholder, error }: any) => (
   <div className="field col-12 md:col-6">
@@ -437,6 +462,7 @@ const DropdownField = ({ id, label, value, options, onChange, onBlur, placeholde
   </div>
 );
 
+
 const InputNumberField = ({ id, label, value, onChange, onBlur, prefix, error }: any) => (
   <div className="field col-12 md:col-6">
     <label htmlFor={id} className="font-bold">{label} *</label>
@@ -452,11 +478,13 @@ const InputNumberField = ({ id, label, value, onChange, onBlur, prefix, error }:
   </div>
 );
 
+
 interface FileUploadFieldProps {
   file: File | null;
   onSelect: (file: File) => void;
   error?: string;
 }
+
 
 const FileUploadField = ({ file, onSelect, error }: FileUploadFieldProps) => (
   <div className="field col-12 md:col-6">
@@ -481,5 +509,6 @@ const FileUploadField = ({ file, onSelect, error }: FileUploadFieldProps) => (
     {error && <small className="p-error">{error}</small>}
   </div>
 );
+
 
 export default ResumeAddEdit;

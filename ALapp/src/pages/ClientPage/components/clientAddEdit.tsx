@@ -64,7 +64,7 @@ const ClientAddEdit: React.FC<ClientAddEditProps> = ({
     // edit mode, clientId must exist in client
     if (!client || !("clientId" in client)) {
       // This is catastrophic: editing client without clientId
-      console.error("Missing clientId in edit mode");
+      //console.error("Missing clientId in edit mode");
       return;
     }
     const clientData: ClientType = {

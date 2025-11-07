@@ -41,8 +41,6 @@ const DepartmentAddEdit: React.FC<DepartmentAddEditProps> = ({
     if (!departmentName.trim() || !departmentDescription.trim()) return;
 
     try {
-      console.log("Access Token (DepartmentAddEdit):", accessToken);
-
       if (!accessToken) {
         toast.current?.show({ severity: "error", summary: "Auth Error", detail: "No token found. Please log in again.", life: 3000 });
         return;
