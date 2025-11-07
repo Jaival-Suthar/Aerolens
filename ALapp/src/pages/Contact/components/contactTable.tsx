@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import type { DataTablePageEvent, DataTableRowClickEvent, DataTableSelectionSingleChangeEvent } from 'primereact/datatable';
@@ -11,12 +11,24 @@ const ContactTable: React.FC<ContactTableProps> = ({
   onSelectionChange,
   onRowDoubleClick
 }) => {
-  const [rowsPerPage, setRowsPerPage] = useState<number>(5);
+  // Load saved pagination from localStorage
+const savedRows = Number(localStorage.getItem("contact_rows")) || 5;
+const savedPage = Number(localStorage.getItem("contact_page")) || 0;
+
+const [rowsPerPage, setRowsPerPage] = useState<number>(savedRows);
+const [first, setFirst] = useState<number>(savedPage * savedRows);
+
 
   // Event handler for page changes
   const onPageChange = useCallback((event: DataTablePageEvent) => {
-    setRowsPerPage(event.rows);
-  }, []);
+  setRowsPerPage(event.rows);
+  setFirst(event.first);
+
+  // Save to localStorage
+  localStorage.setItem("contact_rows", String(event.rows));
+  localStorage.setItem("contact_page", String(event.first / event.rows));
+}, []);
+
 
   const onSelectionChangeHandler = useCallback(
     (e: DataTableSelectionSingleChangeEvent<Contact[]>) => {
@@ -62,6 +74,7 @@ const ContactTable: React.FC<ContactTableProps> = ({
         stripedRows
         className="text-sm"
         paginator={true}
+        first={first}
         rows={rowsPerPage}
         onPage={onPageChange}
         totalRecords={contacts.length}
@@ -74,7 +87,7 @@ const ContactTable: React.FC<ContactTableProps> = ({
         dataKey="clientContactId"
         showGridlines
         metaKeySelection={false}
-        rowsPerPageOptions={[5, 10, 20]}
+        rowsPerPageOptions={[5, 10, 20, 50]}
         scrollHeight="350px"
       >
         <Column
