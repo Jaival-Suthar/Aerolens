@@ -11,6 +11,7 @@ import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
 import { Department, DepartmentTableProps } from "../types/departmentTypes";
 import { useAuth } from "../../../shared/auth/AuthContext";
+import { FaArrowLeft } from "react-icons/fa";
 const DepartmentTable: React.FC<DepartmentTableProps> = ({
   clientId,
   clientName,
@@ -21,6 +22,21 @@ const DepartmentTable: React.FC<DepartmentTableProps> = ({
   const [showAddEditDialog, setShowAddEditDialog] = useState<boolean>(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
+  // ✅ LocalStorage Pagination (isolated for Department table)
+const savedPage = Number(localStorage.getItem("departmentTablePage") || 0);
+const savedRows = Number(localStorage.getItem("departmentTableRows") || 5);
+
+const [first, setFirst] = useState(savedPage * savedRows);
+const [rows, setRows] = useState(savedRows);
+const onPageChange = (event: any) => {
+  setFirst(event.first);
+  setRows(event.rows);
+
+  const pageIndex = event.page; // starts from 0
+  localStorage.setItem("departmentTablePage", pageIndex.toString());
+  localStorage.setItem("departmentTableRows", event.rows.toString());
+};
+
 
   // ✅ Add Auth Hook
   const { accessToken } = useAuth();
@@ -80,14 +96,13 @@ const DepartmentTable: React.FC<DepartmentTableProps> = ({
     <>
       <div className="flex justify-content-between align-items-center mb-4 w-full">
         <div className="flex justify-content-start align-items-center">
-          <Button
-            label="Back to Clients"
-            outlined
-            severity="secondary"
-            icon="pi pi-arrow-left"
+          <button
             onClick={onBackClick}
-            size="large"
-          />
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 border border-gray-400 rounded-lg hover:bg-gray-100 transition"
+          >
+            <FaArrowLeft />
+            Back to Clients
+          </button>
         </div>
 
         <div className="flex gap-2 ml-auto mr-6">
@@ -102,7 +117,9 @@ const DepartmentTable: React.FC<DepartmentTableProps> = ({
       <DataTable
         value={departments}
         paginator
-        rows={5}
+        rows={rows}
+        first={first}
+        onPage={onPageChange}
         rowsPerPageOptions={[5, 10, 20]}
         dataKey="departmentId"
         selectionMode="single"
