@@ -14,6 +14,7 @@ import {
   FaUser,
 } from "react-icons/fa";
 import { useProfileStore } from "./shared/store/profile";
+import Logo from "./assets/Logo.webp";
 
 const AppNavbar: React.FC = () => {
   const navigate = useNavigate();
@@ -126,7 +127,7 @@ const AppNavbar: React.FC = () => {
       }}
     >
       <img
-        src="/src/assets/Logo.webp"
+        src={Logo}
         alt="Aerolens Logo"
         style={{
           height: 24,
