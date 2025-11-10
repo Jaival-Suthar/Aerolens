@@ -4,14 +4,14 @@
 
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { visualizer } from 'rollup-plugin-visualizer';
+import { visualizer } from 'rollup-plugin-visualizer'; // (Remediation #5 - Optional for Analysis)
 import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
-  base: './', // ✅ ADD THIS LINE - Makes all paths relative for S3
   plugins: [
     react(),
     tsconfigPaths(),
+    // Remediation #5: Uncomment to analyze the bundle *after* running 'npm run build'
     visualizer({
       filename: './dist/bundle-stats.html',
       open: true,
@@ -23,6 +23,7 @@ export default defineConfig({
     host: true,
   },
   
+  // ... (Your existing 'test' configuration)
   test: {
     environment: "jsdom",
     globals: true,
