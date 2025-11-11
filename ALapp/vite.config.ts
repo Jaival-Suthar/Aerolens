@@ -6,17 +6,28 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer'; // (Remediation #5 - Optional for Analysis)
 import tsconfigPaths from 'vite-tsconfig-paths';
+import obfuscator from 'vite-plugin-obfuscator';
 
 export default defineConfig({
+   build: {
+    sourcemap: false,
+    minify: "terser",
+    rollupOptions: {
+      output: {
+        entryFileNames: "assets/[hash].js",
+        chunkFileNames: "assets/[hash].js",
+        assetFileNames: "assets/[hash][extname]",
+      },
+    },
+  },
   plugins: [
     react(),
     tsconfigPaths(),
-    // Remediation #5: Uncomment to analyze the bundle *after* running 'npm run build'
-    visualizer({
-      filename: './dist/bundle-stats.html',
-      open: true,
-      gzipSize: true,
-    }),
+    obfuscator({
+    compact: true,
+    controlFlowFlattening: true,
+    rotateStringArray: true,
+  }),
   ],
   server: {
     port: 5173,

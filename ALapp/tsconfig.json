@@ -11,9 +11,13 @@
     "skipLibCheck": true,
     "outDir": "build",
     "rootDir": "src",
-    
+
+    // ✅ add this
+    "typeRoots": ["./src/types", "./node_modules/@types"]
   },
-  "include": ["src"]
+
+  // ✅ expand includes so .d.ts files are picked
+  "include": ["src", "src/types"]
 }
 
 
