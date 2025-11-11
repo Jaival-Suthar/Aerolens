@@ -33,13 +33,6 @@ export default function SignupForm() {
   useEffect(() => {
     const loadDesignations = async () => {
       if (!accessToken || !isAuthenticated) return;
-      console.log("════════════════════════════════════");
-      console.log("🔍 REGISTRATION COMPONENT MOUNTED");
-      console.log("isAuthenticated:", isAuthenticated);
-      console.log("accessToken exists:", !!accessToken);
-      console.log("accessToken value:", accessToken ? accessToken.substring(0, 30) + "..." : "NULL/UNDEFINED");
-      console.log("localStorage token:", localStorage.getItem('accessToken')?.substring(0, 30) + "...");
-      console.log("════════════════════════════════════");
       try {
         setLoadingDesignations(true);
         const data = await fetchDesignations(accessToken);
@@ -86,13 +79,6 @@ export default function SignupForm() {
 
   const handleSignupClick = async () => {
     if (!validateFields()) return;
-    console.log("════════════════════════════════════");
-    console.log("🚀 ABOUT TO CALL registerUser()");
-    console.log("accessToken being passed:", accessToken ? accessToken.substring(0, 30) + "..." : "NULL/UNDEFINED");
-    console.log("Type of accessToken:", typeof accessToken);
-    console.log("accessToken === null?", accessToken === null);
-    console.log("accessToken === undefined?", accessToken === undefined);
-    console.log("════════════════════════════════════");
     const submitData = {
       ...formData,
       isRecruiter: false,
