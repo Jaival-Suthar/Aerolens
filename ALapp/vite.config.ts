@@ -4,30 +4,47 @@
 
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { visualizer } from 'rollup-plugin-visualizer'; // (Remediation #5 - Optional for Analysis)
+// import { visualizer } from 'rollup-plugin-visualizer'; // (Remediation #5 - Optional for Analysis)
 import tsconfigPaths from 'vite-tsconfig-paths';
-import obfuscator from 'vite-plugin-obfuscator';
+import javascriptObfuscator from "vite-plugin-javascript-obfuscator";
 
 export default defineConfig({
    build: {
-    sourcemap: false,
-    minify: "terser",
-    rollupOptions: {
-      output: {
-        entryFileNames: "assets/[hash].js",
-        chunkFileNames: "assets/[hash].js",
-        assetFileNames: "assets/[hash][extname]",
-      },
+  sourcemap: false,
+  minify: "terser",
+  manifest: true, // ✅ helps dynamic import mapping
+  chunkSizeWarningLimit: 1500,
+  rollupOptions: {
+    output: {
+      manualChunks: undefined, // ✅ avoid naming mismatch
+      entryFileNames: "assets/[hash].js",
+      chunkFileNames: "assets/[hash].js",
     },
   },
+},
   plugins: [
     react(),
     tsconfigPaths(),
-    obfuscator({
-    compact: true,
+    javascriptObfuscator({
+    include: ["dist/assets/*.js"], // ✅ obfuscate built chunks only
+    exclude: ["node_modules/**"],
+    options: {
     controlFlowFlattening: true,
+    controlFlowFlatteningThreshold: 0.6,
+    deadCodeInjection: false,
+    debugProtection: false,
+    disableConsoleOutput: true,
+    identifierNamesGenerator: "hexadecimal",
+    log: false,
+    renameGlobals: false,
+    splitStrings: true,
+    stringArray: true,
+    stringArrayThreshold: 0.75,
+    stringArrayShuffle: true,
     rotateStringArray: true,
-  }),
+  },
+}),
+
   ],
   server: {
     port: 5173,
