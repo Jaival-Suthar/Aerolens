@@ -36,7 +36,6 @@ function mapApiJobProfile(data: any): JobProfile {
   };
   return mapped;
 }
-
 // Get clients from the new /client/all endpoint
 export const getClients = async (accessToken: string | null): Promise<ClientOption[]> => {
   try {
@@ -52,14 +51,32 @@ export const getClients = async (accessToken: string | null): Promise<ClientOpti
     const data = await response.json();
     if (!data.success) throw new Error(data.message || 'Failed to fetch clients');
     
-    const clients = data.data.map((client: any): ClientOption => ({
-      clientId: client.clientId,
-      clientName: client.clientName,
-      departments: client.departments.map((dept: any): DepartmentOption => ({
-        departmentId: dept.departmentId,
-        departmentName: dept.departmentName
-      }))
-    }));
+    const clients = (data.data || []).map((client: any): ClientOption => {
+      // ✅ PARSE stringified JSON departments into real array
+      let departmentsArray: any[] = [];
+      
+      if (typeof client.departments === 'string') {
+        try {
+          // Backend sends departments as escaped JSON string - parse it
+          departmentsArray = JSON.parse(client.departments);
+        } catch (parseError) {
+          console.error(`Failed to parse departments for client ${client.clientId}:`, parseError);
+          departmentsArray = [];
+        }
+      } else if (Array.isArray(client.departments)) {
+        // In case backend fixes this later, handle proper arrays too
+        departmentsArray = client.departments;
+      }
+      
+      return {
+        clientId: client.clientId,
+        clientName: client.clientName,
+        departments: departmentsArray.map((dept: any): DepartmentOption => ({
+          departmentId: dept.departmentId,
+          departmentName: dept.departmentName
+        }))
+      };
+    });
     
     return clients;
   } catch (error) {
@@ -67,6 +84,8 @@ export const getClients = async (accessToken: string | null): Promise<ClientOpti
     throw error;
   }
 };
+
+
 
 // Get departments from API
 export const getDepartments = async (accessToken: string | null): Promise<DepartmentOption[]> => {
