@@ -48,6 +48,7 @@ const onPageChange = (event: any) => {
     try {
       const data = await getDepartments(accessToken, clientId); // ✅ fixed param order
       setDepartments(data.departments || []);
+      console.log("Departments loaded:", data);
     } catch (error) {
       console.error("Error loading departments:", error);
     }
@@ -88,9 +89,10 @@ const onPageChange = (event: any) => {
   };
   const handleDeleteDialogHide = (): void => setShowDeleteDialog(false);
 
-  const handleSelectionChange = (e: DataTableSelectionSingleChangeEvent<Department[]>): void => {
-    setSelectedDepartment(e.value);
-  };
+  const handleSelectionChange = (e: any): void => {
+  const dept = Array.isArray(e.value) ? e.value[0] || null : e.value;
+  setSelectedDepartment(dept);
+};
 
   return (
     <>
