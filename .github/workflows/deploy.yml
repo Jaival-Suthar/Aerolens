@@ -27,7 +27,7 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_BASE_URL: ${{ secrets.VITE_BASE_URL }}
       
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
