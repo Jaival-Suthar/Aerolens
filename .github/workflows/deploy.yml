@@ -27,6 +27,7 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
       
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -37,13 +38,31 @@ jobs:
       
       - name: Sync dist folder to S3
         run: |
+          # Upload static assets with long cache
           aws s3 sync ./dist s3://${{ secrets.S3_BUCKET }} \
             --delete \
             --cache-control "public,max-age=31536000,immutable" \
             --exclude "*.html" \
-            --exclude "*.json"
+            --exclude "*.json" \
+            --content-type "application/javascript" \
+            --exclude "*" \
+            --include "*.js"
           
-          # Upload HTML and JSON with different cache settings
+          aws s3 sync ./dist s3://${{ secrets.S3_BUCKET }} \
+            --cache-control "public,max-age=31536000,immutable" \
+            --exclude "*.html" \
+            --exclude "*.json" \
+            --exclude "*.js" \
+            --exclude "*.css"
+          
+          # Upload CSS with correct content-type
+          aws s3 sync ./dist s3://${{ secrets.S3_BUCKET }} \
+            --cache-control "public,max-age=31536000,immutable" \
+            --content-type "text/css" \
+            --exclude "*" \
+            --include "*.css"
+          
+          # Upload HTML and JSON with short cache
           aws s3 sync ./dist s3://${{ secrets.S3_BUCKET }} \
             --exclude "*" \
             --include "*.html" \
