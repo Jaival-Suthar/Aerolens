@@ -3,7 +3,8 @@ name: Deploy to S3 and CloudFront
 on:
   push:
     branches:
-      - main  # Change to your default branch if different
+      - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -16,7 +17,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'  # Change to your Node version if needed
+          node-version: '20'
           cache: 'npm'
       
       - name: Install dependencies
@@ -36,14 +37,14 @@ jobs:
       
       - name: Sync dist folder to S3
         run: |
-          aws s3 sync ./ALapp/dist s3://${{ secrets.S3_BUCKET }} \
+          aws s3 sync ./dist s3://${{ secrets.S3_BUCKET }} \
             --delete \
             --cache-control "public,max-age=31536000,immutable" \
             --exclude "*.html" \
             --exclude "*.json"
           
           # Upload HTML and JSON with different cache settings
-          aws s3 sync ./ALapp/dist s3://${{ secrets.S3_BUCKET }} \
+          aws s3 sync ./dist s3://${{ secrets.S3_BUCKET }} \
             --exclude "*" \
             --include "*.html" \
             --include "*.json" \
