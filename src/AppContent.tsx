@@ -54,6 +54,7 @@ const AppContent: React.FC = () => {
         {/* Public Routes */}
         <Route path="/login" element={isAuthenticated ? <Navigate to="/home" replace /> : <LoginPage />} />
         
+        
         {/* SignUp for admin user creation - always wrapped with navbar */}
         <Route path="/signup" element={
           <AppLayout>
