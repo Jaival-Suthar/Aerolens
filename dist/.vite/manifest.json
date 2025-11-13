@@ -1,0 +1,229 @@
+{
+  "_BlBsoels.js": {
+    "file": "assets/BlBsoels.js",
+    "name": "ExportExcelButton",
+    "imports": [
+      "index.html"
+    ]
+  },
+  "_BqwWppDi.js": {
+    "file": "assets/BqwWppDi.js",
+    "name": "inputtext.esm",
+    "imports": [
+      "index.html"
+    ]
+  },
+  "_CTu3qy8J.js": {
+    "file": "assets/CTu3qy8J.js",
+    "name": "inputtextarea.esm",
+    "imports": [
+      "index.html",
+      "_BqwWppDi.js"
+    ]
+  },
+  "_Cm4xoGAw.js": {
+    "file": "assets/Cm4xoGAw.js",
+    "name": "index.esm",
+    "imports": [
+      "index.html"
+    ]
+  },
+  "_CwQyFNHw.js": {
+    "file": "assets/CwQyFNHw.js",
+    "name": "overlayservice.esm",
+    "imports": [
+      "index.html"
+    ]
+  },
+  "_DtUi3U4g.js": {
+    "file": "assets/DtUi3U4g.js",
+    "name": "AddButton",
+    "imports": [
+      "index.html",
+      "_Cm4xoGAw.js",
+      "_BqwWppDi.js",
+      "_Ohh8sgr8.js",
+      "_CwQyFNHw.js"
+    ]
+  },
+  "_Dw63ZdRZ.js": {
+    "file": "assets/Dw63ZdRZ.js",
+    "name": "message.esm",
+    "imports": [
+      "index.html",
+      "_Ohh8sgr8.js"
+    ]
+  },
+  "_Ohh8sgr8.js": {
+    "file": "assets/Ohh8sgr8.js",
+    "name": "dropdown.esm",
+    "imports": [
+      "index.html",
+      "_CwQyFNHw.js"
+    ]
+  },
+  "index.html": {
+    "file": "assets/ClRBe0j7.js",
+    "name": "index",
+    "src": "index.html",
+    "isEntry": true,
+    "dynamicImports": [
+      "src/AppNavbar.tsx",
+      "src/pages/ClientPage/page.tsx",
+      "src/pages/Dashboard/page.tsx",
+      "src/pages/JobProfile/page.tsx",
+      "src/pages/Resume/page.tsx",
+      "src/pages/Lookup/page.tsx",
+      "src/pages/Login/Login.tsx",
+      "src/pages/Signup/page.tsx"
+    ],
+    "css": [
+      "assets/index-BcNQCn11.css"
+    ]
+  },
+  "src/AppNavbar.tsx": {
+    "file": "assets/C1ceGHVH.js",
+    "name": "AppNavbar",
+    "src": "src/AppNavbar.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_Cm4xoGAw.js",
+      "_CwQyFNHw.js"
+    ],
+    "assets": [
+      "assets/Logo-CXofxItD.webp"
+    ]
+  },
+  "src/assets/Logo.webp": {
+    "file": "assets/Logo-CXofxItD.webp",
+    "src": "src/assets/Logo.webp"
+  },
+  "src/pages/ClientPage/page.tsx": {
+    "file": "assets/BMx-BVh5.js",
+    "name": "page",
+    "src": "src/pages/ClientPage/page.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_Ohh8sgr8.js",
+      "_CwQyFNHw.js",
+      "_Cm4xoGAw.js",
+      "_DtUi3U4g.js",
+      "_BqwWppDi.js",
+      "_BlBsoels.js",
+      "_CTu3qy8J.js"
+    ],
+    "dynamicImports": [
+      "src/pages/Contact/components/contactAddEdit.tsx",
+      "src/pages/Contact/components/contactDelete.tsx"
+    ]
+  },
+  "src/pages/Contact/components/contactAddEdit.tsx": {
+    "file": "assets/rDBKx5Hs.js",
+    "name": "contactAddEdit",
+    "src": "src/pages/Contact/components/contactAddEdit.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_DtUi3U4g.js",
+      "_BqwWppDi.js",
+      "_Cm4xoGAw.js",
+      "_Ohh8sgr8.js",
+      "_CwQyFNHw.js"
+    ]
+  },
+  "src/pages/Contact/components/contactDelete.tsx": {
+    "file": "assets/DMQcVPd6.js",
+    "name": "contactDelete",
+    "src": "src/pages/Contact/components/contactDelete.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_DtUi3U4g.js",
+      "_BlBsoels.js",
+      "_Cm4xoGAw.js",
+      "_BqwWppDi.js",
+      "_Ohh8sgr8.js",
+      "_CwQyFNHw.js"
+    ]
+  },
+  "src/pages/Dashboard/page.tsx": {
+    "file": "assets/jPOZn_No.js",
+    "name": "page",
+    "src": "src/pages/Dashboard/page.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ]
+  },
+  "src/pages/JobProfile/page.tsx": {
+    "file": "assets/Br2uEVy4.js",
+    "name": "page",
+    "src": "src/pages/JobProfile/page.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_DtUi3U4g.js",
+      "_Ohh8sgr8.js",
+      "_BqwWppDi.js",
+      "_CTu3qy8J.js",
+      "_CwQyFNHw.js",
+      "_Dw63ZdRZ.js",
+      "_BlBsoels.js",
+      "_Cm4xoGAw.js"
+    ]
+  },
+  "src/pages/Login/Login.tsx": {
+    "file": "assets/q3oUFQVh.js",
+    "name": "Login",
+    "src": "src/pages/Login/Login.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_BqwWppDi.js"
+    ]
+  },
+  "src/pages/Lookup/page.tsx": {
+    "file": "assets/CkvSE_Mv.js",
+    "name": "page",
+    "src": "src/pages/Lookup/page.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_DtUi3U4g.js",
+      "_BqwWppDi.js",
+      "_Ohh8sgr8.js",
+      "_Dw63ZdRZ.js",
+      "_Cm4xoGAw.js",
+      "_CwQyFNHw.js"
+    ]
+  },
+  "src/pages/Resume/page.tsx": {
+    "file": "assets/mSUZO5LV.js",
+    "name": "page",
+    "src": "src/pages/Resume/page.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_DtUi3U4g.js",
+      "_BqwWppDi.js",
+      "_Ohh8sgr8.js",
+      "_BlBsoels.js",
+      "_Cm4xoGAw.js",
+      "_CwQyFNHw.js"
+    ]
+  },
+  "src/pages/Signup/page.tsx": {
+    "file": "assets/ofboQOKO.js",
+    "name": "page",
+    "src": "src/pages/Signup/page.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_BqwWppDi.js",
+      "_CwQyFNHw.js",
+      "_Ohh8sgr8.js"
+    ]
+  }
+}
