@@ -211,7 +211,7 @@ const ContactAddEdit: React.FC<ContactAddEditProps> = ({
           />
         </div>
 
-        <div className="field mb-3">
+        <div className="field mb-4">
           <label htmlFor="email" className="block mb-2 font-medium">
             Email <span className="text-red-500">*</span>
           </label>
