@@ -12,14 +12,6 @@ const makeHeaders = (accessToken?: string) => {
   return headers;
 };
 
-// Helper to mask token for safe logging
-const maskToken = (token?: string | null) => {
-  if (!token) return "no-token";
-  const t = token as string;
-  if (t.length <= 10) return "****" + t.slice(-4);
-  return `${t.slice(0, 6)}...${t.slice(-4)}`;
-};
-
 // Register User (with verbose logs)
 export const registerUser = async (
   formData: SignupFormData,
