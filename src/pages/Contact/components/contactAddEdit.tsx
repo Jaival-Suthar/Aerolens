@@ -199,7 +199,7 @@ const ContactAddEdit: React.FC<ContactAddEditProps> = ({
           )}
         </div>
 
-        <div className="field mb-4">
+        <div className="field mb-3">
           <label htmlFor="phone" className="block mb-2 font-medium">
             Phone
           </label>
