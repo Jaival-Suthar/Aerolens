@@ -12,7 +12,7 @@ export interface Candidate {
   noticePeriod: number;
   experienceYears: number;
   statusName: string;
-  linkedinProfileUrl: string;
+  linkedinProfileUrl?: string;
   resumeFilename?: string;       // File name stored in DB
   resumeOriginalName?: string;   // Original uploaded file name
   resumeUploadDate?: string;     // Upload timestamp
@@ -64,7 +64,7 @@ export interface AddEditCandidate {
   noticePeriod: number;
   experienceYears: number;
   statusName: string;
-  linkedinProfileUrl: string;
+  linkedinProfileUrl?: string;
   resumeFile: File | null;
 }
 

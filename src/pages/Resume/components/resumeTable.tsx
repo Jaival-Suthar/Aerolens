@@ -137,13 +137,13 @@ const ResumeTable: React.FC = () => {
       <div className="flex gap-1">
         <Button
           icon={<FaDownload />}
-          className="p-button-outlined p-button-sm"
+          className="p-button-outlined p-button-m"
           tooltip="Download Resume"
           onClick={() => handleDownloadResume(candidate.candidateId)}
         />
         <Button
           icon={<FaEye />}
-          className="p-button-outlined p-button-sm"
+          className="p-button-outlined p-button-m"
           tooltip="Preview Resume"
           onClick={() => handlePreviewResume(candidate.candidateId)}
         />

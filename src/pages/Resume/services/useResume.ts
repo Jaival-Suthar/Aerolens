@@ -59,7 +59,9 @@ const buildCandidateFormData = (candidate: AddEditCandidate): FormData => {
   fd.append("noticePeriod", String(candidate.noticePeriod));
   fd.append("experienceYears", String(candidate.experienceYears));
 
-  fd.append("linkedinProfileUrl", candidate.linkedinProfileUrl ?? "");
+  if (candidate.linkedinProfileUrl && candidate.linkedinProfileUrl.trim()) {
+    fd.append("linkedinProfileUrl", candidate.linkedinProfileUrl);
+  }
 
   if (candidate.resumeFile) fd.append("resume", candidate.resumeFile);
 
@@ -167,20 +169,7 @@ export const getCandidates = async (
 export const updateCandidate = async (
   accessToken: string | null,
   candidateId: number,
-  updateData: {
-    candidateName: string;
-    contactNumber: string;
-    email: string;
-    recruiterName: string;
-    jobRole: string;
-    preferredJobLocation: string;
-    currentCTC: number;
-    expectedCTC: number;
-    noticePeriod: number;
-    experienceYears: number;
-    statusName: string;
-    linkedinProfileUrl: string;
-  }
+  updateData: CandidateUpdatePayload 
 ): Promise<any> => {
   try {
     const response = await fetch(`${API_URL}/candidate/${candidateId}`, {
