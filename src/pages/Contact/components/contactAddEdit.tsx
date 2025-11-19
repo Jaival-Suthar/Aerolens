@@ -9,13 +9,12 @@ import type {
 import DialogButton from "../../../shared/DialogAddEditButton";
 import { FaCheck } from "react-icons/fa";
 import { useAuth } from "../../../shared/auth/AuthContext";
-import useContact from "../services/useContact"; // ✅ import the hook
+import useContact from "../services/useContact";
 
 interface Errors {
   contactPersonName?: string | null;
   designation?: string | null;
   phone?: string | null;
-  email?: string | null;
   clientId?: string | null;
   general?: string | null;
 }
@@ -28,18 +27,16 @@ const ContactAddEdit: React.FC<ContactAddEditProps> = ({
   contact = null,
   clientId = null,
 }) => {
-  const { accessToken, isAuthenticated } = useAuth(); // ✅ get token
-  const { getDesignations } = useContact(); // ✅ get function from hook
+  const { accessToken, isAuthenticated } = useAuth();
+  const { getDesignations } = useContact();
 
   const [contactPersonName, setContactPersonName] = useState<string>("");
   const [designation, setDesignation] = useState<string>("");
   const [designations, setDesignations] = useState<{ label: string; value: string }[]>([]);
   const [phone, setPhone] = useState<string>("");
-  const [email, setEmail] = useState<string>("");
   const [errors, setErrors] = useState<Errors>({});
   const [loadingDesignations, setLoadingDesignations] = useState(false);
 
-  // Load designations from API
   useEffect(() => {
     const loadDesignations = async () => {
       if (!accessToken || !isAuthenticated) return;
@@ -56,19 +53,16 @@ const ContactAddEdit: React.FC<ContactAddEditProps> = ({
     loadDesignations();
   }, [accessToken, isAuthenticated, getDesignations]);
 
-  // Initialize form data
   useEffect(() => {
     if (visible) {
       if (contact) {
         setContactPersonName(contact.contactPersonName || "");
         setDesignation(contact.designation || "");
         setPhone(contact.phone || "");
-        setEmail(contact.email || "");
       } else {
         setContactPersonName("");
         setDesignation("");
         setPhone("");
-        setEmail("");
       }
       setErrors({});
     }
@@ -77,21 +71,26 @@ const ContactAddEdit: React.FC<ContactAddEditProps> = ({
   const handleSubmit = () => {
     const newErrors: Errors = {};
 
-    if (!contactPersonName?.trim()) newErrors.contactPersonName = "Contact Person Name is required";
-    if (!designation?.trim()) newErrors.designation = "Designation is required";
-    if (!phone?.trim()) newErrors.phone = "Phone is required";
-    if (!email?.trim()) newErrors.email = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = "Please enter a valid email address";
+    if (!contactPersonName?.trim())
+      newErrors.contactPersonName = "Contact Person Name is required";
 
-    if (mode === "add" && !clientId) newErrors.clientId = "Client ID is required for adding new contact";
+    if (!designation?.trim())
+      newErrors.designation = "Designation is required";
+
+    if (!phone?.trim())
+      newErrors.phone = "Phone is required";
+
+    if (mode === "add" && !clientId)
+      newErrors.clientId = "Client ID is required for adding new contact";
 
     if (mode === "edit" && contact) {
       const hasChanges =
         contactPersonName.trim() !== (contact.contactPersonName || "") ||
         designation.trim() !== (contact.designation || "") ||
-        phone.trim() !== (contact.phone || "") ||
-        email.trim() !== (contact.email || "");
-      if (!hasChanges) newErrors.general = "At least one field must be modified for update";
+        phone.trim() !== (contact.phone || "");
+
+      if (!hasChanges)
+        newErrors.general = "At least one field must be modified for update";
     }
 
     setErrors(newErrors);
@@ -101,9 +100,10 @@ const ContactAddEdit: React.FC<ContactAddEditProps> = ({
       contactPersonName: contactPersonName.trim(),
       designation: designation.trim(),
       phone: phone.trim(),
-      email: email.trim(),
       ...(mode === "add" && clientId ? { clientId } : {}),
-      ...(mode === "edit" && contact?.clientContactId ? { clientContactId: contact.clientContactId } : {}),
+      ...(mode === "edit" && contact?.clientContactId
+        ? { clientContactId: contact.clientContactId }
+        : {}),
     };
 
     if (onSave) onSave(payload);
@@ -113,16 +113,17 @@ const ContactAddEdit: React.FC<ContactAddEditProps> = ({
     setContactPersonName("");
     setDesignation("");
     setPhone("");
-    setEmail("");
     setErrors({});
     if (onHide) onHide();
   };
 
   const clearFieldError = (fieldName: keyof Errors) => {
-    if (errors[fieldName]) setErrors((prev) => ({ ...prev, [fieldName]: null }));
+    if (errors[fieldName])
+      setErrors((prev) => ({ ...prev, [fieldName]: null }));
   };
 
   const dialogHeader = mode === "add" ? "Add New Contact" : "Edit Contact";
+
   const dialogFooter = (
     <div className="flex justify-content-end gap-2 mt-2 w-full">
       <DialogButton label="Cancel" severity="secondary" onClick={handleCancel} />
@@ -146,7 +147,11 @@ const ContactAddEdit: React.FC<ContactAddEditProps> = ({
       breakpoints={{ "960px": "50vw", "641px": "90vw" }}
     >
       <div className="p-fluid">
-        {errors.general && <div className="mb-3"><small className="p-error block">{errors.general}</small></div>}
+        {errors.general && (
+          <div className="mb-3">
+            <small className="p-error block">{errors.general}</small>
+          </div>
+        )}
 
         <div className="field mb-3">
           <label htmlFor="contactPersonName" className="block mb-2 font-medium">
@@ -155,12 +160,17 @@ const ContactAddEdit: React.FC<ContactAddEditProps> = ({
           <InputText
             id="contactPersonName"
             value={contactPersonName}
-            onChange={(e) => { setContactPersonName(e.target.value); clearFieldError("contactPersonName"); }}
+            onChange={(e) => {
+              setContactPersonName(e.target.value);
+              clearFieldError("contactPersonName");
+            }}
             autoFocus
             style={{ borderRadius: "8px" }}
             className={errors.contactPersonName ? "p-invalid" : ""}
           />
-          {errors.contactPersonName && <small className="p-error block mt-1">{errors.contactPersonName}</small>}
+          {errors.contactPersonName && (
+            <small className="p-error block mt-1">{errors.contactPersonName}</small>
+          )}
         </div>
 
         <div className="field mb-3">
@@ -171,42 +181,37 @@ const ContactAddEdit: React.FC<ContactAddEditProps> = ({
             id="designation"
             value={designation}
             options={designations}
-            onChange={(e) => { setDesignation(e.value || ""); clearFieldError("designation"); }}
+            onChange={(e) => {
+              setDesignation(e.value || "");
+              clearFieldError("designation");
+            }}
             placeholder={loadingDesignations ? "Loading..." : "Select designation"}
             disabled={loadingDesignations}
             style={{ borderRadius: "8px" }}
             className={errors.designation ? "p-invalid" : ""}
           />
-          {errors.designation && <small className="p-error block mt-1">{errors.designation}</small>}
+          {errors.designation && (
+            <small className="p-error block mt-1">{errors.designation}</small>
+          )}
         </div>
 
-        <div className="field mb-3">
+        <div className="field mb-4">
           <label htmlFor="phone" className="block mb-2 font-medium">
             Phone <span className="text-red-500">*</span>
           </label>
           <InputText
             id="phone"
             value={phone}
-            onChange={(e) => { setPhone(e.target.value); clearFieldError("phone"); }}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              clearFieldError("phone");
+            }}
             style={{ borderRadius: "8px" }}
             className={errors.phone ? "p-invalid" : ""}
           />
-          {errors.phone && <small className="p-error block mt-1">{errors.phone}</small>}
-        </div>
-
-        <div className="field mb-4">
-          <label htmlFor="email" className="block mb-2 font-medium">
-            Email <span className="text-red-500">*</span>
-          </label>
-          <InputText
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => { setEmail(e.target.value); clearFieldError("email"); }}
-            style={{ borderRadius: "8px" }}
-            className={errors.email ? "p-invalid" : ""}
-          />
-          {errors.email && <small className="p-error block mt-1">{errors.email}</small>}
+          {errors.phone && (
+            <small className="p-error block mt-1">{errors.phone}</small>
+          )}
         </div>
       </div>
     </Dialog>
