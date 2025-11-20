@@ -68,14 +68,10 @@ const refreshAccessToken = async (): Promise<string | null> => {
     try {
       const currentToken = accessToken || localStorage.getItem(TOKEN_KEY);
 
-      if (!currentToken) {
-        throw new Error('No token available to refresh');
-      }
-
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${currentToken}`,
+          Authorization: `Bearer ${currentToken || ''}`,
           'Content-Type': 'application/json',
         },
         credentials: 'include',
