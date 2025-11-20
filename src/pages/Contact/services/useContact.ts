@@ -19,15 +19,23 @@ export const useContact = () => {
     return headers;
   };
 
-  const handleApiResponse = async <T>(response: Response): Promise<ApiResponse<T>> => {
+  const handleApiResponse = async <T>(
+    response: Response
+  ): Promise<ApiResponse<T>> => {
     const data: ApiResponse<T> = await response.json();
-    if (!response.ok) throw new Error(data.message || `HTTP error! status: ${response.status}`);
+    if (!response.ok)
+      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+    //console.log("API Response Data:", data);
     return data;
   };
 
   // ---------------------- GET CLIENT DETAILS ----------------------
   const getClientDetails = useCallback(
-    async (accessToken: string | null, clientId: number): Promise<ApiResponse<ClientDetailsApiResponse>> => {
+    async (
+      accessToken: string | null,
+      clientId: number
+    ): Promise<ApiResponse<ClientDetailsApiResponse>> => {
+      //console.log("Fetching client details for clientId:", clientId);
       setLoading(true);
       setError(null);
       try {
@@ -39,9 +47,18 @@ export const useContact = () => {
           credentials: "include",
         });
 
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error(
+            `Expected JSON but got ${contentType || "unknown content type"}`
+          );
+        }
+
         return await handleApiResponse<ClientDetailsApiResponse>(response);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown error";
+        setError(errorMessage);
         throw err;
       } finally {
         setLoading(false);
@@ -52,7 +69,10 @@ export const useContact = () => {
 
   // ---------------------- CREATE CONTACT ----------------------
   const createContact = useCallback(
-    async (accessToken: string | null, contactData: ContactAddEditPayload): Promise<ApiResponse<Contact>> => {
+    async (
+      accessToken: string | null,
+      contactData: ContactAddEditPayload
+    ): Promise<ApiResponse<Contact>> => {
       setLoading(true);
       setError(null);
       try {
@@ -64,7 +84,9 @@ export const useContact = () => {
         });
         return await handleApiResponse<Contact>(response);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown error";
+        setError(errorMessage);
         throw err;
       } finally {
         setLoading(false);
@@ -75,20 +97,26 @@ export const useContact = () => {
 
   // ---------------------- UPDATE CONTACT ----------------------
   const updateContact = useCallback(
-    async (accessToken: string | null, contactData: ContactAddEditPayload): Promise<ApiResponse<Contact>> => {
+    async (
+      accessToken: string | null,
+      contactData: ContactAddEditPayload
+    ): Promise<ApiResponse<Contact>> => {
       setLoading(true);
       setError(null);
       try {
         const contactId = (contactData as Partial<Contact>).clientContactId;
-        if (!contactId) throw new Error("Contact ID is required for update");
+        if (!contactId)
+          throw new Error("Contact ID is required for update operation");
 
         const updatePayload: Partial<ContactPayload> = {};
         if (contactData.contactPersonName !== undefined)
           updatePayload.contactPersonName = contactData.contactPersonName;
         if (contactData.designation !== undefined)
           updatePayload.designation = contactData.designation;
-        if (contactData.phone !== undefined) updatePayload.phone = contactData.phone;
-        if (contactData.email !== undefined) updatePayload.email = contactData.email;
+        if (contactData.phone !== undefined)
+          updatePayload.phone = contactData.phone;
+        if (contactData.email !== undefined)
+          updatePayload.email = contactData.email;
 
         const response = await fetch(`${API_URL}/contact/${contactId}`, {
           method: "PATCH",
@@ -99,7 +127,9 @@ export const useContact = () => {
 
         return await handleApiResponse<Contact>(response);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown error";
+        setError(errorMessage);
         throw err;
       } finally {
         setLoading(false);
@@ -110,11 +140,15 @@ export const useContact = () => {
 
   // ---------------------- DELETE CONTACT ----------------------
   const deleteContact = useCallback(
-    async (accessToken: string | null, clientContactId: number): Promise<ApiResponse<void>> => {
+    async (
+      accessToken: string | null,
+      clientContactId: number
+    ): Promise<ApiResponse<void>> => {
       setLoading(true);
       setError(null);
       try {
-        if (!clientContactId) throw new Error("Contact ID is required for delete");
+        if (!clientContactId)
+          throw new Error("Contact ID is required for delete operation");
 
         const response = await fetch(`${API_URL}/contact/${clientContactId}`, {
           method: "DELETE",
@@ -124,40 +158,9 @@ export const useContact = () => {
 
         return await handleApiResponse<void>(response);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
-        throw err;
-      } finally {
-        setLoading(false);
-      }
-    },
-    [API_URL]
-  );
-
-  // ---------------------- FETCH DESIGNATIONS ----------------------
-  const getDesignations = useCallback(
-    async (accessToken: string): Promise<string[]> => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await fetch(`${API_URL}/lookup?page=1&limit=100`, {
-          method: "GET",
-          headers: makeHeaders(accessToken),
-          credentials: "include",
-        });
-
-        if (!response.ok) {
-          const text = await response.text().catch(() => "<unreadable>");
-          throw new Error(`Failed to fetch designations: ${response.status} - ${text}`);
-        }
-
-        const result = await response.json();
-        const designations = (result.data || [])
-          .filter((item: any) => item.tag === "designation")
-          .map((item: any) => item.value);
-
-        return designations;
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch designations");
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown error";
+        setError(errorMessage);
         throw err;
       } finally {
         setLoading(false);
@@ -173,9 +176,8 @@ export const useContact = () => {
     error,
     createContact,
     updateContact,
-    deleteContact,
     getClientDetails,
-    getDesignations,
+    deleteContact,
     clearError,
   };
 };
