@@ -12,7 +12,58 @@ import type {
 /*  CONFIG                                                                  */
 /* ------------------------------------------------------------------------- */
 const API_URL: string = import.meta.env.VITE_BASE_URL;
-const IS_DEV = import.meta.env.DEV;
+// -------------------- FETCH LOOKUP DATA --------------------
+export interface LookupItem {
+  lookupKey: number;  // Changed from 'key' to 'lookupKey'
+  tag: string;
+  value: string;
+}
+
+export interface LookupData {
+  recruiters: string[];
+  statuses: string[];
+}
+
+export const fetchLookupData = async (
+  accessToken: string | null
+): Promise<LookupData> => {
+  try {
+    const endpoint = `/lookup?page=1&limit=100`;
+    const data = await apiFetch<LookupItem[]>(
+      endpoint,
+      { method: "GET" },
+      accessToken || undefined
+    );
+
+    const recruiters = (data || [])
+      .filter((item: LookupItem) => item.tag === "recruiter")
+      .map((item: LookupItem) => item.value);
+
+    const statuses = (data || [])
+      .filter((item: LookupItem) => item.tag === "candidateStatus")
+      .map((item: LookupItem) => item.value);
+
+    return { recruiters, statuses };
+  } catch (error) {
+    logger.error("Error fetching lookup data:", error);
+    throw error;
+  }
+};
+
+// Keep the individual functions for backward compatibility if needed
+export const fetchRecruiters = async (
+  accessToken: string | null
+): Promise<string[]> => {
+  const { recruiters } = await fetchLookupData(accessToken);
+  return recruiters;
+};
+
+export const fetchCandidateStatuses = async (
+  accessToken: string | null
+): Promise<string[]> => {
+  const { statuses } = await fetchLookupData(accessToken);
+  return statuses;
+};
 
 /* ------------------------------------------------------------------------- */
 /*  ROUTES                                                                  */

@@ -13,24 +13,35 @@ import {
   createCandidate,
   updateCandidate,
   uploadResume,
+  fetchLookupData,
 } from "../services/useResume";
 import { ResumeAddEditProps, AddEditCandidate } from "../types/resumeTypes";
 import { useAuth } from "../../../shared/auth/AuthContext";
 
-
+interface DropdownFieldProps {
+  id: string;
+  label: string;
+  value: string;
+  options: { label: string; value: string }[];
+  onChange: (e: { value: string }) => void;
+  onBlur: () => void;
+  placeholder?: string;
+  error?: string;
+  disabled?: boolean;
+}
 // ---------- CONSTANTS ----------
-const STATUS_OPTIONS = [
-  { label: "Selected", value: "Selected" },
-  { label: "Rejected", value: "Rejected" },
-  { label: "Interview Pending", value: "Interview Pending" },
-];
+// const STATUS_OPTIONS = [
+//   { label: "Selected", value: "Selected" },
+//   { label: "Rejected", value: "Rejected" },
+//   { label: "Interview Pending", value: "Interview Pending" },
+// ];
 
 
-const RECRUITER_OPTIONS = [
-  { label: "Jayraj", value: "Jayraj" },
-  { label: "Khushi", value: "Khushi" },
-  { label: "Yash", value: "Yash" },
-];
+// const RECRUITER_OPTIONS = [
+//   { label: "Jayraj", value: "Jayraj" },
+//   { label: "Khushi", value: "Khushi" },
+//   { label: "Yash", value: "Yash" },
+// ];
 
 
 const LOCATION_OPTIONS = [
@@ -126,7 +137,39 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const toast = useRef<Toast>(null);
+  const [recruiterOptions, setRecruiterOptions] = useState<{ label: string; value: string }[]>([]);
+  const [statusOptions, setStatusOptions] = useState<{ label: string; value: string }[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(false);
   
+  useEffect(() => {
+  const loadLookupData = async () => {
+    if (!accessToken) return;
+    
+    setLoadingOptions(true);
+    try {
+      // Single API call instead of two
+      const { recruiters, statuses } = await fetchLookupData(accessToken);
+
+      setRecruiterOptions(recruiters.map(r => ({ label: r, value: r })));
+      setStatusOptions(statuses.map(s => ({ label: s, value: s })));
+    } catch (error) {
+      console.error("Error loading lookup data:", error);
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: "Failed to load dropdown options",
+        life: 3000,
+      });
+    } finally {
+      setLoadingOptions(false);
+    }
+  };
+
+  if (visible) {
+    loadLookupData();
+  }
+}, [visible, accessToken]);
+
   // Initialize / Reset form
   useEffect(() => {
     setFormData(
@@ -292,10 +335,12 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             id="recruiterName"
             label="Recruiter"
             value={formData.recruiterName}
-            options={RECRUITER_OPTIONS}
+            options={recruiterOptions}
             onChange={(e: { value: string }) => handleChange("recruiterName", e.value)}
             onBlur={() => handleBlur("recruiterName", formData.recruiterName)}
             error={shouldShowError("recruiterName")}
+            disabled={loadingOptions}
+            placeholder={loadingOptions ? "Loading..." : "Select Recruiter"}
           />
 
 
@@ -387,10 +432,12 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             id="statusName"
             label="Status"
             value={formData.statusName}
-            options={STATUS_OPTIONS}
+            options={statusOptions}
             onChange={(e: { value: string }) => handleChange("statusName", e.value)}
             onBlur={() => handleBlur("statusName", formData.statusName)}
             error={shouldShowError("statusName")}
+            disabled={loadingOptions}
+            placeholder={loadingOptions ? "Loading..." : "Select Status"}
           />
 
 
@@ -451,7 +498,17 @@ const InputField = ({ id, label, value, onChange, onBlur, placeholder, error, re
 );
 
 
-const DropdownField = ({ id, label, value, options, onChange, onBlur, placeholder, error }: any) => (
+const DropdownField = ({ 
+  id, 
+  label, 
+  value, 
+  options, 
+  onChange, 
+  onBlur, 
+  placeholder, 
+  error,
+  disabled = false 
+}: DropdownFieldProps) => (
   <div className="field col-12 md:col-6">
     <label htmlFor={id} className="font-bold">{label} *</label>
     <Dropdown 
@@ -460,7 +517,8 @@ const DropdownField = ({ id, label, value, options, onChange, onBlur, placeholde
       options={options} 
       onChange={onChange} 
       onBlur={onBlur} 
-      placeholder={placeholder} 
+      placeholder={placeholder}
+      disabled={disabled}
       className={error ? "p-invalid" : ""} 
     />
     {error && <small className="p-error">{error}</small>}
