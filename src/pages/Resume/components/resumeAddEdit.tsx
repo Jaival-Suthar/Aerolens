@@ -13,24 +13,35 @@ import {
   createCandidate,
   updateCandidate,
   uploadResume,
+  fetchLookupData,
 } from "../services/useResume";
 import { ResumeAddEditProps, AddEditCandidate } from "../types/resumeTypes";
 import { useAuth } from "../../../shared/auth/AuthContext";
 
-
+interface DropdownFieldProps {
+  id: string;
+  label: string;
+  value: string;
+  options: { label: string; value: string }[];
+  onChange: (e: { value: string }) => void;
+  onBlur: () => void;
+  placeholder?: string;
+  error?: string;
+  disabled?: boolean;
+}
 // ---------- CONSTANTS ----------
-const STATUS_OPTIONS = [
-  { label: "Selected", value: "Selected" },
-  { label: "Rejected", value: "Rejected" },
-  { label: "Interview Pending", value: "Interview Pending" },
-];
+// const STATUS_OPTIONS = [
+//   { label: "Selected", value: "Selected" },
+//   { label: "Rejected", value: "Rejected" },
+//   { label: "Interview Pending", value: "Interview Pending" },
+// ];
 
 
-const RECRUITER_OPTIONS = [
-  { label: "Jayraj", value: "Jayraj" },
-  { label: "Khushi", value: "Khushi" },
-  { label: "Yash", value: "Yash" },
-];
+// const RECRUITER_OPTIONS = [
+//   { label: "Jayraj", value: "Jayraj" },
+//   { label: "Khushi", value: "Khushi" },
+//   { label: "Yash", value: "Yash" },
+// ];
 
 
 const LOCATION_OPTIONS = [
@@ -43,7 +54,7 @@ const LOCATION_OPTIONS = [
 // ---------- HELPERS ----------
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRegex = /^(\+?91|91)?[6-9]\d{9}$|^(\+?1)?[2-9]\d{9}$/;
-const linkedinRegex = /^https:\/\/(www\.)?linkedin\.com\/.*$/i;
+const linkedinRegex = /^https?:\/\/(www\.)?linkedin\.com\/.*$/i;
 
 
 const INITIAL_FORM: AddEditCandidate = {
@@ -58,7 +69,7 @@ const INITIAL_FORM: AddEditCandidate = {
   noticePeriod: 0,
   experienceYears: 0,
   statusName: "",
-  linkedinProfileUrl: "",
+  linkedinProfileUrl: undefined,
   resumeFile: null,
 };
 
@@ -94,16 +105,17 @@ const validateField = (field: keyof AddEditCandidate, value: any) => {
     case "statusName":
       return value ? "" : "Status is required.";
     case "linkedinProfileUrl":
-      if (!value) return "LinkedIn URL is required.";
+      if (!value || value.trim() === "") return "";
       if (!linkedinRegex.test(value)) return "Enter a valid LinkedIn URL.";
       return "";
     case "resumeFile":
-      if (!value) return "";
-      if (!value.name.toLowerCase().endsWith(".pdf"))
-        return "Only PDF files are allowed.";
-      if (value.size > 5 * 1024 * 1024)
-        return "File must be smaller than 5MB.";
-      return "";
+    if (!value) return "";
+    const fileName = value.name.toLowerCase();
+    if (!fileName.endsWith(".pdf") && !fileName.endsWith(".docx"))
+      return "Only PDF and DOCX files are allowed.";
+    if (value.size > 5 * 1024 * 1024)
+      return "File must be smaller than 5MB.";
+    return "";
     default:
       return "";
   }
@@ -125,7 +137,39 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const toast = useRef<Toast>(null);
+  const [recruiterOptions, setRecruiterOptions] = useState<{ label: string; value: string }[]>([]);
+  const [statusOptions, setStatusOptions] = useState<{ label: string; value: string }[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(false);
   
+  useEffect(() => {
+  const loadLookupData = async () => {
+    if (!accessToken) return;
+    
+    setLoadingOptions(true);
+    try {
+      // Single API call instead of two
+      const { recruiters, statuses } = await fetchLookupData(accessToken);
+
+      setRecruiterOptions(recruiters.map(r => ({ label: r, value: r })));
+      setStatusOptions(statuses.map(s => ({ label: s, value: s })));
+    } catch (error) {
+      console.error("Error loading lookup data:", error);
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: "Failed to load dropdown options",
+        life: 3000,
+      });
+    } finally {
+      setLoadingOptions(false);
+    }
+  };
+
+  if (visible) {
+    loadLookupData();
+  }
+}, [visible, accessToken]);
+
   // Initialize / Reset form
   useEffect(() => {
     setFormData(
@@ -186,7 +230,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
           noticePeriod: formData.noticePeriod,
           experienceYears: formData.experienceYears,
           statusName: formData.statusName,
-          linkedinProfileUrl: formData.linkedinProfileUrl,
+          linkedinProfileUrl: formData.linkedinProfileUrl || undefined,
         };
 
 
@@ -291,10 +335,12 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             id="recruiterName"
             label="Recruiter"
             value={formData.recruiterName}
-            options={RECRUITER_OPTIONS}
+            options={recruiterOptions}
             onChange={(e: { value: string }) => handleChange("recruiterName", e.value)}
             onBlur={() => handleBlur("recruiterName", formData.recruiterName)}
             error={shouldShowError("recruiterName")}
+            disabled={loadingOptions}
+            placeholder={loadingOptions ? "Loading..." : "Select Recruiter"}
           />
 
 
@@ -386,23 +432,26 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             id="statusName"
             label="Status"
             value={formData.statusName}
-            options={STATUS_OPTIONS}
+            options={statusOptions}
             onChange={(e: { value: string }) => handleChange("statusName", e.value)}
             onBlur={() => handleBlur("statusName", formData.statusName)}
             error={shouldShowError("statusName")}
+            disabled={loadingOptions}
+            placeholder={loadingOptions ? "Loading..." : "Select Status"}
           />
 
 
           <InputField
             id="linkedinProfileUrl"
-            label="LinkedIn URL"
-            value={formData.linkedinProfileUrl}
+            label="LinkedIn URL" // Removed * since it's optional
+            value={formData.linkedinProfileUrl || ""} // Handle undefined
             onChange={(e) =>
-              handleChange("linkedinProfileUrl", e.target.value)
+              handleChange("linkedinProfileUrl", e.target.value || undefined)
             }
             onBlur={() => handleBlur("linkedinProfileUrl", formData.linkedinProfileUrl)}
             placeholder="https://www.linkedin.com/in/..."
             error={shouldShowError("linkedinProfileUrl")}
+            required={false}
           />
 
 
@@ -427,12 +476,15 @@ interface InputFieldProps {
   onBlur: () => void;
   placeholder?: string;
   error?: string;
+  required?: boolean;
 }
 
 
-const InputField = ({ id, label, value, onChange, onBlur, placeholder, error }: InputFieldProps) => (
+const InputField = ({ id, label, value, onChange, onBlur, placeholder, error, required = true }: InputFieldProps) => (
   <div className="field col-12 md:col-6">
-    <label htmlFor={id} className="font-bold">{label} *</label>
+    <label htmlFor={id} className="font-bold">
+      {label} {required && "*"}
+    </label>
     <InputText 
       id={id}
       value={value} 
@@ -446,7 +498,17 @@ const InputField = ({ id, label, value, onChange, onBlur, placeholder, error }: 
 );
 
 
-const DropdownField = ({ id, label, value, options, onChange, onBlur, placeholder, error }: any) => (
+const DropdownField = ({ 
+  id, 
+  label, 
+  value, 
+  options, 
+  onChange, 
+  onBlur, 
+  placeholder, 
+  error,
+  disabled = false 
+}: DropdownFieldProps) => (
   <div className="field col-12 md:col-6">
     <label htmlFor={id} className="font-bold">{label} *</label>
     <Dropdown 
@@ -455,7 +517,8 @@ const DropdownField = ({ id, label, value, options, onChange, onBlur, placeholde
       options={options} 
       onChange={onChange} 
       onBlur={onBlur} 
-      placeholder={placeholder} 
+      placeholder={placeholder}
+      disabled={disabled}
       className={error ? "p-invalid" : ""} 
     />
     {error && <small className="p-error">{error}</small>}
@@ -488,19 +551,18 @@ interface FileUploadFieldProps {
 
 const FileUploadField = ({ file, onSelect, error }: FileUploadFieldProps) => (
   <div className="field col-12 md:col-6">
-    <label className="font-bold">Upload Resume (PDF Only)</label>
+    <label className="font-bold">Upload Resume (PDF or DOCX)</label>
     <FileUpload
       mode="basic"
       name="resume"
-      accept=".pdf"
+      accept=".pdf,.docx"
       maxFileSize={5 * 1024 * 1024}
       auto={false}
       customUpload
       onSelect={(e) => e.files[0] && onSelect(e.files[0])}
       chooseLabel="Select File"
       chooseOptions={{
-        icon: "pi pi-file-pdf",
-        label: "Upload PDF",
+        label: "Upload File",
         className: "p-button-danger p-button-sm",
       }}
       className={error ? "p-invalid" : ""}
