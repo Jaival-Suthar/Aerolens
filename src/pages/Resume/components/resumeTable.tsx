@@ -86,21 +86,27 @@ const ResumeTable: React.FC = () => {
 
   /** ------------------- Resume Actions ------------------- */
   const handleDownloadResume = async (candidateId: number) => {
-    try {
-      if (!accessToken) throw new Error("Unauthorized");
-      const blob = await downloadResume(accessToken, candidateId);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `resume_${candidateId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Resume download failed:", error);
-    }
-  };
+  try {
+    if (!accessToken) throw new Error("Unauthorized");
+    const blob = await downloadResume(accessToken, candidateId);
+    
+    // Detect file type from blob's MIME type
+    const fileExtension = blob.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" 
+      ? "docx" 
+      : "pdf";
+    
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `resume_${candidateId}.${fileExtension}`;  // ✅ Dynamic extension
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Resume download failed:", error);
+  }
+};
 
   const handlePreviewResume = async (candidateId: number) => {
   try {
