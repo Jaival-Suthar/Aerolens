@@ -99,9 +99,29 @@ const ContactAddEdit: React.FC<ContactAddEditProps> = ({
     if (!designation || designation.trim() === "") {
       newErrors.designation = "Designation is required";
     }
-    // if (!phone || phone.trim() === "") {
-    //   newErrors.phone = "Phone is required";
-    // }
+    if (phone && phone.trim() !== "") {
+      // Remove all non-digit characters to count actual digits
+      const digitsOnly = phone.replace(/\D/g, "");
+      
+      // Check if it contains valid characters
+      const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+      if (!phoneRegex.test(phone.trim())) {
+        newErrors.phone = "Phone number can only contain numbers, spaces, +, -, and parentheses";
+      }
+      // Check length based on country code presence
+      else if (phone.trim().startsWith("+")) {
+        // With country code: 11-13 digits (e.g., +1-xxx or +91-xxx)
+        if (digitsOnly.length < 11 || digitsOnly.length > 13) {
+          newErrors.phone = "Phone number with country code must be 11-13 digits";
+        }
+      }
+      else {
+        // Without country code: exactly 10 digits
+        if (digitsOnly.length !== 10) {
+          newErrors.phone = "Phone number must be exactly 10 digits";
+        }
+      }
+    }
     if (!email || email.trim() === "") {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(email.trim())) {
