@@ -26,19 +26,15 @@ export const useContactsByClient = (
     }
 
     if (!accessToken) {
-      console.warn("⚠️ Access token missing. Skipping contacts fetch.");
       setContacts([]);
       return;
     }
 
     try {
-      console.log("📥 Loading contacts for clientId:", clientId);
       const response: ApiResponse<ClientDetailsApiResponse> = await getClientDetails(
         accessToken, // ✅ Pass token as first argument
         clientId
       );
-
-      console.log("📦 Full API Response:", response);
 
       if (response.success && response.data) {
         const clientContactsArray = response.data.clientContact;
@@ -47,18 +43,14 @@ export const useContactsByClient = (
           const validContacts = clientContactsArray.filter(
             (contact) => contact && (contact.clientContactId || contact.contactId)
           );
-          console.log("✅ Setting contacts:", validContacts);
           setContacts(validContacts);
         } else {
-          console.log("⚠️ No valid contacts found in response");
           setContacts([]);
         }
       } else {
-        console.log("⚠️ No contacts found or unsuccessful response");
         setContacts([]);
       }
     } catch (err) {
-      console.error("❌ Failed to load contacts:", err);
       setContacts([]);
     }
   }, [accessToken, clientId, getClientDetails]);
@@ -67,7 +59,6 @@ export const useContactsByClient = (
     if (accessToken) {
       loadContacts();
     } else {
-      console.warn("⏳ Waiting for accessToken before fetching contacts...");
     }
 
     return () => clearError();
