@@ -69,15 +69,12 @@ const ContactAddEdit: React.FC<ContactAddEditProps> = ({
   
         // call getDesignations from useContact hook
         const data = await getDesignations(accessToken);
-        console.log("Fetched designations:", data);
   
         // Filter only designation entries
         const designationData = data.map((d: string) => ({ label: d, value: d }));
 
-        console.log("Processed designation data:", designationData);
         setDesignations(designationData);
       } catch (err) {
-        console.error("Failed to fetch designations:", err);
       } finally {
         setLoadingDesignations(false);
       }

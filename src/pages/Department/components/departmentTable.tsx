@@ -48,9 +48,7 @@ const onPageChange = (event: any) => {
     try {
       const data = await getDepartments(accessToken, clientId); // ✅ fixed param order
       setDepartments(data.departments || []);
-      console.log("Departments loaded:", data);
     } catch (error) {
-      console.error("Error loading departments:", error);
     }
   }, [clientId, accessToken]);
 
