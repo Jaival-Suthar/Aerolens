@@ -112,10 +112,8 @@ const refreshAccessToken = async (): Promise<string | null> => {
       try {
         const newToken = await refreshAccessToken();
         if (newToken) {
-          const updatedHeaders = {
-            ...(init?.headers || {}),
-            Authorization: `Bearer ${newToken}`,
-          };
+          const updatedHeaders = new Headers(init?.headers || {});
+          updatedHeaders.set("Authorization", `Bearer ${newToken}`);
           res = await originalFetch(input, { ...init, headers: updatedHeaders });
         }
       } catch (err) {
