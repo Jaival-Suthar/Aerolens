@@ -168,7 +168,45 @@ export const useContact = () => {
     },
     [API_URL]
   );
-
+  // ---------------------- GET DESIGNATIONS ----------------------
+  const getDesignations = useCallback(
+    async (accessToken: string | null): Promise<string[]> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`${API_URL}/lookup?page=1&limit=100`, {
+          method: "GET",
+          headers: makeHeaders(accessToken || undefined),
+          credentials: "include",
+        });
+  
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error(
+            `Expected JSON but got ${contentType || "unknown content type"}`
+          );
+        }
+  
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message || "Failed to fetch");
+  
+        // Filter only designations
+        const designations = data.data
+          .filter((item: any) => item.tag === "designation")
+          .map((item: any) => item.value);
+  
+        return designations || [];
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Unknown error";
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [API_URL]
+  );
+  
   const clearError = useCallback(() => setError(null), []);
 
   return {
@@ -179,6 +217,7 @@ export const useContact = () => {
     getClientDetails,
     deleteContact,
     clearError,
+    getDesignations
   };
 };
 
