@@ -49,10 +49,10 @@ const ResumeTable: React.FC = () => {
   }, [loadResumes]);
 
   const onPageChange = (event: any) => {
-  setFirst(event.first);
-  const newPage = event.page + 1; // PrimeReact pages start from 0
-  setSearchParams({ page: newPage.toString() });
-};
+    setFirst(event.first);
+    const newPage = event.page + 1; // PrimeReact pages start from 0
+    setSearchParams({ page: newPage.toString() });
+  };
 
   /** ------------------- CRUD Handlers ------------------- */
   const handleAdd = () => {
@@ -86,53 +86,53 @@ const ResumeTable: React.FC = () => {
 
   /** ------------------- Resume Actions ------------------- */
   const handleDownloadResume = async (candidateId: number) => {
-  try {
-    if (!accessToken) throw new Error("Unauthorized");
-    const blob = await downloadResume(accessToken, candidateId);
-    
-    // Detect file type from blob's MIME type
-    const fileExtension = blob.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" 
-      ? "docx" 
-      : "pdf";
-    
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `resume_${candidateId}.${fileExtension}`;  // ✅ Dynamic extension
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error("Resume download failed:", error);
-  }
-};
+    try {
+      if (!accessToken) throw new Error("Unauthorized");
+      const blob = await downloadResume(accessToken, candidateId);
+
+      // Detect file type from blob's MIME type
+      const fileExtension = blob.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ? "docx"
+        : "pdf";
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `resume_${candidateId}.${fileExtension}`;  // ✅ Dynamic extension
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Resume download failed:", error);
+    }
+  };
 
   const handlePreviewResume = async (candidateId: number) => {
-  try {
-    if (!accessToken) throw new Error("Unauthorized");
-    
-    const previewUrl = `${import.meta.env.VITE_BASE_URL}/candidate/${candidateId}/resume/preview`;
-    
-    const response = await fetch(previewUrl, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    try {
+      if (!accessToken) throw new Error("Unauthorized");
 
-    if (!response.ok) throw new Error("Preview failed");
+      const previewUrl = `${import.meta.env.VITE_BASE_URL}/candidate/${candidateId}/resume/preview`;
 
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    window.open(url, "_blank");
-    
-    // Clean up after a delay to ensure the window opens
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  } catch (error) {
-    console.error("Resume preview failed:", error);
-  }
-};
+      const response = await fetch(previewUrl, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) throw new Error("Preview failed");
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+
+      // Clean up after a delay to ensure the window opens
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      console.error("Resume preview failed:", error);
+    }
+  };
   /** ------------------- Column Templates ------------------- */
   const resumeActionTemplate = (candidate: Candidate) => {
     if (!candidate.resumeFilename) {
@@ -208,6 +208,11 @@ const ResumeTable: React.FC = () => {
         <Column field="contactNumber" header="Contact Number" sortable />
         <Column field="email" header="Email" sortable />
         <Column field="recruiterName" header="Recruiter" sortable />
+        {/* new columns */}
+        <Column field="recruiterPhoneNumber" header="Recruiter Phone" sortable />  // ✅ new
+        <Column field="recruiterEmail" header="Recruiter Email" sortable />          // ✅ new
+        <Column field="notes" header="Notes" body={(rowData) => rowData.notes || "-"} /> // ✅ new
+
         <Column field="jobRole" header="Role" sortable />
         <Column
           field="preferredJobLocation"

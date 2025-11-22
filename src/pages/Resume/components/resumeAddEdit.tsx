@@ -7,8 +7,6 @@ import { FileUpload } from "primereact/fileupload";
 import { FaCheck } from "react-icons/fa";
 import { Toast } from "primereact/toast";
 import DialogButton from "../../../shared/DialogAddEditButton";
-
-
 import {
   createCandidate,
   updateCandidate,
@@ -71,6 +69,10 @@ const INITIAL_FORM: AddEditCandidate = {
   statusName: "",
   linkedinProfileUrl: undefined,
   resumeFile: null,
+   // ---------- NEW FIELDS ----------
+   recruiterPhoneNumber: "",
+   recruiterEmail: "",
+   notes: undefined, // optional
 };
 
 
@@ -116,6 +118,14 @@ const validateField = (field: keyof AddEditCandidate, value: any) => {
     if (value.size > 5 * 1024 * 1024)
       return "File must be smaller than 5MB.";
     return "";
+    
+    case "recruiterPhoneNumber":
+      if (!value) return "Recruiter phone number is required.";
+      return "";
+    case "recruiterEmail":
+      if (!value) return "Recruiter email is required.";
+      if (!emailRegex.test(value)) return "Enter a valid recruiter email.";
+      return "";
     default:
       return "";
   }
@@ -231,6 +241,9 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
           experienceYears: formData.experienceYears,
           statusName: formData.statusName,
           linkedinProfileUrl: formData.linkedinProfileUrl || undefined,
+          recruiterPhoneNumber: formData.recruiterPhoneNumber || "", // required
+  recruiterEmail: formData.recruiterEmail,             // required
+  notes: formData.notes?.trim() || "",               // optional
         };
 
 
@@ -341,6 +354,35 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             error={shouldShowError("recruiterName")}
             disabled={loadingOptions}
             placeholder={loadingOptions ? "Loading..." : "Select Recruiter"}
+          />
+
+<InputField
+            id="recruiterPhoneNumber"
+            label="Recruiter Phone"
+            value={formData.recruiterPhoneNumber}
+            onChange={(e) => handleChange("recruiterPhoneNumber", e.target.value)}
+            onBlur={() => handleBlur("recruiterPhoneNumber", formData.recruiterPhoneNumber)}
+            error={shouldShowError("recruiterPhoneNumber")}
+          />
+
+          <InputField
+            id="recruiterEmail"
+            label="Recruiter Email"
+            value={formData.recruiterEmail}
+            onChange={(e) => handleChange("recruiterEmail", e.target.value)}
+            onBlur={() => handleBlur("recruiterEmail", formData.recruiterEmail)}
+            error={shouldShowError("recruiterEmail")}
+          />
+
+          <InputField
+            id="notes"
+            label="Notes"
+            value={formData.notes || ""} // default to empty string if undefined
+
+            onChange={(e) => handleChange("notes", e.target.value)}
+            onBlur={() => handleBlur("notes", formData.notes)}
+            error={shouldShowError("notes")}
+            required={false}
           />
 
 
