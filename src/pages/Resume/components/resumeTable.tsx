@@ -211,7 +211,8 @@ const ResumeTable: React.FC = () => {
         {/* new columns */}
         <Column field="recruiterPhoneNumber" header="Recruiter Phone" sortable />  // ✅ new
         <Column field="recruiterEmail" header="Recruiter Email" sortable />          // ✅ new
-        <Column field="notes" header="Notes" body={(rowData) => rowData.notes || "-"} /> // ✅ new
+        <Column field="notes" header="Notes" body={(rowData) => rowData.notes || "-"} sortable />
+
 
         <Column field="jobRole" header="Role" sortable />
         <Column
