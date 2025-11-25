@@ -40,6 +40,8 @@ export type ClientTableProps = {
   onSelectionChange: (client: ClientType | null) => void;
   loading?: boolean;
   preSelectClientId?: number;
+  filters?: any;
+  globalFilterFields?: string[];
 };
 
 export type ClientsApiResponse = {
