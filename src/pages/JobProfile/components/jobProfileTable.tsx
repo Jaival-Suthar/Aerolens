@@ -24,10 +24,8 @@ import type {
   JobProfilePayload
 } from '../types/jobProfileTypes';
 import { useAuth } from '../../../shared/auth/AuthContext'; 
-import { InputText } from 'primereact/inputtext';
-import { Button } from 'primereact/button';
-import { FaSearch } from "react-icons/fa";
 import { FilterMatchMode } from 'primereact/api';
+import SearchButton from '../../../shared/SearchButton';
 
 const JobProfileMain: React.FC = () => {
   const toast = useRef<Toast>(null);
@@ -213,41 +211,11 @@ const JobProfileMain: React.FC = () => {
       <div className="flex justify-content-between align-items-center mb-2">
   <h2>Job Profiles Requirements</h2>
   <div className='flex gap-2 align-items-center'>
-    <span className="p-input-icon-right" style={{ position: 'relative' }}>
-      <InputText
-        value={globalFilterValue}
-        onChange={onGlobalFilterChange}
-        placeholder="Search..."
-        style={{ borderRadius: '25px', paddingRight: '3.5rem', width: '250px' }}
-      />
-      <Button
-        aria-label="Search"
-        tooltip="Search"
-        tooltipOptions={{ position: "bottom" }}
-        text
-        className="p-input-icon"
-        style={{
-          position: 'absolute',
-          right: '5px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          backgroundColor: "#e3f1fc",
-          color: "#1976d2",
-          border: "none",
-          boxShadow: "none",
-          width: 32,
-          height: 32,
-          padding: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: '50%',
-          minWidth: 'unset'
-        }}
-      >
-        <FaSearch style={{ color: "#1976d2", fontSize: 16 }} />
-      </Button>
-    </span>
+    <SearchButton
+      value={globalFilterValue}
+      onChange={onGlobalFilterChange}
+      placeholder="Search..."
+    />
     <ExportExcelButton dtRef={dt} />
     <AddButton onClick={handleAddNew} />
     <EditButton 
