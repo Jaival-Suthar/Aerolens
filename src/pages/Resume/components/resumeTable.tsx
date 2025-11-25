@@ -15,6 +15,8 @@ import { useSearchParams } from "react-router-dom";
 import { Candidate } from "../types/resumeTypes";
 import { getCandidates, downloadResume } from "../services/useResume";
 import { useAuth } from "../../../shared/auth/AuthContext";
+import SearchButton from "../../../shared/SearchButton";
+import { FilterMatchMode } from 'primereact/api';
 
 const ResumeTable: React.FC = () => {
   const { accessToken } = useAuth(); // ✅ from AuthContext
@@ -28,7 +30,10 @@ const ResumeTable: React.FC = () => {
   const pageFromUrl = Number(searchParams.get("page")) || 1;
   const [first, setFirst] = useState((pageFromUrl - 1) * 5); // 5 = rows per page
   const dt = useRef<DataTable<any>>(null);
-
+  const [globalFilterValue, setGlobalFilterValue] = useState('');
+  const [filters, setFilters] = useState<any>({
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS }
+  });
   /** ------------------- Data Loading ------------------- */
   const loadResumes = useCallback(async () => {
     if (!accessToken) return;
@@ -83,6 +88,15 @@ const ResumeTable: React.FC = () => {
     setSelectedResume(null);
     loadResumes();
   };
+
+  const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const value = e.target.value;
+  const _filters = { ...filters };
+  _filters['global'].value = value;
+  
+  setFilters(_filters);
+  setGlobalFilterValue(value);
+};
 
   /** ------------------- Resume Actions ------------------- */
   const handleDownloadResume = async (candidateId: number) => {
@@ -179,6 +193,11 @@ const ResumeTable: React.FC = () => {
       <div className="flex justify-content-between align-items-center mb-2">
         <h2>Candidate Resume Management</h2>
         <div className="flex gap-2">
+          <SearchButton
+            value={globalFilterValue}
+            onChange={onGlobalFilterChange}
+            placeholder="Search candidates..."
+          />
           <ExportExcelButton dtRef={dt} />
           <AddButton onClick={handleAdd} />
           <EditButton onClick={handleEdit} disabled={!selectedResume} />
@@ -201,6 +220,16 @@ const ResumeTable: React.FC = () => {
         tableStyle={{ minWidth: "80rem" }}
         loading={loading}
         emptyMessage="No candidates found."
+        filters={filters}  
+        globalFilterFields={[  
+          'candidateName', 
+          'contactNumber', 
+          'email', 
+          'recruiterName', 
+          'jobRole',
+          'preferredJobLocation',
+          'statusName'
+        ]}
       >
 
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
