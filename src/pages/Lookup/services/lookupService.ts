@@ -30,15 +30,23 @@ export const lookupService = {
   /**
    * Get all lookups with pagination
    */
-  async getAll(accessToken: string, page = 1, limit = 10): Promise<LookupApiResponse> {
-    const url = `${API_BASE_URL}/lookup?page=${page}&limit=${limit}`;
+  async getAll(accessToken: string): Promise<LookupApiResponse> {
+    const url = `${API_BASE_URL}/lookup?page=1&limit=1000`; // ← Fetch all
     const res = await fetch(url, {
       method: "GET",
       headers: makeHeaders(accessToken),
-      // ❌ no credentials: 'include' — prevents cookie-based reauth conflicts
     });
     return checkStatus(res);
   },
+  // async getAll(accessToken: string, page = 1, limit = 10): Promise<LookupApiResponse> {
+  //   const url = `${API_BASE_URL}/lookup?page=${page}&limit=${limit}`;
+  //   const res = await fetch(url, {
+  //     method: "GET",
+  //     headers: makeHeaders(accessToken),
+  //     // ❌ no credentials: 'include' — prevents cookie-based reauth conflicts
+  //   });
+  //   return checkStatus(res);
+  // },
 
   /**
    * Get a single lookup by key
