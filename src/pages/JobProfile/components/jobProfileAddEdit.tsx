@@ -34,7 +34,7 @@ interface Props {
 const workArrangementOptions = [
   { label: 'On-Site', value: 'Onsite' as const },
   { label: 'Remote', value: 'Remote' as const },
-  { label: 'Hybrid', value: 'Hybrid' as const },
+  { label: 'Hybrid', value: 'Hybrid' as const },  
 ];
 
 const statusOptions: { label: string; value: JobStatus }[] = [
@@ -81,9 +81,10 @@ const JobProfileAddEdit: React.FC<Props> = ({
   tomorrow.setHours(0, 0, 0, 0);
 
   // Load existing data if editing
-  useEffect(() => {
-    if (visible) {
-      if (jobProfile) {
+// Load existing data if editing
+useEffect(() => {
+  if (visible) {
+    if (jobProfile) {
       // Find the departmentId from departmentName
       const selectedClient = clients.find(c => c.clientId === jobProfile.clientId);
       const selectedDept = selectedClient?.departments.find(
@@ -93,30 +94,45 @@ const JobProfileAddEdit: React.FC<Props> = ({
       console.log('Loading job profile for edit:', jobProfile);
       console.log('Found department:', selectedDept);
       
-      setForm({
-          clientId: jobProfile.clientId,
-          departmentId: jobProfile.departmentId,
-          jobProfileDescription: jobProfile.jobProfileDescription,
-          jobRole: jobProfile.jobRole,
-          techSpecification: jobProfile.techSpecification,
-          positions: jobProfile.positions,
-          estimatedCloseDate: jobProfile.estimatedCloseDate,
-          location: jobProfile.location || { city: '', country: '' },
-          workArrangement: jobProfile.workArrangement 
-      ? (jobProfile.workArrangement.charAt(0).toUpperCase() + 
-        jobProfile.workArrangement.slice(1).toLowerCase()) as 'onsite' | 'hybrid' | 'remote'
-      : undefined,
-          status: jobProfile.status,
+      // ⚠️ CRITICAL: Must use the LOOKED-UP departmentId, not the possibly-undefined one from API
+      const departmentId = selectedDept?.departmentId ?? jobProfile.departmentId;
+      
+      if (!departmentId) {
+        console.error('FATAL: Cannot find departmentId for:', jobProfile.departmentName);
+        toast.current?.show({
+          severity: 'error',
+          summary: 'Data Error',
+          detail: 'Cannot load job profile - department information is missing',
+          life: 5000
         });
-        console.log('Set form with departmentId:', jobProfile.departmentId); // Debug
-      console.log('Set form with workArrangement:', jobProfile.workArrangement);
-      } else {
-        setForm({ ...emptyForm });
+        onHide();
+        return;
       }
-      setErrors({});
-      setSubmitting(false);
+      
+      setForm({
+        clientId: jobProfile.clientId,
+        departmentId: departmentId, // ✅ GUARANTEED to have a value now
+        jobProfileDescription: jobProfile.jobProfileDescription,
+        jobRole: jobProfile.jobRole,
+        techSpecification: jobProfile.techSpecification,
+        positions: jobProfile.positions,
+        estimatedCloseDate: jobProfile.estimatedCloseDate,
+        location: jobProfile.location || { city: '', country: '' },
+        workArrangement: jobProfile.workArrangement 
+          ? (jobProfile.workArrangement.charAt(0).toUpperCase() + 
+             jobProfile.workArrangement.slice(1).toLowerCase()) as 'onsite' | 'hybrid' | 'remote'
+          : undefined,
+        status: jobProfile.status,
+      });
+      
+      console.log('Set form with departmentId:', departmentId);
+    } else {
+      setForm({ ...emptyForm });
     }
-  }, [visible, jobProfile, clients]);
+    setErrors({});
+    setSubmitting(false);
+  }
+}, [visible, jobProfile, clients, onHide, toast]);
 
   // Get departments for the selected client using useMemo for optimization
   const availableDepartments = useMemo((): DepartmentOption[] => {
@@ -298,102 +314,97 @@ const isCityValidForCountry = useMemo((): boolean => {
 };
 
   // Submit handler
-  const handleSubmit = async () => {
-    setErrors({}); // Clear previous errors before starting validation
+const handleSubmit = async () => {
+  setErrors({}); 
 
-    if (!preValidateForm()) {
-        return; // Stop if basic pre-validation fails
-    }
+  if (!preValidateForm()) {
+    return;
+  }
 
-    // Now, we can safely assume required fields are present for the payload construction
-    let isoDate = '';
-    const closeDate = form.estimatedCloseDate;
-    
-    if (closeDate) {
-        const date = new Date(closeDate);
-        if (!isNaN(date.getTime())) {
-            // Convert to ISO string for the backend payload
-            isoDate = date.toISOString();
-        } else {
-            setErrors({ estimatedCloseDate: 'Estimated Close Date is invalid' });
-            return;
-        }
+  let isoDate = '';
+  const closeDate = form.estimatedCloseDate;
+  
+  if (closeDate) {
+    const date = new Date(closeDate);
+    if (!isNaN(date.getTime())) {
+      isoDate = date.toISOString();
     } else {
-        // This case should be covered by preValidateForm, but kept as a safeguard
-        setErrors({ estimatedCloseDate: 'Estimated Close Date is required' });
-        return;
-    }
-    
-    // Type assertion is safe here because preValidateForm checked for all required fields
-    const payload: JobProfilePayload = {
-      clientId: form.clientId!,
-      departmentId: form.departmentId!,
-      jobProfileDescription: form.jobProfileDescription!.trim(),
-      jobRole: form.jobRole!.trim(),
-      techSpecification: form.techSpecification!.trim(),
-      positions: form.positions!,
-      estimatedCloseDate: isoDate,
-      location: form.location!, // Remove .trim() - it's an object, not a string
-      workArrangement: form.workArrangement!, // Add this
-      status: form.status!,
-    };
-
-    // Run the service-level validation (e.g., length, formatting checks)
-    const validationErrors = validateJobProfileRequest(payload as RequiredJobProfilePayload);
-    if (validationErrors.length > 0) {
-      const errorObj: JobProfileFormErrors = {};
-      validationErrors.forEach(err => {
-        // Map the generic error messages back to the specific fields for display
-        if (err.includes('Client')) errorObj.clientId = err;
-        else if (err.includes('Department')) errorObj.departmentId = err;
-        else if (err.includes('Description')) errorObj.jobProfileDescription = err;
-        else if (err.includes('Job Role')) errorObj.jobRole = err;
-        else if (err.includes('Tech Specification')) errorObj.techSpecification = err;
-        else if (err.includes('Positions')) errorObj.positions = err;
-        else if (err.includes('Close Date')) errorObj.estimatedCloseDate = err;
-        else if (err.includes('Location')) errorObj.location = err;
-        else if (err.includes('Status')) errorObj.status = err;
-      });
-      setErrors(errorObj);
-      toast.current?.show({ 
-          severity: 'error', 
-          summary: 'Validation Error', 
-          detail: 'Please review the highlighted fields for errors.', 
-          life: 3000 
-      });
+      setErrors({ estimatedCloseDate: 'Estimated Close Date is invalid' });
       return;
     }
-
-    setSubmitting(true);
-    try {
-      await onSave(payload);
-      
-      // 🚀 Success Toast Notification
-      const successMessage = jobProfile 
-        ? 'Job Profile updated successfully!' 
-        : 'Job Profile created successfully!';
-        
-      toast.current?.show({ 
-        severity: 'success', 
-        summary: 'Success', 
-        detail: successMessage, 
-        life: 3000 
-      });
-      
-      onHide(); // Close the dialog on success
-    } catch (err) {
-      console.error('Save failed', err);
-      // Fallback error toast
-      toast.current?.show({ 
-        severity: 'error', 
-        summary: 'Error', 
-        detail: 'Failed to save job profile. Please try again.', 
-        life: 3000 
-      });
-    } finally {
-      setSubmitting(false);
-    }
+  } else {
+    setErrors({ estimatedCloseDate: 'Estimated Close Date is required' });
+    return;
+  }
+  
+  // ✅ SIMPLE: Everything comes from form state (which was populated in useEffect)
+  const payload: JobProfilePayload = {
+    clientId: form.clientId!,
+    departmentId: form.departmentId!,
+    jobProfileDescription: form.jobProfileDescription!.trim(),
+    jobRole: form.jobRole!.trim(),
+    techSpecification: form.techSpecification!.trim(),
+    positions: form.positions!,
+    estimatedCloseDate: isoDate,
+    location: form.location!,
+    workArrangement: form.workArrangement!,
+    status: form.status!,
   };
+
+  // Run the service-level validation
+  const validationErrors = validateJobProfileRequest(payload as RequiredJobProfilePayload);
+  if (validationErrors.length > 0) {
+    const errorObj: JobProfileFormErrors = {};
+    validationErrors.forEach(err => {
+      if (err.includes('Client')) errorObj.clientId = err;
+      else if (err.includes('Department')) errorObj.departmentId = err;
+      else if (err.includes('Description')) errorObj.jobProfileDescription = err;
+      else if (err.includes('Job Role')) errorObj.jobRole = err;
+      else if (err.includes('Tech Specification')) errorObj.techSpecification = err;
+      else if (err.includes('Positions')) errorObj.positions = err;
+      else if (err.includes('Close Date')) errorObj.estimatedCloseDate = err;
+      else if (err.includes('Location')) errorObj.location = err;
+      else if (err.includes('Status')) errorObj.status = err;
+      else if (err.includes('Work Arrangement')) errorObj.workArrangement = err;
+    });
+    setErrors(errorObj);
+    toast.current?.show({ 
+      severity: 'error', 
+      summary: 'Validation Error', 
+      detail: 'Please review the highlighted fields for errors.', 
+      life: 3000 
+    });
+    return;
+  }
+
+  setSubmitting(true);
+  try {
+    await onSave(payload);
+    
+    const successMessage = jobProfile 
+      ? 'Job Profile updated successfully!' 
+      : 'Job Profile created successfully!';
+      
+    toast.current?.show({ 
+      severity: 'success', 
+      summary: 'Success', 
+      detail: successMessage, 
+      life: 3000 
+    });
+    
+    onHide();
+  } catch (err) {
+    console.error('Save failed', err);
+    toast.current?.show({ 
+      severity: 'error', 
+      summary: 'Error', 
+      detail: 'Failed to save job profile. Please try again.', 
+      life: 3000 
+    });
+  } finally {
+    setSubmitting(false);
+  }
+};
 
 
   const footer = (

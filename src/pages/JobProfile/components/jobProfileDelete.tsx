@@ -105,7 +105,7 @@ const JobProfileDelete: React.FC<Props> = ({
             <span className="text-color-secondary">Location:</span>
           </div>
           <div className="col-6">
-            {jobProfile.location || '-'}
+            {jobProfile.location ? `${jobProfile.location.city}, ${jobProfile.location.country}` : '-'}
           </div>
           <div className="col-6">
             <span className="text-color-secondary">Status:</span>
