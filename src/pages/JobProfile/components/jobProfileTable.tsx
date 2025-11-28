@@ -21,7 +21,8 @@ import {
 import type { 
   JobProfile, 
   ClientOption, 
-  JobProfilePayload
+  JobProfilePayload,
+  Location
 } from '../types/jobProfileTypes';
 import { useAuth } from '../../../shared/auth/AuthContext'; 
 import { FilterMatchMode } from 'primereact/api';
@@ -44,6 +45,7 @@ const JobProfileMain: React.FC = () => {
   const [first, setFirst] = useState((pageFromUrl - 1) * 5); // 5 = default rows
   const [rows, setRows] = useState(5);
   const [globalFilterValue, setGlobalFilterValue] = useState('');
+  const [locations, setLocations] = useState<Location[]>([]);
   const [filters, setFilters] = useState<any>({
   global: { value: null, matchMode: FilterMatchMode.CONTAINS }
 });
@@ -70,23 +72,32 @@ const JobProfileMain: React.FC = () => {
   };
 
   const loadData = async () => {
-    setLoading(true);
-    try {
-      const { jobProfiles: jobProfilesResponse, clients: clientsData } = await getJobProfiles(accessToken);
-      
-      if (!jobProfilesResponse.success) {
-        throw new Error(jobProfilesResponse.message || 'Failed to load job profiles');
-      }
-      
-      setJobProfiles(jobProfilesResponse.data);
-      setClients(clientsData);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      showError('Failed to load data');
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  try {
+    const { jobProfiles: jobProfilesResponse, clients: clientsData, locations: locationsData } = await getJobProfiles(accessToken);
+    
+    if (!jobProfilesResponse.success) {
+      throw new Error(jobProfilesResponse.message || 'Failed to load job profiles');
     }
-  };
+    
+    setJobProfiles(
+  jobProfilesResponse.data.map((jp: JobProfile) => ({
+    ...jp,
+    locationString: jp.location
+      ? `${jp.location.city}, ${jp.location.country}`
+      : ''
+  }))
+);
+
+    setClients(clientsData);
+    setLocations(locationsData); // Set locations
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    showError('Failed to load data');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const onPageChange = (event: any) => {
   setFirst(event.first);
@@ -182,8 +193,6 @@ const JobProfileMain: React.FC = () => {
   setGlobalFilterValue(value);
 };
 
- 
-
   // Simplified status mapping
   const STATUS_SEVERITY_MAP: Record<string, 'info' | 'warning' | 'success' | 'danger'> = {
     'In Progress': 'info',
@@ -202,6 +211,20 @@ const JobProfileMain: React.FC = () => {
   const dateBodyTemplate = (rowData: JobProfile, field: keyof JobProfile) => {
     const date = rowData[field] as string;
     return date ? new Date(date).toLocaleDateString() : '-';
+  };
+
+  const locationBodyTemplate = (rowData: JobProfile) => {
+  if (!rowData.location) return '-';
+  return `${rowData.location.city}, ${rowData.location.country}`;
+  };
+
+  const capitalizeFirstLetter = (str: string) => {
+    if (!str) return str;
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  };
+
+  const workArrangementBodyTemplate = (rowData: JobProfile) => {
+    return rowData.workArrangement ? capitalizeFirstLetter(rowData.workArrangement) : '-';
   };
 
   return (
@@ -244,7 +267,7 @@ const JobProfileMain: React.FC = () => {
         first={first}
         onPage={onPageChange}
         rowsPerPageOptions={[5, 10, 20, 50]}
-        globalFilterFields={['clientName', 'departmentName', 'jobRole', 'jobProfileDescription', 'techSpecification', 'positions','location', 'status']}
+        globalFilterFields={['clientName', 'departmentName', 'jobRole', 'jobProfileDescription', 'techSpecification','workArrangement', 'positions','location', 'status']}
         filters={filters}
       >
 
@@ -272,7 +295,18 @@ const JobProfileMain: React.FC = () => {
           sortable 
           style={{ width: '8rem' }}
         />
-        <Column field="location" header="Location" sortable />
+        <Column 
+          field="workArrangement"
+          header="Work Arrangement"
+          sortable
+          body={workArrangementBodyTemplate}
+        />
+
+        <Column 
+          header="Location"
+          sortable
+          body={locationBodyTemplate}
+        />
         <Column 
           field="receivedOn" 
           header="Received On" 
@@ -299,6 +333,7 @@ const JobProfileMain: React.FC = () => {
         onSave={handleSave}
         jobProfile={selectedJobProfile}
         clients={clients}
+        locations={locations}
         loading={loading}
       />
 

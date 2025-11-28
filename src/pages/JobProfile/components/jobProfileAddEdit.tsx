@@ -16,7 +16,8 @@ import type {
   JobProfileFormErrors,
   ClientOption,
   DepartmentOption,
-  JobStatus
+  JobStatus,
+  Location
 } from '../types/jobProfileTypes';
 import { FaCheck } from 'react-icons/fa';
 
@@ -26,8 +27,15 @@ interface Props {
   onSave: (jobProfile: JobProfilePayload) => Promise<void>;
   jobProfile?: JobProfile | null;
   clients: ClientOption[];
+  locations: Location[];
   loading?: boolean;
 }
+
+const workArrangementOptions = [
+  { label: 'On-Site', value: 'Onsite' as const },
+  { label: 'Remote', value: 'Remote' as const },
+  { label: 'Hybrid', value: 'Hybrid' as const },
+];
 
 const statusOptions: { label: string; value: JobStatus }[] = [
   { label: 'In Progress', value: 'In Progress' },
@@ -44,7 +52,8 @@ const emptyForm: Partial<JobProfilePayload> = {
   techSpecification: '',
   positions: 1,
   estimatedCloseDate: '',
-  location: '',
+  location: { city: '', country: '' }, // Update this
+  workArrangement: undefined,
   status: undefined,
 };
 
@@ -59,6 +68,7 @@ const JobProfileAddEdit: React.FC<Props> = ({
   onSave,
   jobProfile,
   clients,
+  locations,
   loading = false,
 }) => {
   const [form, setForm] = useState<Partial<JobProfilePayload>>(emptyForm);
@@ -74,26 +84,39 @@ const JobProfileAddEdit: React.FC<Props> = ({
   useEffect(() => {
     if (visible) {
       if (jobProfile) {
-        setForm({
+      // Find the departmentId from departmentName
+      const selectedClient = clients.find(c => c.clientId === jobProfile.clientId);
+      const selectedDept = selectedClient?.departments.find(
+        d => d.departmentName === jobProfile.departmentName
+      );
+      
+      console.log('Loading job profile for edit:', jobProfile);
+      console.log('Found department:', selectedDept);
+      
+      setForm({
           clientId: jobProfile.clientId,
           departmentId: jobProfile.departmentId,
           jobProfileDescription: jobProfile.jobProfileDescription,
           jobRole: jobProfile.jobRole,
           techSpecification: jobProfile.techSpecification,
           positions: jobProfile.positions,
-          // Calendar component expects an ISO string or Date object. 
-          // We'll keep it as a string for consistency in the form state.
           estimatedCloseDate: jobProfile.estimatedCloseDate,
-          location: jobProfile.location || '',
+          location: jobProfile.location || { city: '', country: '' },
+          workArrangement: jobProfile.workArrangement 
+      ? (jobProfile.workArrangement.charAt(0).toUpperCase() + 
+        jobProfile.workArrangement.slice(1).toLowerCase()) as 'onsite' | 'hybrid' | 'remote'
+      : undefined,
           status: jobProfile.status,
         });
+        console.log('Set form with departmentId:', jobProfile.departmentId); // Debug
+      console.log('Set form with workArrangement:', jobProfile.workArrangement);
       } else {
         setForm({ ...emptyForm });
       }
       setErrors({});
       setSubmitting(false);
     }
-  }, [visible, jobProfile]);
+  }, [visible, jobProfile, clients]);
 
   // Get departments for the selected client using useMemo for optimization
   const availableDepartments = useMemo((): DepartmentOption[] => {
@@ -105,10 +128,33 @@ const JobProfileAddEdit: React.FC<Props> = ({
 
   // Check if the currently selected department is still valid for the selected client
   const isDepartmentValidForClient = useMemo((): boolean => {
-    if (!form.clientId || !form.departmentId) return true;
+  if (!form.clientId || form.departmentId === undefined || form.departmentId === null) return true; // Changed this line
+  return availableDepartments.some(dept => dept.departmentId === form.departmentId);
+}, [form.clientId, form.departmentId, availableDepartments]);
 
-    return availableDepartments.some(dept => dept.departmentId === form.departmentId);
-  }, [form.clientId, form.departmentId, availableDepartments]);
+  // Get unique countries from locations
+const availableCountries = useMemo((): string[] => {
+  const countries = locations.map(loc => loc.country);
+  return Array.from(new Set(countries)).sort();
+}, [locations]);
+
+// Get cities for the selected country
+const availableCities = useMemo((): string[] => {
+  if (!form.location?.country) return [];
+  
+  const cities = locations
+    .filter(loc => loc.country === form.location?.country)
+    .map(loc => loc.city);
+  
+  return Array.from(new Set(cities)).sort();
+}, [form.location?.country, locations]);
+
+// Check if the currently selected city is valid for the selected country
+const isCityValidForCountry = useMemo((): boolean => {
+  if (!form.location?.country || !form.location?.city) return true;
+  
+  return availableCities.includes(form.location.city);
+}, [form.location?.country, form.location?.city, availableCities]);
 
   // Prepare client options for dropdown
   const clientOptions = useMemo(() =>
@@ -145,23 +191,23 @@ const JobProfileAddEdit: React.FC<Props> = ({
       const newForm = { ...prev, [field]: value };
 
       // Reset departmentId if clientId changes and current department is not valid for new client
-      if (field === 'clientId') {
-        const newClient = clients.find(c => c.clientId === value);
-        const currentDepartmentId = prev.departmentId;
-
-        if (currentDepartmentId && newClient) {
-          const isDepartmentValid = newClient.departments.some(
-            dept => dept.departmentId === currentDepartmentId
-          );
-
-          if (!isDepartmentValid) {
-            newForm.departmentId = undefined; // Set to undefined for better "empty" state handling
+      if (field === 'clientId' && !jobProfile) {
+      newForm.departmentId = undefined;
+    }
+      // Reset city if country changes and current city is not valid for new country
+      if (field === 'location' && value && typeof value === 'object' && 'country' in value) {
+        const currentCity = prev.location?.city;
+        
+        if (currentCity && value.country) {
+          const isCityValid = locations
+            .filter(loc => loc.country === value.country)
+            .some(loc => loc.city === currentCity);
+          
+          if (!isCityValid) {
+            newForm.location = { ...value, city: '' };
           }
-        } else {
-          newForm.departmentId = undefined; // Set to undefined
         }
       }
-
       return newForm;
     });
 
@@ -176,56 +222,80 @@ const JobProfileAddEdit: React.FC<Props> = ({
    * This is a quick check before the heavier service validation.
    */
   const preValidateForm = (): boolean => {
-    const newErrors: JobProfileFormErrors = {};
-    let isValid = true;
+  const newErrors: JobProfileFormErrors = {};
+  let isValid = true;
 
-    // List of required fields for a quick check
-    const requiredFields: (keyof JobProfilePayload)[] = [
-      'clientId', 
-      'departmentId', 
-      'jobProfileDescription', 
-      'jobRole', 
-      'techSpecification', 
-      'positions', 
-      'estimatedCloseDate', 
-      'location', 
-      'status'
-    ];
+  // List of required fields for a quick check
+  const requiredFields: (keyof JobProfilePayload)[] = [
+    'clientId', 
+    'departmentId', 
+    'jobProfileDescription', 
+    'jobRole', 
+    'techSpecification', 
+    'positions', 
+    'estimatedCloseDate', 
+    'status'
+  ];
 
-    requiredFields.forEach(field => {
-        const value = form[field];
-        // Special check for Positions, ensuring it's > 0
-        if (field === 'positions') {
-            if (isFieldEmpty(value) || (typeof value === 'number' && value <= 0)) {
-                newErrors.positions = 'Positions must be a number greater than 0.';
-                isValid = false;
-            }
-        } else if (isFieldEmpty(value)) {
-            newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1').trim()} is required.`;
-            isValid = false;
-        }
-    });
-    
-    // Additional validation for Department validity after client change
-    if (form.clientId && form.departmentId && !isDepartmentValidForClient) {
-      newErrors.departmentId = 'Selected department is not valid for the selected client';
+  requiredFields.forEach(field => {
+    const value = form[field];
+      if (jobProfile && (field === 'clientId' || field === 'departmentId')) {
+      return;
+    }
+    // Special check for Positions, ensuring it's > 0
+    if (field === 'positions') {
+      if (isFieldEmpty(value) || (typeof value === 'number' && value <= 0)) {
+        newErrors.positions = 'Positions must be a number greater than 0.';
+        isValid = false;
+      }
+    } else if (isFieldEmpty(value)) {
+      newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1').trim()} is required.`;
       isValid = false;
     }
+  });
+  
+  // Additional validation for Department validity after client change
+  if (form.clientId && form.departmentId && !isDepartmentValidForClient) {
+    newErrors.departmentId = 'Selected department is not valid for the selected client';
+    isValid = false;
+  }
+  
+  // Check work arrangement
+  if (!form.workArrangement) {
+    newErrors.workArrangement = 'Work Arrangement is required.';
+    isValid = false;
+  }
 
-    setErrors(newErrors);
-    
-    // Show a general error toast if basic validation fails
-    if (!isValid) {
-        toast.current?.show({ 
-            severity: 'error', 
-            summary: 'Validation Error', 
-            detail: 'Please fill in all required fields and correct the errors.', 
-            life: 3000 
-        });
-    }
+  // Check location country and city
+  if (!form.location?.country) {
+    newErrors.location = 'Country is required.';
+    isValid = false;
+  }
 
-    return isValid;
-  };
+  if (!form.location?.city) {
+    newErrors.location = 'City is required.';
+    isValid = false;
+  }
+
+  // Validate city for selected country
+  if (form.location?.country && form.location?.city && !isCityValidForCountry) {
+    newErrors.location = 'Selected city is not valid for the selected country';
+    isValid = false;
+  }
+  
+  setErrors(newErrors);
+  
+  // Show a general error toast if basic validation fails
+  if (!isValid) {
+    toast.current?.show({ 
+      severity: 'error', 
+      summary: 'Validation Error', 
+      detail: 'Please completethe all required fields and correct the errors.',  
+    });
+  }
+
+  return isValid;
+};
 
   // Submit handler
   const handleSubmit = async () => {
@@ -263,7 +333,8 @@ const JobProfileAddEdit: React.FC<Props> = ({
       techSpecification: form.techSpecification!.trim(),
       positions: form.positions!,
       estimatedCloseDate: isoDate,
-      location: form.location!.trim(),
+      location: form.location!, // Remove .trim() - it's an object, not a string
+      workArrangement: form.workArrangement!, // Add this
       status: form.status!,
     };
 
@@ -359,39 +430,62 @@ const JobProfileAddEdit: React.FC<Props> = ({
         resizable={false}
       >
         <div className="p-fluid formgrid grid gap-3">
-          <div className="field col-6">
-            <label>Client <span className="p-error">*</span></label>
-            <Dropdown
-              value={form.clientId ?? null}
-              options={clientOptions}
-              onChange={(e: DropdownChangeEvent) => updateField('clientId', e.value)}
-              placeholder="Select Client"
-              className={classNames({ 'p-invalid': errors.clientId })}
-              optionLabel="label"
-              optionValue="value"
-            />
+            <div className="field col-6">
+            <label htmlFor="clientId">
+              Client <span className="p-error">*</span>
+            </label>
+            {jobProfile ? (
+              <InputText
+                id="clientName"
+                value={jobProfile.clientName}
+                disabled
+                className="p-disabled"
+              />
+            ) : (
+              <Dropdown
+                id="clientId"
+                value={form.clientId}
+                options={clientOptions}
+                onChange={(e: DropdownChangeEvent) => updateField('clientId', e.value)}
+                placeholder="Select Client"
+                className={classNames({ 'p-invalid': errors.clientId })}
+                optionLabel="label"
+                optionValue="value"
+              />
+            )}
             {errors.clientId && <small className="p-error">{errors.clientId}</small>}
           </div>
+      
 
           <div className="field col-6">
-            <label>Department <span className="p-error">*</span></label>
+          <label htmlFor="departmentId">
+            Department <span className="p-error">*</span>
+          </label>
+          {jobProfile ? (
+            <InputText
+              id="departmentName"
+              value={jobProfile.departmentName}
+              disabled
+              className="p-disabled"
+            />
+          ) : (
             <Dropdown
-              value={form.departmentId ?? null}
+              id="departmentId"
+              value={form.departmentId}
               options={departmentOptions}
               onChange={(e: DropdownChangeEvent) => updateField('departmentId', e.value)}
               placeholder="Select Department"
               disabled={!form.clientId || availableDepartments.length === 0}
-              className={classNames({
-                'p-invalid': errors.departmentId,
-              })}
+              className={classNames({ 'p-invalid': errors.departmentId })}
               optionLabel="label"
               optionValue="value"
             />
-            {form.clientId && availableDepartments.length === 0 && (
-              <small className="text-muted">No departments available for selected client</small>
-            )}
-            {errors.departmentId && <small className="p-error">{errors.departmentId}</small>}
-          </div>
+          )}
+          {form.clientId && availableDepartments.length === 0 && !jobProfile && (
+            <small className="text-muted">No departments available for selected client</small>
+          )}
+          {errors.departmentId && <small className="p-error">{errors.departmentId}</small>}
+        </div>
 
           <div className="field col-12">
             <label>Job Profile Description <span className="p-error">*</span></label>
@@ -466,13 +560,58 @@ const JobProfileAddEdit: React.FC<Props> = ({
           </div>
 
           <div className="field col-4">
-            <label>Location <span className="p-error">*</span></label>
-            <InputText
-              value={form.location || ''}
-              onChange={e => updateField('location', e.target.value)}
-              className={classNames({ 'p-invalid': errors.location })}
-              placeholder="e.g., US, IDC, Seattle"
+            <label>Work Arrangement <span className="p-error">*</span></label>
+            <Dropdown
+              value={form.workArrangement ?? null}
+              options={workArrangementOptions}
+              onChange={(e: DropdownChangeEvent) => updateField('workArrangement', e.value)}
+              placeholder="Select Work Arrangement"
+              className={classNames({ 'p-invalid': errors.workArrangement })}
+              optionLabel="label"
+              optionValue="value"
             />
+            {errors.workArrangement && <small className="p-error">{errors.workArrangement}</small>}
+          </div>
+
+          <div className="field col-4">
+            <label>Country <span className="p-error">*</span></label>
+            <Dropdown
+              value={form.location?.country || null}
+              options={availableCountries.map(country => ({ label: country, value: country }))}
+              onChange={(e: DropdownChangeEvent) => 
+                updateField('location', { 
+                  country: e.value, 
+                  city: '' 
+                })
+              }
+              placeholder="Select Country"
+              className={classNames({ 'p-invalid': errors.location })}
+              optionLabel="label"
+              optionValue="value"
+            />
+            {errors.location && <small className="p-error">{errors.location}</small>}
+          </div>
+
+          <div className="field col-4">
+            <label>City <span className="p-error">*</span></label>
+            <Dropdown
+              value={form.location?.city || null}
+              options={availableCities.map(city => ({ label: city, value: city }))}
+              onChange={(e: DropdownChangeEvent) => 
+                updateField('location', { 
+                  country: form.location?.country || '', 
+                  city: e.value 
+                })
+              }
+              placeholder="Select City"
+              disabled={!form.location?.country || availableCities.length === 0}
+              className={classNames({ 'p-invalid': errors.location })}
+              optionLabel="label"
+              optionValue="value"
+            />
+            {form.location?.country && availableCities.length === 0 && (
+              <small className="text-muted">No cities available for selected country</small>
+            )}
             {errors.location && <small className="p-error">{errors.location}</small>}
           </div>
 
