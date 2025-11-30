@@ -16,8 +16,8 @@ import type {
   JobProfileFormErrors,
   ClientOption,
   DepartmentOption,
-  JobStatus,
-  Location
+  Location,
+
 } from '../types/jobProfileTypes';
 import { FaCheck } from 'react-icons/fa';
 
@@ -29,6 +29,7 @@ interface Props {
   clients: ClientOption[];
   locations: Location[];
   loading?: boolean;
+  statusOptions: string[];
 }
 
 const workArrangementOptions = [
@@ -37,12 +38,6 @@ const workArrangementOptions = [
   { label: 'Hybrid', value: 'Hybrid' as const },  
 ];
 
-const statusOptions: { label: string; value: JobStatus }[] = [
-  { label: 'In Progress', value: 'In Progress' },
-  { label: 'Pending', value: 'Pending' },
-  { label: 'Closed', value: 'Closed' },
-  { label: 'Cancelled', value: 'Cancelled' },
-];
 
 const emptyForm: Partial<JobProfilePayload> = {
   clientId: undefined,
@@ -70,6 +65,7 @@ const JobProfileAddEdit: React.FC<Props> = ({
   clients,
   locations,
   loading = false,
+  statusOptions
 }) => {
   const [form, setForm] = useState<Partial<JobProfilePayload>>(emptyForm);
   const [errors, setErrors] = useState<JobProfileFormErrors>({});
@@ -187,6 +183,15 @@ const isCityValidForCountry = useMemo((): boolean => {
       value: dept.departmentId
     }))
   , [availableDepartments]);
+
+  // Prepare status options for dropdown from lookup data
+    // Prepare status options for dropdown from lookup data
+const mappedStatusOptions = useMemo(() => 
+  statusOptions.map(status => ({
+    label: status,
+    value: status // ✅ Now just string, not 'as JobStatus'
+  }))
+, [statusOptions]);
 
   // Helper to check if a field is empty
   const isFieldEmpty = (value: any): boolean => {
@@ -630,7 +635,7 @@ const handleSubmit = async () => {
             <label>Status <span className="p-error">*</span></label>
             <Dropdown
               value={form.status ?? null}
-              options={statusOptions}
+              options={mappedStatusOptions}
               onChange={(e: DropdownChangeEvent) => updateField('status', e.value)}
               placeholder="Select Status"
               className={classNames({ 'p-invalid': errors.status })}

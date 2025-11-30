@@ -4,7 +4,6 @@ import {
   ClientOption, 
   DepartmentOption,
   ApiResponse,
-  JobStatus,
   Location
 } from '../types/jobProfileTypes';
 
@@ -33,11 +32,43 @@ function mapApiJobProfile(data: any): JobProfile {
     estimatedCloseDate: data.estimatedCloseDate,
     location: data.location || { city: '', country: '' },
     workArrangement: data.workArrangement || 'onsite',
-    status: (data.statusName || data.status || 'Pending') as JobStatus,
+    status: data.statusName || data.status || 'Pending',
     statusName: data.statusName
   };
   return mapped;
 }
+export const fetchJobProfileLookupData = async (
+  accessToken: string | null
+): Promise<{ profileStatuses: string[] }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/lookup?page=1&limit=100`, {
+      credentials: 'include',
+      headers: makeHeaders(accessToken || undefined),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch lookup data: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    // ✅ API returns: { success: true, message: "...", data: [...] }
+    if (!result.success || !Array.isArray(result.data)) {
+      console.error('Unexpected lookup response structure:', result);
+      return { profileStatuses: [] };
+    }
+    
+    const profileStatuses = result.data
+      .filter((item: any) => item.tag === "profileStatus")
+      .map((item: any) => item.value);
+    
+    console.log('Fetched profile statuses:', profileStatuses);
+    return { profileStatuses };
+  } catch (error) {
+    console.error('Error fetching lookup data:', error);
+    throw error;
+  }
+};
 // Get clients from the new /client/all endpoint
 export const getClients = async (
   accessToken: string | null

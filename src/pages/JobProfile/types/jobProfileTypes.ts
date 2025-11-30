@@ -1,5 +1,5 @@
-export type JobStatus = 'In Progress' | 'Closed' | 'Cancelled' | 'Pending';
-
+// ✅ Make it a simple string - values come from lookup API
+export type JobStatus = string;
 export interface Client {
   clientId: number;
   clientName: string;

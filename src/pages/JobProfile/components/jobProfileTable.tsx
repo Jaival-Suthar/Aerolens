@@ -16,7 +16,8 @@ import {
   createJobProfile, 
   updateJobProfile,
   deleteJobProfile,
-  getJobProfileById
+  getJobProfileById,
+  fetchJobProfileLookupData
 } from '../services/jobProfileService';
 import type { 
   JobProfile, 
@@ -49,11 +50,28 @@ const JobProfileMain: React.FC = () => {
   const [filters, setFilters] = useState<any>({
   global: { value: null, matchMode: FilterMatchMode.CONTAINS }
 });
+const [statusOptions, setStatusOptions] = useState<string[]>([]);
 
   useEffect(() => {
     loadData();
   }, []);
-
+  useEffect(() => {
+  const loadLookupData = async () => {
+    try {
+      const { profileStatuses } = await fetchJobProfileLookupData(accessToken);
+      setStatusOptions(profileStatuses);
+    } catch (error) {
+      console.error('Failed to load status options:', error);
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Failed to load status options',
+        life: 3000
+      });
+    }
+  };
+  loadLookupData();
+}, [accessToken]);
   // Centralized error handler - reduces duplication
   const showError = (message: string) => {
     toast.current?.show({
@@ -335,6 +353,7 @@ const JobProfileMain: React.FC = () => {
         clients={clients}
         locations={locations}
         loading={loading}
+        statusOptions={statusOptions}
       />
 
       <JobProfileDelete
