@@ -1,15 +1,17 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Toast } from "primereact/toast";
 import { lookupService } from "../services/lookupService";
-import { ValidationError } from "../types/lookupTypes";
+import { LookupEntry, ValidationError } from "../types/lookupTypes"; // Ensure LookupEntry is imported
 import DialogButton from "../../../shared/DialogAddEditButton";
-import { FaCheck } from "react-icons/fa";
-import { useAuth } from "../../../shared/auth/AuthContext"; // ✅ get token
+import { FaCheck, FaPencilAlt } from "react-icons/fa"; // Added FaPencilAlt for Edit button
+import { useAuth } from "../../../shared/auth/AuthContext";
 
 interface AddLookupFormProps {
   visible: boolean;
+  isEdit?: boolean;
+  lookupToEdit?: LookupEntry | null;
   onHide: () => void;
   onSuccess: () => void;
 }
@@ -26,23 +28,43 @@ interface ValidationErrors {
 
 export const AddLookupForm: React.FC<AddLookupFormProps> = ({
   visible,
+  isEdit = false, // Default to false
+  lookupToEdit = null, // Default to null
   onHide,
   onSuccess,
 }) => {
   const toast = useRef<Toast>(null);
-  const { accessToken } = useAuth(); // ✅ bring in token from context
+  const { accessToken } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<FormData>({ tag: "", value: "" });
   const [errors, setErrors] = useState<ValidationErrors>({});
+
+  // --- Effect to set form data on Edit ---
+  useEffect(() => {
+    if (visible && isEdit && lookupToEdit) {
+      // Set existing values for editing
+      setFormData({
+        tag: lookupToEdit.tag,
+        value: lookupToEdit.value,
+      });
+    } else if (visible && !isEdit) {
+      // Reset form for 'Add' when dialog opens
+      resetForm();
+    }
+  }, [visible, isEdit, lookupToEdit]);
 
   // --- Validation ---
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
 
-    if (!formData.tag.trim()) newErrors.tag = "Tag is required";
-    else if (formData.tag.length > 100)
-      newErrors.tag = "Tag must be 100 characters or less";
+    if (!isEdit) {
+      // **Create (Add) Validation:** Tag is required
+      if (!formData.tag.trim()) newErrors.tag = "Tag is required";
+      else if (formData.tag.length > 100)
+        newErrors.tag = "Tag must be 100 characters or less";
+    }
 
+    // **Shared Validation:** Value is required for both Create and Patch/Edit
     if (!formData.value.trim()) newErrors.value = "Value is required";
     else if (formData.value.length > 500)
       newErrors.value = "Value must be 500 characters or less";
@@ -67,16 +89,34 @@ export const AddLookupForm: React.FC<AddLookupFormProps> = ({
 
     setLoading(true);
     try {
-      const response = await lookupService.create(accessToken, {
-        tag: formData.tag.trim(),
-        value: formData.value.trim(),
-      });
+      let response;
+      const action = isEdit ? "update" : "create";
+
+      if (isEdit && lookupToEdit) {
+        // --- PATCH/EDIT Logic (Partial Update) ---
+        const payload: { value: string } = {
+          value: formData.value.trim(),
+        };
+
+        response = await lookupService.patch(
+          accessToken,
+          lookupToEdit.lookupKey,
+          payload
+        );
+      } else {
+        // --- POST/CREATE Logic ---
+        const payload: { tag: string; value: string } = {
+          tag: formData.tag.trim(),
+          value: formData.value.trim(),
+        };
+        response = await lookupService.create(accessToken, payload);
+      }
 
       if (response.success) {
         toast.current?.show({
           severity: "success",
           summary: "Success",
-          detail: response.message || "Lookup entry created successfully",
+          detail: response.message || `Lookup entry ${action}d successfully`,
           life: 3000,
         });
         resetForm();
@@ -100,7 +140,7 @@ export const AddLookupForm: React.FC<AddLookupFormProps> = ({
         toast.current?.show({
           severity: "error",
           summary: "Error",
-          detail: response.message || "Failed to create lookup entry",
+          detail: response.message || `Failed to ${action} lookup entry`,
           life: 3000,
         });
       }
@@ -108,7 +148,7 @@ export const AddLookupForm: React.FC<AddLookupFormProps> = ({
       toast.current?.show({
         severity: "error",
         summary: "Error",
-        detail: error.message || "Failed to create lookup entry",
+        detail: error.message || `Failed to perform lookup ${isEdit ? 'update' : 'creation'}`,
         life: 3000,
       });
     } finally {
@@ -143,9 +183,9 @@ export const AddLookupForm: React.FC<AddLookupFormProps> = ({
         disabled={loading}
       />
       <DialogButton
-        label="Add Lookup"
-        severity="success"
-        icon={<FaCheck style={{ fontSize: 16, marginRight: 8, marginLeft: 4 }} />}
+        label={isEdit ? "Save Changes" : "Add Lookup"}
+        severity={"success"} // Use primary for Edit
+        icon={isEdit ? <FaPencilAlt style={{ fontSize: 14, marginRight: 8, marginLeft: 4 }} /> : <FaCheck style={{ fontSize: 16, marginRight: 8, marginLeft: 4 }} />}
         onClick={handleSubmit}
         className="w-auto"
         loading={loading}
@@ -157,7 +197,7 @@ export const AddLookupForm: React.FC<AddLookupFormProps> = ({
     <>
       <Toast ref={toast} />
       <Dialog
-        header="Add New Lookup Entry"
+        header={isEdit ? `Edit Lookup Key ${lookupToEdit?.lookupKey}` : "Add New Lookup Entry"} // Dynamic Header
         visible={visible}
         style={{ width: "450px" }}
         footer={dialogFooter}
@@ -178,12 +218,16 @@ export const AddLookupForm: React.FC<AddLookupFormProps> = ({
               placeholder="Enter tag (e.g., status)"
               maxLength={100}
               className={errors.tag ? "p-invalid" : ""}
-              disabled={loading}
+              disabled={loading || isEdit} // Disable Tag when editing/patching
             />
             {errors.tag && <small className="p-error">{errors.tag}</small>}
-            <small className="text-500">
-              {formData.tag.length}/100 characters
-            </small>
+            {isEdit ? (
+                <small className="text-500">Tag is read-only during update.</small>
+            ) : (
+                <small className="text-500">
+                {formData.tag.length}/100 characters
+                </small>
+            )}
           </div>
 
           <div className="field">

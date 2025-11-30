@@ -87,18 +87,26 @@ export const lookupService = {
   /**
    * Update an existing lookup entry
    */
-  async update(
+  // ... (rest of the file remains the same)
+
+  /**
+   * Update an existing lookup entry (PATCH - partial update)
+   */
+  async patch(
     accessToken: string,
     lookupKey: number,
-    payload: { tag: string; value: string }
+    payload: { value: string } // Only value is required for partial update
   ): Promise<LookupApiResponse> {
     if (!lookupKey || lookupKey <= 0) {
       throw new Error("Invalid lookupKey provided");
     }
+    if (!payload?.value?.trim()) {
+      throw new Error("Payload validation failed: value is required for patch");
+    }
 
     const url = `${API_BASE_URL}/lookup/${lookupKey}`;
     const res = await fetch(url, {
-      method: "PUT",
+      method: "PATCH", // <--- CHANGE: Use PATCH method
       headers: makeHeaders(accessToken),
       body: JSON.stringify(payload),
     });

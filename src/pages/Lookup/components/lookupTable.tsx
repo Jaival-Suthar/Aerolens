@@ -3,8 +3,11 @@ import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { LookupEntry } from '../types/lookupTypes';
 import AddButton from '../../../shared/AddButton';
+import EditButton from '../../../shared/EditButton'; 
+import DeleteButton from '../../../shared/DeleteButton';
 import SearchButton from '../../../shared/SearchButton';  // ← ADD
 import { AddLookupForm } from './AddLookupForm';
+import { DeleteLookupForm } from './DeleteLookupForm';
 import { FilterMatchMode } from 'primereact/api';  // ← ADD
 
 // REMOVE PaginationMeta interface - not needed anymore
@@ -23,7 +26,9 @@ const LookupTable: React.FC<LookupTableProps> = ({
 }) => {
   const [selectedLookup, setSelectedLookup] = useState<LookupEntry | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false); 
+  const [showEditDialog, setShowEditDialog] = useState(false);
+
   // ← ADD search state
   const [globalFilterValue, setGlobalFilterValue] = useState('');
   const [filters, setFilters] = useState<any>({
@@ -48,10 +53,26 @@ const LookupTable: React.FC<LookupTableProps> = ({
     []
   );
 
-  const handleAddClick = () => setShowAddDialog(true);
+  const handleAddClick = () => {
+    setSelectedLookup(null); 
+    setShowAddDialog(true);
+  };
+  const handleEditClick = () => { 
+    if (selectedLookup) {
+      setShowEditDialog(true);
+    }
+  };
+  const handleDeleteClick = () => { 
+    if (selectedLookup) {
+      setShowDeleteDialog(true);
+    }
+  };
 
-  const handleAddSuccess = useCallback(() => {
+  const handleSuccess = useCallback(() => { 
     onDataChange?.();
+    setSelectedLookup(null); 
+    setShowEditDialog(false);
+    setShowDeleteDialog(false);
   }, [onDataChange]);
 
   return (
@@ -65,6 +86,14 @@ const LookupTable: React.FC<LookupTableProps> = ({
             placeholder="Search lookups..."
           />
           <AddButton onClick={handleAddClick} />
+          <EditButton // <--- ADD Edit Button
+            onClick={handleEditClick}
+            disabled={!selectedLookup} // Disabled if nothing is selected
+          />
+          <DeleteButton // <--- ADD Delete Button
+            onClick={handleDeleteClick}
+            disabled={!selectedLookup} // Disabled if nothing is selected
+          />
         </div>
       </div>
 
@@ -93,9 +122,22 @@ const LookupTable: React.FC<LookupTableProps> = ({
       </DataTable>
 
       <AddLookupForm
-        visible={showAddDialog}
-        onHide={() => setShowAddDialog(false)}
-        onSuccess={handleAddSuccess}
+        visible={showAddDialog || showEditDialog} // <--- CHANGE: Use for both Add/Edit
+        lookupToEdit={selectedLookup} // <--- PASS SELECTED LOOKUP for editing
+        isEdit={!!selectedLookup} // <--- New prop to tell form if it's an edit
+        onHide={() => {
+            setShowAddDialog(false);
+            setShowEditDialog(false);
+            setSelectedLookup(null);
+        }}
+        onSuccess={handleSuccess}
+      />
+      
+      <DeleteLookupForm // <--- ADD Delete Form
+        visible={showDeleteDialog}
+        lookup={selectedLookup}
+        onHide={() => setShowDeleteDialog(false)}
+        onSuccess={handleSuccess}
       />
     </div>
   );
