@@ -30,15 +30,23 @@ export const lookupService = {
   /**
    * Get all lookups with pagination
    */
-  async getAll(accessToken: string, page = 1, limit = 10): Promise<LookupApiResponse> {
-    const url = `${API_BASE_URL}/lookup?page=${page}&limit=${limit}`;
+  async getAll(accessToken: string): Promise<LookupApiResponse> {
+    const url = `${API_BASE_URL}/lookup?page=1&limit=1000`; // ← Fetch all
     const res = await fetch(url, {
       method: "GET",
       headers: makeHeaders(accessToken),
-      // ❌ no credentials: 'include' — prevents cookie-based reauth conflicts
     });
     return checkStatus(res);
   },
+  // async getAll(accessToken: string, page = 1, limit = 10): Promise<LookupApiResponse> {
+  //   const url = `${API_BASE_URL}/lookup?page=${page}&limit=${limit}`;
+  //   const res = await fetch(url, {
+  //     method: "GET",
+  //     headers: makeHeaders(accessToken),
+  //     // ❌ no credentials: 'include' — prevents cookie-based reauth conflicts
+  //   });
+  //   return checkStatus(res);
+  // },
 
   /**
    * Get a single lookup by key
@@ -79,18 +87,26 @@ export const lookupService = {
   /**
    * Update an existing lookup entry
    */
-  async update(
+  // ... (rest of the file remains the same)
+
+  /**
+   * Update an existing lookup entry (PATCH - partial update)
+   */
+  async patch(
     accessToken: string,
     lookupKey: number,
-    payload: { tag: string; value: string }
+    payload: { value: string } // Only value is required for partial update
   ): Promise<LookupApiResponse> {
     if (!lookupKey || lookupKey <= 0) {
       throw new Error("Invalid lookupKey provided");
     }
+    if (!payload?.value?.trim()) {
+      throw new Error("Payload validation failed: value is required for patch");
+    }
 
     const url = `${API_BASE_URL}/lookup/${lookupKey}`;
     const res = await fetch(url, {
-      method: "PUT",
+      method: "PATCH", // <--- CHANGE: Use PATCH method
       headers: makeHeaders(accessToken),
       body: JSON.stringify(payload),
     });

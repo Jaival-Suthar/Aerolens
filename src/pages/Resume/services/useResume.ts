@@ -42,7 +42,6 @@ export const fetchLookupData = async (
     const statuses = (data || [])
       .filter((item: LookupItem) => item.tag === "candidateStatus")
       .map((item: LookupItem) => item.value);
-
     return { recruiters, statuses };
   } catch (error) {
     logger.error("Error fetching lookup data:", error);
@@ -190,7 +189,7 @@ export const createCandidate = async (
   }
 };
 
-// -------------------- READ (Paginated) --------------------
+// -------------------- GET --------------------
 export interface PaginatedCandidatesResponse {
   candidates: Candidate[];
   totalCount?: number;
@@ -203,18 +202,22 @@ export const getCandidates = async (
 ): Promise<PaginatedCandidatesResponse> => {
   try {
     const endpoint = `${ROUTES.BASE}?page=${page}&limit=${limit}`;
-    const response = await apiFetch<PaginatedCandidatesResponse>(
+    const data = await apiFetch<Candidate[]>(
       endpoint,
       { method: "GET" },
       accessToken || undefined
     );
 
-    return response;
+    return {
+      candidates: data,
+      totalCount: data.length,
+    };
   } catch (error) {
     logger.error("Error in getCandidates:", error);
     throw error;
   }
 };
+
 
 // -------------------- UPDATE --------------------
 export const updateCandidate = async (
