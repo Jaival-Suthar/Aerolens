@@ -1,43 +1,36 @@
 import { useState, useCallback, useEffect } from "react";
-import type { ClientType, ClientsApiResponse } from "../types/clientTypes";
-import { getClients } from "../services/clientService";
-import { useAuth } from "../../../shared/auth/AuthContext"; // Import useAuth
+import type { ClientType } from "../types/clientTypes";
+import { getAllClients } from "../services/clientService";
+import { useAuth } from "../../../shared/auth/AuthContext";
 
-export const useClientData = (refreshTrigger = 0) => {
-  const { accessToken } = useAuth(); // Get the token
+export const useClientData = (refreshTrigger = 0) => {  // ← Keep this param
+  const { accessToken } = useAuth();
   const [clients, setClients] = useState<ClientType[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadClients = useCallback(async (page: number, limit: number) => {
+  const loadClients = useCallback(async () => {
     setLoading(true);
-    setError(null);
-
     try {
-      const response: ClientsApiResponse = await getClients(accessToken, page, limit); // Pass token first!
-      setClients(response.data ?? []);
-      return response;
-    } catch (err: unknown) {
-      let message = "Unknown error";
-
-      if (err instanceof Error) {
-        message = err.message;
-      }
-
+      const allClients = await getAllClients(accessToken);
+      setClients(allClients);
+      setError(null);
+      return { data: allClients, meta: { total: allClients.length } };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
       setError(message);
-      setClients([]);
       throw err;
     } finally {
       setLoading(false);
     }
-  }, [accessToken]); // Add accessToken to dependencies
+  }, [accessToken]);
 
   // Auto-reload when refreshTrigger changes
   useEffect(() => {
-    if (accessToken) { // Only load if token exists
-      loadClients(1, 10).catch(() => {});
+    if (accessToken) {
+      loadClients().catch(() => {});
     }
-  }, [refreshTrigger, loadClients, accessToken]);
+  }, [refreshTrigger, loadClients, accessToken]);  // ← refreshTrigger is in deps
 
   return { clients, loading, error, loadClients, setError };
 };

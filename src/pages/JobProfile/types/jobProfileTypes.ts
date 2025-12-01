@@ -1,5 +1,5 @@
-export type JobStatus = 'In Progress' | 'Closed' | 'Cancelled' | 'Pending';
-
+// ✅ Make it a simple string - values come from lookup API
+export type JobStatus = string;
 export interface Client {
   clientId: number;
   clientName: string;
@@ -11,10 +11,17 @@ export interface Department {
   departmentName: string;
 }
 
+export interface Location {
+  city: string;
+  state?: string;
+  country: string;
+}
+
+
 export interface JobProfile {
   jobProfileId: number;
   clientId: number;
-  departmentId: number;
+  departmentId?: number;
   clientName: string; // Add this - comes from API
   departmentName: string; // Add this - comes from API
   jobProfileDescription: string;
@@ -23,9 +30,9 @@ export interface JobProfile {
   positions: number;
   receivedOn?: string;
   estimatedCloseDate: string;
+  workArrangement: 'onsite' | 'hybrid' | 'remote';
   // locationId: number; // API returns locationId, not location
-  location: string; // API might return locationName
-  // location: string; // Keep for UI compatibility
+  location: Location;
   status: JobStatus;
   statusName?: string; // API returns statusName
 }
@@ -39,7 +46,8 @@ export interface JobProfilePayload {
   techSpecification: string;
   positions: number;
   estimatedCloseDate: string;
-  location: string; // Change back to location (string)
+  workArrangement: 'onsite' | 'hybrid' | 'remote';
+  location: Location; 
   status: JobStatus;
 }
 
@@ -70,6 +78,7 @@ export interface JobProfileFormErrors {
   techSpecification?: string;
   positions?: string;
   estimatedCloseDate?: string;
+  workArrangement?: string;
   location?: string;
   status?: string;
 }

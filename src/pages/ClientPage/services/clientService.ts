@@ -8,6 +8,30 @@ const makeHeaders = (accessToken?: string) => {
   return headers;
 };
 
+// Add a new function to fetch ALL clients without pagination
+export const getAllClients = async (
+  accessToken: string | null
+): Promise<ClientType[]> => {
+  try {
+    const response = await fetch(
+      `${API_URL}/client?page=1&limit=10000`, // Fetch large limit to get all
+      {
+        credentials: "include",
+        headers: makeHeaders(accessToken || undefined),
+      }
+    );
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch clients: ${response.status} ${await response.text()}`
+      );
+    }
+    const json: ClientsApiResponse = await response.json();
+    return json.data;
+  } catch (error) {
+    console.error("Error in getAllClients:", error);
+    throw error;
+  }
+};
 // Fetch paginated clients
 export const getClients = async (
   accessToken: string | null,
