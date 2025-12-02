@@ -287,6 +287,8 @@ const [statusOptions, setStatusOptions] = useState<string[]>([]);
         rowsPerPageOptions={[5, 10, 20, 50]}
         globalFilterFields={['clientName', 'departmentName', 'jobRole', 'jobProfileDescription', 'techSpecification','workArrangement', 'positions','location', 'status']}
         filters={filters}
+        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Job Profiles"
       >
 
         <Column

@@ -27,6 +27,7 @@ export const registerUser = async (
       password: formData.password ? "[REDACTED]" : undefined, // avoid logging plain password
       designation: formData.designation,
       isRecruiter: formData.isRecruiter,
+      isInterviewer: formData.isInterviewer,
     };
 
     const headers = makeHeaders(accessToken || undefined);
@@ -42,6 +43,7 @@ export const registerUser = async (
         password: formData.password, // send actual password in body to API
         designation: formData.designation,
         isRecruiter: formData.isRecruiter,
+        isInterviewer: formData.isInterviewer,
       }),
     });
 
