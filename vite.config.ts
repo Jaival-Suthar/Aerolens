@@ -9,7 +9,7 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 import javascriptObfuscator from "vite-plugin-javascript-obfuscator";
 
 export default defineConfig({
-   build: {
+  build: {
   sourcemap: false,
   minify: "terser",
   manifest: true, // ✅ helps dynamic import mapping
