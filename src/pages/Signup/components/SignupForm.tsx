@@ -23,12 +23,26 @@ export default function SignupForm() {
     confirmPassword: "",
     designation: "",
     isRecruiter: false,
+    isInterviewer: false
   });
 
   const [designations, setDesignations] = useState<{ label: string; value: string }[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [loadingDesignations, setLoadingDesignations] = useState(false);
+  const resetForm = () => {
+  setFormData({
+    fullName: "",
+    contactNumber: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    designation: "",
+    isRecruiter: false,
+    isInterviewer: false,
+  });
+  setErrors({});
+};
 
   useEffect(() => {
     const loadDesignations = async () => {
@@ -81,8 +95,8 @@ export default function SignupForm() {
     if (!validateFields()) return;
     const submitData = {
       ...formData,
-      isRecruiter: false,
-      isAdmin: formData.designation === "admin",
+      isRecruiter: formData.isRecruiter,
+      isInterviewer: formData.isInterviewer,
     };
 
     try {
@@ -106,6 +120,7 @@ export default function SignupForm() {
           confirmPassword: "",
           designation: "",
           isRecruiter: false,
+          isInterviewer: false
         });
       }
     } catch (err: any) {
@@ -296,13 +311,63 @@ export default function SignupForm() {
               </div>
               {errors.confirmPassword && <p style={{ color: "#dc2626", marginTop: "3px", fontSize: "12px" }}>{errors.confirmPassword}</p>}
             </div>
+            {/* Recruiter / Interviewer Flags */}
+          <div style={{ gridColumn: "1 / span 2", marginTop: "8px" }}>
+            <label style={{ ...labelStyle, marginBottom: "6px", fontSize:"16px" }}>User Role Access</label>
+
+            <div style={{ display: "flex", gap: "40px", marginTop: "8px" }}>
+              
+              {/* Recruiter */}
+               <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    cursor: "pointer",
+                    fontSize: "15px",
+                  }}
+                >
+                <input
+                  type="checkbox"
+                  style={{ transform: "scale(1.5)" }}
+                  checked={formData.isRecruiter}
+                  onChange={(e) =>
+                    setFormData(prev => ({ ...prev, isRecruiter: e.target.checked }))
+                  }
+                />
+                Recruiter
+              </label>
+
+              {/* Interviewer */}
+              <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    cursor: "pointer",
+                    fontSize: "15px",
+                  }}
+                >
+                <input
+                  type="checkbox"
+                  style={{ transform: "scale(1.5)" }}
+                  checked={formData.isInterviewer}
+                  onChange={(e) =>
+                    setFormData(prev => ({ ...prev, isInterviewer: e.target.checked }))
+                  }
+                />
+                Interviewer
+              </label>
+            </div>
+          </div>
+
           </div>
 
           {/* Action Buttons */}
           <div style={{ display: "flex", gap: "10px", marginTop: "20px", justifyContent: "flex-end" }}>
             <Button
               label="Cancel"
-              onClick={() => navigate(-1)}
+              onClick={resetForm}
               outlined
               style={{
                 padding: "8px 20px",

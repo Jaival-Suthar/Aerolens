@@ -140,6 +140,8 @@ useEffect(() => {
         aria-live="polite"
         filters={filters}
         globalFilterFields={globalFilterFields}
+        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Clients"
       >
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} frozen />
         <Column
