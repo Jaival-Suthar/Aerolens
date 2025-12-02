@@ -55,7 +55,7 @@ const MemberDelete: React.FC<Props> = ({
       <Dialog
         visible={visible}
         header="Delete Member"
-        style={{ width: "30rem" }}
+        style={{ width: "50rem" }}
         modal
         onHide={handleHide}
         footer={footer}
@@ -69,9 +69,16 @@ const MemberDelete: React.FC<Props> = ({
         {/* Member Details Card */}
         <div className="bg-surface-50 p-3 border-round mb-4">
           <div className="grid">
-            <div className="col-12">
-              <strong>Member Details:</strong>
-            </div>
+           <div className="text-center">
+            <p className="m-0 font-bold text-lg text-color-secondary">
+              Are you sure you want to delete this member?
+            </p>
+          </div>
+
+          <div className="col-12 mt-3">
+            <strong className="text-xl">Member Details:</strong>
+          </div>
+
 
             <div className="col-6">
               <span className="text-color-secondary">Member ID:</span>
@@ -116,48 +123,7 @@ const MemberDelete: React.FC<Props> = ({
               <span className="text-color-secondary">Organisation:</span>
             </div>
             <div className="col-6">{selectedMember.organisation || "-"}</div>
-
-            <div className="col-6">
-              <span className="text-color-secondary">Active:</span>
-            </div>
-            <div className="col-6">
-              {selectedMember.isActive ? "Yes" : "No"}
-            </div>
-
-            <div className="col-6">
-              <span className="text-color-secondary">Recruiter:</span>
-            </div>
-            <div className="col-6">
-              {selectedMember.isRecruiter ? "Yes" : "No"}
-            </div>
-
-            <div className="col-6">
-              <span className="text-color-secondary">Interviewer:</span>
-            </div>
-            <div className="col-6">
-              {selectedMember.isInterviewer ? "Yes" : "No"}
-            </div>
-
-            {selectedMember.isInterviewer && (
-              <>
-                <div className="col-6">
-                  <span className="text-color-secondary">Capacity:</span>
-                </div>
-                <div className="col-6">{selectedMember.interviewerCapacity}</div>
-              </>
-            )}
-
-            <div className="col-6">
-              <span className="text-color-secondary">Skills:</span>
-            </div>
-            <div className="col-6">{selectedMember.skills || "-"}</div>
           </div>
-        </div>
-
-        <div className="text-center">
-          <p className="m-0 text-color-secondary">
-            Are you sure you want to delete this member?
-          </p>
         </div>
       </Dialog>
     </>
