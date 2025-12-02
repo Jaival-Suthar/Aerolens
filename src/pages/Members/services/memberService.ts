@@ -1,6 +1,9 @@
 import { 
   Member,
-  ApiResponse
+  ApiResponse,
+  ClientOption,
+  MemberPatchPayload,
+  Location
 } from '../types/memberTypes';
 
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
@@ -31,7 +34,7 @@ export function mapApiMember(data: any): Member {
     updatedAt: data.updatedAt || null,
 
     location: {
-      city: data.cityName || "",
+      city: data.city || "",
       country: data.country || "",
     },
 
@@ -41,7 +44,7 @@ export function mapApiMember(data: any): Member {
     isInterviewer: Boolean(data.isInterviewer),
     interviewerCapacity: data.interviewerCapacity ?? 0,
 
-    skills: data.skills ?? "",
+    skills: Array.isArray(data.skills) ? data.skills : [],
   };
 }
 
@@ -58,12 +61,12 @@ export const getMembers = async (
     });
 
     if (!response.ok) {
-      if (response.status === 401) throw new Error("Unauthorized – invalid or expired token");
+      if (response.status === 401) throw new Error("Unauthorized - invalid or expired token");
       throw new Error(`Failed to fetch members: ${response.status}`);
     }
 
     const data = await response.json();
-
+    console.log("getMembers response data:", data);
     // Backend returns: { success: true, message, data: [...] }
     if (!data.success) {
       throw new Error(data.message || "Failed to fetch members");
@@ -72,7 +75,7 @@ export const getMembers = async (
     const mapped = Array.isArray(data.data)
       ? data.data.map(mapApiMember)
       : [];
-
+    console.log("Mapped members:", mapped);
     return {
       success: true,
       message: data.message,
@@ -103,7 +106,7 @@ export const getMemberById = async (
     }
 
     const data = await response.json();
-
+    console.log("getMemberById response data:", data);
     if (!data.success) {
       throw new Error(data.message || "Member not found");
     }
@@ -117,6 +120,145 @@ export const getMemberById = async (
     };
   } catch (error) {
     console.error("Error in getMemberById:", error);
+    throw error;
+  }
+};
+
+export const patchMember = async (
+  accessToken: string | null,
+  memberId: number,
+  payload: MemberPatchPayload
+): Promise<ApiResponse<Member>> => {
+  if (!accessToken) throw new Error("Access token is required");
+  if (!memberId || memberId <= 0) throw new Error("Invalid memberId");
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/member/${memberId}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: makeHeaders(accessToken),
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+    console.log("patchMember response data:", data);
+    if (!response.ok) {
+      const msg = data.message || `Failed to update member: ${response.status}`;
+      throw new Error(msg);
+    }
+
+    if (!data.success) {
+      throw new Error(data.message || "Failed to update member");
+    }
+
+    const mapped = mapApiMember(data.data);
+
+    return {
+      success: true,
+      message: data.message,
+      data: mapped,
+    };
+  } catch (error) {
+    console.error("Error in patchMember:", error);
+    throw error;
+  }
+};
+
+// --------------------------
+// GET Lookup Data (Designations, Skills)
+// --------------------------
+export const fetchMemberLookupData = async (
+  accessToken: string | null
+): Promise<{ designations: string[]; skills: string[] }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/lookup?page=1&limit=100`, {
+      credentials: 'include',
+      headers: makeHeaders(accessToken || undefined),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch lookup data: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (!result.success || !Array.isArray(result.data)) {
+      console.error('Unexpected lookup response structure:', result);
+      return { designations: [], skills: [] };
+    }
+    
+    const designations = result.data
+      .filter((item: any) => item.tag === "designation")
+      .map((item: any) => item.value);
+    
+    const skills = result.data
+      .filter((item: any) => item.tag === "skill")
+      .map((item: any) => item.value);
+    
+    console.log('Fetched designations:', designations);
+    console.log('Fetched skills:', skills);
+    
+    return { designations, skills };
+  } catch (error) {
+    console.error('Error fetching member lookup data:', error);
+    throw error;
+  }
+};
+
+export const getClients = async (
+  accessToken: string | null
+): Promise<{ clients: ClientOption[]; locations: Location[] }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/client/all`, {
+      credentials: 'include',
+      headers: makeHeaders(accessToken || undefined),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch clients: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    if (!data.success) throw new Error(data.message || 'Failed to fetch clients');
+    
+    const clients = Array.isArray(data.data?.clientData)
+      ? data.data.clientData.map((client: any): ClientOption => {
+          let departmentsArray = [];
+
+          if (typeof client.departments === 'string') {
+            try {
+              departmentsArray = JSON.parse(client.departments);
+            } catch (err) {
+              console.error("Failed to parse departments:", err);
+              departmentsArray = [];
+            }
+          } else if (Array.isArray(client.departments)) {
+            departmentsArray = client.departments;
+          }
+          
+          return {
+            clientId: client.clientId,
+            clientName: client.clientName,
+            departments: departmentsArray.map((dept: any) => ({
+              departmentId: dept.departmentId,
+              departmentName: dept.departmentName
+            }))
+          };
+        })
+      : [];
+
+    // Extract locations from the response
+    const locations = Array.isArray(data.data?.locationData)
+      ? data.data.locationData.map((loc: any): Location => ({
+          city: loc.city,
+          state: loc.state,
+          country: loc.country
+        }))
+      : [];
+    
+    return { clients, locations };
+  } catch (error) {
+    console.error('Error in getClients:', error);
     throw error;
   }
 };

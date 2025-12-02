@@ -8,13 +8,15 @@ import ExportExcelButton from "../../../shared/ExportExcelButton";
 import SearchButton from "../../../shared/SearchButton";
 
 import { useSearchParams } from "react-router-dom";
-import { Member } from "../types/memberTypes";
-import { getMembers, deleteMember } from "../services/memberService";
+import { Member, Location, ClientOption } from "../types/memberTypes";
+import { getMembers, deleteMember, fetchMemberLookupData, getClients } from "../services/memberService";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import { FilterMatchMode } from "primereact/api";
 import { Toast } from 'primereact/toast';
+import { Tooltip } from "primereact/tooltip";
 
-// import MemberEdit from "./MemberEdit";     // ✔ Only Edit dialog
+
+import MemberEdit from "./MembersEdit";     // ✔ Only Edit dialog
 import MemberDelete from "./MembersDelete"; // ✔ Delete dialog only
 
 const MembersTable: React.FC = () => {
@@ -41,7 +43,32 @@ const pageFromUrl = Number(searchParams.get("page")) || 1;
 
 const [first, setFirst] = useState((pageFromUrl - 1) * 10); 
 const [rows, setRows] = useState(10);
- 
+const tooltipRef = useRef<Tooltip>(null);
+const [clients, setClients] = useState<ClientOption[]>([]);
+const [locations, setLocations] = useState<Location[]>([]);
+  const [designations, setDesignations] = useState<string[]>([]);
+  const [skillOptions, setSkillOptions] = useState<string[]>([]);
+  useEffect(() => {
+    const loadLookupData = async () => {
+      try {
+        const [clientsData, memberLookup] = await Promise.all([
+          getClients(accessToken),
+          fetchMemberLookupData(accessToken)
+        ]);
+        
+        setClients(clientsData.clients);
+        setLocations(clientsData.locations);
+        setDesignations(memberLookup.designations);
+        setSkillOptions(memberLookup.skills);
+      } catch (error) {
+        console.error('Failed to load lookup data:', error);
+      }
+    };
+    
+    if (accessToken) {
+      loadLookupData();
+    }
+  }, [accessToken]);
   useEffect(() => {
     loadMembers();
   }, []);
@@ -71,7 +98,9 @@ const [rows, setRows] = useState(10);
     try {
       const res = await getMembers(accessToken);
         setMembers(Array.isArray(res.data) ? res.data : []);
-
+        setTimeout(() => {
+          tooltipRef.current?.updateTargetEvents();
+        }, 0);
     } catch (err) {
       console.error("Error loading members:", err);
       setMembers([]);
@@ -146,12 +175,84 @@ const [rows, setRows] = useState(10);
   const formatValue = (value: any) => {
   return value === null || value === undefined || value === "" ? "-" : value;
 };
+  const formatSkillsDetailed = (skills: Member["skills"]) => {
+  if (!skills?.length) return "-";
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "8px",
+        maxWidth: "100%",
+      }}
+    >
+      {skills.map((skill, index) => (
+        <span
+          key={index}
+          className="skill-tag"
+          data-pr-tooltip={
+            `Proficiency: ${skill.proficiencyLevel || "-"}\n` +
+            `YOE: ${skill.yearsOfExperience || 0} yrs`
+          }
+          data-pr-position="top"
+          style={{
+            background: "#eef3ff",
+            padding: "6px 12px",
+            borderRadius: "6px",
+            fontSize: "12px",
+            fontWeight: 600,
+            cursor: "pointer",
+            display: "inline-block",
+            color: "#3957e8",
+            border: "1px solid #cdd5ff",
+            maxWidth: "120px",
+            textOverflow: "ellipsis",
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {skill.skillName}
+        </span>
+      ))}
+    </div>
+  );
+};
+
+
+
+
+const formatContactDetails = (row: Member) => {
+  return (
+    <div>
+      <div>{row.email || "-"}</div>
+      <div>{row.memberContact || "-"}</div>
+    </div>
+  );
+};
+
+const formatLocation = (row: Member) => {
+  const city = row.location?.city || "";
+  const country = row.location?.country || "";
+  if (!city && !country) return "-";
+  return `${city}, ${country}`;
+};
+
+const formatNameDesignation = (row: Member) => {
+  return (
+    <div>
+      <div><strong>{row.memberName}</strong></div>
+      <div style={{ fontSize: "12px", color: "#666" }}>{row.designation}</div>
+    </div>
+  );
+};
 
 
   /** ------------------- JSX ------------------- */
   return (
     <>
         <Toast ref={toast} position="top-right" />
+        <Tooltip ref={tooltipRef} target=".skill-tag" />
       <div className="flex justify-content-between align-items-center mb-2">
         <h2>Member Management</h2>
 
@@ -201,43 +302,71 @@ const [rows, setRows] = useState(10);
       >
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
 
-        <Column field="memberName" header="Name" sortable/>
-        <Column field="email" header="Email" sortable />
-        <Column field="memberContact" header="Contact" sortable />
-        <Column field="designation" header="Designation" sortable />
+{/* Name + Designation */}
+<Column
+  header="Member"
+  body={formatNameDesignation}
+  sortable
+/>
 
-        {/* Nested fields */}
-        <Column field="location.city" header="City" sortable body={(row) => formatValue(row.location?.city)}/>
-        <Column field="location.country" header="Country" sortable body={(row) => formatValue(row.location?.country)}/>
+{/* Email + Phone */}
+<Column
+  header="Contact Details"
+  body={formatContactDetails}
+  sortable
+/>
 
-        <Column field="clientName" header="Client" sortable body={(row) => formatValue(row.clientName)}/>
+{/* City + Country */}
+<Column
+  header="Location"
+  body={(row) => formatLocation(row)}
+  sortable
+/>
+
+{/* Skills */}
+<Column
+  header="Skills"
+  body={(row) => formatSkillsDetailed(row.skills)}
+  style={{ width: "17rem", maxWidth: "17rem" }}
+/>
+
+
+{/* Interviewer Capacity */}
+<Column
+  field="interviewerCapacity"
+  header="Capacity"
+  sortable
+  body={(row) => row.interviewerCapacity ?? "-"}
+/>
+
+{/* Recruiter */}
+<Column
+  header="Recruiter"
+  body={(row) => (row.isRecruiter ? "Yes" : "No")}
+  sortable
+/>
+
+{/* Interviewer */}
+<Column
+  header="Interviewer"
+  body={(row) => (row.isInterviewer ? "Yes" : "No")}
+  sortable
+/>
+<Column field="clientName" header="Client" sortable body={(row) => formatValue(row.clientName)}/>
         <Column field="organisation" header="Organisation" sortable body={(row) => formatValue(row.organisation)}/>
-
-        {/* Boolean fields with transform */}
-        <Column
-        field="isActive"
-        header="Active"
-        body={(row) => (row.isActive ? "Yes" : "No")}
-        sortable
-        />
-        <Column
-        field="isRecruiter"
-        header="Recruiter"
-        body={(row) => (row.isRecruiter ? "Yes" : "No")}
-        sortable
-        />
-
-        <Column field="skills" header="Skills" sortable body={(row) => formatValue(row.skills)}/>
-
       </DataTable>
 
       {/* ------------------- Dialogs ------------------- */}
-      {/* <MemberEdit
+      <MemberEdit
         visible={showEditDialog}
         onHide={() => setShowEditDialog(false)}
         selectedMember={editingMember}
         onSuccess={handleEditSuccess}
-      /> */}
+        clients={clients}
+        locations={locations}
+        designations={designations}
+        skillOptions={skillOptions}
+      />
 
         <MemberDelete
             visible={showDeleteDialog}
