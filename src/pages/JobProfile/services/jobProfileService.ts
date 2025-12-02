@@ -4,7 +4,7 @@ import {
   ClientOption, 
   DepartmentOption,
   ApiResponse,
-  JobStatus
+  Location
 } from '../types/jobProfileTypes';
 
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
@@ -30,14 +30,49 @@ function mapApiJobProfile(data: any): JobProfile {
     positions: data.positions,
     receivedOn: data.receivedOn,
     estimatedCloseDate: data.estimatedCloseDate,
-    location: data.locationName || data.location || '',
-    status: (data.statusName || data.status || 'Pending') as JobStatus,
+    location: data.location || { city: '', country: '' },
+    workArrangement: data.workArrangement || 'onsite',
+    status: data.statusName || data.status || 'Pending',
     statusName: data.statusName
   };
   return mapped;
 }
+export const fetchJobProfileLookupData = async (
+  accessToken: string | null
+): Promise<{ profileStatuses: string[] }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/lookup?page=1&limit=100`, {
+      credentials: 'include',
+      headers: makeHeaders(accessToken || undefined),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch lookup data: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    // ✅ API returns: { success: true, message: "...", data: [...] }
+    if (!result.success || !Array.isArray(result.data)) {
+      console.error('Unexpected lookup response structure:', result);
+      return { profileStatuses: [] };
+    }
+    
+    const profileStatuses = result.data
+      .filter((item: any) => item.tag === "profileStatus")
+      .map((item: any) => item.value);
+    
+    console.log('Fetched profile statuses:', profileStatuses);
+    return { profileStatuses };
+  } catch (error) {
+    console.error('Error fetching lookup data:', error);
+    throw error;
+  }
+};
 // Get clients from the new /client/all endpoint
-export const getClients = async (accessToken: string | null): Promise<ClientOption[]> => {
+export const getClients = async (
+  accessToken: string | null
+): Promise<{ clients: ClientOption[]; locations: Location[] }> => {
   try {
     const response = await fetch(`${API_BASE_URL}/client/all`, {
       credentials: 'include',
@@ -51,40 +86,47 @@ export const getClients = async (accessToken: string | null): Promise<ClientOpti
     const data = await response.json();
     if (!data.success) throw new Error(data.message || 'Failed to fetch clients');
     
-    const clients = (data.data || []).map((client: any): ClientOption => {
-      // ✅ PARSE stringified JSON departments into real array
-      let departmentsArray: any[] = [];
-      
-      if (typeof client.departments === 'string') {
-        try {
-          // Backend sends departments as escaped JSON string - parse it
-          departmentsArray = JSON.parse(client.departments);
-        } catch (parseError) {
-          console.error(`Failed to parse departments for client ${client.clientId}:`, parseError);
-          departmentsArray = [];
-        }
-      } else if (Array.isArray(client.departments)) {
-        // In case backend fixes this later, handle proper arrays too
-        departmentsArray = client.departments;
-      }
-      
-      return {
-        clientId: client.clientId,
-        clientName: client.clientName,
-        departments: departmentsArray.map((dept: any): DepartmentOption => ({
-          departmentId: dept.departmentId,
-          departmentName: dept.departmentName
+    const clients = Array.isArray(data.data?.clientData)
+      ? data.data.clientData.map((client: any): ClientOption => {
+          let departmentsArray = [];
+
+          if (typeof client.departments === 'string') {
+            try {
+              departmentsArray = JSON.parse(client.departments);
+            } catch (err) {
+              console.error("Failed to parse departments:", err);
+              departmentsArray = [];
+            }
+          } else if (Array.isArray(client.departments)) {
+            departmentsArray = client.departments;
+          }
+          
+          return {
+            clientId: client.clientId,
+            clientName: client.clientName,
+            departments: departmentsArray.map((dept: any) => ({
+              departmentId: dept.departmentId,
+              departmentName: dept.departmentName
+            }))
+          };
+        })
+      : [];
+
+    // Extract locations from the response
+    const locations = Array.isArray(data.data?.locationData)
+      ? data.data.locationData.map((loc: any): Location => ({
+          city: loc.city,
+          state: loc.state,
+          country: loc.country
         }))
-      };
-    });
+      : [];
     
-    return clients;
+    return { clients, locations };
   } catch (error) {
     console.error('Error in getClients:', error);
     throw error;
   }
 };
-
 
 
 // Get departments from API
@@ -112,7 +154,7 @@ export const getDepartments = async (accessToken: string | null): Promise<Depart
 // Fetch all job profiles and then fetch clients
 export const getJobProfiles = async (
   accessToken: string | null
-): Promise<{ jobProfiles: ApiResponse<JobProfile[]>, clients: ClientOption[] }> => {
+): Promise<{ jobProfiles: ApiResponse<JobProfile[]>; clients: ClientOption[]; locations: Location[] }> => {
   try {
     const jobProfileResponse = await fetch(`${API_BASE_URL}/jobProfile`, {
       credentials: 'include',
@@ -127,27 +169,25 @@ export const getJobProfiles = async (
     if (!jobProfileData.success) {
       throw new Error(jobProfileData.message || 'Failed to fetch job profiles');
     }
-
     const mappedJobProfiles = jobProfileData.data.map(mapApiJobProfile);
-
     const jobProfilesResult: ApiResponse<JobProfile[]> = {
       success: true,
       message: jobProfileData.message,
       data: mappedJobProfiles,
     };
 
-    const clients = await getClients(accessToken);
+    const { clients, locations } = await getClients(accessToken);
 
     return {
       jobProfiles: jobProfilesResult,
-      clients: clients
+      clients: clients,
+      locations: locations
     };
   } catch (error) {
     console.error('Error in getJobProfiles:', error);
     throw error;
   }
 };
-
 // Fetch job profile by ID
 export const getJobProfileById = async (
   accessToken: string | null,
@@ -158,16 +198,16 @@ export const getJobProfileById = async (
       credentials: 'include',
       headers: makeHeaders(accessToken || undefined),
     });
-    
+    console.log('Response status:', response.status);
     if (!response.ok) {
       throw new Error(`Failed to fetch job profile: ${response.status}`);
     }
     
     const data = await response.json();
+    console.log('Raw job profile data:', data);
     if (!data.success) throw new Error(data.message || 'Job profile not found');
 
     const mappedData = mapApiJobProfile(data.data);
-
     return {
       success: true,
       message: data.message,
@@ -187,7 +227,9 @@ export const createJobProfile = async (
   try {
     const req = {
       ...jobProfileData,
-      receivedOn: undefined, // Backend sets this automatically
+      receivedOn: undefined, 
+      workArrangement: jobProfileData.workArrangement,
+      location: jobProfileData.location,
     };
 
     const response = await fetch(`${API_BASE_URL}/jobProfile`, {
@@ -317,7 +359,11 @@ export const validateJobProfileRequest = (data: Partial<JobProfilePayload>): str
   }
   if (!data.positions || data.positions < 1) errors.push('Positions must be at least 1');
   if (!data.estimatedCloseDate) errors.push('Estimated Close Date is required');
-  if (!data.location?.trim()) errors.push('Location is required');
+  if (!data.location || !data.location.city || !data.location.country) {
+    errors.push('Location must include city and country');
+  }
+  if (!data.workArrangement) errors.push('Work Arrangement is required');
+
   if (!data.status) errors.push('Status is required');
 
   if (data.estimatedCloseDate) {

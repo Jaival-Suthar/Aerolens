@@ -16,18 +16,18 @@ import {
   createJobProfile, 
   updateJobProfile,
   deleteJobProfile,
-  getJobProfileById
+  getJobProfileById,
+  fetchJobProfileLookupData
 } from '../services/jobProfileService';
 import type { 
   JobProfile, 
   ClientOption, 
-  JobProfilePayload
+  JobProfilePayload,
+  Location
 } from '../types/jobProfileTypes';
 import { useAuth } from '../../../shared/auth/AuthContext'; 
-import { InputText } from 'primereact/inputtext';
-import { Button } from 'primereact/button';
-import { FaSearch } from "react-icons/fa";
 import { FilterMatchMode } from 'primereact/api';
+import SearchButton from '../../../shared/SearchButton';
 
 const JobProfileMain: React.FC = () => {
   const toast = useRef<Toast>(null);
@@ -46,14 +46,32 @@ const JobProfileMain: React.FC = () => {
   const [first, setFirst] = useState((pageFromUrl - 1) * 5); // 5 = default rows
   const [rows, setRows] = useState(5);
   const [globalFilterValue, setGlobalFilterValue] = useState('');
+  const [locations, setLocations] = useState<Location[]>([]);
   const [filters, setFilters] = useState<any>({
   global: { value: null, matchMode: FilterMatchMode.CONTAINS }
 });
+const [statusOptions, setStatusOptions] = useState<string[]>([]);
 
   useEffect(() => {
     loadData();
   }, []);
-
+  useEffect(() => {
+  const loadLookupData = async () => {
+    try {
+      const { profileStatuses } = await fetchJobProfileLookupData(accessToken);
+      setStatusOptions(profileStatuses);
+    } catch (error) {
+      console.error('Failed to load status options:', error);
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Failed to load status options',
+        life: 3000
+      });
+    }
+  };
+  loadLookupData();
+}, [accessToken]);
   // Centralized error handler - reduces duplication
   const showError = (message: string) => {
     toast.current?.show({
@@ -72,23 +90,32 @@ const JobProfileMain: React.FC = () => {
   };
 
   const loadData = async () => {
-    setLoading(true);
-    try {
-      const { jobProfiles: jobProfilesResponse, clients: clientsData } = await getJobProfiles(accessToken);
-      
-      if (!jobProfilesResponse.success) {
-        throw new Error(jobProfilesResponse.message || 'Failed to load job profiles');
-      }
-      
-      setJobProfiles(jobProfilesResponse.data);
-      setClients(clientsData);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      showError('Failed to load data');
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  try {
+    const { jobProfiles: jobProfilesResponse, clients: clientsData, locations: locationsData } = await getJobProfiles(accessToken);
+    
+    if (!jobProfilesResponse.success) {
+      throw new Error(jobProfilesResponse.message || 'Failed to load job profiles');
     }
-  };
+    
+    setJobProfiles(
+  jobProfilesResponse.data.map((jp: JobProfile) => ({
+    ...jp,
+    locationString: jp.location
+      ? `${jp.location.city}, ${jp.location.country}`
+      : ''
+  }))
+);
+
+    setClients(clientsData);
+    setLocations(locationsData); // Set locations
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    showError('Failed to load data');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const onPageChange = (event: any) => {
   setFirst(event.first);
@@ -184,8 +211,6 @@ const JobProfileMain: React.FC = () => {
   setGlobalFilterValue(value);
 };
 
- 
-
   // Simplified status mapping
   const STATUS_SEVERITY_MAP: Record<string, 'info' | 'warning' | 'success' | 'danger'> = {
     'In Progress': 'info',
@@ -206,6 +231,20 @@ const JobProfileMain: React.FC = () => {
     return date ? new Date(date).toLocaleDateString() : '-';
   };
 
+  const locationBodyTemplate = (rowData: JobProfile) => {
+  if (!rowData.location) return '-';
+  return `${rowData.location.city}, ${rowData.location.country}`;
+  };
+
+  const capitalizeFirstLetter = (str: string) => {
+    if (!str) return str;
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  };
+
+  const workArrangementBodyTemplate = (rowData: JobProfile) => {
+    return rowData.workArrangement ? capitalizeFirstLetter(rowData.workArrangement) : '-';
+  };
+
   return (
     <div className="card">
       <Toast ref={toast} />
@@ -213,41 +252,11 @@ const JobProfileMain: React.FC = () => {
       <div className="flex justify-content-between align-items-center mb-2">
   <h2>Job Profiles Requirements</h2>
   <div className='flex gap-2 align-items-center'>
-    <span className="p-input-icon-right" style={{ position: 'relative' }}>
-      <InputText
-        value={globalFilterValue}
-        onChange={onGlobalFilterChange}
-        placeholder="Search..."
-        style={{ borderRadius: '25px', paddingRight: '3.5rem', width: '250px' }}
-      />
-      <Button
-        aria-label="Search"
-        tooltip="Search"
-        tooltipOptions={{ position: "bottom" }}
-        text
-        className="p-input-icon"
-        style={{
-          position: 'absolute',
-          right: '5px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          backgroundColor: "#e3f1fc",
-          color: "#1976d2",
-          border: "none",
-          boxShadow: "none",
-          width: 32,
-          height: 32,
-          padding: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: '50%',
-          minWidth: 'unset'
-        }}
-      >
-        <FaSearch style={{ color: "#1976d2", fontSize: 16 }} />
-      </Button>
-    </span>
+    <SearchButton
+      value={globalFilterValue}
+      onChange={onGlobalFilterChange}
+      placeholder="Search..."
+    />
     <ExportExcelButton dtRef={dt} />
     <AddButton onClick={handleAddNew} />
     <EditButton 
@@ -276,8 +285,10 @@ const JobProfileMain: React.FC = () => {
         first={first}
         onPage={onPageChange}
         rowsPerPageOptions={[5, 10, 20, 50]}
-        globalFilterFields={['clientName', 'departmentName', 'jobRole', 'jobProfileDescription', 'techSpecification', 'positions','location', 'status']}
+        globalFilterFields={['clientName', 'departmentName', 'jobRole', 'jobProfileDescription', 'techSpecification','workArrangement', 'positions','location', 'status']}
         filters={filters}
+        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Job Profiles"
       >
 
         <Column
@@ -304,7 +315,18 @@ const JobProfileMain: React.FC = () => {
           sortable 
           style={{ width: '8rem' }}
         />
-        <Column field="location" header="Location" sortable />
+        <Column 
+          field="workArrangement"
+          header="Work Arrangement"
+          sortable
+          body={workArrangementBodyTemplate}
+        />
+
+        <Column 
+          header="Location"
+          sortable
+          body={locationBodyTemplate}
+        />
         <Column 
           field="receivedOn" 
           header="Received On" 
@@ -331,7 +353,9 @@ const JobProfileMain: React.FC = () => {
         onSave={handleSave}
         jobProfile={selectedJobProfile}
         clients={clients}
+        locations={locations}
         loading={loading}
+        statusOptions={statusOptions}
       />
 
       <JobProfileDelete

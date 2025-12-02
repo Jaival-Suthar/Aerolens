@@ -126,6 +126,8 @@ const onPageChange = (event: any) => {
         selection={selectedDepartment}
         onSelectionChange={handleSelectionChange}
         tableStyle={{ minWidth: "50rem" }}
+        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Departments"
       >
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
         <Column field="departmentId" header="ID" />

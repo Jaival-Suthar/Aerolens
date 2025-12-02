@@ -6,6 +6,7 @@ export interface SignupFormData {
   confirmPassword: string;
   designation: string;
   isRecruiter: boolean;
+  isInterviewer: boolean;
 }
 
 export interface SignupResponse {

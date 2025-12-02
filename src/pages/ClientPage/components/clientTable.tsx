@@ -1,11 +1,15 @@
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useState } from "react";
 import { DataTable, type DataTableSelectionSingleChangeEvent, type DataTableRowClickEvent } from "primereact/datatable";
 import { Column } from "primereact/column";
-import { Paginator, type PaginatorPageChangeEvent } from "primereact/paginator";
+// import { Paginator, type PaginatorPageChangeEvent } from "primereact/paginator";
 import { useClientData } from "../hooks/useClientData";
-import { usePagination } from "../hooks/usePagination";
+// import { usePagination } from "../hooks/usePagination";
 import type { ClientTableProps, ClientType } from "../types/clientTypes";
-import { FaTimesCircle } from "react-icons/fa";
+import { FaTimesCircle, FaSearch } from "react-icons/fa";
+import { useAuth } from '../../../shared/auth/AuthContext'; 
+import { InputText } from 'primereact/inputtext';
+import { Button } from 'primereact/button';
+import { FilterMatchMode } from 'primereact/api';
 
 const ClientTable: React.FC<ClientTableProps> = ({
   dtRef,
@@ -13,44 +17,57 @@ const ClientTable: React.FC<ClientTableProps> = ({
   refreshTrigger = 0,
   selectedClient,
   onSelectionChange,
-  preSelectClientId
+  preSelectClientId,
+  filters,
+  globalFilterFields
 }) => {
-  const { clients, loading, error, loadClients } = useClientData();
-  const {
-    pagination,
-    getInitialPagination,
-    updateUrlParams,
-    savePaginationPreferences,
-    updatePaginationFromResponse,
-    resetPaginationOnError,
-    searchParams,
-  } = usePagination();
+  const { clients, loading, error, loadClients } = useClientData(refreshTrigger);
+  // const {
+  //   pagination,
+  //   getInitialPagination,
+  //   updateUrlParams,
+  //   savePaginationPreferences,
+  //   updatePaginationFromResponse,
+  //   resetPaginationOnError,
+  //   searchParams,
+  // } = usePagination();
 
   useEffect(() => {
-    const loadData = async () => {
-      const { currentPage, limit } = getInitialPagination();
-      try {
-        const response = await loadClients(currentPage, limit);
-        updatePaginationFromResponse(
-          { ...response, pagination: response.meta ?? {} },
-          currentPage,
-          limit
-        );
-        savePaginationPreferences(currentPage, limit);
-      } catch {
-        resetPaginationOnError(currentPage, limit);
-      }
-    };
-    loadData();
-  }, [
-    searchParams,
-    refreshTrigger,
-    getInitialPagination,
-    loadClients,
-    savePaginationPreferences,
-    updatePaginationFromResponse,
-    resetPaginationOnError,
-  ]);
+  const loadData = async () => {
+    try {
+      await loadClients(); // Just load all data, no pagination params
+    } catch (error) {
+      console.error('Failed to load clients:', error);
+    }
+  };
+  loadData();
+}, [refreshTrigger, loadClients]);
+  // useEffect(() => {          Backend Pagination - disabled for now
+  //   const loadData = async () => {
+  //     const { currentPage, limit } = getInitialPagination();
+  //     try {
+  //       const response = await loadClients(currentPage, limit);
+  //       updatePaginationFromResponse(
+  //         { ...response, pagination: response.meta ?? {} },
+  //         currentPage,
+  //         limit
+  //       );
+  //       savePaginationPreferences(currentPage, limit);
+  //     } catch {
+  //       resetPaginationOnError(currentPage, limit);
+  //     }
+  //   };
+  //   loadData();
+  // }, [
+  //   searchParams,
+  //   refreshTrigger,
+  //   getInitialPagination,
+  //   loadClients,
+  //   savePaginationPreferences,
+  //   updatePaginationFromResponse,
+  //   resetPaginationOnError,
+  // ]);
+
   // Auto-select client from URL on mount/refresh
 useEffect(() => {
   if (preSelectClientId && clients.length > 0 && !selectedClient) {
@@ -60,15 +77,15 @@ useEffect(() => {
     }
   }
 }, [preSelectClientId, clients, selectedClient, onSelectionChange]);
-  const onPageChange = useCallback(
-    (event: PaginatorPageChangeEvent) => {
-      const newPage = event.page + 1; // zero-based → one-based
-      const newLimit = event.rows;
-      updateUrlParams(newPage, newLimit);
-      savePaginationPreferences(newPage, newLimit);
-    },
-    [updateUrlParams, savePaginationPreferences]
-  );
+  // const onPageChange = useCallback(
+  //   (event: PaginatorPageChangeEvent) => {
+  //     const newPage = event.page + 1; // zero-based → one-based
+  //     const newLimit = event.rows;
+  //     updateUrlParams(newPage, newLimit);
+  //     savePaginationPreferences(newPage, newLimit);
+  //   },
+  //   [updateUrlParams, savePaginationPreferences]
+  // );
 
   const onSelectionChangeHandler = useCallback(
   (e: DataTableSelectionSingleChangeEvent<ClientType[]>) => {
@@ -109,7 +126,9 @@ useEffect(() => {
         responsiveLayout="scroll"
         stripedRows
         className="text-m"
-        paginator={false} // external paginator
+        paginator={true} 
+        rows={10}  // ← ADD THIS
+        rowsPerPageOptions={[10, 20, 50]}  // ← ADD THIS
         scrollHeight="400px"
         emptyMessage={loading ? "Loading..." : "No clients found."}
         selectionMode="single"
@@ -119,6 +138,10 @@ useEffect(() => {
         onRowDoubleClick={onRowDoubleClick}
         showGridlines
         aria-live="polite"
+        filters={filters}
+        globalFilterFields={globalFilterFields}
+        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Clients"
       >
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} frozen />
         <Column
@@ -149,7 +172,7 @@ useEffect(() => {
         />
       </DataTable>
 
-      {!loading && pagination.totalRecords > 0 && (
+      {/* {!loading && pagination.totalRecords > 0 && (
         <Paginator
           first={(pagination.currentPage - 1) * pagination.limit}
           rows={pagination.limit}
@@ -160,7 +183,7 @@ useEffect(() => {
           className="mt-3"
           aria-label="Table pagination controls"
         />
-      )}
+      )} */}
     </section>
   );
 };

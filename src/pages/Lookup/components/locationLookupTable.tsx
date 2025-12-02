@@ -1,76 +1,79 @@
 import React, { useState, useCallback } from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
-import { LookupEntry } from '../types/lookupTypes';
+import { FilterMatchMode } from 'primereact/api';
+
+import { LocationEntry } from '../types/locationTypes';  // <-- Update path if needed
+
 import AddButton from '../../../shared/AddButton';
-import EditButton from '../../../shared/EditButton'; 
+import EditButton from '../../../shared/EditButton';
 import DeleteButton from '../../../shared/DeleteButton';
-import SearchButton from '../../../shared/SearchButton';  // ← ADD
-import { AddLookupForm } from './AddLookupForm';
-import { DeleteLookupForm } from './DeleteLookupForm';
-import { FilterMatchMode } from 'primereact/api';  // ← ADD
+import SearchButton from '../../../shared/SearchButton';
 
-// REMOVE PaginationMeta interface - not needed anymore
+ import AddEditLocationForm  from './AddEditLocationForm';
+ import  DeleteLocationForm  from './DeleteLocationForm';
 
-interface LookupTableProps {
-  data: LookupEntry[];
+interface LocationLookupTableProps {
+  data: LocationEntry[];
   loading?: boolean;
   onDataChange?: () => void;
-  // REMOVE: meta, onPageChange, onSelectionChange
 }
 
-const LookupTable: React.FC<LookupTableProps> = ({
+const LocationLookupTable: React.FC<LocationLookupTableProps> = ({
   data,
   loading = false,
-  onDataChange,
+  onDataChange
 }) => {
-  const [selectedLookup, setSelectedLookup] = useState<LookupEntry | null>(null);
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false); 
-  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<LocationEntry | null>(null);
 
-  // ← ADD search state
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  // Search State
   const [globalFilterValue, setGlobalFilterValue] = useState('');
   const [filters, setFilters] = useState<any>({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS }
   });
+  const existingCountries = Array.from(
+  new Set(data.map(loc => loc.country).filter(Boolean))
+);
 
-  // ← ADD filter change handler
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const _filters = { ...filters };
     _filters['global'].value = value;
-    
+
     setFilters(_filters);
     setGlobalFilterValue(value);
   };
 
-  const onSelectionChangeHandler = useCallback(
-    (e: any) => {
-      const selected = e?.value && typeof e.value === 'object' && 'lookupKey' in e.value ? e.value : null;
-      setSelectedLookup(selected);
-    },
-    []
-  );
+  const onSelectionChangeHandler = useCallback((e: any) => {
+    const selected = e?.value && typeof e.value === 'object' ? e.value : null;
+    setSelectedLocation(selected);
+  }, []);
 
   const handleAddClick = () => {
-    setSelectedLookup(null); 
+    setSelectedLocation(null);
     setShowAddDialog(true);
   };
-  const handleEditClick = () => { 
-    if (selectedLookup) {
+
+  const handleEditClick = () => {
+    if (selectedLocation) {
       setShowEditDialog(true);
     }
   };
-  const handleDeleteClick = () => { 
-    if (selectedLookup) {
+
+  const handleDeleteClick = () => {
+    if (selectedLocation) {
       setShowDeleteDialog(true);
     }
   };
 
-  const handleSuccess = useCallback(() => { 
+  const handleSuccess = useCallback(() => {
     onDataChange?.();
-    setSelectedLookup(null); 
+    setSelectedLocation(null);
+    setShowAddDialog(false);
     setShowEditDialog(false);
     setShowDeleteDialog(false);
   }, [onDataChange]);
@@ -78,21 +81,25 @@ const LookupTable: React.FC<LookupTableProps> = ({
   return (
     <div className="card">
       <div className="flex justify-content-between align-items-center mb-2">
-        <h2>Lookup Data</h2>
+        <h2>Location Lookup</h2>
+
         <div className="flex gap-2">
-          <SearchButton  
+          <SearchButton
             value={globalFilterValue}
             onChange={onGlobalFilterChange}
-            placeholder="Search lookups..."
+            placeholder="Search locations..."
           />
+
           <AddButton onClick={handleAddClick} />
-          <EditButton // <--- ADD Edit Button
+
+          <EditButton
             onClick={handleEditClick}
-            disabled={!selectedLookup} // Disabled if nothing is selected
+            disabled={!selectedLocation}
           />
-          <DeleteButton // <--- ADD Delete Button
+
+          <DeleteButton
             onClick={handleDeleteClick}
-            disabled={!selectedLookup} // Disabled if nothing is selected
+            disabled={!selectedLocation}
           />
         </div>
       </div>
@@ -100,47 +107,49 @@ const LookupTable: React.FC<LookupTableProps> = ({
       <DataTable
         value={data}
         loading={loading}
-        paginator 
-        rows={10}  
+        paginator
+        rows={10}
         rowsPerPageOptions={[5, 10, 25, 50]}
         responsiveLayout="scroll"
         className="p-datatable-sm"
         selectionMode="single"
-        selection={selectedLookup}
+        selection={selectedLocation}
         onSelectionChange={onSelectionChangeHandler}
-        dataKey="lookupKey"
-        emptyMessage="No lookup entries found"
-        filters={filters}  
-        globalFilterFields={['lookupKey', 'tag', 'value']} 
+        dataKey="locationId"     // <-- Make sure this exists in your LocationEntry
+        emptyMessage="No locations found"
+        filters={filters}
+        globalFilterFields={[ 'city', 'state', 'country']}
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
       >
         <Column selectionMode="single" headerStyle={{ width: '3rem' }} frozen />
-        <Column field="lookupKey" header="Key" sortable />
-        <Column field="tag" header="Tag" sortable />
-        <Column field="value" header="Value" sortable />
+        <Column field="city" header="City" sortable />
+        <Column field="state" header="State" sortable />
+        <Column field="country" header="Country" sortable />
       </DataTable>
 
-      <AddLookupForm
-        visible={showAddDialog || showEditDialog} // <--- CHANGE: Use for both Add/Edit
-        lookupToEdit={selectedLookup} // <--- PASS SELECTED LOOKUP for editing
-        isEdit={!!selectedLookup} // <--- New prop to tell form if it's an edit
+      {/* ADD/EDIT */}
+      <AddEditLocationForm
+        visible={showAddDialog || showEditDialog}
+        locationToEdit={selectedLocation}
+        isEdit={showEditDialog}
+        existingCountries={existingCountries}  // ← Pass this
         onHide={() => {
             setShowAddDialog(false);
             setShowEditDialog(false);
-            setSelectedLookup(null);
+            setSelectedLocation(null);
         }}
         onSuccess={handleSuccess}
-      />
-      
-      <DeleteLookupForm // <--- ADD Delete Form
+        />
+
+      <DeleteLocationForm
         visible={showDeleteDialog}
-        lookup={selectedLookup}
+        location={selectedLocation}
         onHide={() => setShowDeleteDialog(false)}
         onSuccess={handleSuccess}
-      />
+       />
     </div>
   );
 };
 
-export default LookupTable;
+export default LocationLookupTable;

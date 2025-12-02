@@ -78,7 +78,8 @@ const [first, setFirst] = useState<number>(savedPage * savedRows);
         rows={rowsPerPage}
         onPage={onPageChange}
         totalRecords={contacts.length}
-        currentPageReportTemplate={`Showing {first} to {last} of {totalRecords} contacts`}
+        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Contacts"
         emptyMessage={loading ? "Loading contacts..." : "No contacts found."}
         selectionMode="single"
         selection={selectedContact}
@@ -89,6 +90,7 @@ const [first, setFirst] = useState<number>(savedPage * savedRows);
         metaKeySelection={false}
         rowsPerPageOptions={[5, 10, 20, 50]}
         scrollHeight="350px"
+        
       >
         <Column
           selectionMode="single"
