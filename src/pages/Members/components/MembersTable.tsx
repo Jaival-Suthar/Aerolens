@@ -159,8 +159,8 @@ const [locations, setLocations] = useState<Location[]>([]);
   setRows(event.rows);
 
   const newPage = event.page + 1; // PrimeReact starts from 0
-  setSearchParams({ page: newPage.toString() });
-};
+    setSearchParams({ page: newPage.toString() });
+  };
 
 
   /** ------------------- Global Search ------------------- */
@@ -173,79 +173,79 @@ const [locations, setLocations] = useState<Location[]>([]);
   };
 
   const formatValue = (value: any) => {
-  return value === null || value === undefined || value === "" ? "-" : value;
-};
+    return value === null || value === undefined || value === "" ? "-" : value;
+  };
   const formatSkillsDetailed = (skills: Member["skills"]) => {
   if (!skills?.length) return "-";
 
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "8px",
-        maxWidth: "100%",
-      }}
-    >
-      {skills.map((skill, index) => (
-        <span
-          key={index}
-          className="skill-tag"
-          data-pr-tooltip={
-            `Proficiency: ${skill.proficiencyLevel || "-"}\n` +
-            `YOE: ${skill.yearsOfExperience || 0} yrs`
-          }
-          data-pr-position="top"
-          style={{
-            background: "#eef3ff",
-            padding: "6px 12px",
-            borderRadius: "6px",
-            fontSize: "12px",
-            fontWeight: 600,
-            cursor: "pointer",
-            display: "inline-block",
-            color: "#3957e8",
-            border: "1px solid #cdd5ff",
-            maxWidth: "120px",
-            textOverflow: "ellipsis",
-            overflow: "hidden",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {skill.skillName}
-        </span>
-      ))}
-    </div>
-  );
-};
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "8px",
+          maxWidth: "100%",
+        }}
+      >
+        {skills.map((skill, index) => (
+          <span
+            key={index}
+            className="skill-tag"
+            data-pr-tooltip={
+              `Proficiency: ${skill.proficiencyLevel || "-"}\n` +
+              `YOE: ${skill.yearsOfExperience || 0} yrs`
+            }
+            data-pr-position="top"
+            style={{
+              background: "#eef3ff",
+              padding: "6px 12px",
+              borderRadius: "6px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "inline-block",
+              color: "#3957e8",
+              border: "1px solid #cdd5ff",
+              maxWidth: "120px",
+              textOverflow: "ellipsis",
+              overflow: "hidden",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {skill.skillName}
+          </span>
+        ))}
+      </div>
+    );
+  };
 
 
 
 
-const formatContactDetails = (row: Member) => {
-  return (
-    <div>
-      <div>{row.email || "-"}</div>
-      <div>{row.memberContact || "-"}</div>
-    </div>
-  );
-};
+  const formatContactDetails = (row: Member) => {
+    return (
+      <div>
+        <div>{row.email || "-"}</div>
+        <div>{row.memberContact || "-"}</div>
+      </div>
+    );
+  };
 
-const formatLocation = (row: Member) => {
-  const city = row.location?.city || "";
-  const country = row.location?.country || "";
-  if (!city && !country) return "-";
-  return `${city}, ${country}`;
-};
+  const formatLocation = (row: Member) => {
+    const city = row.location?.city || "";
+    const country = row.location?.country || "";
+    if (!city && !country) return "-";
+    return `${city}, ${country}`;
+  };
 
-const formatNameDesignation = (row: Member) => {
-  return (
-    <div>
-      <div><strong>{row.memberName}</strong></div>
-      <div style={{ fontSize: "12px", color: "#666" }}>{row.designation}</div>
-    </div>
-  );
-};
+  const formatNameDesignation = (row: Member) => {
+    return (
+      <div>
+        <div><strong>{row.memberName}</strong></div>
+        <div style={{ fontSize: "12px", color: "#666" }}>{row.designation}</div>
+      </div>
+    );
+  };
 
 
   /** ------------------- JSX ------------------- */
@@ -279,6 +279,8 @@ const formatNameDesignation = (row: Member) => {
         first={first}
         onPage={onPageChange}
         rowsPerPageOptions={[10, 20, 50]}
+        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Members"
         selectionMode="single"
         selection={selectedMember}
         dataKey="memberId"
@@ -301,58 +303,14 @@ const formatNameDesignation = (row: Member) => {
         ]}
       >
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
-
-{/* Name + Designation */}
-<Column
-  header="Member"
-  body={formatNameDesignation}
-  sortable
-/>
-
-{/* Email + Phone */}
-<Column
-  header="Contact Details"
-  body={formatContactDetails}
-  sortable
-/>
-
-{/* City + Country */}
-<Column
-  header="Location"
-  body={(row) => formatLocation(row)}
-  sortable
-/>
-
-{/* Skills */}
-<Column
-  header="Skills"
-  body={(row) => formatSkillsDetailed(row.skills)}
-  style={{ width: "17rem", maxWidth: "17rem" }}
-/>
-
-
-{/* Interviewer Capacity */}
-<Column
-  field="interviewerCapacity"
-  header="Capacity"
-  sortable
-  body={(row) => row.interviewerCapacity ?? "-"}
-/>
-
-{/* Recruiter */}
-<Column
-  header="Recruiter"
-  body={(row) => (row.isRecruiter ? "Yes" : "No")}
-  sortable
-/>
-
-{/* Interviewer */}
-<Column
-  header="Interviewer"
-  body={(row) => (row.isInterviewer ? "Yes" : "No")}
-  sortable
-/>
-<Column field="clientName" header="Client" sortable body={(row) => formatValue(row.clientName)}/>
+        <Column header="Member" body={formatNameDesignation} sortable />
+        <Column header="Contact Details" body={formatContactDetails} sortable />
+        <Column header="Location" body={(row) => formatLocation(row)} sortable />
+        <Column header="Skills" body={(row) => formatSkillsDetailed(row.skills)} style={{ width: "17rem", maxWidth: "17rem" }} />
+        <Column field="interviewerCapacity" header="Capacity" sortable body={(row) => row.interviewerCapacity ?? "-"} />
+        <Column header="Recruiter" body={(row) => (row.isRecruiter ? "Yes" : "No")} sortable />
+        <Column header="Interviewer" body={(row) => (row.isInterviewer ? "Yes" : "No")} sortable />
+        <Column field="clientName" header="Client" sortable body={(row) => formatValue(row.clientName)}/>
         <Column field="organisation" header="Organisation" sortable body={(row) => formatValue(row.organisation)}/>
       </DataTable>
 

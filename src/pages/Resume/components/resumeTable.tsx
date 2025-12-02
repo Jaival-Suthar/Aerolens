@@ -230,6 +230,8 @@ const ResumeTable: React.FC = () => {
           'preferredJobLocation',
           'statusName'
         ]}
+        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Candidates"
       >
 
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
