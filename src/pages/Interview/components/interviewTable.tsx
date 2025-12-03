@@ -22,7 +22,7 @@ const convert24to12Hour = (time24: string): string => {
   const [hours, minutes] = time24.split(':').map(Number);
   
   let hour12 = hours % 12;
-  if (hour12 === 0) hour12 = 12; // Handle midnight (00:00) and noon (12:00)
+  if (hour12 === 0) hour12 = 12; 
   
   const period = hours >= 12 ? 'PM' : 'AM';
   
@@ -46,9 +46,6 @@ const InterviewTable: React.FC = () => {
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
   const toast = useRef<Toast>(null);
 
-  /* ------------------------------------------------------------------
-      FETCH INTERVIEWS
-  ------------------------------------------------------------------ */
   const fetchInterviews = useCallback(async () => {
     if (!accessToken) {
       return;
@@ -61,7 +58,6 @@ const InterviewTable: React.FC = () => {
       if (response?.success) {
         setInterviews(Array.isArray(response.data) ? response.data : []);
       } else {
-        console.error("API Error:", response?.message);
         toast.current?.show({
           severity: "error",
           summary: "Error",
@@ -69,7 +65,6 @@ const InterviewTable: React.FC = () => {
         });
       }
     } catch (err: any) {
-      console.error("Exception while fetching interviews:", err);
       toast.current?.show({
         severity: "error",
         summary: "Error",
@@ -84,9 +79,6 @@ const InterviewTable: React.FC = () => {
     fetchInterviews();
   }, [fetchInterviews]);
 
-  /* ------------------------------------------------------------------
-      ACTION HANDLERS
-  ------------------------------------------------------------------ */
   const handleAdd = () => {
     setIsEdit(false);
     setEditingInterview(null);
@@ -104,48 +96,56 @@ const InterviewTable: React.FC = () => {
     if (selectedInterview) setShowDeleteDialog(true);
   };
 
-  
-
   const handleDeleteSuccess = () => {
     setShowDeleteDialog(false);
     setSelectedInterview(null);
     fetchInterviews();
   };
 
-  /* ------------------------------------------------------------------
-      COLUMN BODY TEMPLATES
-  ------------------------------------------------------------------ */
-  
-  // Format date in DD/MM/YYYY
   const dateBodyTemplate = (rowData: Interview) => {
-    return new Date(rowData.interviewDate).toLocaleDateString("en-GB");
+    const date = new Date(rowData.interviewDate);
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   };
-
-  // Format time from 24-hour to 12-hour with AM/PM
+  
   const timeBodyTemplate = (rowData: Interview) => {
     return convert24to12Hour(rowData.fromTime);
   };
 
   const endTimeBodyTemplate = (rowData: Interview) => {
-  return convert24to12Hour(rowData.toTime);
-};
-const filteredInterviews = interviews.filter((item) => {
-  if (!searchText.trim()) return true;
+    return convert24to12Hour(rowData.toTime);
+  };
 
-  const text = searchText.toLowerCase();
-
-  return Object.values(item).some((val) =>
-    String(val).toLowerCase().includes(text)
-  );
-});
-
+  // ------------------------------------------------------------
+  // ✅ ADDITION #1 — Global Search Filter Logic (NO CHANGES)
+  // ------------------------------------------------------------
+  const filteredInterviews = interviews.filter((item) => {
+    if (!searchText.trim()) return true;
+    const text = searchText.toLowerCase();
+    return Object.values(item).some((val) =>
+      String(val).toLowerCase().includes(text)
+    );
+  });
 
   return (
     <>
       <Toast ref={toast} />
       <div className="flex justify-content-between align-items-center mb-2">
         <h2>Interviews</h2>
+
         <div className="flex gap-2 align-items-center">
+
+          {/* ------------------------------------------------------------ */}
+          {/* ✅ ADDITION #2 — Add Search Button */}
+          {/* ------------------------------------------------------------ */}
+          <SearchButton
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+
           <AddButton onClick={handleAdd} />
           <EditButton onClick={handleEdit} disabled={!selectedInterview} />
           <DeleteButton onClick={handleDelete} disabled={!selectedInterview} />
@@ -153,7 +153,10 @@ const filteredInterviews = interviews.filter((item) => {
       </div>
 
       <DataTable
-        value={interviews}
+        /* ------------------------------------------------------------ */
+        /* ✅ ADDITION #3 — Use filtered list instead of interviews     */
+        /* ------------------------------------------------------------ */
+        value={filteredInterviews}
         paginator
         rows={10}
         loading={loading}
@@ -169,26 +172,12 @@ const filteredInterviews = interviews.filter((item) => {
         <Column field="interviewerName" header="Interviewer" />
         <Column field="scheduledByName" header="Scheduled By" />
 
-        <Column
-          field="interviewDate"
-          header="Date"
-          body={dateBodyTemplate}
-        />
-
-        <Column
-          field="fromTime"
-          header="Start Time"
-          body={timeBodyTemplate}
-        />
-        <Column
-          field="toTime"
-          header="End Time"
-          body={endTimeBodyTemplate}
-        />
+        <Column field="interviewDate" header="Date" body={dateBodyTemplate} />
+        <Column field="fromTime" header="Start Time" body={timeBodyTemplate} />
+        <Column field="toTime" header="End Time" body={endTimeBodyTemplate} />
         <Column field="durationMinutes" header="Duration (min)" />
       </DataTable>
 
-      {/* Existing Add/Edit Dialog for scheduling */}
       <InterviewAddEditForm
         visible={visible}
         isEdit={isEdit}
@@ -199,6 +188,7 @@ const filteredInterviews = interviews.filter((item) => {
           fetchInterviews();
         }}
       />
+
       <InterviewDelete
         visible={showDeleteDialog}
         onHide={() => setShowDeleteDialog(false)}
