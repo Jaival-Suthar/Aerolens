@@ -112,3 +112,27 @@ export interface CandidatesApiResponse {
   candidates: Candidate[];
   totalCount?: number;
 }
+
+/* ------------------ LOOKUP TYPES ------------------ */
+export interface RecruiterItem {
+  recruiterId: number;
+  recruiterName: string;
+}
+
+export interface StatusItem {
+  lookupKey: number;
+  value: string;
+}
+
+export interface LocationItem {
+  locationId: number;
+  city: string;
+  country: string;
+  state: string;
+}
+
+export interface CandidateCreateData {
+  recruiters: RecruiterItem[];
+  status: StatusItem[];
+  locations: LocationItem[];
+}
