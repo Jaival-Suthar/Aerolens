@@ -4,45 +4,62 @@ export interface Candidate {
   candidateName: string;
   contactNumber: string;
   email: string;
-  recruiterName: string;
+
+  recruiterId: number | null;        // Editable
+  recruiterName: string | null;      // Editable
+  recruiterContact: string | null;   // Read-only from backend
+  recruiterEmail: string | null;     // Read-only from backend
+
   jobRole: string;
-  preferredJobLocation: string;
+
+  preferredJobLocation: {
+    city: string;
+    country: string;
+  } | null;
+
   currentCTC: number;
   expectedCTC: number;
   noticePeriod: number;
   experienceYears: number;
   statusName: string;
-  linkedinProfileUrl?: string;
-  resumeFilename?: string;       // File name stored in DB
-  resumeOriginalName?: string;   // Original uploaded file name
-  resumeUploadDate?: string;     // Upload timestamp
 
-  // ---------- NEW FIELDS ----------
-  recruiterPhoneNumber: string; // Added for recruiter contact
-  recruiterEmail: string;       // Added for recruiter email
-  notes?: string;                // Optional internal notes
+  linkedinProfileUrl?: string | null;
+
+  resumeFilename?: string | null;
+  resumeOriginalName?: string | null;
+  resumeUploadDate?: string | null;
+
+  notes?: string;
 }
+
+
 
 /* ------------------ UPDATE PAYLOAD ------------------ */
 export interface CandidateUpdatePayload {
   candidateName?: string;
   contactNumber?: string;
   email?: string;
-  recruiterName?: string;
+
+  recruiterId?: number | null;
+  recruiterName?: string | null;
+
   jobRole?: string;
-  preferredJobLocation?: string;
+
+  preferredJobLocation?: {
+    city: string;
+    country: string;
+  };
+
   currentCTC?: number;
   expectedCTC?: number;
   noticePeriod?: number;
   experienceYears?: number;
-  statusName?: string; // Maps to API's 'status'
-  linkedinProfileUrl?: string;
 
-  // ---------- NEW FIELDS ----------
-  recruiterPhoneNumber: string;
-  recruiterEmail: string;
-  notes: string;
+  statusName?: string;
+  linkedinProfileUrl?: string;
+  notes?: string;
 }
+
 
 /* ------------------ DELETE PROPS ------------------ */
 export interface ResumeDeleteProps {
@@ -66,22 +83,29 @@ export interface AddEditCandidate {
   candidateName: string;
   contactNumber: string;
   email: string;
-  recruiterName: string;
+
+  recruiterId: number | null;
+  recruiterName: string | null;
+
   jobRole: string;
-  preferredJobLocation: string;
+
+  preferredJobLocation?: {
+    city: string;
+    country: string;
+  };
+
   currentCTC: number;
   expectedCTC: number;
   noticePeriod: number;
   experienceYears: number;
+
   statusName: string;
   linkedinProfileUrl?: string;
-  resumeFile: File | null;
 
-  // ---------- NEW FIELDS ----------
-  recruiterPhoneNumber: string;
-  recruiterEmail: string;
+  resumeFile: File | null;
   notes?: string;
 }
+
 
 /* ------------------ API RESPONSE ------------------ */
 export interface CandidatesApiResponse {

@@ -152,7 +152,7 @@ const ResumeTable: React.FC = () => {
     if (!candidate.resumeFilename) {
       return <span className="text-400">No Resume</span>;
     }
-
+    
     return (
       <div className="flex gap-1">
         <Button
@@ -186,6 +186,39 @@ const ResumeTable: React.FC = () => {
       </a>
     );
   };
+
+  /** ------------------- Custom Combined Cell Templates ------------------- */
+
+const candidateContactTemplate = (row: Candidate) => {
+  return (
+    <div>
+      <div>{row.contactNumber || "-"}</div>
+      <div className="text-sm text-color-secondary">{row.email || "-"}</div>
+    </div>
+  );
+};
+
+const recruiterContactTemplate = (row: Candidate) => {
+  const phone = row.recruiterContact;
+  const email = row.recruiterEmail;
+
+  return (
+    <div>
+      <div>{phone || "-"}</div>
+      <div className="text-sm text-color-secondary">{email || "-"}</div>
+    </div>
+  );
+};
+
+const formatLocation = (row: Candidate) => {
+  const city = row.preferredJobLocation?.city || "";
+  const country = row.preferredJobLocation?.country || "";
+
+  if (!city && !country) return "-";
+
+  return `${city}, ${country}`;
+};
+
 
   /** ------------------- JSX ------------------- */
   return (
@@ -236,25 +269,31 @@ const ResumeTable: React.FC = () => {
 
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
         <Column field="candidateName" header="Candidate Name" sortable />
-        <Column field="contactNumber" header="Contact Number" sortable />
-        <Column field="email" header="Email" sortable />
+        <Column
+          header="Candidate Contact"
+          body={candidateContactTemplate}
+          sortable
+        />
         <Column field="recruiterName" header="Recruiter" sortable />
         {/* new columns */}
-        <Column field="recruiterPhoneNumber" header="Recruiter Phone" sortable />  // ✅ new
-        <Column field="recruiterEmail" header="Recruiter Email" sortable />          // ✅ new
+        <Column
+          header="Recruiter Contact"
+          body={recruiterContactTemplate}
+          sortable
+        />
         <Column field="notes" header="Notes" body={(rowData) => rowData.notes || "-"} sortable />
 
 
         <Column field="jobRole" header="Role" sortable />
         <Column
-          field="preferredJobLocation"
-          header="Preferred Location"
+          header="Location"
+          body={formatLocation}
           sortable
         />
         <Column field="currentCTC" header="Current CTC" sortable />
         <Column field="expectedCTC" header="Expected CTC" sortable />
         <Column field="noticePeriod" header="Notice Period" sortable />
-        <Column field="experienceYears" header="Experience" sortable />
+        <Column field="experienceYears" header="YOE" sortable />
         <Column field="statusName" header="Status" sortable />
         <Column
           field="linkedinProfileUrl"

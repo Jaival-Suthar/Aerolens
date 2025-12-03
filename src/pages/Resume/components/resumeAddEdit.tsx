@@ -27,41 +27,29 @@ interface DropdownFieldProps {
   error?: string;
   disabled?: boolean;
 }
+
 // ---------- CONSTANTS ----------
-// const STATUS_OPTIONS = [
-//   { label: "Selected", value: "Selected" },
-//   { label: "Rejected", value: "Rejected" },
-//   { label: "Interview Pending", value: "Interview Pending" },
-// ];
+const LOCATION_DATA = {
+  "India": ["Ahmedabad", "Bangalore", "Mumbai", "Delhi", "Hyderabad", "Pune", "Chennai"],
+  "USA": ["San Francisco", "New York", "Boston", "Seattle", "Austin", "Chicago"],
+  "UK": ["London", "Manchester", "Birmingham", "Edinburgh"],
+};
 
-
-// const RECRUITER_OPTIONS = [
-//   { label: "Jayraj", value: "Jayraj" },
-//   { label: "Khushi", value: "Khushi" },
-//   { label: "Yash", value: "Yash" },
-// ];
-
-
-const LOCATION_OPTIONS = [
-  { label: "Ahmedabad", value: "Ahmedabad" },
-  { label: "Bangalore", value: "Bangalore" },
-  { label: "San Francisco", value: "San Francisco" },
-];
-
+const AVAILABLE_COUNTRIES = Object.keys(LOCATION_DATA);
 
 // ---------- HELPERS ----------
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRegex = /^(\+?91|91)?[6-9]\d{9}$|^(\+?1)?[2-9]\d{9}$/;
 const linkedinRegex = /^https?:\/\/(www\.)?linkedin\.com\/.*$/i;
 
-
 const INITIAL_FORM: AddEditCandidate = {
   candidateName: "",
   contactNumber: "",
   email: "",
+  recruiterId: null,
   recruiterName: "",
   jobRole: "",
-  preferredJobLocation: "",
+  preferredJobLocation: { city: '', country: '' },
   currentCTC: 0,
   expectedCTC: 0,
   noticePeriod: 0,
@@ -69,12 +57,8 @@ const INITIAL_FORM: AddEditCandidate = {
   statusName: "",
   linkedinProfileUrl: undefined,
   resumeFile: null,
-   // ---------- NEW FIELDS ----------
-   recruiterPhoneNumber: "",
-   recruiterEmail: "",
-   notes: undefined, // optional
+  notes: undefined,
 };
-
 
 // ---------- VALIDATION ----------
 const validateField = (field: keyof AddEditCandidate, value: any) => {
@@ -95,7 +79,9 @@ const validateField = (field: keyof AddEditCandidate, value: any) => {
     case "jobRole":
       return value.trim() ? "" : "Job role is required.";
     case "preferredJobLocation":
-      return value ? "" : "Location is required.";
+      if (!value || !value.country) return "Country is required.";
+      if (!value.city) return "City is required.";
+      return "";
     case "currentCTC":
       return value > 0 ? "" : "Current CTC must be greater than 0.";
     case "expectedCTC":
@@ -111,26 +97,17 @@ const validateField = (field: keyof AddEditCandidate, value: any) => {
       if (!linkedinRegex.test(value)) return "Enter a valid LinkedIn URL.";
       return "";
     case "resumeFile":
-    if (!value) return "";
-    const fileName = value.name.toLowerCase();
-    if (!fileName.endsWith(".pdf") && !fileName.endsWith(".docx"))
-      return "Only PDF and DOCX files are allowed.";
-    if (value.size > 5 * 1024 * 1024)
-      return "File must be smaller than 5MB.";
-    return "";
-    
-    case "recruiterPhoneNumber":
-      if (!value) return "Recruiter phone number is required.";
-      return "";
-    case "recruiterEmail":
-      if (!value) return "Recruiter email is required.";
-      if (!emailRegex.test(value)) return "Enter a valid recruiter email.";
+      if (!value) return "";
+      const fileName = value.name.toLowerCase();
+      if (!fileName.endsWith(".pdf") && !fileName.endsWith(".docx"))
+        return "Only PDF and DOCX files are allowed.";
+      if (value.size > 5 * 1024 * 1024)
+        return "File must be smaller than 5MB.";
       return "";
     default:
       return "";
   }
 };
-
 
 // ---------- COMPONENT ----------
 const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
@@ -142,7 +119,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   const { accessToken } = useAuth();
   const isEditMode = Boolean(selectedResume);
 
-
   const [formData, setFormData] = useState<AddEditCandidate>(INITIAL_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -151,44 +127,66 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   const [statusOptions, setStatusOptions] = useState<{ label: string; value: string }[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
   
+  // Get available cities based on selected country
+  const availableCities = useMemo(() => {
+    if (!formData.preferredJobLocation?.country) return [];
+    return LOCATION_DATA[formData.preferredJobLocation.country as keyof typeof LOCATION_DATA] || [];
+  }, [formData.preferredJobLocation?.country]);
+
   useEffect(() => {
-  const loadLookupData = async () => {
-    if (!accessToken) return;
-    
-    setLoadingOptions(true);
-    try {
-      // Single API call instead of two
-      const { recruiters, statuses } = await fetchLookupData(accessToken);
+    const loadLookupData = async () => {
+      if (!accessToken) return;
+      
+      setLoadingOptions(true);
+      try {
+        const { recruiters, statuses } = await fetchLookupData(accessToken);
 
-      setRecruiterOptions(recruiters.map(r => ({ label: r, value: r })));
-      setStatusOptions(statuses.map(s => ({ label: s, value: s })));
-    } catch (error) {
-      console.error("Error loading lookup data:", error);
-      toast.current?.show({
-        severity: "error",
-        summary: "Error",
-        detail: "Failed to load dropdown options",
-        life: 3000,
-      });
-    } finally {
-      setLoadingOptions(false);
+        setRecruiterOptions(recruiters.map(r => ({ label: r, value: r })));
+        setStatusOptions(statuses.map(s => ({ label: s, value: s })));
+      } catch (error) {
+        console.error("Error loading lookup data:", error);
+        toast.current?.show({
+          severity: "error",
+          summary: "Error",
+          detail: "Failed to load dropdown options",
+          life: 3000,
+        });
+      } finally {
+        setLoadingOptions(false);
+      }
+    };
+
+    if (visible) {
+      loadLookupData();
     }
-  };
-
-  if (visible) {
-    loadLookupData();
-  }
-}, [visible, accessToken]);
+  }, [visible, accessToken]);
 
   // Initialize / Reset form
   useEffect(() => {
-    setFormData(
-      isEditMode ? { ...selectedResume!, resumeFile: null } : INITIAL_FORM
-    );
+    if (isEditMode && selectedResume) {
+      setFormData({
+        candidateName: selectedResume.candidateName,
+        contactNumber: selectedResume.contactNumber,
+        email: selectedResume.email,
+        recruiterId: selectedResume.recruiterId,
+        recruiterName: selectedResume.recruiterName || "",
+        jobRole: selectedResume.jobRole,
+        preferredJobLocation: selectedResume.preferredJobLocation || { city: '', country: '' },
+        currentCTC: selectedResume.currentCTC,
+        expectedCTC: selectedResume.expectedCTC,
+        noticePeriod: selectedResume.noticePeriod,
+        experienceYears: selectedResume.experienceYears,
+        statusName: selectedResume.statusName,
+        linkedinProfileUrl: selectedResume.linkedinProfileUrl || undefined,
+        resumeFile: null,
+        notes: selectedResume.notes || undefined,
+      });
+    } else {
+      setFormData(INITIAL_FORM);
+    }
     setErrors({});
     setSubmitted(false);
   }, [visible, selectedResume, isEditMode]);
-
 
   const handleChange = useCallback(
     (field: keyof AddEditCandidate, value: any) => {
@@ -203,7 +201,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     []
   );
 
-
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
     (Object.keys(formData) as (keyof AddEditCandidate)[]).forEach((key) => {
@@ -214,17 +211,12 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
-
   const handleSave = useCallback(async () => {
-    // 1. Set submitted to true to enable error display
     setSubmitted(true);
     
-    // 2. Validate the form and check the result
     if (!validateForm()) {
-      // If validation fails, stop here. Errors are now set in state and visible.
       return; 
     }
-
 
     try {
       if (isEditMode && selectedResume) {
@@ -241,19 +233,14 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
           experienceYears: formData.experienceYears,
           statusName: formData.statusName,
           linkedinProfileUrl: formData.linkedinProfileUrl || undefined,
-          recruiterPhoneNumber: formData.recruiterPhoneNumber || "", // required
-  recruiterEmail: formData.recruiterEmail,             // required
-  notes: formData.notes?.trim() || "",               // optional
+          notes: formData.notes?.trim() || "",
         };
 
-
         await updateCandidate(accessToken, selectedResume.candidateId, updateData);
-
 
         if (formData.resumeFile) {
           await uploadResume(accessToken, selectedResume.candidateId, formData.resumeFile);
         }
-
 
         toast.current?.show({
           severity: "success",
@@ -271,7 +258,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
         });
       }
 
-
       onSuccess();
       onHide();
     } catch (err: any) {
@@ -285,7 +271,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
           "Something went wrong. Please try again.",
         life: 5000,
       });
-    } finally {
     }
   }, [
     formData,
@@ -297,15 +282,8 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     accessToken,
   ]);
 
-
-  const prefixSymbol = useMemo(
-    () => (formData.preferredJobLocation === "San Francisco" ? "$" : "₹"),
-    [formData.preferredJobLocation]
-  );
-
   const shouldShowError = (field: string): string | undefined =>
-  submitted ? errors[field] : undefined;
-
+    submitted ? errors[field] : undefined;
 
   const dialogFooter = (
     <div className="flex justify-content-end gap-2">
@@ -318,7 +296,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
       />
     </div>
   );
-
 
   return (
     <>
@@ -343,11 +320,10 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             error={shouldShowError("candidateName")}
           />
 
-
           <DropdownField
             id="recruiterName"
             label="Recruiter"
-            value={formData.recruiterName}
+            value={formData.recruiterName || ""}
             options={recruiterOptions}
             onChange={(e: { value: string }) => handleChange("recruiterName", e.value)}
             onBlur={() => handleBlur("recruiterName", formData.recruiterName)}
@@ -356,35 +332,15 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             placeholder={loadingOptions ? "Loading..." : "Select Recruiter"}
           />
 
-<InputField
-            id="recruiterPhoneNumber"
-            label="Recruiter Phone"
-            value={formData.recruiterPhoneNumber}
-            onChange={(e) => handleChange("recruiterPhoneNumber", e.target.value)}
-            onBlur={() => handleBlur("recruiterPhoneNumber", formData.recruiterPhoneNumber)}
-            error={shouldShowError("recruiterPhoneNumber")}
-          />
-
-          <InputField
-            id="recruiterEmail"
-            label="Recruiter Email"
-            value={formData.recruiterEmail}
-            onChange={(e) => handleChange("recruiterEmail", e.target.value)}
-            onBlur={() => handleBlur("recruiterEmail", formData.recruiterEmail)}
-            error={shouldShowError("recruiterEmail")}
-          />
-
           <InputField
             id="notes"
             label="Notes"
-            value={formData.notes || ""} // default to empty string if undefined
-
+            value={formData.notes || ""}
             onChange={(e) => handleChange("notes", e.target.value)}
             onBlur={() => handleBlur("notes", formData.notes)}
             error={shouldShowError("notes")}
             required={false}
           />
-
 
           <InputField
             id="contactNumber"
@@ -396,7 +352,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             error={shouldShowError("contactNumber")}
           />
 
-
           <InputField
             id="email"
             label="Email"
@@ -405,7 +360,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             onBlur={() => handleBlur("email", formData.email)}
             error={shouldShowError("email")}
           />
-
 
           <InputField
             id="jobRole"
@@ -416,39 +370,68 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             error={shouldShowError("jobRole")}
           />
 
+          {/* Country Dropdown */}
+          <div className="field col-12 md:col-6">
+            <label htmlFor="country" className="font-bold">Country *</label>
+            <Dropdown
+              id="country"
+              value={formData.preferredJobLocation?.country || null}
+              options={AVAILABLE_COUNTRIES.map(country => ({ label: country, value: country }))}
+              onChange={(e: { value: string }) => 
+                handleChange("preferredJobLocation", { 
+                  country: e.value, 
+                  city: '' 
+                })
+              }
+              onBlur={() => handleBlur("preferredJobLocation", formData.preferredJobLocation)}
+              placeholder="Select Country"
+              className={shouldShowError("preferredJobLocation") ? "p-invalid" : ""}
+            />
+            {shouldShowError("preferredJobLocation") && (
+              <small className="p-error">{shouldShowError("preferredJobLocation")}</small>
+            )}
+          </div>
 
-          <DropdownField
-            id="preferredJobLocation"
-            label="Preferred Location"
-            value={formData.preferredJobLocation}
-            options={LOCATION_OPTIONS}
-            onChange={(e: { value: string }) => handleChange("preferredJobLocation", e.value)}
-            onBlur={() => handleBlur("preferredJobLocation", formData.preferredJobLocation)}
-            error={shouldShowError("preferredJobLocation")}
-          />
-
+          {/* City Dropdown */}
+          <div className="field col-12 md:col-6">
+            <label htmlFor="city" className="font-bold">City *</label>
+            <Dropdown
+              id="city"
+              value={formData.preferredJobLocation?.city || null}
+              options={availableCities.map(city => ({ label: city, value: city }))}
+              onChange={(e: { value: string }) => 
+                handleChange("preferredJobLocation", { 
+                  country: formData.preferredJobLocation?.country || '', 
+                  city: e.value 
+                })
+              }
+              onBlur={() => handleBlur("preferredJobLocation", formData.preferredJobLocation)}
+              placeholder="Select City"
+              disabled={!formData.preferredJobLocation?.country || availableCities.length === 0}
+              className={shouldShowError("preferredJobLocation") ? "p-invalid" : ""}
+            />
+            {formData.preferredJobLocation?.country && availableCities.length === 0 && (
+              <small className="text-muted">No cities available for selected country</small>
+            )}
+          </div>
 
           <InputNumberField
             id="currentCTC"
             label="Current CTC"
             value={formData.currentCTC}
             onChange={(val: number | null) => handleChange("currentCTC", val)}
-            prefix={prefixSymbol}
             onBlur={() => handleBlur("currentCTC", formData.currentCTC)}
             error={shouldShowError("currentCTC")}
           />
-
 
           <InputNumberField
             id="expectedCTC"
             label="Expected CTC"
             value={formData.expectedCTC}
             onChange={(val: number | null) => handleChange("expectedCTC", val)}
-            prefix={prefixSymbol}
             onBlur={() => handleBlur("expectedCTC", formData.expectedCTC)}
             error={shouldShowError("expectedCTC")}
           />
-
 
           <InputNumberField
             id="noticePeriod"
@@ -459,7 +442,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             error={shouldShowError("noticePeriod")}
           />
 
-
           <InputNumberField
             id="experienceYears"
             label="Experience (Years)"
@@ -468,7 +450,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             onBlur={() => handleBlur("experienceYears", formData.experienceYears)}
             error={shouldShowError("experienceYears")}
           />
-
 
           <DropdownField
             id="statusName"
@@ -482,11 +463,10 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             placeholder={loadingOptions ? "Loading..." : "Select Status"}
           />
 
-
           <InputField
             id="linkedinProfileUrl"
-            label="LinkedIn URL" // Removed * since it's optional
-            value={formData.linkedinProfileUrl || ""} // Handle undefined
+            label="LinkedIn URL"
+            value={formData.linkedinProfileUrl || ""}
             onChange={(e) =>
               handleChange("linkedinProfileUrl", e.target.value || undefined)
             }
@@ -495,7 +475,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             error={shouldShowError("linkedinProfileUrl")}
             required={false}
           />
-
 
           <FileUploadField
             file={formData.resumeFile}
@@ -508,7 +487,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   );
 };
 
-
 // ---------- REUSABLE FIELD COMPONENTS ----------
 interface InputFieldProps {
   id: string;
@@ -520,7 +498,6 @@ interface InputFieldProps {
   error?: string;
   required?: boolean;
 }
-
 
 const InputField = ({ id, label, value, onChange, onBlur, placeholder, error, required = true }: InputFieldProps) => (
   <div className="field col-12 md:col-6">
@@ -538,7 +515,6 @@ const InputField = ({ id, label, value, onChange, onBlur, placeholder, error, re
     {error && <small className="p-error">{error}</small>}
   </div>
 );
-
 
 const DropdownField = ({ 
   id, 
@@ -567,7 +543,6 @@ const DropdownField = ({
   </div>
 );
 
-
 const InputNumberField = ({ id, label, value, onChange, onBlur, prefix, error }: any) => (
   <div className="field col-12 md:col-6">
     <label htmlFor={id} className="font-bold">{label} *</label>
@@ -583,13 +558,11 @@ const InputNumberField = ({ id, label, value, onChange, onBlur, prefix, error }:
   </div>
 );
 
-
 interface FileUploadFieldProps {
   file: File | null;
   onSelect: (file: File) => void;
   error?: string;
 }
-
 
 const FileUploadField = ({ file, onSelect, error }: FileUploadFieldProps) => (
   <div className="field col-12 md:col-6">
@@ -613,6 +586,5 @@ const FileUploadField = ({ file, onSelect, error }: FileUploadFieldProps) => (
     {error && <small className="p-error">{error}</small>}
   </div>
 );
-
 
 export default ResumeAddEdit;
