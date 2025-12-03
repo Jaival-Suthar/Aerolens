@@ -54,10 +54,10 @@ const ResumeTable: React.FC = () => {
   }, [loadResumes]);
 
   const onPageChange = (event: any) => {
-  setFirst(event.first);
-  const newPage = event.page + 1; // PrimeReact pages start from 0
-  setSearchParams({ page: newPage.toString() });
-};
+    setFirst(event.first);
+    const newPage = event.page + 1; // PrimeReact pages start from 0
+    setSearchParams({ page: newPage.toString() });
+  };
 
   /** ------------------- CRUD Handlers ------------------- */
   const handleAdd = () => {
@@ -100,59 +100,59 @@ const ResumeTable: React.FC = () => {
 
   /** ------------------- Resume Actions ------------------- */
   const handleDownloadResume = async (candidateId: number) => {
-  try {
-    if (!accessToken) throw new Error("Unauthorized");
-    const blob = await downloadResume(accessToken, candidateId);
-    
-    // Detect file type from blob's MIME type
-    const fileExtension = blob.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" 
-      ? "docx" 
-      : "pdf";
-    
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `resume_${candidateId}.${fileExtension}`;  // ✅ Dynamic extension
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error("Resume download failed:", error);
-  }
-};
+    try {
+      if (!accessToken) throw new Error("Unauthorized");
+      const blob = await downloadResume(accessToken, candidateId);
+
+      // Detect file type from blob's MIME type
+      const fileExtension = blob.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ? "docx"
+        : "pdf";
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `resume_${candidateId}.${fileExtension}`;  // ✅ Dynamic extension
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Resume download failed:", error);
+    }
+  };
 
   const handlePreviewResume = async (candidateId: number) => {
-  try {
-    if (!accessToken) throw new Error("Unauthorized");
-    
-    const previewUrl = `${import.meta.env.VITE_BASE_URL}/candidate/${candidateId}/resume/preview`;
-    
-    const response = await fetch(previewUrl, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    try {
+      if (!accessToken) throw new Error("Unauthorized");
 
-    if (!response.ok) throw new Error("Preview failed");
+      const previewUrl = `${import.meta.env.VITE_BASE_URL}/candidate/${candidateId}/resume/preview`;
 
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    window.open(url, "_blank");
-    
-    // Clean up after a delay to ensure the window opens
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  } catch (error) {
-    console.error("Resume preview failed:", error);
-  }
-};
+      const response = await fetch(previewUrl, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) throw new Error("Preview failed");
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+
+      // Clean up after a delay to ensure the window opens
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      console.error("Resume preview failed:", error);
+    }
+  };
   /** ------------------- Column Templates ------------------- */
   const resumeActionTemplate = (candidate: Candidate) => {
     if (!candidate.resumeFilename) {
       return <span className="text-400">No Resume</span>;
     }
-
+    
     return (
       <div className="flex gap-1">
         <Button
@@ -186,6 +186,39 @@ const ResumeTable: React.FC = () => {
       </a>
     );
   };
+
+  /** ------------------- Custom Combined Cell Templates ------------------- */
+
+const candidateContactTemplate = (row: Candidate) => {
+  return (
+    <div>
+      <div>{row.contactNumber || "-"}</div>
+      <div className="text-sm text-color-secondary">{row.email || "-"}</div>
+    </div>
+  );
+};
+
+const recruiterContactTemplate = (row: Candidate) => {
+  const phone = row.recruiterContact;
+  const email = row.recruiterEmail;
+
+  return (
+    <div>
+      <div>{phone || "-"}</div>
+      <div className="text-sm text-color-secondary">{email || "-"}</div>
+    </div>
+  );
+};
+
+const formatLocation = (row: Candidate) => {
+  const city = row.preferredJobLocation?.city || "";
+  const country = row.preferredJobLocation?.country || "";
+
+  if (!city && !country) return "-";
+
+  return `${city}, ${country}`;
+};
+
 
   /** ------------------- JSX ------------------- */
   return (
@@ -236,19 +269,31 @@ const ResumeTable: React.FC = () => {
 
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
         <Column field="candidateName" header="Candidate Name" sortable />
-        <Column field="contactNumber" header="Contact Number" sortable />
-        <Column field="email" header="Email" sortable />
+        <Column
+          header="Candidate Contact"
+          body={candidateContactTemplate}
+          sortable
+        />
         <Column field="recruiterName" header="Recruiter" sortable />
+        {/* new columns */}
+        <Column
+          header="Recruiter Contact"
+          body={recruiterContactTemplate}
+          sortable
+        />
+        <Column field="notes" header="Notes" body={(rowData) => rowData.notes || "-"} sortable />
+
+
         <Column field="jobRole" header="Role" sortable />
         <Column
-          field="preferredJobLocation"
-          header="Preferred Location"
+          header="Location"
+          body={formatLocation}
           sortable
         />
         <Column field="currentCTC" header="Current CTC" sortable />
         <Column field="expectedCTC" header="Expected CTC" sortable />
         <Column field="noticePeriod" header="Notice Period" sortable />
-        <Column field="experienceYears" header="Experience" sortable />
+        <Column field="experienceYears" header="YOE" sortable />
         <Column field="statusName" header="Status" sortable />
         <Column
           field="linkedinProfileUrl"

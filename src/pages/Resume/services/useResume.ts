@@ -6,6 +6,7 @@ import type {
   Candidate,
   AddEditCandidate,
   CandidateUpdatePayload,
+  CandidateCreateData,
 } from "../types/resumeTypes";
 
 /* ------------------------------------------------------------------------- */
@@ -24,44 +25,74 @@ export interface LookupData {
   statuses: string[];
 }
 
-export const fetchLookupData = async (
-  accessToken: string | null
-): Promise<LookupData> => {
+// export const fetchLookupData = async (
+//   accessToken: string | null
+// ): Promise<LookupData> => {
+//   try {
+//     const endpoint = `/lookup?page=1&limit=100`;
+//     const data = await apiFetch<LookupItem[]>(
+//       endpoint,
+//       { method: "GET" },
+//       accessToken || undefined
+//     );
+
+//     const recruiters = (data || [])
+//       .filter((item: LookupItem) => item.tag === "recruiter")
+//       .map((item: LookupItem) => item.value);
+
+//     const statuses = (data || [])
+//       .filter((item: LookupItem) => item.tag === "candidateStatus")
+//       .map((item: LookupItem) => item.value);
+//     return { recruiters, statuses };
+//   } catch (error) {
+//     logger.error("Error fetching lookup data:", error);
+//     throw error;
+//   }
+// };
+
+// Keep the individual functions for backward compatibility if needed
+// export const fetchRecruiters = async (
+//   accessToken: string | null
+// ): Promise<string[]> => {
+//   const { recruiters } = await fetchLookupData(accessToken);
+//   return recruiters;
+// };
+
+// export const fetchCandidateStatuses = async (
+//   accessToken: string | null
+// ): Promise<string[]> => {
+//   const { statuses } = await fetchLookupData(accessToken);
+//   return statuses;
+// };
+/* ------------------------------------------------------------------------- */
+/*  CACHED LOOKUP FETCH – /candidate/create-data                             */
+/* ------------------------------------------------------------------------- */
+
+let cachedCandidateCreateData: CandidateCreateData | null = null;
+
+export const fetchCandidateCreateData = async (
+  accessToken: string | null,
+  forceRefresh = false
+): Promise<CandidateCreateData> => {
   try {
-    const endpoint = `/lookup?page=1&limit=100`;
-    const data = await apiFetch<LookupItem[]>(
+    // Return cached copy unless explicitly refreshed
+    if (cachedCandidateCreateData && !forceRefresh) {
+      return cachedCandidateCreateData;
+    }
+
+    const endpoint = `/candidate/create-data`;
+    const data = await apiFetch<CandidateCreateData>(
       endpoint,
       { method: "GET" },
       accessToken || undefined
     );
 
-    const recruiters = (data || [])
-      .filter((item: LookupItem) => item.tag === "recruiter")
-      .map((item: LookupItem) => item.value);
-
-    const statuses = (data || [])
-      .filter((item: LookupItem) => item.tag === "candidateStatus")
-      .map((item: LookupItem) => item.value);
-    return { recruiters, statuses };
+    cachedCandidateCreateData = data;
+    return data;
   } catch (error) {
-    logger.error("Error fetching lookup data:", error);
+    logger.error("Error fetching create-data:", error);
     throw error;
   }
-};
-
-// Keep the individual functions for backward compatibility if needed
-export const fetchRecruiters = async (
-  accessToken: string | null
-): Promise<string[]> => {
-  const { recruiters } = await fetchLookupData(accessToken);
-  return recruiters;
-};
-
-export const fetchCandidateStatuses = async (
-  accessToken: string | null
-): Promise<string[]> => {
-  const { statuses } = await fetchLookupData(accessToken);
-  return statuses;
 };
 
 /* ------------------------------------------------------------------------- */
@@ -100,15 +131,18 @@ const buildCandidateFormData = (candidate: AddEditCandidate): FormData => {
   fd.append("candidateName", candidate.candidateName);
   fd.append("contactNumber", candidate.contactNumber);
   fd.append("email", candidate.email);
-  fd.append("recruiterName", candidate.recruiterName);
+  fd.append("recruiterName", candidate.recruiterName ?? "");
   fd.append("jobRole", candidate.jobRole);
-  fd.append("preferredJobLocation", candidate.preferredJobLocation);
+  if (candidate.preferredJobLocation) {
+    fd.append("preferredJobLocation[city]", candidate.preferredJobLocation.city);
+    fd.append("preferredJobLocation[country]", candidate.preferredJobLocation.country);
+  }
 
   fd.append("currentCTC", String(candidate.currentCTC));
   fd.append("expectedCTC", String(candidate.expectedCTC));
   fd.append("noticePeriod", String(candidate.noticePeriod));
   fd.append("experienceYears", String(candidate.experienceYears));
-
+  if (candidate.notes) fd.append("notes", candidate.notes);
   if (candidate.linkedinProfileUrl && candidate.linkedinProfileUrl.trim()) {
     fd.append("linkedinProfileUrl", candidate.linkedinProfileUrl);
   }
