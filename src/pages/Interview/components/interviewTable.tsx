@@ -7,6 +7,7 @@ import DeleteButton from "../../../shared/DeleteButton";
 import { Toast } from "primereact/toast";
 import InterviewDelete from "./interviewDelete";
 import InterviewAddEditForm from "./interviewAddEdit";
+import SearchButton from "../../../shared/SearchButton";
 
 import { Interview } from "../types/interviewTypes";
 import { getInterviews } from "../services/interviewService";
@@ -34,6 +35,8 @@ const convert24to12Hour = (time24: string): string => {
 
 const InterviewTable: React.FC = () => {
   const { accessToken } = useAuth();
+  const [searchText, setSearchText] = useState("");
+
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -126,6 +129,16 @@ const InterviewTable: React.FC = () => {
   const endTimeBodyTemplate = (rowData: Interview) => {
   return convert24to12Hour(rowData.toTime);
 };
+const filteredInterviews = interviews.filter((item) => {
+  if (!searchText.trim()) return true;
+
+  const text = searchText.toLowerCase();
+
+  return Object.values(item).some((val) =>
+    String(val).toLowerCase().includes(text)
+  );
+});
+
 
   return (
     <>
