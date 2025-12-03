@@ -26,6 +26,23 @@ const checkStatus = async (res: Response) => {
   }
 };
 
+// GET FORM DATA (candidates, interviewers, recruiters)
+export const getInterviewFormData = async (token: string) => {
+  const url = `${BASE_URL}/interview/create-data`;
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: makeHeaders(token),
+    });
+
+    return await checkStatus(res);
+  } catch (err) {
+    console.error("[getInterviewFormData] ERROR:", err);
+    throw err;
+  }
+};
+
 // ---------------------- INTERVIEW SERVICE WITH DEBUG ----------------------
 
 export const getInterviews = async (token: string) => {

@@ -6,6 +6,8 @@ import { Dropdown } from "primereact/dropdown";
 import { InputNumber } from "primereact/inputnumber";
 import { Toast } from "primereact/toast";
 import { FaCheck, FaPencilAlt, FaClock, FaCalendarAlt } from "react-icons/fa";
+import { getInterviewFormData, createInterview, updateInterview } from "../services/interviewService";
+import { useAuth } from "../../../shared/auth/AuthContext";
 
 // Mock types - replace with actual imports
 interface Interview {
@@ -76,22 +78,10 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
 }) => {
   const toast = useRef<Toast>(null);
   const [loading, setLoading] = useState(false);
-  
-  // Mock data for dropdowns - Replace with actual API calls
-  const mockCandidates = [
-    { candidateId: 1, name: "John Doe" },
-    { candidateId: 2, name: "Jane Smith" },
-    { candidateId: 3, name: "Mike Johnson" },
-    { candidateId: 4, name: "Sarah Williams" },
-    { candidateId: 5, name: "Robert Brown" }
-  ];
-
-  const mockTeamMembers = [
-    { memberId: 1, name: "Alice Cooper" },
-    { memberId: 2, name: "Bob Martin" },
-    { memberId: 3, name: "Charlie Davis" },
-    { memberId: 4, name: "Diana Prince" }
-  ];
+  const [candidates, setCandidates] = useState<any[]>([]);
+  const [interviewers, setInterviewers] = useState<any[]>([]);
+  const [recruiters, setRecruiters] = useState<any[]>([]);
+  const { accessToken } = useAuth();
 
   const [formData, setFormData] = useState<FormData>({
     interviewDate: null,
@@ -103,22 +93,65 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
   });
 
   const [errors, setErrors] = useState<ValidationErrors>({});
+  
+  const loadFormData = async () => {
+  try {
+    const token = localStorage.getItem("accessToken"); // or use AuthContext
+    const res = await getInterviewFormData(token!);
+
+    const data = res.data;
+
+    setCandidates(
+      data.candidates.map((c: any) => ({
+        label: c.candidateName,
+        value: c.candidateId,
+      }))
+    );
+
+    setInterviewers(
+      data.interviewers.map((i: any) => ({
+        label: i.interviewerName,
+        value: i.interviewerId,
+      }))
+    );
+
+    setRecruiters(
+      data.recruiters.map((r: any) => ({
+        label: r.recruiterName,
+        value: r.recruiterId,
+      }))
+    );
+
+  } catch (err: any) {
+    toast.current?.show({
+      severity: "error",
+      summary: "Error Loading Form",
+      detail: err.message || "Failed to fetch form data",
+      life: 3000,
+    });
+  }
+};
 
   // Effect to set form data on Edit
   useEffect(() => {
-    if (visible && isEdit && interviewToEdit) {
-      setFormData({
-        interviewDate: new Date(interviewToEdit.interviewDate),
-        fromTime: interviewToEdit.fromTime,
-        durationMinutes: interviewToEdit.durationMinutes,
-        candidateId: interviewToEdit.candidateId,
-        interviewerId: interviewToEdit.interviewerId,
-        scheduledById: interviewToEdit.scheduledById,
-      });
-    } else if (visible && !isEdit) {
-      resetForm();
-    }
-  }, [visible, isEdit, interviewToEdit]);
+  if (visible) {
+    loadFormData(); // ← NEW FUNCTION
+  }
+
+  if (visible && isEdit && interviewToEdit) {
+    setFormData({
+      interviewDate: new Date(interviewToEdit.interviewDate),
+      fromTime: interviewToEdit.fromTime,
+      durationMinutes: interviewToEdit.durationMinutes,
+      candidateId: interviewToEdit.candidateId,
+      interviewerId: interviewToEdit.interviewerId,
+      scheduledById: interviewToEdit.scheduledById,
+    });
+  } else if (visible && !isEdit) {
+    resetForm();
+  }
+}, [visible, isEdit, interviewToEdit]);
+
 
   // Validation
   const validateForm = (): boolean => {
@@ -199,81 +232,55 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
 
   // Submit Handler
   const handleSubmit = async () => {
-    if (!validateForm()) return;
+  if (!validateForm()) return;
 
-    setLoading(true);
-    try {
-      const action = isEdit ? "update" : "create";
+  setLoading(true);
 
-      if (isEdit && interviewToEdit) {
-        // PATCH/EDIT Logic
-        const payload: any = {};
+  const payload = {
+    interviewDate: formData.interviewDate,
+    fromTime: formData.fromTime,
+    durationMinutes: formData.durationMinutes,
+    candidateId: formData.candidateId,
+    interviewerId: formData.interviewerId,
+    scheduledById: formData.scheduledById,
+  };
 
-        if (formData.interviewDate?.toISOString().split('T')[0] !== interviewToEdit.interviewDate) {
-          payload.interviewDate = formData.interviewDate?.toISOString().split('T')[0];
-        }
-        if (formData.fromTime !== interviewToEdit.fromTime) {
-          payload.fromTime = formData.fromTime;
-        }
-        if (formData.durationMinutes !== interviewToEdit.durationMinutes) {
-          payload.durationMinutes = formData.durationMinutes;
-        }
+  try {
+    if (isEdit && interviewToEdit) {
+      await updateInterview(interviewToEdit.interviewId, payload, accessToken!);
 
-        console.log("PATCH Payload:", payload);
-        // const response = await updateInterview(interviewToEdit.interviewId, payload, accessToken);
-        
-        // Mock success
-        setTimeout(() => {
-          toast.current?.show({
-            severity: "success",
-            summary: "Success",
-            detail: `Interview ${action}d successfully`,
-            life: 3000,
-          });
-          resetForm();
-          onSuccess();
-          onHide();
-          setLoading(false);
-        }, 1000);
-
-      } else {
-        // POST/CREATE Logic
-        const payload = {
-          interviewDate: formData.interviewDate?.toISOString().split('T')[0],
-          fromTime: formData.fromTime,
-          durationMinutes: formData.durationMinutes,
-          candidateId: formData.candidateId,
-          interviewerId: formData.interviewerId,
-          scheduledById: formData.scheduledById,
-        };
-
-        console.log("POST Payload:", payload);
-        // const response = await createInterview(payload, accessToken);
-
-        // Mock success
-        setTimeout(() => {
-          toast.current?.show({
-            severity: "success",
-            summary: "Success",
-            detail: `Interview ${action}d successfully`,
-            life: 3000,
-          });
-          resetForm();
-          onSuccess();
-          onHide();
-          setLoading(false);
-        }, 1000);
-      }
-    } catch (error: any) {
       toast.current?.show({
-        severity: "error",
-        summary: "Error",
-        detail: error.message || `Failed to ${isEdit ? "update" : "create"} interview`,
+        severity: "success",
+        summary: "Success",
+        detail: "Interview updated successfully",
         life: 3000,
       });
-      setLoading(false);
+    } else {
+      await createInterview(payload, accessToken!);
+
+      toast.current?.show({
+        severity: "success",
+        summary: "Success",
+        detail: "Interview created successfully",
+        life: 3000,
+      });
     }
-  };
+
+    resetForm();
+    onSuccess();
+    onHide();
+  } catch (err: any) {
+    toast.current?.show({
+      severity: "error",
+      summary: "Error",
+      detail: err.message || "Something went wrong",
+      life: 3000,
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // Helpers
   const resetForm = () => {
@@ -368,22 +375,15 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
             <Dropdown
               id="candidate"
               value={formData.candidateId}
-              options={mockCandidates}
+              options={candidates}
               onChange={(e) => handleInputChange("candidateId", e.value)}
-              optionLabel="name"
-              optionValue="candidateId"
               placeholder="Select a candidate"
               filter
               className={errors.candidateId ? "p-invalid" : ""}
-              disabled={loading || isEdit}
-              emptyMessage="No candidates available"
+              disabled={loading}
             />
+
             {errors.candidateId && <small className="p-error">{errors.candidateId}</small>}
-            {isEdit && (
-              <small className="text-500">
-                Candidate cannot be changed during edit
-              </small>
-            )}
           </div>
 
           {/* Interview Date */}
@@ -473,22 +473,14 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
             <Dropdown
               id="interviewer"
               value={formData.interviewerId}
-              options={mockTeamMembers}
+              options={interviewers}
               onChange={(e) => handleInputChange("interviewerId", e.value)}
-              optionLabel="name"
-              optionValue="memberId"
               placeholder="Select interviewer"
               filter
               className={errors.interviewerId ? "p-invalid" : ""}
-              disabled={loading || isEdit}
-              emptyMessage="No team members available"
+              disabled={loading}
             />
             {errors.interviewerId && <small className="p-error">{errors.interviewerId}</small>}
-            {isEdit && (
-              <small className="text-500">
-                Interviewer cannot be changed during edit
-              </small>
-            )}
           </div>
 
           {/* Scheduled By Dropdown */}
@@ -499,22 +491,13 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
             <Dropdown
               id="scheduledBy"
               value={formData.scheduledById}
-              options={mockTeamMembers}
+              options={recruiters}
               onChange={(e) => handleInputChange("scheduledById", e.value)}
-              optionLabel="name"
-              optionValue="memberId"
-              placeholder="Select scheduler"
+              placeholder="Select recruiter"
               filter
               className={errors.scheduledById ? "p-invalid" : ""}
-              disabled={loading || isEdit}
-              emptyMessage="No team members available"
             />
             {errors.scheduledById && <small className="p-error">{errors.scheduledById}</small>}
-            {isEdit && (
-              <small className="text-500">
-                Scheduler cannot be changed during edit
-              </small>
-            )}
           </div>
         </div>
       </Dialog>

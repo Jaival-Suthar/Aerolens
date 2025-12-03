@@ -1,10 +1,10 @@
-import React, { useRef } from "react";
-import { Toast } from "primereact/toast";
-import { confirmDialog } from "primereact/confirmdialog";
-import { deleteInterview } from "../services/interviewService";
-import { Interview } from "../types/interviewTypes";
+import React, { useState, useRef } from "react";
 import { Dialog } from "primereact/dialog";
-import { Button } from "primereact/button";
+import { Toast } from "primereact/toast";
+import DialogDeleteButton from "../../../shared/DialogDeleteButton";
+import { Interview } from "../types/interviewTypes";
+import { deleteInterview } from "../services/interviewService";
+import { useAuth } from "../../../shared/auth/AuthContext";
 
 type InterviewDeleteProps = {
   visible: boolean;
@@ -21,76 +21,93 @@ const InterviewDelete: React.FC<InterviewDeleteProps> = ({
   onSuccess,
   onClearSelection,
 }) => {
+  const [loading, setLoading] = useState<boolean>(false);
   const toast = useRef<Toast>(null);
+  const { accessToken } = useAuth();
 
-  const handleDelete = () => {
+  const handleDelete = async (): Promise<void> => {
     if (!selectedInterview) return;
 
-    confirmDialog({
-      message: `Are you sure you want to delete the interview of ${selectedInterview.candidateName}?`,
-      header: "Confirm Delete",
-      icon: "pi pi-exclamation-triangle",
-      acceptClassName: "p-button-danger",
-      accept: async () => {
-        try {
-          const token = localStorage.getItem("token");
-          if (!token) throw new Error("No auth token found");
+    if (!accessToken) {
+      toast.current?.show({
+        severity: "error",
+        summary: "Auth Error",
+        detail: "No token found. Please log in again.",
+        life: 3000,
+      });
+      return;
+    }
 
-          const response = await deleteInterview(selectedInterview.interviewId, token);
-          if (response.success) {
-            toast.current?.show({
-              severity: "success",
-              summary: "Deleted",
-              detail: "Interview deleted successfully",
-              life: 3000,
-            });
-            onSuccess();
-            onClearSelection();
-            onHide();
-          } else {
-            toast.current?.show({
-              severity: "error",
-              summary: "Error",
-              detail: response.message,
-              life: 3000,
-            });
-          }
-        } catch (error: any) {
-          toast.current?.show({
-            severity: "error",
-            summary: "Error",
-            detail: error.message,
-            life: 3000,
-          });
-        }
-      },
-    });
+    setLoading(true);
+
+    try {
+      const response = await deleteInterview(selectedInterview.interviewId, accessToken);
+
+      if (response.success) {
+        toast.current?.show({
+          severity: "success",
+          summary: "Deleted",
+          detail: `Interview for "${selectedInterview.candidateName}" deleted successfully`,
+          life: 3000,
+        });
+
+        onClearSelection();
+        onSuccess();
+        onHide();
+      } else {
+        toast.current?.show({
+          severity: "error",
+          summary: "Error",
+          detail: response.message || "Failed to delete interview",
+          life: 3000,
+        });
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: error.message || "Failed to delete interview. Please try again.",
+        life: 3000,
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const handleCancel = (): void => {
+    onHide();
+  };
+
+  const dialogFooter = (
+    <div className="flex justify-content-end gap-2">
+      <DialogDeleteButton onCancel={handleCancel} onDelete={handleDelete} loading={loading} />
+    </div>
+  );
+
   return (
-    <Dialog
-      header="Delete Interview"
-      visible={visible}
-      style={{ width: "400px" }}
-      onHide={onHide}
-      modal
-      footer={
-        <div className="flex justify-content-end gap-2">
-          <Button label="Cancel" className="p-button-secondary" onClick={onHide} />
-          <Button label="Delete" className="p-button-danger" onClick={handleDelete} />
+    <>
+      {/* Toast outside Dialog */}
+      <Toast ref={toast} position="top-right" />
+
+      <Dialog
+        visible={visible}
+        onHide={handleCancel}
+        header="Confirm Deletion"
+        footer={dialogFooter}
+        style={{ width: "400px" }}
+        modal
+        className="p-fluid"
+      >
+        <div className="confirmation-content">
+          <p>
+            Are you sure you want to delete the interview for candidate{" "}
+            <strong>"{selectedInterview?.candidateName}"</strong>?
+          </p>
+          <p className="text-sm text-600">This action cannot be undone.</p>
         </div>
-      }
-    >
-      <Toast ref={toast} />
-      {selectedInterview ? (
-        <p>
-          Are you sure you want to delete the interview of{" "}
-          <strong>{selectedInterview.candidateName}</strong>?
-        </p>
-      ) : (
-        <p>No interview selected.</p>
-      )}
-    </Dialog>
+      </Dialog>
+    </>
   );
 };
 
