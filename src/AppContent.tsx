@@ -7,6 +7,7 @@ const Client = lazy(() => import('./pages/ClientPage/page'));
 const Home = lazy(() => import('./pages/Dashboard/page'));
 const JobProfile = lazy(() => import('./pages/JobProfile/page'));
 const Resume = lazy(() => import('./pages/Resume/page'));
+const Interview = lazy(() => import('./pages/Interview/page')); // ⭐️ NEW LAZY IMPORT
 const LookupPage = lazy(() => import('./pages/Lookup/page'));
 const LoginPage = lazy(() => import('./pages/Login/Login'));
 const SignUpPage = lazy(() => import('./pages/Signup/page'));
@@ -71,6 +72,7 @@ const AppContent: React.FC = () => {
             <Route path="/client" element={<AppLayout><Client /></AppLayout>} />
             <Route path="/job-profile" element={<AppLayout><JobProfile /></AppLayout>} />
             <Route path="/resume" element={<AppLayout><Resume /></AppLayout>} />
+            <Route path="/interview" element={<AppLayout><Interview /></AppLayout>} />
             <Route path="/lookup-data" element={<AppLayout><LookupPage /></AppLayout>} />
             <Route path="/members" element={<AppLayout><Members /></AppLayout>} />
             <Route path="*" element={<NotFound />} />
