@@ -4,11 +4,9 @@ import { Column } from "primereact/column";
 import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
-import RecordResultsButton from "./RecordResultsButton";
 import { Toast } from "primereact/toast";
 import InterviewDelete from "./interviewDelete";
 import InterviewAddEditForm from "./interviewAddEdit";
-import InterviewRoundsDialog from "./InterviewRoundsDialog";
 
 import { Interview } from "../types/interviewTypes";
 import { getInterviews } from "../services/interviewService";
@@ -39,9 +37,7 @@ const InterviewTable: React.FC = () => {
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showAddEditDialog, setShowAddEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showRoundsDialog, setShowRoundsDialog] = useState(false);
   const [visible, setVisible] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
@@ -105,40 +101,12 @@ const InterviewTable: React.FC = () => {
     if (selectedInterview) setShowDeleteDialog(true);
   };
 
-  const handleRecordResults = () => {
-    if (!selectedInterview) return;
-    
-    // Allow opening dialog irrespective of status for now
-    // TODO: Uncomment below validation once status workflow is finalized
-    /*
-    if (selectedInterview.status !== 'COMPLETED') {
-      toast.current?.show({
-        severity: "warn",
-        summary: "Warning",
-        detail: "Please mark interview as completed before recording results",
-      });
-      return;
-    }
-    */
-    
-    setShowRoundsDialog(true);
-  };
+  
 
   const handleDeleteSuccess = () => {
     setShowDeleteDialog(false);
     setSelectedInterview(null);
     fetchInterviews();
-  };
-
-  const handleRoundsSuccess = () => {
-    setShowRoundsDialog(false);
-    setSelectedInterview(null);
-    fetchInterviews();
-    toast.current?.show({
-      severity: "success",
-      summary: "Success",
-      detail: "Interview results recorded successfully",
-    });
   };
 
   /* ------------------------------------------------------------------
@@ -165,11 +133,6 @@ const InterviewTable: React.FC = () => {
       <div className="flex justify-content-between align-items-center mb-2">
         <h2>Interviews</h2>
         <div className="flex gap-2 align-items-center">
-          <RecordResultsButton 
-            onClick={handleRecordResults} 
-            disabled={!selectedInterview}
-          />
-          
           <AddButton onClick={handleAdd} />
           <EditButton onClick={handleEdit} disabled={!selectedInterview} />
           <DeleteButton onClick={handleDelete} disabled={!selectedInterview} />
@@ -210,21 +173,6 @@ const InterviewTable: React.FC = () => {
           body={endTimeBodyTemplate}
         />
         <Column field="durationMinutes" header="Duration (min)" />
-        
-        {/* NEW: Status column to show interview state */}
-        {/* <Column 
-          field="status" 
-          header="Status"
-          body={(row) => (
-            <span className={`badge ${
-              row.status === 'COMPLETED' ? 'badge-success' : 
-              row.status === 'SCHEDULED' ? 'badge-info' : 
-              'badge-secondary'
-            }`}>
-              {row.status || 'SCHEDULED'}
-            </span>
-          )}
-        /> */}
       </DataTable>
 
       {/* Existing Add/Edit Dialog for scheduling */}
@@ -238,15 +186,6 @@ const InterviewTable: React.FC = () => {
           fetchInterviews();
         }}
       />
-
-      {/* NEW: Rounds Dialog for post-interview results */}
-      <InterviewRoundsDialog
-        visible={showRoundsDialog}
-        interview={selectedInterview}
-        onHide={() => setShowRoundsDialog(false)}
-        onSuccess={handleRoundsSuccess}
-      />
-
       <InterviewDelete
         visible={showDeleteDialog}
         onHide={() => setShowDeleteDialog(false)}
