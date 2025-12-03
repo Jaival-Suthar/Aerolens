@@ -9,6 +9,7 @@ export interface Interview {
   scheduledByName: string;
   interviewDate: string;
   fromTime: string;
+  toTime: string;
   durationMinutes: number;
   
   // New fields for rounds management
@@ -43,6 +44,7 @@ export interface Interview {
   export interface CreateInterviewRequest {
     interviewDate: string;      // ISO date string, cannot be in the past
     fromTime: string;           // "HH:MM"
+    toTime: string;             // "HH:MM"
     durationMinutes: number;    // min 15, max 480
     candidateId: number;
     interviewerId: number;

@@ -4,15 +4,35 @@ import { Column } from "primereact/column";
 import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
-import RecordResultsButton from "./RecordResultsButton"; // NEW
+import RecordResultsButton from "./RecordResultsButton";
 import { Toast } from "primereact/toast";
 import InterviewDelete from "./interviewDelete";
 import InterviewAddEditForm from "./interviewAddEdit";
-import InterviewRoundsDialog from "./InterviewRoundsDialog"; // NEW
+import InterviewRoundsDialog from "./InterviewRoundsDialog";
 
 import { Interview } from "../types/interviewTypes";
 import { getInterviews } from "../services/interviewService";
 import { useAuth } from "../../../shared/auth/AuthContext";
+
+// ============================================================
+// TIME CONVERSION UTILITY
+// ============================================================
+const convert24to12Hour = (time24: string): string => {
+  if (!time24) return '';
+  
+  const [hours, minutes] = time24.split(':').map(Number);
+  
+  let hour12 = hours % 12;
+  if (hour12 === 0) hour12 = 12; // Handle midnight (00:00) and noon (12:00)
+  
+  const period = hours >= 12 ? 'PM' : 'AM';
+  
+  return `${String(hour12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${period}`;
+};
+
+// ============================================================
+// MAIN COMPONENT
+// ============================================================
 
 const InterviewTable: React.FC = () => {
   const { accessToken } = useAuth();
@@ -21,7 +41,7 @@ const InterviewTable: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showRoundsDialog, setShowRoundsDialog] = useState(false); // NEW
+  const [showRoundsDialog, setShowRoundsDialog] = useState(false);
   const [visible, setVisible] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
@@ -31,7 +51,6 @@ const InterviewTable: React.FC = () => {
       FETCH INTERVIEWS
   ------------------------------------------------------------------ */
   const fetchInterviews = useCallback(async () => {
-
     if (!accessToken) {
       return;
     }
@@ -86,7 +105,6 @@ const InterviewTable: React.FC = () => {
     if (selectedInterview) setShowDeleteDialog(true);
   };
 
-  // NEW: Handle Record Results button click
   const handleRecordResults = () => {
     if (!selectedInterview) return;
     
@@ -123,13 +141,30 @@ const InterviewTable: React.FC = () => {
     });
   };
 
+  /* ------------------------------------------------------------------
+      COLUMN BODY TEMPLATES
+  ------------------------------------------------------------------ */
+  
+  // Format date in DD/MM/YYYY
+  const dateBodyTemplate = (rowData: Interview) => {
+    return new Date(rowData.interviewDate).toLocaleDateString("en-GB");
+  };
+
+  // Format time from 24-hour to 12-hour with AM/PM
+  const timeBodyTemplate = (rowData: Interview) => {
+    return convert24to12Hour(rowData.fromTime);
+  };
+
+  const endTimeBodyTemplate = (rowData: Interview) => {
+  return convert24to12Hour(rowData.toTime);
+};
+
   return (
     <>
       <Toast ref={toast} />
       <div className="flex justify-content-between align-items-center mb-2">
         <h2>Interviews</h2>
         <div className="flex gap-2 align-items-center">
-          {/* NEW: Record Results Button - Special CTA */}
           <RecordResultsButton 
             onClick={handleRecordResults} 
             disabled={!selectedInterview}
@@ -161,15 +196,19 @@ const InterviewTable: React.FC = () => {
         <Column
           field="interviewDate"
           header="Date"
-          body={(row) => new Date(row.interviewDate).toLocaleDateString("en-GB")}
+          body={dateBodyTemplate}
         />
 
         <Column
           field="fromTime"
           header="Start Time"
-          body={(row) => row.fromTime?.slice(0, 5)}
+          body={timeBodyTemplate}
         />
-
+        <Column
+          field="toTime"
+          header="End Time"
+          body={endTimeBodyTemplate}
+        />
         <Column field="durationMinutes" header="Duration (min)" />
         
         {/* NEW: Status column to show interview state */}
