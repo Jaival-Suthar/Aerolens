@@ -4,8 +4,7 @@ import InterviewTable from './components/interviewTable';
 
 const InterviewPage: React.FC = () => {
   return (
-    <div className="p-4">
-      <h2>Interviews</h2>
+    <div className="p-2">
       <InterviewTable />
     </div>
   );

@@ -1,8 +1,8 @@
 import React, { useRef } from "react";
 import { Toast } from "primereact/toast";
 import { confirmDialog } from "primereact/confirmdialog";
-import { deleteInterview } from "../services/useInterview";
-import { Interview } from "../types/useInterview";
+import { deleteInterview } from "../services/interviewService";
+import { Interview } from "../types/interviewTypes";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 

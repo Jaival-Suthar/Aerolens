@@ -4,68 +4,106 @@ import { Column } from "primereact/column";
 import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
+import RecordResultsButton from "./RecordResultsButton"; // NEW
 import { Toast } from "primereact/toast";
-import { confirmDialog } from "primereact/confirmdialog";
-
-// import InterviewAddEdit from "./interviewAddEdit";
 import InterviewDelete from "./interviewDelete";
+import InterviewAddEditForm from "./interviewAddEdit";
+import InterviewRoundsDialog from "./InterviewRoundsDialog"; // NEW
 
-import { Interview } from "../types/useInterview";
-import { getInterviews, deleteInterview } from "../services/useInterview";
+import { Interview } from "../types/interviewTypes";
+import { getInterviews } from "../services/interviewService";
+import { useAuth } from "../../../shared/auth/AuthContext";
 
 const InterviewTable: React.FC = () => {
+  const { accessToken } = useAuth();
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
   const [loading, setLoading] = useState(false);
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showRoundsDialog, setShowRoundsDialog] = useState(false); // NEW
+  const [visible, setVisible] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
-
   const toast = useRef<Toast>(null);
 
+  /* ------------------------------------------------------------------
+      FETCH INTERVIEWS
+  ------------------------------------------------------------------ */
   const fetchInterviews = useCallback(async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+
+    if (!accessToken) {
+      return;
+    }
 
     setLoading(true);
+
     try {
-      const response = await getInterviews(token);
-      if (response.success) setInterviews(response.data);
-      else toast.current?.show({ severity: "error", summary: "Error", detail: response.message });
-    } catch (error: any) {
-      console.error(error);
-      toast.current?.show({ severity: "error", summary: "Error", detail: "Failed to fetch interviews" });
+      const response = await getInterviews(accessToken);
+      if (response?.success) {
+        setInterviews(Array.isArray(response.data) ? response.data : []);
+      } else {
+        console.error("API Error:", response?.message);
+        toast.current?.show({
+          severity: "error",
+          summary: "Error",
+          detail: response?.message || "Unknown error",
+        });
+      }
+    } catch (err: any) {
+      console.error("Exception while fetching interviews:", err);
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: "Failed to fetch interviews",
+      });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [accessToken]);
 
   useEffect(() => {
     fetchInterviews();
   }, [fetchInterviews]);
 
-  /** ------------------- Handlers ------------------- */
+  /* ------------------------------------------------------------------
+      ACTION HANDLERS
+  ------------------------------------------------------------------ */
   const handleAdd = () => {
+    setIsEdit(false);
     setEditingInterview(null);
-    setShowAddEditDialog(true);
+    setVisible(true);
   };
 
   const handleEdit = () => {
-    if (selectedInterview) {
-      setEditingInterview(selectedInterview);
-      setShowAddEditDialog(true);
-    }
+    if (!selectedInterview) return;
+    setIsEdit(true);
+    setEditingInterview(selectedInterview);
+    setVisible(true);
   };
 
   const handleDelete = () => {
-    if (selectedInterview) {
-      setShowDeleteDialog(true);
-    }
+    if (selectedInterview) setShowDeleteDialog(true);
   };
 
-  const handleAddEditSuccess = () => {
-    setShowAddEditDialog(false);
-    fetchInterviews();
+  // NEW: Handle Record Results button click
+  const handleRecordResults = () => {
+    if (!selectedInterview) return;
+    
+    // Allow opening dialog irrespective of status for now
+    // TODO: Uncomment below validation once status workflow is finalized
+    /*
+    if (selectedInterview.status !== 'COMPLETED') {
+      toast.current?.show({
+        severity: "warn",
+        summary: "Warning",
+        detail: "Please mark interview as completed before recording results",
+      });
+      return;
+    }
+    */
+    
+    setShowRoundsDialog(true);
   };
 
   const handleDeleteSuccess = () => {
@@ -74,11 +112,29 @@ const InterviewTable: React.FC = () => {
     fetchInterviews();
   };
 
+  const handleRoundsSuccess = () => {
+    setShowRoundsDialog(false);
+    setSelectedInterview(null);
+    fetchInterviews();
+    toast.current?.show({
+      severity: "success",
+      summary: "Success",
+      detail: "Interview results recorded successfully",
+    });
+  };
+
   return (
     <>
       <Toast ref={toast} />
-      <div className="flex justify-content-end mb-4">
-        <div className="flex gap-2">
+      <div className="flex justify-content-between align-items-center mb-2">
+        <h2>Interviews</h2>
+        <div className="flex gap-2 align-items-center">
+          {/* NEW: Record Results Button - Special CTA */}
+          <RecordResultsButton 
+            onClick={handleRecordResults} 
+            disabled={!selectedInterview}
+          />
+          
           <AddButton onClick={handleAdd} />
           <EditButton onClick={handleEdit} disabled={!selectedInterview} />
           <DeleteButton onClick={handleDelete} disabled={!selectedInterview} />
@@ -98,23 +154,59 @@ const InterviewTable: React.FC = () => {
         scrollable
       >
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
-        <Column field="interviewId" header="ID" style={{ width: "80px" }} />
-        <Column field="candidateName" header="Candidate" />
+        <Column field="candidateName" header="Candidate Name" />
         <Column field="interviewerName" header="Interviewer" />
         <Column field="scheduledByName" header="Scheduled By" />
-        <Column field="interviewDate" header="Date" />
-        <Column field="fromTime" header="Start Time" />
+
+        <Column
+          field="interviewDate"
+          header="Date"
+          body={(row) => new Date(row.interviewDate).toLocaleDateString("en-GB")}
+        />
+
+        <Column
+          field="fromTime"
+          header="Start Time"
+          body={(row) => row.fromTime?.slice(0, 5)}
+        />
+
         <Column field="durationMinutes" header="Duration (min)" />
-        <Column field="result" header="Result" />
+        
+        {/* NEW: Status column to show interview state */}
+        {/* <Column 
+          field="status" 
+          header="Status"
+          body={(row) => (
+            <span className={`badge ${
+              row.status === 'COMPLETED' ? 'badge-success' : 
+              row.status === 'SCHEDULED' ? 'badge-info' : 
+              'badge-secondary'
+            }`}>
+              {row.status || 'SCHEDULED'}
+            </span>
+          )}
+        /> */}
       </DataTable>
 
-      {/* ------------------- Dialogs ------------------- */}
-      {/* <InterviewAddEdit
-        visible={showAddEditDialog}
-        onHide={() => setShowAddEditDialog(false)}
-        selectedInterview={editingInterview}
-        onSuccess={handleAddEditSuccess}
-      /> */}
+      {/* Existing Add/Edit Dialog for scheduling */}
+      <InterviewAddEditForm
+        visible={visible}
+        isEdit={isEdit}
+        interviewToEdit={editingInterview}
+        onHide={() => setVisible(false)}
+        onSuccess={() => {
+          setVisible(false);
+          fetchInterviews();
+        }}
+      />
+
+      {/* NEW: Rounds Dialog for post-interview results */}
+      <InterviewRoundsDialog
+        visible={showRoundsDialog}
+        interview={selectedInterview}
+        onHide={() => setShowRoundsDialog(false)}
+        onSuccess={handleRoundsSuccess}
+      />
 
       <InterviewDelete
         visible={showDeleteDialog}

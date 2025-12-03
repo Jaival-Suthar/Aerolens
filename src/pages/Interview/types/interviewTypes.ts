@@ -1,19 +1,27 @@
 // Interview object returned by GET /api/interview
 export interface Interview {
-    interviewId: number;
-    interviewDate: string;        // ISO date string
-    fromTime: string;             // "HH:MM"
-    durationMinutes: number;
-    candidateId: number;
-    candidateName: string;
-    interviewerId: number;
-    interviewerName: string;
-    scheduledById: number;
-    scheduledByName: string;
-    result: "pending" | "selected" | "rejected" | "cancelled" | null;
-    recruiterNotes?: string | null;
-    interviewerFeedback?: string | null;
-  }
+  interviewId: number;
+  candidateId: number;
+  candidateName: string;
+  interviewerId: number;
+  interviewerName: string;
+  scheduledById: number;
+  scheduledByName: string;
+  interviewDate: string;
+  fromTime: string;
+  durationMinutes: number;
+  
+  // New fields for rounds management
+  status?: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
+  rounds?: Round[];
+  finalNotes?: string;
+  finalResult?: 'Selected' | 'Rejected' | 'Pending';
+  
+  // Deprecated fields (kept for backward compatibility)
+  result?: string;
+  recruiterNotes?: string;
+  interviewerFeedback?: string;
+}
   
   // Response from GET /api/interview
   export interface GetAllInterviewsResponse {
@@ -77,3 +85,10 @@ export interface Interview {
     statusCode: number;
   }
   
+  export interface Round {
+  roundName: string;
+  result: 'Selected' | 'Rejected' | 'On Hold';
+  interviewerNotes: string;
+  isLocked: boolean;
+  lockedAt?: string;
+}
