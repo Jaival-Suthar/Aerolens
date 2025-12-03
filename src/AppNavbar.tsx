@@ -12,6 +12,7 @@ import {
   FaIdCard,
   FaCog,
   FaUser,
+  FaUserTie,
 } from "react-icons/fa";
 import { useProfileStore } from "./shared/store/profile";
 import Logo from "./assets/Logo.webp";
@@ -94,7 +95,14 @@ const AppNavbar: React.FC = () => {
           command: () => handleNavigation("/resume"),
           className: isMenuActive("/resume") ? "nav-subitem-active" : "",
         },
+        {
+          label: "Interview", // ✅ New top-level heading
+          icon: <FaUserTie style={{ marginRight: 8, marginLeft: 4 }} />,
+          command: () => navigate("/interview"),
+          className: isMenuActive("/interview") ? "nav-subitem-active" : "",
+        },
       ],
+      
     },
     {
       label: "Reports",
