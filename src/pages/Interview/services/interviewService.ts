@@ -78,8 +78,8 @@ export const getInterviewById = async (interviewId: number, token: string) => {
 };
 
 // CREATE
-export const createInterview = async (payload: any, token: string) => {
-  const url = `${BASE_URL}/interview`;
+export const createInterview = async (candidateId: number, payload: any, token: string) => {
+  const url = `${BASE_URL}/interview/${candidateId}`;
 
   try {
     const res = await fetch(url, {
