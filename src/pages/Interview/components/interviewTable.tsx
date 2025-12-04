@@ -14,8 +14,8 @@ import { getInterviews } from "../services/interviewService";
 import { useAuth } from "../../../shared/auth/AuthContext";
 
 import CogButton from "../../../shared/CogButton";
-//import InterviewResultDialog from "./interviewResultDialog";
-import { FaUserTie } from "react-icons/fa";
+import InterviewResultDialog from "./interviewResultDialog";
+import { FaUserTie, FaClipboardCheck } from "react-icons/fa";
 
 const convert24to12Hour = (time24: string): string => {
   if (!time24) return '';
@@ -49,7 +49,7 @@ const InterviewTable: React.FC = () => {
   const [isEdit, setIsEdit] = useState(false);
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
   const toast = useRef<Toast>(null);
-
+  
   const fetchInterviews = useCallback(async () => {
     if (!accessToken) {
       return;
@@ -84,20 +84,20 @@ const InterviewTable: React.FC = () => {
   }, [fetchInterviews]);
 
   const handleAdd = () => {
-  if (!selectedInterview) {
-    toast.current?.show({
-      severity: "warn",
-      summary: "No Selection",
-      detail: "Please select an interview row to schedule next round for that candidate",
-      life: 3000,
-    });
-    return;
-  }
-  
-  setIsEdit(false);
-  setEditingInterview(null);
-  setVisible(true);
-};
+    if (!selectedInterview) {
+      toast.current?.show({
+        severity: "warn",
+        summary: "No Selection",
+        detail: "Please select an interview row to schedule next round for that candidate",
+        life: 3000,
+      });
+      return;
+    }
+    
+    setIsEdit(false);
+    setEditingInterview(null);
+    setVisible(true);
+  };
 
   const handleEdit = () => {
     if (!selectedInterview) return;
@@ -113,6 +113,25 @@ const InterviewTable: React.FC = () => {
   const handleDeleteSuccess = () => {
     setShowDeleteDialog(false);
     setSelectedInterview(null);
+    fetchInterviews();
+  };
+
+  const handleResultDialogOpen = () => {
+    if (!selectedInterview) {
+      toast.current?.show({
+        severity: "warn",
+        summary: "No Selection",
+        detail: "Please select an interview to finalize",
+        life: 3000,
+      });
+      return;
+    }
+    setShowSettingsMenu(false);
+    setShowResultDialog(true);
+  };
+
+  const handleResultSuccess = () => {
+    setShowResultDialog(false);
     fetchInterviews();
   };
 
@@ -133,9 +152,35 @@ const InterviewTable: React.FC = () => {
     return convert24to12Hour(rowData.toTime);
   };
 
-  // ------------------------------------------------------------
-  // ✅ ADDITION #1 — Global Search Filter Logic (NO CHANGES)
-  // ------------------------------------------------------------
+  // Result badge styling
+  const resultBodyTemplate = (rowData: Interview) => {
+    const result = rowData.result || "Pending";
+    
+    const getBadgeClass = (result: string) => {
+      switch (result) {
+        case "Selected":
+          return "bg-green-100 text-green-800";
+        case "Rejected":
+          return "bg-red-100 text-red-800";
+        case "Cancelled":
+          return "bg-gray-100 text-gray-800";
+        case "Pending":
+        default:
+          return "bg-yellow-100 text-yellow-800";
+      }
+    };
+
+    return (
+      <span
+        className={`px-2 py-1 border-round text-sm font-semibold ${getBadgeClass(result)}`}
+        style={{ display: "inline-block" }}
+      >
+        {result}
+      </span>
+    );
+  };
+
+  // Global Search Filter Logic
   const filteredInterviews = interviews.filter((item) => {
     if (!searchText.trim()) return true;
     const text = searchText.toLowerCase();
@@ -145,25 +190,20 @@ const InterviewTable: React.FC = () => {
   });
 
   const settingsItems = [
-  {
-    label: "Schedule Next Interview",
-    icon: <FaUserTie style={{ marginRight: 8, marginLeft: 4 }} />,
-    action: () => {
-      setShowSettingsMenu(false);
-      handleAdd();
+    {
+      label: "Schedule Next Interview",
+      icon: <FaUserTie style={{ marginRight: 8, marginLeft: 4 }} />,
+      action: () => {
+        setShowSettingsMenu(false);
+        handleAdd();
+      }
+    },
+    {
+      label: "Interview Result",
+      icon: <FaClipboardCheck style={{ marginRight: 8, marginLeft: 4 }} />,
+      action: handleResultDialogOpen
     }
-  },
-  {
-    label: "Interview Result",
-    icon: <FaUserTie style={{ marginRight: 8, marginLeft: 4 }} />,
-    action: () => {
-      setShowSettingsMenu(false);
-      setShowResultDialog(true);
-    }
-  }
-];
-
-
+  ];
 
   return (
     <>
@@ -176,68 +216,70 @@ const InterviewTable: React.FC = () => {
           <EditButton onClick={handleEdit} disabled={!selectedInterview} />
           <DeleteButton onClick={handleDelete} disabled={!selectedInterview} />
           <div style={{ position: "relative" }}>
-            <CogButton onClick={() => setShowSettingsMenu((prev) => !prev)} />
+            <CogButton
+              onClick={(e) => {
+                e.stopPropagation();      // prevents the opening click from closing it
+                setShowSettingsMenu((prev) => !prev);
+              }}
+            />
 
             {showSettingsMenu && (
-            <div
-              className="card shadow-3"
-              style={{
-                position: "absolute",
-                right: 0,
-                top: 50,
-                zIndex: 1000,
-                minWidth: 220,
-                backgroundColor: "white",
-                border: "1px solid #e5e7eb",
-                borderRadius: "8px",
-                padding: "0.5rem",
-                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
-              }}
-            >
-              {settingsItems.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="p-2 cursor-pointer border-round transition-colors transition-duration-150"
-                  onClick={item.action}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    borderRadius: "6px",
-                    marginBottom: idx < settingsItems.length - 1 ? "4px" : "0",
-                    transition: "background-color 0.15s ease"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#f3f4f6";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                  }}
-                >
-                  <span style={{ fontSize: "16px", color: "#6b7280" }}>
-                    {item.icon}
-                  </span>
-                  <span 
-                    style={{ 
-                      marginLeft: "12px",
-                      fontSize: "14px",
-                      fontWeight: "500",
-                      color: "#374151"
+              <div
+                className="card shadow-3"
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  top: 50,
+                  zIndex: 1000,
+                  minWidth: 220,
+                  backgroundColor: "white",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  padding: "0.5rem",
+                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
+                }}
+              >
+                {settingsItems.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="p-2 cursor-pointer border-round transition-colors transition-duration-150"
+                    onClick={item.action}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      borderRadius: "6px",
+                      marginBottom: idx < settingsItems.length - 1 ? "4px" : "0",
+                      transition: "background-color 0.15s ease"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "#f3f4f6";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
                     }}
                   >
-                    {item.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+                    <span style={{ fontSize: "16px", color: "#6b7280" }}>
+                      {item.icon}
+                    </span>
+                    <span 
+                      style={{ 
+                        marginLeft: "12px",
+                        fontSize: "14px",
+                        fontWeight: "500",
+                        color: "#374151"
+                      }}
+                    >
+                      {item.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       <DataTable
-        /* ------------------------------------------------------------ */
-        /* ✅ ADDITION #3 — Use filtered list instead of interviews     */
-        /* ------------------------------------------------------------ */
         value={filteredInterviews}
         paginator
         rows={10}
@@ -255,7 +297,7 @@ const InterviewTable: React.FC = () => {
         <Column field="scheduledByName" header="Scheduled By" />
         <Column field="roundNumber" header="Round No." />
         <Column field="totalInterviews" header="Total Rounds" />
-        <Column field="result" header="Result" />
+        <Column field="result" header="Result" body={resultBodyTemplate} />
         <Column field="interviewDate" header="Date" body={dateBodyTemplate} />
         <Column field="fromTime" header="Start Time" body={timeBodyTemplate} />
         <Column field="toTime" header="End Time" body={endTimeBodyTemplate} />
@@ -266,8 +308,8 @@ const InterviewTable: React.FC = () => {
         visible={visible}
         isEdit={isEdit}
         interviewToEdit={editingInterview}
-        candidateId={isEdit ? editingInterview?.candidateId : selectedInterview?.candidateId}  // ✅ ADD THIS
-        candidateName={isEdit ? editingInterview?.candidateName : selectedInterview?.candidateName}  // ✅ ADD THIS
+        candidateId={isEdit ? editingInterview?.candidateId : selectedInterview?.candidateId}
+        candidateName={isEdit ? editingInterview?.candidateName : selectedInterview?.candidateName}
         onHide={() => setVisible(false)}
         onSuccess={() => {
           setVisible(false);
@@ -282,6 +324,14 @@ const InterviewTable: React.FC = () => {
         selectedInterview={selectedInterview}
         onSuccess={handleDeleteSuccess}
         onClearSelection={() => setSelectedInterview(null)}
+      />
+
+      <InterviewResultDialog
+        visible={showResultDialog}
+        onHide={() => setShowResultDialog(false)}
+        selectedInterview={selectedInterview}
+        onSuccess={handleResultSuccess}
+        externalToast={toast}
       />
     </>
   );
