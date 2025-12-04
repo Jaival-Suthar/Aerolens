@@ -1,4 +1,5 @@
 const BASE_URL: string = import.meta.env.VITE_BASE_URL;
+import { FinalizeInterviewRequest, FinalizeInterviewResponse } from "../types/interviewTypes";
 
 // -------------------- COMMON HELPERS WITH DEBUG --------------------
 
@@ -78,8 +79,8 @@ export const getInterviewById = async (interviewId: number, token: string) => {
 };
 
 // CREATE
-export const createInterview = async (payload: any, token: string) => {
-  const url = `${BASE_URL}/interview`;
+export const createInterview = async (candidateId: number, payload: any, token: string) => {
+  const url = `${BASE_URL}/interview/${candidateId}`;
 
   try {
     const res = await fetch(url, {
@@ -127,6 +128,27 @@ export const deleteInterview = async (interviewId: number, token: string) => {
     return await checkStatus(res);
   } catch (err) {
     console.error("[deleteInterview] ERROR:", err);
+    throw err;
+  }
+};
+
+export const finalizeInterview = async (
+  interviewId: number,
+  payload: FinalizeInterviewRequest,
+  token: string
+): Promise<FinalizeInterviewResponse> => {
+  const url = `${BASE_URL}/interview/${interviewId}/finalize`;
+
+  try {
+    const res = await fetch(url, {
+      method: "PUT",
+      headers: makeHeaders(token),
+      body: JSON.stringify(payload),
+    });
+
+    return await checkStatus(res);
+  } catch (err) {
+    console.error("[finalizeInterview] ERROR:", err);
     throw err;
   }
 };

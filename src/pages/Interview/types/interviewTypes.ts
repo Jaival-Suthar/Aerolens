@@ -13,10 +13,8 @@ export interface Interview {
   durationMinutes: number;
   
   // New fields for rounds management
-  status?: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
-  rounds?: Round[];
-  finalNotes?: string;
-  finalResult?: 'Selected' | 'Rejected' | 'Pending';
+  roundNumber: number;
+  totalInterviews: number;
   
   // Deprecated fields (kept for backward compatibility)
   result?: string;
@@ -66,7 +64,7 @@ export interface Interview {
     interviewDate?: string;
     fromTime?: string;
     durationMinutes?: number;
-    result?: "pending" | "selected" | "rejected" | "cancelled";
+    result?: "Pending" | "Selected" | "Rejected" | "Cancelled";
     recruiterNotes?: string;
     interviewerFeedback?: string;
   }
@@ -87,10 +85,24 @@ export interface Interview {
     statusCode: number;
   }
   
-  export interface Round {
-  roundName: string;
-  result: 'Selected' | 'Rejected' | 'On Hold';
-  interviewerNotes: string;
-  isLocked: boolean;
-  lockedAt?: string;
+  export type InterviewResult = "Pending" | "Selected" | "Rejected" | "Cancelled";
+
+// Request to PUT /api/interview/:interviewId/finalize
+export interface FinalizeInterviewRequest {
+  result: InterviewResult;
+  recruiterNotes?: string;
+  interviewerFeedback?: string;
+}
+
+// Response from PUT /api/interview/:interviewId/finalize
+export interface FinalizeInterviewResponse {
+  success: boolean;
+  message: string;
+  data: {
+    interviewId: number;
+    result: InterviewResult;
+    recruiterNotes?: string;
+    interviewerFeedback?: string;
+  };
+  statusCode: number;
 }
