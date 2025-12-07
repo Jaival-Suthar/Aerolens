@@ -20,7 +20,7 @@ import MemberEdit from "./MembersEdit";     // ✔ Only Edit dialog
 import MemberDelete from "./MembersDelete"; // ✔ Delete dialog only
 
 const MembersTable: React.FC = () => {
-     const toast = useRef<Toast>(null);
+  const toast = useRef<Toast>(null);
   const { accessToken } = useAuth();
   const [members, setMembers] = useState<Member[]>([]);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
@@ -39,13 +39,12 @@ const MembersTable: React.FC = () => {
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
   const [searchParams, setSearchParams] = useSearchParams();
-const pageFromUrl = Number(searchParams.get("page")) || 1;
-
-const [first, setFirst] = useState((pageFromUrl - 1) * 10); 
-const [rows, setRows] = useState(10);
-const tooltipRef = useRef<Tooltip>(null);
-const [clients, setClients] = useState<ClientOption[]>([]);
-const [locations, setLocations] = useState<Location[]>([]);
+  const pageFromUrl = Number(searchParams.get("page")) || 1;
+  const [rows, setRows] = useState(10);
+  const [first, setFirst] = useState((pageFromUrl - 1) * 10); 
+  const tooltipRef = useRef<Tooltip>(null);
+  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [designations, setDesignations] = useState<string[]>([]);
   const [skillOptions, setSkillOptions] = useState<string[]>([]);
   useEffect(() => {
@@ -70,8 +69,11 @@ const [locations, setLocations] = useState<Location[]>([]);
     }
   }, [accessToken]);
   useEffect(() => {
+  if (accessToken) {
     loadMembers();
-  }, []);
+  }
+}, [accessToken]);
+
   const showSuccess = (message: string) => {
     toast.current?.show({
       severity: 'success',
@@ -97,7 +99,15 @@ const [locations, setLocations] = useState<Location[]>([]);
 
     try {
       const res = await getMembers(accessToken);
-        setMembers(Array.isArray(res.data) ? res.data : []);
+        setMembers(
+          Array.isArray(res.data)
+            ? res.data.map((m: Member) => ({
+                ...m,
+                locationString: `${m.location?.city || ""} ${m.location?.country || ""}`.trim(),
+                skillsString: m.skills?.map(s => s.skillName).join(", ") || ""
+              }))
+            : []
+        );
         setTimeout(() => {
           tooltipRef.current?.updateTargetEvents();
         }, 0);
@@ -108,10 +118,6 @@ const [locations, setLocations] = useState<Location[]>([]);
       setLoading(false);
     }
   }, [accessToken]);
-
-  
-
- 
 
   /** ------------------- Handlers ------------------- */
   const handleEdit = () => {
@@ -138,8 +144,6 @@ const [locations, setLocations] = useState<Location[]>([]);
     setLoading(true);
     try {
       const response = await deleteMember(accessToken, selectedMember.memberId);
-      
-      // 👈 Use PARENT toast instead of dialog toast
       showSuccess(response.message || 'Member deactivated successfully');
       
       setShowDeleteDialog(false);
@@ -291,15 +295,15 @@ const [locations, setLocations] = useState<Location[]>([]);
         responsiveLayout="scroll"
         filters={filters}
         globalFilterFields={[
-            "memberName",
-            "memberContact",
-            "email",
-            "designation",
-            "location.city",
-            "location.country",
-            "clientName",
-            "organisation",
-            "skills"
+          "member",
+          "Contact Details",
+          "Location",
+          "Skills",
+          "interviewerCapacity",
+          "Recruiter",
+          "Interviewer",
+          "clientName",
+          "organisation",
         ]}
       >
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
