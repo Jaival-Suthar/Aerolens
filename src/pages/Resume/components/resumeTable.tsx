@@ -33,9 +33,10 @@ const ResumeTable: React.FC = () => {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showInterviewDialog, setShowInterviewDialog] = useState(false);
   const toastRef = useRef<Toast>(null);
+  const [rows, setRows] = useState(10);
   const [searchParams, setSearchParams] = useSearchParams();
   const pageFromUrl = Number(searchParams.get("page")) || 1;
-  const [first, setFirst] = useState((pageFromUrl - 1) * 5); // 5 = rows per page
+  const [first, setFirst] = useState((pageFromUrl - 1) * 10); 
   const dt = useRef<DataTable<any>>(null);
   const [globalFilterValue, setGlobalFilterValue] = useState('');
   const [filters, setFilters] = useState<any>({
@@ -61,10 +62,13 @@ const ResumeTable: React.FC = () => {
   }, [loadResumes]);
 
   const onPageChange = (event: any) => {
-    setFirst(event.first);
-    const newPage = event.page + 1; // PrimeReact pages start from 0
-    setSearchParams({ page: newPage.toString() });
-  };
+  setFirst(event.first);
+  setRows(event.rows); // IMPORTANT: sync when user changes rows dropdown
+
+  const newPage = event.page + 1;
+  setSearchParams({ page: newPage.toString() });
+};
+
 
   /** ------------------- CRUD Handlers ------------------- */
   const handleAdd = () => {
@@ -329,10 +333,10 @@ const settingsItems = [
         ref={dt}
         value={resumes}
         paginator
-        rows={5}
+        rows={rows}
         first={first}
         onPage={onPageChange}
-        rowsPerPageOptions={[5, 10, 20, 50]}
+        rowsPerPageOptions={[10, 20, 50]}
         selectionMode="single"
         selection={selectedResume}
         dataKey="candidateId"
