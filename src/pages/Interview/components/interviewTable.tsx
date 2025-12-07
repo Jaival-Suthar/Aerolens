@@ -16,6 +16,8 @@ import { useAuth } from "../../../shared/auth/AuthContext";
 import CogButton from "../../../shared/CogButton";
 import InterviewResultDialog from "./interviewResultDialog";
 import { FaUserTie, FaClipboardCheck } from "react-icons/fa";
+import { useSearchParams } from "react-router-dom";
+
 
 const convert24to12Hour = (time24: string): string => {
   if (!time24) return '';
@@ -49,7 +51,22 @@ const InterviewTable: React.FC = () => {
   const [isEdit, setIsEdit] = useState(false);
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
   const toast = useRef<Toast>(null);
-  
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pageFromUrl = Number(searchParams.get("page")) || 1;
+
+  const [rows, setRows] = useState(10);
+  const [first, setFirst] = useState((pageFromUrl - 1) * rows);
+
+  const onPageChange = (e: any) => {
+  setFirst(e.first);
+  setRows(e.rows);
+
+  // PrimeReact page starts from 0, but URL starts from 1
+  const newPage = e.page + 1;
+  setSearchParams({ page: newPage.toString() });
+};
+
+
   const fetchInterviews = useCallback(async () => {
     if (!accessToken) {
       return;
@@ -180,15 +197,6 @@ const InterviewTable: React.FC = () => {
     );
   };
 
-  // Global Search Filter Logic
-  const filteredInterviews = interviews.filter((item) => {
-    if (!searchText.trim()) return true;
-    const text = searchText.toLowerCase();
-    return Object.values(item).some((val) =>
-      String(val).toLowerCase().includes(text)
-    );
-  });
-
   const settingsItems = [
     {
       label: "Schedule Next Interview",
@@ -280,9 +288,7 @@ const InterviewTable: React.FC = () => {
       </div>
 
       <DataTable
-        value={filteredInterviews}
-        paginator
-        rows={10}
+        value={interviews}
         loading={loading}
         selectionMode="single"
         selection={selectedInterview}
@@ -290,6 +296,27 @@ const InterviewTable: React.FC = () => {
         dataKey="interviewId"
         emptyMessage="No interviews found."
         scrollable
+        paginator
+        rows={rows}
+        first={first}
+        onPage={onPageChange}
+        rowsPerPageOptions={[10, 20, 50]}
+        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Members"
+        totalRecords={interviews.length}
+        globalFilter={searchText}
+        globalFilterFields={[
+          "candidateName",
+          "interviewerName",
+          "scheduledByName",
+          "roundNumber",
+          "totalInterviews",
+          "result",
+          "interviewDate",
+          "fromTime",
+          "toTime",
+          "durationMinutes"
+        ]}
       >
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
         <Column field="candidateName" header="Candidate Name" />
