@@ -62,7 +62,7 @@ export const fetchJobProfileLookupData = async (
       .filter((item: any) => item.tag === "profileStatus")
       .map((item: any) => item.value);
     
-    console.log('Fetched profile statuses:', profileStatuses);
+    //console.log('Fetched profile statuses:', profileStatuses);
     return { profileStatuses };
   } catch (error) {
     console.error('Error fetching lookup data:', error);
@@ -78,12 +78,12 @@ export const getClients = async (
       credentials: 'include',
       headers: makeHeaders(accessToken || undefined),
     });
-    
     if (!response.ok) {
       throw new Error(`Failed to fetch clients: ${response.status}`);
     }
     
     const data = await response.json();
+    //console.log('Raw client data:', data);
     if (!data.success) throw new Error(data.message || 'Failed to fetch clients');
     
     const clients = Array.isArray(data.data?.clientData)
@@ -169,7 +169,10 @@ export const getJobProfiles = async (
     if (!jobProfileData.success) {
       throw new Error(jobProfileData.message || 'Failed to fetch job profiles');
     }
-    const mappedJobProfiles = jobProfileData.data.map(mapApiJobProfile);
+    const rawProfiles = Array.isArray(jobProfileData.data) ? jobProfileData.data : [];
+
+    const mappedJobProfiles = rawProfiles.map(mapApiJobProfile);
+
     const jobProfilesResult: ApiResponse<JobProfile[]> = {
       success: true,
       message: jobProfileData.message,

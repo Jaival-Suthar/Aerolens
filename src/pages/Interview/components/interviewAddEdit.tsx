@@ -61,6 +61,9 @@ interface AddEditInterviewFormProps {
   interviewToEdit?: Interview | null;
   onHide: () => void;
   onSuccess: () => void;
+  candidateId?: number;        // ✅ ADD THIS
+  candidateName?: string;
+  externalToast?: React.RefObject<Toast>;
 }
 
 interface FormData {
@@ -69,7 +72,6 @@ interface FormData {
   minute: number;
   period: 'AM' | 'PM';
   durationMinutes: number;
-  candidateId: number | null;
   interviewerId: number | null;
   scheduledById: number | null;
 }
@@ -113,10 +115,13 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
   interviewToEdit = null,
   onHide,
   onSuccess,
+  candidateId,      // ✅ ADD THIS
+  candidateName, 
+  externalToast,
 }) => {
   const toast = useRef<Toast>(null);
+  const toastRef = externalToast || toast; 
   const [loading, setLoading] = useState(false);
-  const [candidates, setCandidates] = useState<any[]>([]);
   const [interviewers, setInterviewers] = useState<any[]>([]);
   const [recruiters, setRecruiters] = useState<any[]>([]);
   const { accessToken } = useAuth();
@@ -127,7 +132,6 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
     minute: 0,
     period: 'AM',
     durationMinutes: 60,
-    candidateId: null,
     interviewerId: null,
     scheduledById: null,
   });
@@ -158,13 +162,6 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
       const res = await getInterviewFormData(accessToken!);
       const data = res.data;
 
-      setCandidates(
-        data.candidates.map((c: any) => ({
-          label: c.candidateName,
-          value: c.candidateId,
-        }))
-      );
-
       setInterviewers(
         data.interviewers.map((i: any) => ({
           label: i.interviewerName,
@@ -179,11 +176,11 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
         }))
       );
     } catch (err: any) {
-      toast.current?.show({
+      toastRef.current?.show({
         severity: "error",
         summary: "Error Loading Form",
         detail: err.message || "Failed to fetch form data",
-        life: 3000,
+        life: 2000,
       });
     }
   };
@@ -204,7 +201,6 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
         minute,
         period,
         durationMinutes: interviewToEdit.durationMinutes,
-        candidateId: interviewToEdit.candidateId,
         interviewerId: interviewToEdit.interviewerId,
         scheduledById: interviewToEdit.scheduledById,
       });
@@ -216,7 +212,15 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
   // Validation
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
-
+    if (!isEdit && !candidateId) {
+    toastRef.current?.show({
+      severity: "error",
+      summary: "No Candidate Selected",
+      detail: "Please select a candidate from the interview list first",
+      life: 2000,
+    });
+    return false;
+  }
     // Interview Date validation
     if (!formData.interviewDate) {
       newErrors.interviewDate = "Interview date is required";
@@ -245,11 +249,6 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
       newErrors.durationMinutes = "Maximum duration is 480 minutes (8 hours)";
     }
 
-    // Candidate validation
-    if (!formData.candidateId) {
-      newErrors.candidateId = "Candidate selection is required";
-    }
-
     // Interviewer validation
     if (!formData.interviewerId) {
       newErrors.interviewerId = "Interviewer selection is required";
@@ -268,16 +267,15 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
         formData.interviewDate?.toISOString().split('T')[0] !== interviewToEdit.interviewDate ||
         currentTime24 !== interviewToEdit.fromTime ||
         formData.durationMinutes !== interviewToEdit.durationMinutes ||
-        formData.candidateId !== interviewToEdit.candidateId ||
         formData.interviewerId !== interviewToEdit.interviewerId ||
         formData.scheduledById !== interviewToEdit.scheduledById;
 
       if (!hasChanges) {
-        toast.current?.show({
+        toastRef.current?.show({
           severity: "warn",
           summary: "No Changes",
           detail: "Please modify at least one field to update",
-          life: 3000,
+          life: 2000,
         });
         return false;
       }
@@ -289,57 +287,59 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
 
   // Submit Handler
   const handleSubmit = async () => {
-    if (!validateForm()) return;
+  if (!validateForm()) return;
 
-    setLoading(true);
+  setLoading(true);
 
-    // Convert 12-hour time to 24-hour format for backend
-    const time24 = convert12to24(formData.hour12, formData.minute, formData.period);
+  // Convert 12-hour time to 24-hour format for backend
+  const time24 = convert12to24(formData.hour12, formData.minute, formData.period);
 
-    const payload = {
-      interviewDate: formData.interviewDate,
-      fromTime: time24, // Send 24-hour format to backend
-      durationMinutes: formData.durationMinutes,
-      candidateId: formData.candidateId,
-      interviewerId: formData.interviewerId,
-      scheduledById: formData.scheduledById,
-    };
+  const payload = {
+    interviewDate: formData.interviewDate,
+    fromTime: time24,
+    durationMinutes: formData.durationMinutes,
+    interviewerId: formData.interviewerId,
+    scheduledById: formData.scheduledById,
+  };
 
-    try {
-      if (isEdit && interviewToEdit) {
-        await updateInterview(interviewToEdit.interviewId, payload, accessToken!);
+  try {
+    if (isEdit && interviewToEdit) {
+      await updateInterview(interviewToEdit.interviewId, payload, accessToken!);
 
-        toast.current?.show({
-          severity: "success",
-          summary: "Success",
-          detail: "Interview updated successfully",
-          life: 3000,
-        });
-      } else {
-        await createInterview(payload, accessToken!);
+      toastRef.current?.show({
+        severity: "success",
+        summary: "Success",
+        detail: "Interview updated successfully",
+        life: 2000,  // ✅ Changed to 2 seconds
+      });
+    } else {
+      await createInterview(candidateId!, payload, accessToken!);
 
-        toast.current?.show({
+      // ✅ ONLY show toast if NO external toast (i.e., when used in Interview page)
+      if (!externalToast) {
+        toastRef.current?.show({
           severity: "success",
           summary: "Success",
           detail: "Interview created successfully",
-          life: 3000,
+          life: 2000,  // ✅ Changed to 2 seconds
         });
       }
-
-      resetForm();
-      onSuccess();
-      onHide();
-    } catch (err: any) {
-      toast.current?.show({
-        severity: "error",
-        summary: "Error",
-        detail: err.message || "Something went wrong",
-        life: 3000,
-      });
-    } finally {
-      setLoading(false);
     }
-  };
+
+    resetForm();
+    onSuccess();  // ✅ This will trigger the external toast in InterviewScheduler
+    onHide();
+  } catch (err: any) {
+    toastRef.current?.show({
+      severity: "error",
+      summary: "Error",
+      detail: err.message || "Something went wrong",
+      life: 2000,  // ✅ Changed to 2 seconds
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Helpers
   const resetForm = () => {
@@ -349,7 +349,6 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
       minute: 0,
       period: 'AM',
       durationMinutes: 60,
-      candidateId: null,
       interviewerId: null,
       scheduledById: null,
     });
@@ -441,21 +440,16 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
         <div className="p-fluid">
           {/* Candidate Dropdown */}
           <div className="field mb-4">
-            <label htmlFor="candidate" className="font-semibold">
-              Candidate <span className="text-red-500">*</span>
-            </label>
-            <Dropdown
-              id="candidate"
-              value={formData.candidateId}
-              options={candidates}
-              onChange={(e) => handleInputChange("candidateId", e.value)}
-              placeholder="Select a candidate"
-              filter
-              className={errors.candidateId ? "p-invalid" : ""}
-              disabled={loading}
-            />
-            {errors.candidateId && <small className="p-error">{errors.candidateId}</small>}
-          </div>
+          <label htmlFor="candidate" className="font-semibold">
+            Candidate <span className="text-red-500">*</span>
+          </label>
+          <InputText
+            id="candidate"
+            value={candidateName || 'No candidate selected'}
+            disabled
+            className="bg-gray-100"
+          />
+        </div>
 
           {/* Interview Date */}
           <div className="field mb-4">

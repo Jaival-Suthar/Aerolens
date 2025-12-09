@@ -89,11 +89,13 @@ const MemberEdit: React.FC<Props> = ({
 
       // Map skills
       setFormSkills(
-        selectedMember.skills.map(skill => ({
-          skillName: skill.skillName,
-          proficiencyLevel: skill.proficiencyLevel,
-          yearsOfExperience: skill.yearsOfExperience,
-        }))
+        selectedMember.skills?.length > 0
+          ? selectedMember.skills.map(skill => ({
+              skillName: skill.skillName,
+              proficiencyLevel: skill.proficiencyLevel,
+              yearsOfExperience: skill.yearsOfExperience,
+            }))
+          : []
       );
       setErrors({});
     }
@@ -247,7 +249,9 @@ const MemberEdit: React.FC<Props> = ({
         city: form.location!.city,
         country: form.location!.country,
       },
-      skills: formSkills,
+      skills: formSkills.filter(
+        skill => skill.skillName && skill.proficiencyLevel
+      ),
     };
 
     setSubmitting(true);
