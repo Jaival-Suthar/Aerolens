@@ -1,4 +1,4 @@
-name: Deploy PreProd to S3 and CloudFront
+name: Deploy to PreProd Development Environment
 
 on:
   push:
