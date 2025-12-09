@@ -12,7 +12,7 @@ import type {
 /* ------------------------------------------------------------------------- */
 /*  CONFIG                                                                  */
 /* ------------------------------------------------------------------------- */
-const API_URL: string = import.meta.env.VITE_PREPROD_URL;
+const API_URL: string = import.meta.env.VITE_BASE_URL;
 // -------------------- FETCH LOOKUP DATA --------------------
 export interface LookupItem {
   lookupKey: number;  // Changed from 'key' to 'lookupKey'

@@ -8,7 +8,7 @@ import type {
   ErrorResponse,
 } from "../types/departmentTypes";
 
-const API_URL: string = import.meta.env.VITE_PREPROD_URL;
+const API_URL: string = import.meta.env.VITE_BASE_URL;
 const IS_DEV = import.meta.env.DEV;
 
 const logger = {

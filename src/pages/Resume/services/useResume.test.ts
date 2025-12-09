@@ -15,7 +15,7 @@ import type { Candidate, AddEditCandidate } from '../types/resumeTypes';
 const MOCK_BASE_URL = 'https://aerolens-backend.onrender.com';
 vi.stubGlobal('import.meta', {
   env: {
-    VITE_PREPROD_URL: MOCK_BASE_URL,
+    VITE_BASE_URL: MOCK_BASE_URL,
     DEV: false,
   },
 });

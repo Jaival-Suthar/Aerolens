@@ -27,7 +27,7 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
-          VITE_PREPROD_URL: ${{ secrets.VITE_PREPROD_URL }}
+          VITE_BASE_URL: ${{ secrets.VITE_PREPROD_URL }}
       
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

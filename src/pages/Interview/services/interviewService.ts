@@ -1,4 +1,4 @@
-const BASE_URL: string = import.meta.env.VITE_PREPROD_URL;
+const BASE_URL: string = import.meta.env.VITE_BASE_URL;
 import { FinalizeInterviewRequest, FinalizeInterviewResponse } from "../types/interviewTypes";
 
 // -------------------- COMMON HELPERS WITH DEBUG --------------------

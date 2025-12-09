@@ -1,4 +1,4 @@
-const API_URL: string = import.meta.env.VITE_PREPROD_URL;
+const API_URL: string = import.meta.env.VITE_BASE_URL;
 import type { ClientType, ClientsApiResponse } from "../types/clientTypes";
 
 // Helper to create headers with token if provided

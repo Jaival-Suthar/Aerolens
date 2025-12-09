@@ -15,7 +15,7 @@ afterEach(() => {
 global.fetch = vi.fn();
 
 describe('useContact', () => {
-  const mockApiUrl = import.meta.env.VITE_PREPROD_URL;
+  const mockApiUrl = import.meta.env.VITE_BASE_URL;
   const mockAccessToken = 'mock-token-123';
 
   describe('getClientDetails', () => {

@@ -137,7 +137,7 @@ const ResumeTable: React.FC = () => {
     try {
       if (!accessToken) throw new Error("Unauthorized");
 
-      const previewUrl = `${import.meta.env.VITE_PREPROD_URL}/candidate/${candidateId}/resume/preview`;
+      const previewUrl = `${import.meta.env.VITE_BASE_URL}/candidate/${candidateId}/resume/preview`;
 
       const response = await fetch(previewUrl, {
         method: "GET",

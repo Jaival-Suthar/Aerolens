@@ -13,7 +13,7 @@ vi.mock('../store/profile', () => ({
 }));
 
 // Get the actual API_BASE from environment
-const API_BASE = import.meta.env.VITE_PREPROD_URL || 'http://localhost:3000';
+const API_BASE = import.meta.env.VITE_BASE_URL || 'http://localhost:3000';
 
 describe('AuthProvider', () => {
   let mockSetProfile: ReturnType<typeof vi.fn>;

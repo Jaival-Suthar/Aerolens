@@ -6,7 +6,7 @@ import {
   Location
 } from '../types/memberTypes';
 
-const API_BASE_URL: string = import.meta.env.VITE_PREPROD_URL;
+const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
 
 // Common headers
 const makeHeaders = (accessToken?: string): HeadersInit => {

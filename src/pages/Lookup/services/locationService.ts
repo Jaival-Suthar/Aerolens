@@ -1,6 +1,6 @@
 import { LocationApiResponse } from "../types/locationTypes";
 
-const API_BASE_URL: string = import.meta.env.VITE_PREPROD_URL;
+const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
 
 /**
  * Common headers generator

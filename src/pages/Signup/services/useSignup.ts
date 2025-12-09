@@ -1,5 +1,5 @@
 import { SignupFormData, SignupResponse } from "../types/signuptypes";
-const API_URL = import.meta.env.VITE_PREPROD_URL;
+const API_URL = import.meta.env.VITE_BASE_URL;
 
 // Helper to create headers with token if provided
 const makeHeaders = (accessToken?: string) => {

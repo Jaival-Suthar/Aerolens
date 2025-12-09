@@ -15,7 +15,7 @@ import type {
   ErrorResponse,
 } from '../../Department/types/departmentTypes';
 import { describe, it, expect, afterEach } from 'vitest';
-const API_BASE_URL = import.meta.env.VITE_PREPROD_URL;
+const API_BASE_URL = import.meta.env.VITE_BASE_URL;
 // Mock AuthContext
 vi.mock('../../../shared/auth/AuthContext', () => ({
   useAuth: () => ({
