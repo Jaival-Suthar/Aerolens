@@ -10,7 +10,7 @@ import type {
 export const useContact = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const API_URL = import.meta.env.VITE_BASE_URL;
+  const API_URL = import.meta.env.VITE_PREPROD_URL;
 
   // Helper: Build headers dynamically
   const makeHeaders = (accessToken?: string) => {

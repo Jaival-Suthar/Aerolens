@@ -7,7 +7,7 @@ import {
   Location
 } from '../types/jobProfileTypes';
 
-const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
+const API_BASE_URL: string = import.meta.env.VITE_PREPROD_URL;
 
 // Helper to create headers with token if provided
 const makeHeaders = (accessToken?: string) => {

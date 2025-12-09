@@ -18,7 +18,7 @@ afterEach(() => {
 
 global.fetch = vi.fn() as any;
 
-const BASE_URL = import.meta.env.VITE_BASE_URL;
+const BASE_URL = import.meta.env.VITE_PREPROD_URL;
 const TOKEN = "mock-token-123";
 
 describe("clientService API calls", () => {

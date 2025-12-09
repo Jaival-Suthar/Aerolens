@@ -48,7 +48,7 @@ describe('lookupService', () => {
       const result = await lookupService.getAll('mock-token-123');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        `${import.meta.env.VITE_BASE_URL}/lookup?page=1&limit=10`,
+        `${import.meta.env.VITE_PREPROD_URL}/lookup?page=1&limit=10`,
         {
           method: 'GET',
           headers: {
@@ -87,7 +87,7 @@ describe('lookupService', () => {
       const result = await lookupService.getAll('mock-token-123',2, 20);
 
       expect(global.fetch).toHaveBeenCalledWith(
-        `${import.meta.env.VITE_BASE_URL}/lookup?page=2&limit=20`,
+        `${import.meta.env.VITE_PREPROD_URL}/lookup?page=2&limit=20`,
         expect.objectContaining({
           method: 'GET',
           headers: {
@@ -163,7 +163,7 @@ describe('lookupService', () => {
       const result = await lookupService.getByKey('mock-token-123',1);
 
       expect(global.fetch).toHaveBeenCalledWith(
-        `${import.meta.env.VITE_BASE_URL}/lookup/1`,
+        `${import.meta.env.VITE_PREPROD_URL}/lookup/1`,
         {
           method: 'GET',
           headers: {
@@ -219,7 +219,7 @@ describe('lookupService', () => {
       const result = await lookupService.create('mock-token-123',payload);
 
       expect(global.fetch).toHaveBeenCalledWith(
-        `${import.meta.env.VITE_BASE_URL}/lookup`,
+        `${import.meta.env.VITE_PREPROD_URL}/lookup`,
         expect.objectContaining({
           method: 'POST',
           headers: {
@@ -323,7 +323,7 @@ describe('lookupService', () => {
       const result = await lookupService.delete('mock-token-123',1);
 
       expect(global.fetch).toHaveBeenCalledWith(
-        `${import.meta.env.VITE_BASE_URL}/lookup/1`,
+        `${import.meta.env.VITE_PREPROD_URL}/lookup/1`,
         expect.objectContaining({ method: 'DELETE' })
       );
       expect(result.success).toBe(true);
@@ -406,7 +406,7 @@ describe('lookupService', () => {
       const result = await lookupService.getAll('mock-token-123',9999, 10);
 
       expect(global.fetch).toHaveBeenCalledWith(
-        `${import.meta.env.VITE_BASE_URL}/lookup?page=9999&limit=10`,
+        `${import.meta.env.VITE_PREPROD_URL}/lookup?page=9999&limit=10`,
         expect.any(Object)
       );
       expect(result.data).toEqual([]);
@@ -438,7 +438,7 @@ describe('lookupService', () => {
       await lookupService.getAll('mock-token-123',1, 1000);
 
       expect(global.fetch).toHaveBeenCalledWith(
-        `${import.meta.env.VITE_BASE_URL}/lookup?page=1&limit=1000`,
+        `${import.meta.env.VITE_PREPROD_URL}/lookup?page=1&limit=1000`,
         expect.any(Object)
       );
     });
@@ -467,7 +467,7 @@ describe('lookupService', () => {
       const result = await lookupService.create('mock-token-123',payload);
 
       expect(global.fetch).toHaveBeenCalledWith(
-        `${import.meta.env.VITE_BASE_URL}/lookup`,
+        `${import.meta.env.VITE_PREPROD_URL}/lookup`,
         expect.objectContaining({
           method: 'POST',
           headers: {

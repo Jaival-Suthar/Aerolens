@@ -1,6 +1,6 @@
 import { LookupApiResponse } from "../types/lookupTypes";
 
-const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
+const API_BASE_URL: string = import.meta.env.VITE_PREPROD_URL;
 
 /**
  * ✅ Build headers safely for both JSON and FormData requests

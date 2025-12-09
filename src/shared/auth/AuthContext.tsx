@@ -18,7 +18,7 @@ export const useAuth = () => {
   return ctx;
 };
 
-const API_BASE = import.meta.env.VITE_BASE_URL;
+const API_BASE = import.meta.env.VITE_PREPROD_URL;
 const TOKEN_KEY = 'accessToken';
 const REFRESH_COOLDOWN = 1000; // 1 second cooldown between refresh attempts
 
