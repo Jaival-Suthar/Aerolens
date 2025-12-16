@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './shared/auth/AuthContext';
+import { FaSpinner, FaExclamationTriangle } from "react-icons/fa";
 
 const AppNavbar = lazy(() => import('./AppNavbar'));
 const Client = lazy(() => import('./pages/ClientPage/page'));
@@ -15,21 +16,35 @@ const Members = lazy(() => import('./pages/Members/page'));
 const ReportPage = lazy(() => import('./pages/Report/page'));
 
 const LoadingSpinner = () => (
-  <div className="flex align-items-center justify-content-center h-screen" data-testid="loading-spinner">
-    <i className="pi pi-spin pi-spinner text-4xl text-primary"></i>
+  <div
+    className="flex align-items-center justify-content-center h-screen"
+    data-testid="loading-spinner"
+  >
+    <FaSpinner className="spin text-4xl text-primary" />
   </div>
 );
 
+
 const NotFound: React.FC = () => (
-  <div className="flex flex-column align-items-center justify-content-center h-screen" data-testid="not-found">
-    <i className="pi pi-exclamation-triangle text-6xl text-orange-500 mb-3"></i>
+  <div
+    className="flex flex-column align-items-center justify-content-center h-screen"
+    data-testid="not-found"
+  >
+    <FaExclamationTriangle className="text-6xl text-orange-500 mb-3" />
+
     <h1 className="text-4xl font-bold text-900 mb-2">404</h1>
     <p className="text-xl text-600 mb-4">Page not found</p>
-    <button className="p-button p-component" onClick={() => (window.location.href = '/home')} data-testid="go-dashboard-btn">
+
+    <button
+      className="p-button p-component"
+      onClick={() => (window.location.href = "/home")}
+      data-testid="go-dashboard-btn"
+    >
       <span className="p-button-label">Go to Home Page</span>
     </button>
   </div>
 );
+
 
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="app">
@@ -56,19 +71,12 @@ const AppContent: React.FC = () => {
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={isAuthenticated ? <Navigate to="/home" replace /> : <LoginPage />} />
-        
-        
-        {/* SignUp for admin user creation - always wrapped with navbar */}
-        <Route path="/signup" element={
-          <AppLayout>
-            <SignUpPage />
-          </AppLayout>
-        } />
 
         {/* Authenticated Routes */}
         {isAuthenticated && (
           <>
             <Route path="/" element={<Navigate to="/home" replace />} />
+            <Route path="/create-user" element={<AppLayout><SignUpPage /></AppLayout>} />
             <Route path="/home" element={<AppLayout><Home /></AppLayout>} />
             <Route path="/client" element={<AppLayout><Client /></AppLayout>} />
             <Route path="/job-profile" element={<AppLayout><JobProfile /></AppLayout>} />
