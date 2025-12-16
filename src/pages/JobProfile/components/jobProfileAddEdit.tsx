@@ -71,6 +71,24 @@ const JobProfileAddEdit: React.FC<Props> = ({
   const [errors, setErrors] = useState<JobProfileFormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const toast = useRef<Toast>(null); // 👈 Toast Ref
+  const toLocalDateString = (date: Date): string =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const normalizeDateOnly = (value?: string): string => {
+  if (!value) return '';
+
+  // Case 1: Already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  // Case 2: ISO datetime or anything Date can parse
+  const date = new Date(value);
+  if (!isNaN(date.getTime())) {
+    return toLocalDateString(date);
+  }
+
+  return '';
+};
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -112,7 +130,7 @@ useEffect(() => {
         jobRole: jobProfile.jobRole,
         techSpecification: jobProfile.techSpecification,
         positions: jobProfile.positions,
-        estimatedCloseDate: jobProfile.estimatedCloseDate,
+        estimatedCloseDate: normalizeDateOnly(jobProfile.estimatedCloseDate),
         location: jobProfile.location || { city: '', country: '' },
         workArrangement: jobProfile.workArrangement 
           ? (jobProfile.workArrangement.charAt(0).toUpperCase() + 
@@ -326,19 +344,14 @@ const handleSubmit = async () => {
     return;
   }
 
-  let isoDate = '';
   const closeDate = form.estimatedCloseDate;
-  
-  if (closeDate) {
-    const date = new Date(closeDate);
-    if (!isNaN(date.getTime())) {
-      isoDate = date.toISOString();
-    } else {
-      setErrors({ estimatedCloseDate: 'Estimated Close Date is invalid' });
-      return;
-    }
-  } else {
+   if (!closeDate) {
     setErrors({ estimatedCloseDate: 'Estimated Close Date is required' });
+    return;
+  }
+   const isValidDateFormat = /^\d{4}-\d{2}-\d{2}$/.test(closeDate);
+  if (!isValidDateFormat) {
+    setErrors({ estimatedCloseDate: 'Estimated Close Date is invalid' });
     return;
   }
   
@@ -350,7 +363,7 @@ const handleSubmit = async () => {
     jobRole: form.jobRole!.trim(),
     techSpecification: form.techSpecification!.trim(),
     positions: form.positions!,
-    estimatedCloseDate: isoDate,
+    estimatedCloseDate: closeDate,
     location: form.location!,
     workArrangement: form.workArrangement!,
     status: form.status!,
@@ -556,12 +569,18 @@ const handleSubmit = async () => {
           <div className="field col-4">
             <label>Estimated Close Date <span className="p-error">*</span></label>
             <Calendar
-              value={form.estimatedCloseDate ? new Date(form.estimatedCloseDate) : null}
+              value={
+                form.estimatedCloseDate
+                  ? (() => {
+                      const [y, m, d] = form.estimatedCloseDate.split('-').map(Number);
+                      return new Date(y, m - 1, d);
+                    })()
+                  : null
+              }
               onChange={e => {
                 const val = e.value;
                 if (val instanceof Date && !isNaN(val.getTime())) {
-                  // Ensure value is set as ISO string
-                  updateField('estimatedCloseDate', val.toISOString()); 
+                  updateField('estimatedCloseDate', toLocalDateString(val));
                 } else if (typeof val === 'string' && val) {
                   updateField('estimatedCloseDate', val);
                 } else {
