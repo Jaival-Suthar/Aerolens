@@ -1,72 +1,118 @@
-import { CumulativeInterviewSummary } from "../types/reportTypes";
+import React from 'react';
+
+interface CumulativeInterviewSummary {
+  total: number;
+  selected: number;
+  rejected: number;
+  pending: number;
+}
 
 interface Props {
   summary: CumulativeInterviewSummary | null;
 }
 
-const TopSummaryCards: React.FC<Props> = ({ summary}) => {
- 
+const TopSummaryCards: React.FC<Props> = ({ summary }) => {
   if (!summary) {
     return (
-      <div className="p-4 border-round-xl mb-4 text-center text-500">
-        Loading interview summary...
+      <div className="p-4 text-center" style={{ color: "#6b7280" }}>
+        Loading interview summary…
       </div>
     );
   }
 
   const stats = [
-    { label: "Total Interviews", value: summary.total },
-    { label: "Selected", value: summary.selected },
-    { label: "Rejected", value: summary.rejected },
-    { label: "Pending", value: summary.pending },
+    { label: "Total", value: summary.total, color: "#072844" },
+    { label: "Selected", value: summary.selected, color: "#55c62c" },
+    { label: "Rejected", value: summary.rejected, color: "#ef4444" },
+    { label: "Pending", value: summary.pending, color: "#f59e0b" },
   ];
 
   return (
-    <div
-      className="p-4 border-round-xl mb-4"
-      style={{
-        background:
-          "linear-gradient(135deg, #ffffff 0%, #f6f9fc 45%, #eef3f8 100%)",
-      }}
-    >
-      {/* Title */}
-      <div className="mb-4 text-center">
-        <h2 className="font-bold m-0" style={{ color: "#1f2937" }}>
-          Total Aerolens Interview Report
-        </h2>
-        <p className="text-sm mt-1" style={{ color: "#6b7280" }}>
-          Overall interview performance overview
+    <div className="mb-3">
+      {/* Title with gradient underline */}
+      <div className="mb-2 px-1">
+        <h3
+          className="m-0 font-semibold"
+          style={{ 
+            color: "#072844", 
+            fontSize: "2.0 rem",
+            marginBottom: "4px"
+          }}
+        >
+          Aerolens Interview Summary
+        </h3>
+        <div 
+          style={{
+            width: "60px",
+            height: "3px",
+            background: "linear-gradient(90deg, #072844, #55c62c)",
+            borderRadius: "3px",
+            marginBottom: "6px"
+          }}
+        />
+        <p className="m-0" style={{ color: "#6b7280", fontSize: "0.875rem" }}>
+          Cumulative performance snapshot
         </p>
       </div>
 
-      {/* Cards */}
-      <div className="grid">
-        {stats.map((stat) => (
-          <div key={stat.label} className="col-6 md:col-3">
+      {/* Compact Cards Grid */}
+      <div className="grid" style={{ marginTop: "12px" }}>
+        {stats.map((stat, index) => (
+          <div key={stat.label} className="col-6 md:col-3 px-2" style={{ marginBottom: "8px" }}>
             <div
-              className="p-4 border-round-lg h-full text-center"
+              className="border-round-lg p-3 text-center h-full"
               style={{
-                background:
-                  "linear-gradient(135deg, rgba(255,255,255,0.85), rgba(245,248,252,0.75))",
-                backdropFilter: "blur(12px) saturate(140%)",
-                WebkitBackdropFilter: "blur(12px) saturate(140%)",
-                boxShadow:
-                  "0 12px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255,255,255,0.6)",
-                border: "1px solid rgba(220, 230, 240, 0.6)",
+                background: "#ffffff",
+                border: "2px solid transparent",
+                backgroundImage: "linear-gradient(white, white), linear-gradient(90deg, #072844 0%, #55c62c 100%)",
+                backgroundOrigin: "border-box",
+                backgroundClip: "padding-box, border-box",
+                boxShadow: "0 4px 8px rgba(7, 40, 68, 0.06)",
+                transition: "all 0.3s ease",
+                position: "relative",
+                overflow: "hidden"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 6px 16px rgba(7, 40, 68, 0.12)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 2px 8px rgba(7, 40, 68, 0.06)";
               }}
             >
+              {/* Gradient accent dot */}
               <div
-                className="text-sm font-medium mb-2"
-                style={{ color: "rgba(0, 0, 0, 0.9)" }}
+                style={{
+                  width: "8px",
+                  height: "8px",
+                  borderRadius: "50%",
+                  margin: "0 auto 10px",
+                  background: `linear-gradient(135deg, ${stat.color}, ${stat.color}dd)`,
+                  boxShadow: `0 0 8px ${stat.color}40`
+                }}
+              />
+
+              <div
+                className="text-xs font-medium mb-2"
+                style={{ 
+                  color: "#6b7280", 
+                  letterSpacing: "0.03em",
+                  textTransform: "uppercase",
+                  fontSize: "0.7rem"
+                }}
               >
                 {stat.label}
               </div>
 
               <div
-                className="font-extrabold"
                 style={{
-                  fontSize: "2.8rem",
-                  color: "#000000ff",
+                  fontSize: "2.25rem",
+                  fontWeight: 700,
+                  background: "linear-gradient(90deg, #072844, #55c62c)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
                   lineHeight: 1,
                 }}
               >
@@ -79,5 +125,4 @@ const TopSummaryCards: React.FC<Props> = ({ summary}) => {
     </div>
   );
 };
-
 export default TopSummaryCards;
