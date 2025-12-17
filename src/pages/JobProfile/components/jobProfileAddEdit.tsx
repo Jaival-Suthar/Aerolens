@@ -10,6 +10,7 @@ import { classNames } from 'primereact/utils';
 import { Toast } from 'primereact/toast'; // 👈 Import Toast
 import DialogButton from '../../../shared/DialogAddEditButton';
 import { validateJobProfileRequest } from '../services/jobProfileService';
+import { FileUpload } from 'primereact/fileupload';
 import type {
   JobProfile,
   JobProfilePayload,
@@ -70,7 +71,8 @@ const JobProfileAddEdit: React.FC<Props> = ({
   const [form, setForm] = useState<Partial<JobProfilePayload>>(emptyForm);
   const [errors, setErrors] = useState<JobProfileFormErrors>({});
   const [submitting, setSubmitting] = useState(false);
-  const toast = useRef<Toast>(null); // 👈 Toast Ref
+  const [jdFile, setJdFile] = useState<File | null>(null);
+  const toast = useRef<Toast>(null); 
   const toLocalDateString = (date: Date): string =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   const normalizeDateOnly = (value?: string): string => {
@@ -98,15 +100,13 @@ const JobProfileAddEdit: React.FC<Props> = ({
 // Load existing data if editing
 useEffect(() => {
   if (visible) {
+    setJdFile(null);
     if (jobProfile) {
       // Find the departmentId from departmentName
       const selectedClient = clients.find(c => c.clientId === jobProfile.clientId);
       const selectedDept = selectedClient?.departments.find(
         d => d.departmentName === jobProfile.departmentName
       );
-      
-      console.log('Loading job profile for edit:', jobProfile);
-      console.log('Found department:', selectedDept);
       
       // ⚠️ CRITICAL: Must use the LOOKED-UP departmentId, not the possibly-undefined one from API
       const departmentId = selectedDept?.departmentId ?? jobProfile.departmentId;
@@ -125,7 +125,7 @@ useEffect(() => {
       
       setForm({
         clientId: jobProfile.clientId,
-        departmentId: departmentId, // ✅ GUARANTEED to have a value now
+        departmentId: departmentId, 
         jobProfileDescription: jobProfile.jobProfileDescription,
         jobRole: jobProfile.jobRole,
         techSpecification: jobProfile.techSpecification,
@@ -136,10 +136,10 @@ useEffect(() => {
           ? (jobProfile.workArrangement.charAt(0).toUpperCase() + 
              jobProfile.workArrangement.slice(1).toLowerCase()) as 'onsite' | 'hybrid' | 'remote'
           : undefined,
-        status: jobProfile.status,
+        status: jobProfile ? jobProfile.status : 'pending',
+
       });
       
-      console.log('Set form with departmentId:', departmentId);
     } else {
       setForm({ ...emptyForm });
     }
@@ -273,7 +273,6 @@ const mappedStatusOptions = useMemo(() =>
     'techSpecification', 
     'positions', 
     'estimatedCloseDate', 
-    'status'
   ];
 
   requiredFields.forEach(field => {
@@ -357,17 +356,20 @@ const handleSubmit = async () => {
   
   // ✅ SIMPLE: Everything comes from form state (which was populated in useEffect)
   const payload: JobProfilePayload = {
-    clientId: form.clientId!,
-    departmentId: form.departmentId!,
-    jobProfileDescription: form.jobProfileDescription!.trim(),
-    jobRole: form.jobRole!.trim(),
-    techSpecification: form.techSpecification!.trim(),
-    positions: form.positions!,
-    estimatedCloseDate: closeDate,
-    location: form.location!,
-    workArrangement: form.workArrangement!,
-    status: form.status!,
-  };
+  clientId: form.clientId!,
+  departmentId: form.departmentId!,
+  jobProfileDescription: form.jobProfileDescription!.trim(),
+  jobRole: form.jobRole!.trim(),
+  techSpecification: form.techSpecification!.trim(),
+  positions: form.positions!,
+  estimatedCloseDate: closeDate,
+  location: form.location!,
+  workArrangement: form.workArrangement!,
+  ...(form.status ? { status: form.status } : {}),
+};
+  if (jdFile) {
+  payload.JD = jdFile;
+}
 
   // Run the service-level validation
   const validationErrors = validateJobProfileRequest(payload as RequiredJobProfilePayload);
@@ -649,20 +651,58 @@ const handleSubmit = async () => {
             )}
             {errors.location && <small className="p-error">{errors.location}</small>}
           </div>
-
           <div className="field col-12">
-            <label>Status <span className="p-error">*</span></label>
-            <Dropdown
-              value={form.status ?? null}
-              options={mappedStatusOptions}
-              onChange={(e: DropdownChangeEvent) => updateField('status', e.value)}
-              placeholder="Select Status"
-              className={classNames({ 'p-invalid': errors.status })}
-              optionLabel="label"
-              optionValue="value"
+            <label className="font">
+              Job Description File (JD)
+            </label>
+
+            <FileUpload
+              mode="basic"
+              name="JD"
+              accept=".pdf,.doc,.docx"
+              maxFileSize={5 * 1024 * 1024} // 5MB
+              auto={false}
+              customUpload
+              chooseLabel="Upload JD"
+              chooseOptions={{
+                label: "Upload JD",
+                className: "p-button-secondary p-button-sm",
+              }}
+              onSelect={(e) => {
+                const selectedFile = e.files?.[0];
+                if (selectedFile) {
+                  setJdFile(selectedFile);
+                }
+              }}
             />
-            {errors.status && <small className="p-error">{errors.status}</small>}
+
+            {jdFile && (
+              <small className="p-success block mt-1">
+                Selected file: <strong>{jdFile.name}</strong>
+              </small>
+            )}
+
+            <small className="text-muted block mt-1">
+              Supported formats: PDF, DOC, DOCX (max 5MB)
+            </small>
           </div>
+
+          {jobProfile && (
+            <div className="field col-12">
+              <label>Status</label>
+              <Dropdown
+                value={form.status ?? null}
+                options={mappedStatusOptions}
+                onChange={(e: DropdownChangeEvent) => updateField('status', e.value)}
+                placeholder="Select Status"
+                className={classNames({ 'p-invalid': errors.status })}
+                optionLabel="label"
+                optionValue="value"
+              />
+              {errors.status && <small className="p-error">{errors.status}</small>}
+            </div>
+          )}
+
         </div>
       </Dialog>
     </>

@@ -17,10 +17,20 @@ export interface Location {
   country: string;
 }
 
+export interface JDInfo {
+  hasJD: boolean;
+  originalName: string | null;
+  uploadDate: string | null;
+  s3Key: string | null;
+  fileExtension?: string;
+  mimeType?: string;
+  supportsPreview?: boolean;
+}
+
 
 export interface JobProfile {
   jobProfileId: number;
-  clientId: number;
+  clientId?: number;
   departmentId?: number;
   clientName: string; // Add this - comes from API
   departmentName: string; // Add this - comes from API
@@ -35,6 +45,9 @@ export interface JobProfile {
   location: Location;
   status: JobStatus;
   statusName?: string; // API returns statusName
+  jdFileName?: string;
+  jdOriginalName?: string;
+  jdUploadDate?: string;
 }
 
 // Payload type for create/update JobProfile API
@@ -48,7 +61,8 @@ export interface JobProfilePayload {
   estimatedCloseDate: string;
   workArrangement: 'onsite' | 'hybrid' | 'remote';
   location: Location; 
-  status: JobStatus;
+  status?: JobStatus;
+  JD?: File;
 }
 
 // Type for dropdown options used in UI
@@ -81,4 +95,5 @@ export interface JobProfileFormErrors {
   workArrangement?: string;
   location?: string;
   status?: string;
+  JD?: string;
 }

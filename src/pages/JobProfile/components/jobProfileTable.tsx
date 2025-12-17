@@ -10,6 +10,7 @@ import AddButton from '../../../shared/AddButton';
 import EditButton from '../../../shared/EditButton';
 import DeleteButton from '../../../shared/DeleteButton';
 import ExportExcelButton from '../../../shared/ExportExcelButton';
+import { Button } from 'primereact/button';
 import { useSearchParams } from "react-router-dom";
 import { 
   getJobProfiles, 
@@ -28,6 +29,8 @@ import type {
 import { useAuth } from '../../../shared/auth/AuthContext'; 
 import { FilterMatchMode } from 'primereact/api';
 import type { DataTableFilterMeta } from 'primereact/datatable';
+import { FaDownload, FaEye } from 'react-icons/fa';
+
 
 // import SearchButton from '../../../shared/SearchButton';
 
@@ -265,6 +268,118 @@ const [statusOptions, setStatusOptions] = useState<string[]>([]);
     return rowData.workArrangement ? capitalizeFirstLetter(rowData.workArrangement) : '-';
   };
 
+  const downloadJD = async (jobProfileId: number) => {
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_BASE_URL}/jobProfile/${jobProfileId}/get-JD`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.message);
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (err: any) {
+    toast.current?.show({
+      severity: 'error',
+      summary: 'Error',
+      detail: err.message, // ✅ backend message only
+    });
+  }
+};
+
+
+const previewJD = async (jobProfileId: number) => {
+  try {
+    if (!accessToken) throw new Error('Authentication token required');
+
+    const previewUrl = `${import.meta.env.VITE_BASE_URL}/jobProfile/${jobProfileId}/get-JD/preview`;
+    const response = await fetch(previewUrl, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  
+
+    const contentType = response.headers.get('content-type');
+
+    // ❌ Backend returned JSON error
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.message || 'JD preview failed');
+    }
+
+    // ❌ Not a PDF (safety check)
+    if (!contentType?.includes('application/pdf')) {
+      throw new Error('Preview is only supported for PDF files. Please download the file instead.');
+    }
+
+    // ✅ PDF preview
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (error: any) {
+    console.error('JD preview failed:', error);
+    toast.current?.show({
+      severity: 'error',
+      summary: 'Preview Error',
+      detail: error.message,
+    });
+  }
+};
+
+
+
+
+const jdBodyTemplate = (rowData: any) => {
+  if (!rowData.jdFileName) {
+    return <span className="text-muted">—</span>;
+  }
+
+  const isPdf = rowData.jdOriginalName?.toLowerCase().endsWith('.pdf');
+
+  return (
+    <div className="flex gap-2 align-items-center">
+      <Button
+        className="p-button-text p-button-sm"
+        tooltip="Download JD"
+        onClick={() => downloadJD(rowData.jobProfileId)}
+      >
+        <FaDownload />
+      </Button>
+
+      {isPdf && (
+        <Button
+          type="button"
+          className="p-button-text p-button-sm"
+          onClick={() => {
+            previewJD(rowData.jobProfileId);
+          }}
+        >
+          <FaEye />
+        </Button>
+      )}
+    </div>
+  );
+};
+
+
   return (
     <div className="card">
       <Toast ref={toast} />
@@ -378,6 +493,12 @@ const [statusOptions, setStatusOptions] = useState<string[]>([]);
           sortable 
           filter
         />
+        <Column
+          header="JD"
+          body={jdBodyTemplate}
+          style={{ width: '8rem', textAlign: 'center' }}
+        />
+
       </DataTable>
 
       <JobProfileAddEdit

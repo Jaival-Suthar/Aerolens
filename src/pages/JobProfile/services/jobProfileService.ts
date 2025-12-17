@@ -4,7 +4,8 @@ import {
   ClientOption, 
   DepartmentOption,
   ApiResponse,
-  Location
+  Location,
+  JDInfo
 } from '../types/jobProfileTypes';
 
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
@@ -12,6 +13,12 @@ const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
 // Helper to create headers with token if provided
 const makeHeaders = (accessToken?: string) => {
   const headers: HeadersInit = { "Content-Type": "application/json" };
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+  return headers;
+};
+
+const makeMultipartHeaders = (accessToken?: string) => {
+  const headers: HeadersInit = {};
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
   return headers;
 };
@@ -33,7 +40,10 @@ function mapApiJobProfile(data: any): JobProfile {
     location: data.location || { city: '', country: '' },
     workArrangement: data.workArrangement || 'onsite',
     status: data.statusName || data.status || 'Pending',
-    statusName: data.statusName
+    statusName: data.statusName,
+    jdFileName: data.jdFileName ?? null,
+    jdOriginalName: data.jdOriginalName ?? null,
+    jdUploadDate: data.jdUploadDate ?? null,
   };
   return mapped;
 }
@@ -201,13 +211,11 @@ export const getJobProfileById = async (
       credentials: 'include',
       headers: makeHeaders(accessToken || undefined),
     });
-    console.log('Response status:', response.status);
     if (!response.ok) {
       throw new Error(`Failed to fetch job profile: ${response.status}`);
     }
     
     const data = await response.json();
-    console.log('Raw job profile data:', data);
     if (!data.success) throw new Error(data.message || 'Job profile not found');
 
     const mappedData = mapApiJobProfile(data.data);
@@ -228,45 +236,54 @@ export const createJobProfile = async (
   jobProfileData: Omit<JobProfilePayload, 'jobProfileId'>
 ): Promise<ApiResponse<JobProfile>> => {
   try {
-    const req = {
-      ...jobProfileData,
-      receivedOn: undefined, 
-      workArrangement: jobProfileData.workArrangement,
-      location: jobProfileData.location,
-    };
+    const formData = new FormData();
+
+    Object.entries(jobProfileData).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      if (key === 'status') return; // not allowed on create
+      if (key === 'JD') return;     // handled separately
+
+      if (key === 'location') {
+        formData.append('location', JSON.stringify(value));
+      } else {
+        formData.append(key, String(value));
+      }
+    });
+
+    // ✅ append JD only once
+    if (jobProfileData.JD instanceof File) {
+      formData.append('JD', jobProfileData.JD);
+    }
 
     const response = await fetch(`${API_BASE_URL}/jobProfile`, {
       method: 'POST',
-      headers: makeHeaders(accessToken || undefined),
-      body: JSON.stringify(req),
+      headers: makeMultipartHeaders(accessToken || undefined),
+      body: formData,
       credentials: 'include'
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to create job profile: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    if (!data.success) {
-      if (data.error === 'VALIDATION_ERROR' && data.details) {
-        const errMsg = data.details.map((d: any) => d.message).join(', ');
-        throw new Error(errMsg);
-      }
-      throw new Error(data.message || 'Failed to create job profile');
-    }
+    const data = await response.json().catch(() => null);
 
-    const mappedData = mapApiJobProfile(data.data);
+    // ✅ backend-controlled error message
+    if (!response.ok || !data?.success) {
+      throw new Error(
+        data?.message ||
+        (data?.details?.map((d: any) => d.message).join(', ')) ||
+        'Failed to create job profile'
+      );
+    }
 
     return {
       success: true,
       message: data.message,
-      data: mappedData,
+      data: mapApiJobProfile(data.data),
     };
   } catch (error) {
     console.error('Error in createJobProfile:', error);
-    throw error;
+    throw error; // 👈 UI Toast will show backend message
   }
 };
+
 
 // Update a job profile
 export const updateJobProfile = async (
@@ -275,12 +292,31 @@ export const updateJobProfile = async (
   jobProfileData: Partial<Omit<JobProfilePayload, 'jobProfileId'>>
 ): Promise<ApiResponse<JobProfile>> => {
   try {
+    const formData = new FormData();
+
+    Object.entries(jobProfileData).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+
+      if (key === 'location') {
+        formData.append('location', JSON.stringify(value));
+      } else {
+        formData.append(key, String(value));
+      }
+    });
+
+    // OPTIONAL JD update
+    if (jobProfileData.JD) {
+      formData.append('JD', jobProfileData.JD);
+    }
+
+
     const response = await fetch(`${API_BASE_URL}/jobProfile/${id}`, {
       method: 'PATCH',
-      headers: makeHeaders(accessToken || undefined),
-      body: JSON.stringify(jobProfileData),
+      headers: makeMultipartHeaders(accessToken || undefined),
+      body: formData,
       credentials: 'include'
     });
+
 
     if (!response.ok) {
       throw new Error(`Failed to update job profile: ${response.status}`);
@@ -307,6 +343,21 @@ export const updateJobProfile = async (
     throw error;
   }
 };
+
+export const getJDInfo = async (
+  accessToken: string | null,
+  jobProfileId: number
+): Promise<ApiResponse<JDInfo>> => {
+  const response = await fetch(
+    `${API_BASE_URL}/jobProfile/${jobProfileId}/JD/info`,
+    {
+      headers: makeMultipartHeaders(accessToken || undefined),
+      credentials: 'include'
+    }
+  );
+  return response.json();
+};
+
 
 // Delete job profile by ID
 export const deleteJobProfile = async (
@@ -343,6 +394,8 @@ export const deleteJobProfile = async (
   }
 };
 
+
+
 // Validation for job profile data
 export const validateJobProfileRequest = (data: Partial<JobProfilePayload>): string[] => {
   const errors: string[] = [];
@@ -366,8 +419,6 @@ export const validateJobProfileRequest = (data: Partial<JobProfilePayload>): str
     errors.push('Location must include city and country');
   }
   if (!data.workArrangement) errors.push('Work Arrangement is required');
-
-  if (!data.status) errors.push('Status is required');
 
   if (data.estimatedCloseDate) {
     const closeDate = new Date(data.estimatedCloseDate);
