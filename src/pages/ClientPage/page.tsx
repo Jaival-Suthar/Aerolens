@@ -38,10 +38,10 @@ const Client: React.FC = () => {
   const [selectedClient, setSelectedClient] = useState<ClientType | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [globalFilterValue, setGlobalFilterValue] = useState('');
-  const [filters, setFilters] = useState<any>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS }
-  });
+  // const [globalFilterValue, setGlobalFilterValue] = useState('');
+  // const [filters, setFilters] = useState<any>({
+  //   global: { value: null, matchMode: FilterMatchMode.CONTAINS }
+  // });
   // --- Refs ---
   const toast = useRef<Toast | null>(null);
   const dt = useRef<React.ElementRef<typeof DataTable>>(null);
@@ -196,14 +196,16 @@ const Client: React.FC = () => {
       setSearchParams({ view: activeView, clientId: String(client.clientId) });
     }
   }, [activeView, setSearchParams]);
-  const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const value = e.target.value;
-  const _filters = { ...filters };
-  _filters['global'].value = value;
+
+  //   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//   const value = e.target.value;
+//   const _filters = { ...filters };
+//   _filters['global'].value = value;
   
-  setFilters(_filters);
-  setGlobalFilterValue(value);
-};
+//   setFilters(_filters);
+//   setGlobalFilterValue(value);
+// };
+
   const isTableView = activeView === VIEW_MODES.TABLE;
 
   return (
@@ -224,11 +226,11 @@ const Client: React.FC = () => {
             />
           </div>
           <div className="flex gap-2 mr-6">
-            <SearchButton
+            {/* <SearchButton
               value={globalFilterValue}
               onChange={onGlobalFilterChange}
               placeholder="Search clients..."
-            />
+            /> */}
             <ExportExcelButton dtRef={dt} />
             <AddButton onClick={openAddDialog} disabled={loading} data-testid="AddBtn" />
             <EditButton onClick={handleEditSelected} disabled={!selectedClient || loading} data-testid="EditBtn" />
@@ -248,8 +250,6 @@ const Client: React.FC = () => {
             onSelectionChange={handleSelectionChange}
             loading={loading}
             preSelectClientId={selectedClientId ? Number(selectedClientId) : undefined}
-            globalFilterFields={['clientId', 'clientName', 'address']}
-            filters={filters}
           />
         )}
 
