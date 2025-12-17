@@ -17,6 +17,8 @@ import CogButton from "../../../shared/CogButton";
 import InterviewResultDialog from "./interviewResultDialog";
 import { FaUserTie, FaClipboardCheck } from "react-icons/fa";
 import { useSearchParams } from "react-router-dom";
+import { FilterMatchMode } from "primereact/api";
+import type { DataTableFilterMeta } from "primereact/datatable";
 
 
 const convert24to12Hour = (time24: string): string => {
@@ -38,7 +40,7 @@ const convert24to12Hour = (time24: string): string => {
 
 const InterviewTable: React.FC = () => {
   const { accessToken } = useAuth();
-  const [searchText, setSearchText] = useState("");
+  // const [searchText, setSearchText] = useState("");
 
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
@@ -56,7 +58,18 @@ const InterviewTable: React.FC = () => {
 
   const [rows, setRows] = useState(10);
   const [first, setFirst] = useState((pageFromUrl - 1) * rows);
-
+  const [filters, setFilters] = useState<DataTableFilterMeta>({
+  candidateName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  interviewerName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  scheduledByName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  roundNumber: { value: null, matchMode: FilterMatchMode.EQUALS },
+  totalInterviews: { value: null, matchMode: FilterMatchMode.EQUALS },
+  result: { value: null, matchMode: FilterMatchMode.EQUALS },
+  interviewDate: { value: null, matchMode: FilterMatchMode.EQUALS },
+  fromTime: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  toTime: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  durationMinutes: { value: null, matchMode: FilterMatchMode.EQUALS }
+});
   const onPageChange = (e: any) => {
   setFirst(e.first);
   setRows(e.rows);
@@ -220,7 +233,7 @@ const InterviewTable: React.FC = () => {
         <h2>Interviews</h2>
 
         <div className="flex gap-2 align-items-center">
-          <SearchButton value={searchText} onChange={(e) => setSearchText(e.target.value)} />
+          {/* <SearchButton value={searchText} onChange={(e) => setSearchText(e.target.value)} /> */}
           <EditButton onClick={handleEdit} disabled={!selectedInterview} />
           <DeleteButton onClick={handleDelete} disabled={!selectedInterview} />
           <div style={{ position: "relative" }}>
@@ -300,35 +313,49 @@ const InterviewTable: React.FC = () => {
         rows={rows}
         first={first}
         onPage={onPageChange}
+        filterDisplay="menu"
+        filters={filters}
+        onFilter={(e) => setFilters(e.filters)}
         rowsPerPageOptions={[10, 20, 50]}
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Members"
         totalRecords={interviews.length}
-        globalFilter={searchText}
-        globalFilterFields={[
-          "candidateName",
-          "interviewerName",
-          "scheduledByName",
-          "roundNumber",
-          "totalInterviews",
-          "result",
-          "interviewDate",
-          "fromTime",
-          "toTime",
-          "durationMinutes"
-        ]}
+        // globalFilter={searchText}
+        // globalFilterFields={[
+        //   "candidateName",
+        //   "interviewerName",
+        //   "scheduledByName",
+        //   "roundNumber",
+        //   "totalInterviews",
+        //   "result",
+        //   "interviewDate",
+        //   "fromTime",
+        //   "toTime",
+        //   "durationMinutes"
+        // ]}
       >
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
-        <Column field="candidateName" header="Candidate Name" />
-        <Column field="interviewerName" header="Interviewer" />
-        <Column field="scheduledByName" header="Scheduled By" />
-        <Column field="roundNumber" header="Round No." />
-        <Column field="totalInterviews" header="Total Rounds" />
-        <Column field="result" header="Result" body={resultBodyTemplate} />
-        <Column field="interviewDate" header="Date" body={dateBodyTemplate} />
-        <Column field="fromTime" header="Start Time" body={timeBodyTemplate} />
-        <Column field="toTime" header="End Time" body={endTimeBodyTemplate} />
-        <Column field="durationMinutes" header="Duration (min)" />
+        <Column field="candidateName" header="Candidate Name" filter />
+        <Column field="interviewerName" header="Interviewer" filter />
+        <Column field="scheduledByName" header="Scheduled By" filter />
+        <Column field="roundNumber" header="Round No." filter />
+        <Column field="totalInterviews" header="Total Rounds" filter />
+        <Column
+          field="result"
+          header="Result"
+          body={resultBodyTemplate}
+          filter
+          showFilterMatchModes={false}
+        />
+        <Column
+          field="interviewDate"
+          header="Date"
+          body={dateBodyTemplate}
+          filter
+        />
+        <Column field="fromTime" header="Start Time" body={timeBodyTemplate} filter />
+        <Column field="toTime" header="End Time" body={endTimeBodyTemplate} filter />
+        <Column field="durationMinutes" header="Duration (min)" filter />
       </DataTable>
 
       <InterviewAddEditForm

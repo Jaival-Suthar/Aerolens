@@ -7,9 +7,10 @@ import { useClientData } from "../hooks/useClientData";
 import type { ClientTableProps, ClientType } from "../types/clientTypes";
 import { FaTimesCircle, FaSearch } from "react-icons/fa";
 import { useAuth } from '../../../shared/auth/AuthContext'; 
-import { InputText } from 'primereact/inputtext';
-import { Button } from 'primereact/button';
+// import { InputText } from 'primereact/inputtext';
+// import { Button } from 'primereact/button';
 import { FilterMatchMode } from 'primereact/api';
+import type { DataTableFilterMeta } from 'primereact/datatable';
 
 const ClientTable: React.FC<ClientTableProps> = ({
   dtRef,
@@ -18,8 +19,8 @@ const ClientTable: React.FC<ClientTableProps> = ({
   selectedClient,
   onSelectionChange,
   preSelectClientId,
-  filters,
-  globalFilterFields
+  // filters,
+  // globalFilterFields
 }) => {
   const { clients, loading, error, loadClients } = useClientData(refreshTrigger);
   // const {
@@ -31,6 +32,11 @@ const ClientTable: React.FC<ClientTableProps> = ({
   //   resetPaginationOnError,
   //   searchParams,
   // } = usePagination();
+  const [filters, setFilters] = useState<DataTableFilterMeta>({
+    clientId: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    clientName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    address: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  });
 
   useEffect(() => {
   const loadData = async () => {
@@ -120,26 +126,27 @@ useEffect(() => {
       )}
 
       <DataTable
-        ref={dtRef}
-        value={clients}
-        loading={loading}
-        responsiveLayout="scroll"
-        stripedRows
-        className="text-m"
-        paginator={true} 
-        rows={10}  // ← ADD THIS
-        rowsPerPageOptions={[10, 20, 50]}  // ← ADD THIS
-        scrollHeight="400px"
-        emptyMessage={loading ? "Loading..." : "No clients found."}
-        selectionMode="single"
-        selection={selectedClient}
-        onSelectionChange={onSelectionChangeHandler}
-        dataKey="clientId"
-        onRowDoubleClick={onRowDoubleClick}
-        showGridlines
-        aria-live="polite"
-        filters={filters}
-        globalFilterFields={globalFilterFields}
+         ref={dtRef}
+          value={clients}
+          loading={loading}
+          responsiveLayout="scroll"
+          stripedRows
+          paginator
+          rows={10}
+          rowsPerPageOptions={[10, 20, 50]}
+          scrollHeight="400px"
+          emptyMessage={loading ? "Loading..." : "No clients found."}
+          selectionMode="single"
+          selection={selectedClient}
+          onSelectionChange={onSelectionChangeHandler}
+          dataKey="clientId"
+          onRowDoubleClick={onRowDoubleClick}
+          showGridlines
+          filterDisplay="menu"
+          filters={filters}
+          onFilter={(e) => setFilters(e.filters)}
+        // filters={filters}
+        // globalFilterFields={globalFilterFields}
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Clients"
       >
@@ -148,6 +155,8 @@ useEffect(() => {
           field="clientId"
           header="Client ID"
           sortable
+          filter
+          showClearButton={true}
           bodyClassName={cellClass}
           headerClassName={headerClass}
           style={{ minWidth: "8rem" }}
@@ -157,6 +166,8 @@ useEffect(() => {
           field="clientName"
           header="Client Name"
           sortable
+          filter
+          showClearButton={true}
           bodyClassName={cellClass}
           headerClassName={headerClass}
           style={{ minWidth: "12rem" }}
@@ -165,6 +176,10 @@ useEffect(() => {
         <Column
           field="address"
           header="Address"
+          filter
+          showFilterMatchModes={false}
+          showApplyButton={false}
+          showClearButton={true}
           bodyClassName={cellClass}
           headerClassName={headerClass}
           style={{ minWidth: "15rem" }}

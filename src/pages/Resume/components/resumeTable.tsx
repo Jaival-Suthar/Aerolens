@@ -38,10 +38,24 @@ const ResumeTable: React.FC = () => {
   const pageFromUrl = Number(searchParams.get("page")) || 1;
   const [first, setFirst] = useState((pageFromUrl - 1) * 10); 
   const dt = useRef<DataTable<any>>(null);
-  const [globalFilterValue, setGlobalFilterValue] = useState('');
+  // const [globalFilterValue, setGlobalFilterValue] = useState('');
   const [filters, setFilters] = useState<any>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS }
-  });
+  candidateName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  recruiterName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  recruiterContact: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  "preferredJobLocation.city": { value: null, matchMode: FilterMatchMode.CONTAINS },
+  jobRole: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  statusName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  contactNumber: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  email: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  currentCTC: { value: null, matchMode: FilterMatchMode.EQUALS },
+  expectedCTC: { value: null, matchMode: FilterMatchMode.EQUALS },
+  noticePeriod: { value: null, matchMode: FilterMatchMode.EQUALS },
+  experienceYears: { value: null, matchMode: FilterMatchMode.EQUALS },
+  notes: { value: null, matchMode: FilterMatchMode.CONTAINS }
+});
+
+
   /** ------------------- Data Loading ------------------- */
   const loadResumes = useCallback(async () => {
     if (!accessToken) return;
@@ -100,14 +114,14 @@ const ResumeTable: React.FC = () => {
     loadResumes();
   };
 
-  const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const value = e.target.value;
-  const _filters = { ...filters };
-  _filters['global'].value = value;
+//   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//   const value = e.target.value;
+//   const _filters = { ...filters };
+//   _filters['global'].value = value;
   
-  setFilters(_filters);
-  setGlobalFilterValue(value);
-};
+//   setFilters(_filters);
+//   setGlobalFilterValue(value);
+// };
 
   /** ------------------- Resume Actions ------------------- */
   const handleDownloadResume = async (candidateId: number) => {
@@ -261,11 +275,11 @@ const settingsItems = [
       <div className="flex justify-content-between align-items-center mb-2">
         <h2>Candidate Resume Management</h2>
         <div className="flex gap-2">
-          <SearchButton
+          {/* <SearchButton
             value={globalFilterValue}
             onChange={onGlobalFilterChange}
             placeholder="Search candidates..."
-          />
+          /> */}
           <ExportExcelButton dtRef={dt} />
           <AddButton onClick={handleAdd} />
           <EditButton onClick={handleEdit} disabled={!selectedResume} />
@@ -335,6 +349,8 @@ const settingsItems = [
         paginator
         rows={rows}
         first={first}
+        filterDisplay="menu"
+        onFilter={(e) => setFilters(e.filters)}
         onPage={onPageChange}
         rowsPerPageOptions={[10, 20, 50]}
         selectionMode="single"
@@ -345,53 +361,70 @@ const settingsItems = [
         loading={loading}
         emptyMessage="No candidates found."
         filters={filters}  
-        globalFilterFields={[  
-          'candidateName', 
-          'contactNumber', 
-          'email', 
-          'recruiterName', 
-          'jobRole',
-          'preferredJobLocation',
-          'statusName'
-        ]}
+        // globalFilterFields={[  
+        //   'candidateName', 
+        //   'contactNumber', 
+        //   'email', 
+        //   'recruiterName', 
+        //   'jobRole',
+        //   'preferredJobLocation',
+        //   'statusName'
+        // ]}
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Candidates"
       >
 
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
-        <Column field="candidateName" header="Candidate Name" sortable />
+        <Column field="candidateName" header="Candidate Name" sortable filter/>
         <Column
           header="Candidate Contact"
           body={candidateContactTemplate}
           sortable
+          filter
+          filterField="contactNumber"
+          showFilterMatchModes={false}
+          showApplyButton={false}
+          showClearButton={true}
         />
-        <Column field="recruiterName" header="Recruiter" sortable />
-        {/* new columns */}
+        <Column field="recruiterName" header="Recruiter" sortable filter/>
         <Column
           header="Recruiter Contact"
           body={recruiterContactTemplate}
           sortable
+          filter
+          filterField="recruiterContact"
+          showFilterMatchModes={false}
+          showApplyButton={false}
+          showClearButton={true}
         />
-        <Column field="notes" header="Notes" body={(rowData) => rowData.notes || "-"} sortable />
-
-
-        <Column field="jobRole" header="Role" sortable />
+        <Column field="jobRole" header="Role" sortable filter/>
         <Column
           header="Location"
           body={formatLocation}
           sortable
+          filter
+          filterField="preferredJobLocation.city"
+          showFilterMatchModes={false}
         />
-        <Column field="currentCTC" header="Current CTC" sortable />
-        <Column field="expectedCTC" header="Expected CTC" sortable />
-        <Column field="noticePeriod" header="Notice Period" sortable />
-        <Column field="experienceYears" header="YOE" sortable />
-        <Column field="statusName" header="Status" sortable />
+        <Column field="currentCTC" header="Current CTC" sortable filter/>
+        <Column field="expectedCTC" header="Expected CTC" sortable filter/>  
+        <Column field="noticePeriod" header="Notice Period" sortable filter/>
+        <Column field="experienceYears" header="YOE" sortable filter/>
+        <Column field="statusName" header="Status" sortable filter showFilterMatchModes={false}/>
         <Column
           field="linkedinProfileUrl"
           header="LinkedIn Profile"
           body={linkedInTemplate}
         />
         <Column header="Resume" body={resumeActionTemplate} style={{ width: "8rem" }} />
+        <Column
+          field="notes"
+          header="Notes"
+          body={(rowData) => rowData.notes || "-"}
+          sortable
+          filter
+          showFilterMatchModes={false}
+        />
       </DataTable>
 
       {/* ------------------- Dialogs ------------------- */}
