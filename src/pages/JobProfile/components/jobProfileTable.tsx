@@ -27,7 +27,9 @@ import type {
 } from '../types/jobProfileTypes';
 import { useAuth } from '../../../shared/auth/AuthContext'; 
 import { FilterMatchMode } from 'primereact/api';
-import SearchButton from '../../../shared/SearchButton';
+import type { DataTableFilterMeta } from 'primereact/datatable';
+
+// import SearchButton from '../../../shared/SearchButton';
 
 const JobProfileMain: React.FC = () => {
   const toast = useRef<Toast>(null);
@@ -43,13 +45,25 @@ const JobProfileMain: React.FC = () => {
   // ----- Pagination with URL Sync -----
   const [searchParams, setSearchParams] = useSearchParams();
   const pageFromUrl = Number(searchParams.get("page")) || 1;
-  const [first, setFirst] = useState((pageFromUrl - 1) * 5); // 5 = default rows
-  const [rows, setRows] = useState(5);
-  const [globalFilterValue, setGlobalFilterValue] = useState('');
+  const [first, setFirst] = useState((pageFromUrl - 1) * 10);
+  const [rows, setRows] = useState(10);
+  // const [globalFilterValue, setGlobalFilterValue] = useState('');
   const [locations, setLocations] = useState<Location[]>([]);
-  const [filters, setFilters] = useState<any>({
-  global: { value: null, matchMode: FilterMatchMode.CONTAINS }
+  const [filters, setFilters] = useState<DataTableFilterMeta>({
+  clientName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  departmentName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  jobRole: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  jobProfileDescription: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  techSpecification: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  positions: { value: null, matchMode: FilterMatchMode.EQUALS },
+  workArrangement: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  "location.city": { value: null, matchMode: FilterMatchMode.CONTAINS },
+  receivedOnDisplay: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  estimatedCloseDateDisplay: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  status: { value: null, matchMode: FilterMatchMode.CONTAINS }
 });
+
+
 const [statusOptions, setStatusOptions] = useState<string[]>([]);
 
   useEffect(() => {
@@ -101,11 +115,21 @@ const [statusOptions, setStatusOptions] = useState<string[]>([]);
     setJobProfiles(
   jobProfilesResponse.data.map((jp: JobProfile) => ({
     ...jp,
+
     locationString: jp.location
       ? `${jp.location.city}, ${jp.location.country}`
+      : '',
+
+    receivedOnDisplay: jp.receivedOn
+      ? new Date(jp.receivedOn).toLocaleDateString('en-GB')
+      : '',
+
+    estimatedCloseDateDisplay: jp.estimatedCloseDate
+      ? new Date(jp.estimatedCloseDate).toLocaleDateString('en-GB')
       : ''
   }))
 );
+
 
     setClients(clientsData);
     setLocations(locationsData); // Set locations
@@ -202,14 +226,14 @@ const [statusOptions, setStatusOptions] = useState<string[]>([]);
     setSelectedJobProfile(null);
   };
 
-  const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const value = e.target.value;
-  const _filters = { ...filters };
-  _filters['global'].value = value;
+//   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//   const value = e.target.value;
+//   const _filters = { ...filters };
+//   _filters['global'].value = value;
   
-  setFilters(_filters);
-  setGlobalFilterValue(value);
-};
+//   setFilters(_filters);
+//   setGlobalFilterValue(value);
+// };
 
   // Simplified status mapping
   const STATUS_SEVERITY_MAP: Record<string, 'info' | 'warning' | 'success' | 'danger'> = {
@@ -226,10 +250,6 @@ const [statusOptions, setStatusOptions] = useState<string[]>([]);
     />
   );
 
-  const dateBodyTemplate = (rowData: JobProfile, field: keyof JobProfile) => {
-    const date = rowData[field] as string;
-    return date ? new Date(date).toLocaleDateString() : '-';
-  };
 
   const locationBodyTemplate = (rowData: JobProfile) => {
   if (!rowData.location) return '-';
@@ -252,11 +272,11 @@ const [statusOptions, setStatusOptions] = useState<string[]>([]);
       <div className="flex justify-content-between align-items-center mb-2">
   <h2>Job Profiles Requirements</h2>
   <div className='flex gap-2 align-items-center'>
-    <SearchButton
+    {/* <SearchButton
       value={globalFilterValue}
       onChange={onGlobalFilterChange}
       placeholder="Search..."
-    />
+    /> */}
     <ExportExcelButton dtRef={dt} />
     <AddButton onClick={handleAddNew} />
     <EditButton 
@@ -277,6 +297,8 @@ const [statusOptions, setStatusOptions] = useState<string[]>([]);
         selectionMode="single"
         selection={selectedJobProfile}
         onSelectionChange={(e) => setSelectedJobProfile(e.value as JobProfile | null)}
+        filterDisplay="menu"
+        onFilter={(e) => setFilters(e.filters)}
         dataKey="jobProfileId"
         responsiveLayout="scroll"
         emptyMessage="No job profiles found"
@@ -285,65 +307,76 @@ const [statusOptions, setStatusOptions] = useState<string[]>([]);
         first={first}
         onPage={onPageChange}
         rowsPerPageOptions={[5, 10, 20, 50]}
-        globalFilterFields={['clientName', 'departmentName', 'jobRole', 'jobProfileDescription', 'techSpecification','workArrangement', 'positions','location', 'status']}
+        // globalFilterFields={['clientName', 'departmentName', 'jobRole', 'jobProfileDescription', 'techSpecification','workArrangement', 'positions','location', 'status']}
         filters={filters}
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Job Profiles"
       >
-
         <Column
           selectionMode="single"
           headerStyle={{ width: '3rem' }}
           frozen
         />
-        <Column field="clientName" header="Client" sortable />
-        <Column field="departmentName" header="Department" sortable />
-        <Column field="jobRole" header="Role" sortable />
+        <Column field="clientName" header="Client" sortable filter/>
+        <Column field="departmentName" header="Department" sortable filter/>
+        <Column field="jobRole" header="Role" sortable filter/>
         <Column 
           field="jobProfileDescription" 
           header="Description" 
           style={{ maxWidth: '200px' }}
+          filter
         />
         <Column 
           field="techSpecification" 
           header="Tech Stack" 
           style={{ maxWidth: '200px' }}
+          filter
         />
         <Column 
           field="positions" 
           header="Positions" 
           sortable 
           style={{ width: '8rem' }}
+          filter
         />
         <Column 
           field="workArrangement"
           header="Work Arrangement"
           sortable
           body={workArrangementBodyTemplate}
+          filter
         />
-
-        <Column 
+        <Column
           header="Location"
-          sortable
           body={locationBodyTemplate}
+          sortable
+          filter
+          filterField="location.city"
+          showFilterMatchModes={false}
         />
-        <Column 
-          field="receivedOn" 
-          header="Received On" 
-          sortable 
-          body={(rowData) => dateBodyTemplate(rowData, 'receivedOn')}
+        <Column
+          header="Received On"
+          body={(row) => row.receivedOnDisplay || '-'}
+          filter
+          filterField="receivedOnDisplay"
+          showFilterMatchModes={false}
         />
-        <Column 
-          field="estimatedCloseDate" 
-          header="Close Date" 
-          sortable 
-          body={(rowData) => dateBodyTemplate(rowData, 'estimatedCloseDate')}
+        <Column
+          header="Close Date"
+          sortable
+          body={(row) => row.estimatedCloseDateDisplay || '-'}
+          filter
+          filterField="estimatedCloseDateDisplay"
+          showFilterMatchModes={false}
+          showApplyButton={false}
+          showClearButton={true}
         />
         <Column 
           field="status" 
           header="Status" 
           body={statusBodyTemplate}
           sortable 
+          filter
         />
       </DataTable>
 
