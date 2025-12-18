@@ -49,7 +49,7 @@ const NotFound: React.FC = () => (
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="app">
     <AppNavbar />
-    <main className="main-content p-2" style={{ background: '#fff', minHeight: '100vh' }}>
+    <main className="main-content p-2" style={{ background: '#fff', minHeight: '90vh' }}>
       {children}
     </main>
   </div>
