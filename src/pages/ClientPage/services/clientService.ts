@@ -64,32 +64,21 @@ export const createClient = async (
   accessToken: string | null,
   payload: { name: string; address: string }
 ): Promise<ClientType> => {
-  try {
-    if (!payload.name || !payload.address) {
-      throw new Error("Name and address are required to create a client");
-    }
+  const response = await fetch(`${API_URL}/client`, {
+    method: "POST",
+    headers: makeHeaders(accessToken || undefined),
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
 
-    const response = await fetch(`${API_URL}/client`, {
-      method: "POST",
-      headers: makeHeaders(accessToken || undefined),
-      credentials: "include",
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(
-        `Failed to create client: ${response.status} ${errorBody}`
-      );
-    }
-
-    const data: ClientType = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Error in createClient:", error);
-    throw error;
+  if (!response.ok) {
+    const errorJson = await response.json();
+    throw errorJson; // 🔥 THIS IS THE KEY
   }
+
+  return response.json();
 };
+
 
 // Update existing client
 export const updateClient = async (
@@ -119,8 +108,8 @@ export const updateClient = async (
     });
 
     if (!response.ok) {
-      const errorText = await response.text().catch(() => "Unknown error");
-      throw new Error(`Failed to update client: ${response.status} ${errorText}`);
+      const errorJson = await response.json();
+      throw errorJson;
     }
 
     const data: ClientType = await response.json();
