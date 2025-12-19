@@ -127,39 +127,43 @@ const Client: React.FC = () => {
 
   // --- API Handlers ---
   const handleSaveClient = useCallback(
-    async (client: ClientType | ClientAddType) => {
-      setLoading(true);
-      try {
-        if (dialogMode === "add") {
-          const newClient = client as ClientAddType;
-          await createClient(accessToken, {
-            name: newClient.clientName.trim(),
-            address: newClient.address.trim(),
-          });
-          showToast("success", "Success", "Client added successfully");
-        } else {
-          const existingClient = client as ClientType;
-          if (!existingClient.clientId) {
-            throw new Error("Invalid client ID");
-          }
-          await updateClient(accessToken, {
-            id: existingClient.clientId,
-            name: existingClient.clientName.trim(),
-            address: existingClient.address.trim(),
-          });
-          showToast("success", "Success", "Client updated successfully");
+  async (client: ClientType | ClientAddType) => {
+    setLoading(true);
+    try {
+      if (dialogMode === "add") {
+        const newClient = client as ClientAddType;
+        await createClient(accessToken, {
+          name: newClient.clientName.trim(),
+          address: newClient.address.trim(),
+        });
+        showToast("success", "Success", "Client added successfully");
+      } else {
+        const existingClient = client as ClientType;
+        if (!existingClient.clientId) {
+          throw new Error("Invalid client ID");
         }
-        setRefreshTrigger((prev) => prev + 1);
-        closeAddEditDialog();
-      } catch (error) {
-        console.error("Save client error:", error);
-        showToast("error", "Error", "Failed to save client. Retry.");
-      } finally {
-        setLoading(false);
+        await updateClient(accessToken, {
+          id: existingClient.clientId,
+          name: existingClient.clientName.trim(),
+          address: existingClient.address.trim(),
+        });
+        showToast("success", "Success", "Client updated successfully");
       }
-    },
-    [dialogMode, showToast, closeAddEditDialog, accessToken]
-  );
+
+      setRefreshTrigger((prev) => prev + 1);
+      closeAddEditDialog();
+    } catch (error: any) {
+      console.error("Save client error:", error);
+
+      // 🚨 IMPORTANT: rethrow backend error
+      throw error?.response?.data || error;
+    } finally {
+      setLoading(false);
+    }
+  },
+  [dialogMode, showToast, closeAddEditDialog, accessToken]
+);
+
 
   const handleDeleteClient = useCallback(
     async (client?: ClientType | null) => {

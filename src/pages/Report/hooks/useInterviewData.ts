@@ -15,6 +15,8 @@ import {
 export const useInterviewData = (accessToken: string | null) => {
   const [loading, setLoading] = useState(false);
 
+  const [dailyLoading, setDailyLoading] = useState(false);
+
   // 🔹 TOP SUMMARY (monthly cumulative)
   const [cumulativeSummary, setCumulativeSummary] =
     useState<CumulativeInterviewSummary>({
@@ -46,21 +48,29 @@ export const useInterviewData = (accessToken: string | null) => {
   try {
     setLoading(true);
 
-    // 🔥 CLEAR STALE DATA IMMEDIATELY
     setMonthlyInterviewDates([]);
     setMonthlyInterviewers([]);
+    setCumulativeSummary({
+      total: 0,
+      selected: 0,
+      rejected: 0,
+      pending: 0,
+      cancelled: 0,
+    });
 
     const response = await getMonthlyReport(accessToken, startDate, endDate);
-
     if (!response.success) return;
 
     setCumulativeSummary(response.data.summary);
-    setMonthlyInterviewers(response.data.interviewers);
-    setMonthlyInterviewDates(response.data.interviewDates);
+    setMonthlyInterviewers(response.data.interviewers ?? []);
+    setMonthlyInterviewDates(response.data.interviewDates ?? []);
+  } catch (error) {
+    console.error("❌ Monthly report failed:", error);
   } finally {
     setLoading(false);
   }
 };
+
 
 
   /* --------------------------------------------------
@@ -85,13 +95,16 @@ export const useInterviewData = (accessToken: string | null) => {
      -------------------------------------------------- */
   const fetchDailyReport = useCallback(async (date: string) => {
   try {
-    setLoading(true);
+    setDailyInterviews([]); // prevent stale data
+
     const response = await getDailyReport(accessToken, date);
     if (!response.success) return;
-    setDailyInterviews(response.data.interviews);
-  } finally {
-    setLoading(false);
-  }
+
+    setDailyInterviews(response.data.interviews ?? []);
+  } catch (error) {
+    console.error("❌ Daily report failed:", error);
+    setDailyInterviews([]);
+  } 
 }, [accessToken]);
 
   return {
