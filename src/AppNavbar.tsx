@@ -41,7 +41,7 @@ const AppNavbar: React.FC = () => {
     {
       label: "Create User",
       icon: <FaUser style={{ marginRight: 8, marginLeft: 4 }} />,
-      command: () => handleNavigation("/signup"),
+      command: () => handleNavigation("/create-user"),
     },
   ];
 

@@ -8,7 +8,8 @@ import { useNavigate } from "react-router-dom";
 import { SignupFormData, SignupResponse } from "../types/signuptypes";
 import { registerUser, fetchDesignations } from "../services/useSignup";
 import { useAuth } from "../../../shared/auth/AuthContext";
-import { FaUser, FaPhone, FaEnvelope, FaLock, FaBriefcase } from "react-icons/fa";
+import { FaUser, FaPhone, FaEnvelope, FaLock, FaBriefcase, FaSpinner } from "react-icons/fa";
+import DialogButton from "../../../shared/DialogAddEditButton";
 
 export default function SignupForm() {
   const navigate = useNavigate();
@@ -77,19 +78,48 @@ export default function SignupForm() {
   };
 
   const validateFields = () => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.fullName) newErrors.fullName = "Please enter your full name";
-    if (!formData.contactNumber) newErrors.contactNumber = "Please enter your contact number";
-    if (!formData.email) newErrors.email = "Please enter your email address";
-    if (!formData.designation) newErrors.designation = "Please select a designation";
-    if (!formData.password) newErrors.password = "Please enter a password";
-    if (!formData.confirmPassword) newErrors.confirmPassword = "Please confirm your password";
-    if (formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword)
-      newErrors.confirmPassword = "Passwords do not match";
+  const newErrors: Record<string, string> = {};
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  // Full Name
+  if (!formData.fullName?.trim()) {
+    newErrors.fullName = "Please enter your full name";
+  }
+
+  // Contact Number
+  if (!formData.contactNumber?.trim()) {
+    newErrors.contactNumber = "Contact number is required";
+  } else if (!/^\+?[\d\s-]{10,}$/.test(formData.contactNumber)) {
+    newErrors.contactNumber = "Invalid contact number";
+  }
+
+  // Email
+  if (!formData.email?.trim()) {
+    newErrors.email = "Email is required";
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    newErrors.email = "Invalid email format";
+  }
+
+  // Designation
+  if (!formData.designation) {
+    newErrors.designation = "Please select a designation";
+  }
+
+  // Password
+  if (!formData.password) {
+    newErrors.password = "Please enter a password";
+  }
+
+  // Confirm Password
+  if (!formData.confirmPassword) {
+    newErrors.confirmPassword = "Please confirm your password";
+  } else if (formData.password !== formData.confirmPassword) {
+    newErrors.confirmPassword = "Passwords do not match";
+  }
+
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
+
 
   const handleSignupClick = async () => {
     if (!validateFields()) return;
@@ -213,7 +243,7 @@ export default function SignupForm() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
             {/* Full Name */}
             <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Full Name</label>
+              <label style={labelStyle}>Full Name *</label>
               <div style={inputGroupStyle}>
                 <FaUser style={iconStyle} />
                 <InputText
@@ -229,7 +259,7 @@ export default function SignupForm() {
 
             {/* Contact Number */}
             <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Contact Number</label>
+              <label style={labelStyle}>Contact Number *</label>
               <div style={inputGroupStyle}>
                 <FaPhone style={iconStyle} />
                 <InputText
@@ -245,7 +275,7 @@ export default function SignupForm() {
 
             {/* Email Address */}
             <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Email Address</label>
+              <label style={labelStyle}>Email Address *</label>
               <div style={inputGroupStyle}>
                 <FaEnvelope style={iconStyle} />
                 <InputText
@@ -262,7 +292,7 @@ export default function SignupForm() {
 
             {/* Designation */}
             <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Designation</label>
+              <label style={labelStyle}>Designation *</label>
               <div style={inputGroupStyle}>
                 <FaBriefcase style={iconStyle} />
                 <Dropdown
@@ -279,7 +309,7 @@ export default function SignupForm() {
 
             {/* Password */}
             <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Password</label>
+              <label style={labelStyle}>Password *</label>
               <div style={inputGroupStyle}>
                 <FaLock style={iconStyle} />
                 <Password
@@ -296,7 +326,7 @@ export default function SignupForm() {
 
             {/* Confirm Password */}
             <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Confirm Password</label>
+              <label style={labelStyle}>Confirm Password *</label>
               <div style={inputGroupStyle}>
                 <FaLock style={iconStyle} />
                 <Password
@@ -365,33 +395,19 @@ export default function SignupForm() {
 
           {/* Action Buttons */}
           <div style={{ display: "flex", gap: "10px", marginTop: "20px", justifyContent: "flex-end" }}>
-            <Button
+            <DialogButton
               label="Cancel"
+              severity="secondary"
               onClick={resetForm}
-              outlined
-              style={{
-                padding: "8px 20px",
-                borderRadius: "6px",
-                border: "1px solid #d1d5db",
-                background: "white",
-                color: "#374151",
-                fontSize: "14px",
-              }}
-            />
-            <Button
-              label={loading ? "Creating User..." : "Create User"}
-              icon={loading ? "pi pi-spin pi-spinner" : ""}
-              onClick={handleSignupClick}
               disabled={loading}
-              style={{
-                padding: "8px 20px",
-                background: "#2563eb",
-                border: "none",
-                color: "white",
-                borderRadius: "6px",
-                cursor: loading ? "not-allowed" : "pointer",
-                fontSize: "14px",
-              }}
+            />
+            <DialogButton
+              label={loading ? "Creating User..." : "Create User"}
+              severity="success"
+              icon={loading ? <FaSpinner className="spin mr-2" /> : null}
+              onClick={handleSignupClick}
+              loading={loading}
+              disabled={loading}
             />
           </div>
         </div>

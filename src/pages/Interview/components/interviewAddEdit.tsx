@@ -195,8 +195,9 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
       // Convert 24-hour backend time to 12-hour format
       const { hour12, minute, period } = convert24to12(interviewToEdit.fromTime);
       
+      const [year, month, day] = interviewToEdit.interviewDate.split('-').map(Number);
       setFormData({
-        interviewDate: new Date(interviewToEdit.interviewDate),
+        interviewDate: new Date(year, month - 1, day),
         hour12,
         minute,
         period,
@@ -263,8 +264,12 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
     if (isEdit && interviewToEdit) {
       const currentTime24 = convert12to24(formData.hour12, formData.minute, formData.period);
       
-      const hasChanges =
-        formData.interviewDate?.toISOString().split('T')[0] !== interviewToEdit.interviewDate ||
+      const selectedDate = formData.interviewDate!.getFullYear() + '-' + 
+  String(formData.interviewDate!.getMonth() + 1).padStart(2, '0') + '-' + 
+  String(formData.interviewDate!.getDate()).padStart(2, '0');
+
+const hasChanges =
+  selectedDate !== interviewToEdit.interviewDate ||
         currentTime24 !== interviewToEdit.fromTime ||
         formData.durationMinutes !== interviewToEdit.durationMinutes ||
         formData.interviewerId !== interviewToEdit.interviewerId ||
@@ -295,7 +300,9 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
   const time24 = convert12to24(formData.hour12, formData.minute, formData.period);
 
   const payload = {
-    interviewDate: formData.interviewDate,
+   interviewDate: formData.interviewDate!.getFullYear() + '-' + 
+    String(formData.interviewDate!.getMonth() + 1).padStart(2, '0') + '-' + 
+    String(formData.interviewDate!.getDate()).padStart(2, '0'),
     fromTime: time24,
     durationMinutes: formData.durationMinutes,
     interviewerId: formData.interviewerId,

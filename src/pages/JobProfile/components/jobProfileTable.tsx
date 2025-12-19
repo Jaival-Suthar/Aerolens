@@ -10,6 +10,7 @@ import AddButton from '../../../shared/AddButton';
 import EditButton from '../../../shared/EditButton';
 import DeleteButton from '../../../shared/DeleteButton';
 import ExportExcelButton from '../../../shared/ExportExcelButton';
+import { Button } from 'primereact/button';
 import { useSearchParams } from "react-router-dom";
 import { 
   getJobProfiles, 
@@ -27,7 +28,11 @@ import type {
 } from '../types/jobProfileTypes';
 import { useAuth } from '../../../shared/auth/AuthContext'; 
 import { FilterMatchMode } from 'primereact/api';
-import SearchButton from '../../../shared/SearchButton';
+import type { DataTableFilterMeta } from 'primereact/datatable';
+import { FaDownload, FaEye } from 'react-icons/fa';
+
+
+// import SearchButton from '../../../shared/SearchButton';
 
 const JobProfileMain: React.FC = () => {
   const toast = useRef<Toast>(null);
@@ -43,13 +48,25 @@ const JobProfileMain: React.FC = () => {
   // ----- Pagination with URL Sync -----
   const [searchParams, setSearchParams] = useSearchParams();
   const pageFromUrl = Number(searchParams.get("page")) || 1;
-  const [first, setFirst] = useState((pageFromUrl - 1) * 5); // 5 = default rows
-  const [rows, setRows] = useState(5);
-  const [globalFilterValue, setGlobalFilterValue] = useState('');
+  const [first, setFirst] = useState((pageFromUrl - 1) * 10);
+  const [rows, setRows] = useState(10);
+  // const [globalFilterValue, setGlobalFilterValue] = useState('');
   const [locations, setLocations] = useState<Location[]>([]);
-  const [filters, setFilters] = useState<any>({
-  global: { value: null, matchMode: FilterMatchMode.CONTAINS }
+  const [filters, setFilters] = useState<DataTableFilterMeta>({
+  clientName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  departmentName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  jobRole: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  jobProfileDescription: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  techSpecification: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  positions: { value: null, matchMode: FilterMatchMode.EQUALS },
+  workArrangement: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  "location.city": { value: null, matchMode: FilterMatchMode.CONTAINS },
+  receivedOnDisplay: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  estimatedCloseDateDisplay: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  status: { value: null, matchMode: FilterMatchMode.CONTAINS }
 });
+
+
 const [statusOptions, setStatusOptions] = useState<string[]>([]);
 
   useEffect(() => {
@@ -101,11 +118,21 @@ const [statusOptions, setStatusOptions] = useState<string[]>([]);
     setJobProfiles(
   jobProfilesResponse.data.map((jp: JobProfile) => ({
     ...jp,
+
     locationString: jp.location
       ? `${jp.location.city}, ${jp.location.country}`
+      : '',
+
+    receivedOnDisplay: jp.receivedOn
+      ? new Date(jp.receivedOn).toLocaleDateString('en-GB')
+      : '',
+
+    estimatedCloseDateDisplay: jp.estimatedCloseDate
+      ? new Date(jp.estimatedCloseDate).toLocaleDateString('en-GB')
       : ''
   }))
 );
+
 
     setClients(clientsData);
     setLocations(locationsData); // Set locations
@@ -202,14 +229,14 @@ const [statusOptions, setStatusOptions] = useState<string[]>([]);
     setSelectedJobProfile(null);
   };
 
-  const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const value = e.target.value;
-  const _filters = { ...filters };
-  _filters['global'].value = value;
+//   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//   const value = e.target.value;
+//   const _filters = { ...filters };
+//   _filters['global'].value = value;
   
-  setFilters(_filters);
-  setGlobalFilterValue(value);
-};
+//   setFilters(_filters);
+//   setGlobalFilterValue(value);
+// };
 
   // Simplified status mapping
   const STATUS_SEVERITY_MAP: Record<string, 'info' | 'warning' | 'success' | 'danger'> = {
@@ -226,10 +253,6 @@ const [statusOptions, setStatusOptions] = useState<string[]>([]);
     />
   );
 
-  const dateBodyTemplate = (rowData: JobProfile, field: keyof JobProfile) => {
-    const date = rowData[field] as string;
-    return date ? new Date(date).toLocaleDateString() : '-';
-  };
 
   const locationBodyTemplate = (rowData: JobProfile) => {
   if (!rowData.location) return '-';
@@ -245,6 +268,118 @@ const [statusOptions, setStatusOptions] = useState<string[]>([]);
     return rowData.workArrangement ? capitalizeFirstLetter(rowData.workArrangement) : '-';
   };
 
+  const downloadJD = async (jobProfileId: number) => {
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_BASE_URL}/jobProfile/${jobProfileId}/get-JD`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.message);
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (err: any) {
+    toast.current?.show({
+      severity: 'error',
+      summary: 'Error',
+      detail: err.message, // ✅ backend message only
+    });
+  }
+};
+
+
+const previewJD = async (jobProfileId: number) => {
+  try {
+    if (!accessToken) throw new Error('Authentication token required');
+
+    const previewUrl = `${import.meta.env.VITE_BASE_URL}/jobProfile/${jobProfileId}/get-JD/preview`;
+    const response = await fetch(previewUrl, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  
+
+    const contentType = response.headers.get('content-type');
+
+    // ❌ Backend returned JSON error
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.message || 'JD preview failed');
+    }
+
+    // ❌ Not a PDF (safety check)
+    if (!contentType?.includes('application/pdf')) {
+      throw new Error('Preview is only supported for PDF files. Please download the file instead.');
+    }
+
+    // ✅ PDF preview
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (error: any) {
+    console.error('JD preview failed:', error);
+    toast.current?.show({
+      severity: 'error',
+      summary: 'Preview Error',
+      detail: error.message,
+    });
+  }
+};
+
+
+
+
+const jdBodyTemplate = (rowData: any) => {
+  if (!rowData.jdFileName) {
+    return <span className="text-muted">—</span>;
+  }
+
+  const isPdf = rowData.jdOriginalName?.toLowerCase().endsWith('.pdf');
+
+  return (
+    <div className="flex gap-2 align-items-center">
+      <Button
+        className="p-button-text p-button-sm"
+        tooltip="Download JD"
+        onClick={() => downloadJD(rowData.jobProfileId)}
+      >
+        <FaDownload />
+      </Button>
+
+      {isPdf && (
+        <Button
+          type="button"
+          className="p-button-text p-button-sm"
+          onClick={() => {
+            previewJD(rowData.jobProfileId);
+          }}
+        >
+          <FaEye />
+        </Button>
+      )}
+    </div>
+  );
+};
+
+
   return (
     <div className="card">
       <Toast ref={toast} />
@@ -252,11 +387,11 @@ const [statusOptions, setStatusOptions] = useState<string[]>([]);
       <div className="flex justify-content-between align-items-center mb-2">
   <h2>Job Profiles Requirements</h2>
   <div className='flex gap-2 align-items-center'>
-    <SearchButton
+    {/* <SearchButton
       value={globalFilterValue}
       onChange={onGlobalFilterChange}
       placeholder="Search..."
-    />
+    /> */}
     <ExportExcelButton dtRef={dt} />
     <AddButton onClick={handleAddNew} />
     <EditButton 
@@ -277,6 +412,8 @@ const [statusOptions, setStatusOptions] = useState<string[]>([]);
         selectionMode="single"
         selection={selectedJobProfile}
         onSelectionChange={(e) => setSelectedJobProfile(e.value as JobProfile | null)}
+        filterDisplay="menu"
+        onFilter={(e) => setFilters(e.filters)}
         dataKey="jobProfileId"
         responsiveLayout="scroll"
         emptyMessage="No job profiles found"
@@ -285,66 +422,83 @@ const [statusOptions, setStatusOptions] = useState<string[]>([]);
         first={first}
         onPage={onPageChange}
         rowsPerPageOptions={[5, 10, 20, 50]}
-        globalFilterFields={['clientName', 'departmentName', 'jobRole', 'jobProfileDescription', 'techSpecification','workArrangement', 'positions','location', 'status']}
+        // globalFilterFields={['clientName', 'departmentName', 'jobRole', 'jobProfileDescription', 'techSpecification','workArrangement', 'positions','location', 'status']}
         filters={filters}
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Job Profiles"
       >
-
         <Column
           selectionMode="single"
           headerStyle={{ width: '3rem' }}
           frozen
         />
-        <Column field="clientName" header="Client" sortable />
-        <Column field="departmentName" header="Department" sortable />
-        <Column field="jobRole" header="Role" sortable />
+        <Column field="clientName" header="Client" sortable filter/>
+        <Column field="departmentName" header="Department" sortable filter/>
+        <Column field="jobRole" header="Role" sortable filter/>
         <Column 
           field="jobProfileDescription" 
           header="Description" 
           style={{ maxWidth: '200px' }}
+          filter
         />
         <Column 
           field="techSpecification" 
           header="Tech Stack" 
           style={{ maxWidth: '200px' }}
+          filter
         />
         <Column 
           field="positions" 
           header="Positions" 
           sortable 
           style={{ width: '8rem' }}
+          filter
         />
         <Column 
           field="workArrangement"
           header="Work Arrangement"
           sortable
           body={workArrangementBodyTemplate}
+          filter
         />
-
-        <Column 
+        <Column
           header="Location"
-          sortable
           body={locationBodyTemplate}
+          sortable
+          filter
+          filterField="location.city"
+          showFilterMatchModes={false}
         />
-        <Column 
-          field="receivedOn" 
-          header="Received On" 
-          sortable 
-          body={(rowData) => dateBodyTemplate(rowData, 'receivedOn')}
+        <Column
+          header="Received On"
+          body={(row) => row.receivedOnDisplay || '-'}
+          filter
+          filterField="receivedOnDisplay"
+          showFilterMatchModes={false}
         />
-        <Column 
-          field="estimatedCloseDate" 
-          header="Close Date" 
-          sortable 
-          body={(rowData) => dateBodyTemplate(rowData, 'estimatedCloseDate')}
+        <Column
+          header="Close Date"
+          sortable
+          body={(row) => row.estimatedCloseDateDisplay || '-'}
+          filter
+          filterField="estimatedCloseDateDisplay"
+          showFilterMatchModes={false}
+          showApplyButton={false}
+          showClearButton={true}
         />
         <Column 
           field="status" 
           header="Status" 
           body={statusBodyTemplate}
           sortable 
+          filter
         />
+        <Column
+          header="JD"
+          body={jdBodyTemplate}
+          style={{ width: '8rem', textAlign: 'center' }}
+        />
+
       </DataTable>
 
       <JobProfileAddEdit

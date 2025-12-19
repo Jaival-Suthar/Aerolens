@@ -18,6 +18,34 @@ const ClientAddEdit: React.FC<ClientAddEditProps> = ({
   const [errors, setErrors] = useState<{ clientName?: string; address?: string }>(
     {}
   );
+  
+  const handleBackendErrors = (error: any) => {
+  // 🔴 Case 1: backend validationErrors array (YOUR CURRENT BACKEND)
+  if (Array.isArray(error?.details?.validationErrors)) {
+    const fieldErrors: Record<string, string> = {};
+    error.details.validationErrors.forEach((err: any) => {
+      if (err.field && err.message) {
+        fieldErrors[err.field] = err.message;
+      }
+    });
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(fieldErrors);
+      return;
+    }
+  }
+  // 🟡 Case 2: single-field error (future-proof)
+  if (error?.details?.field && error?.message) {
+    setErrors({
+      [error.details.field]: error.message,
+    });
+    return;
+  }
+  // 🟡 Case 3: already-normalized errors object
+  if (error?.details?.errors) {
+    setErrors(error.details.errors);
+    return;
+  }
+};
 
   // Initialize form data when dialog opens or client changes
   useEffect(() => {
@@ -48,33 +76,41 @@ const ClientAddEdit: React.FC<ClientAddEditProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (): void => {
+  const handleSubmit = async (): Promise<void> => {
   if (!validateForm()) return;
 
   const trimmedName = clientName.trim();
   const trimmedAddress = address.trim();
 
-  if (mode === "add") {
-    const clientData: ClientAddType = {
-      clientName: trimmedName,
-      address: trimmedAddress,
-    };
-    onSave(clientData);
-  } else {
-    // edit mode, clientId must exist in client
-    if (!client || !("clientId" in client)) {
-      // This is catastrophic: editing client without clientId
-      //console.error("Missing clientId in edit mode");
-      return;
+  try {
+    if (mode === "add") {
+      const clientData: ClientAddType = {
+        clientName: trimmedName,
+        address: trimmedAddress,
+      };
+      await onSave(clientData);
+    } else {
+      // edit mode, clientId must exist
+      if (!client || !("clientId" in client)) {
+        return;
+      }
+
+      const clientData: ClientType = {
+        clientId: client.clientId,
+        clientName: trimmedName,
+        address: trimmedAddress,
+      };
+      await onSave(clientData);
     }
-    const clientData: ClientType = {
-      clientId: client.clientId,
-      clientName: trimmedName,
-      address: trimmedAddress,
-    };
-    onSave(clientData);
+
+    // ✅ success → close dialog
+    onHide();
+  } catch (error: any) {
+    // 🔥 backend validation → highlight fields
+    handleBackendErrors(error);
   }
 };
+
 
 
   const handleCancel = (): void => {
