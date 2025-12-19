@@ -309,7 +309,6 @@ const InterviewTable: React.FC = () => {
         dataKey="interviewId"
         emptyMessage="No interviews found."
         scrollable
-        scrollHeight="380px"
         paginator
         rows={rows}
         first={first}
