@@ -76,8 +76,25 @@ const LookupTable: React.FC<LookupTableProps> = ({
   }, [onDataChange]);
 
   return (
-    <div className="card">
-      <div className="flex justify-content-between align-items-center mb-2">
+    <div
+      className="card"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        overflow: "hidden",
+      }}
+    >
+      <div
+        className="flex justify-content-between align-items-center mb-2"
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 2,
+          background: "white",
+          paddingBottom: "0.5rem",
+        }}
+      >
         <h2>Lookup Data</h2>
         <div className="flex gap-2">
           <SearchButton  
@@ -96,13 +113,15 @@ const LookupTable: React.FC<LookupTableProps> = ({
           />
         </div>
       </div>
-
+      <div style={{ flex: 1, overflow: "hidden" }}>
       <DataTable
         value={data}
         loading={loading}
         paginator 
         rows={10}  
         rowsPerPageOptions={[5, 10, 25, 50]}
+        scrollable
+        scrollHeight="flex"
         responsiveLayout="scroll"
         className="p-datatable-sm"
         selectionMode="single"
@@ -120,7 +139,7 @@ const LookupTable: React.FC<LookupTableProps> = ({
         <Column field="tag" header="Tag" sortable />
         <Column field="value" header="Value" sortable />
       </DataTable>
-
+      </div>
       <AddLookupForm
         visible={showAddDialog || showEditDialog} // <--- CHANGE: Use for both Add/Edit
         lookupToEdit={selectedLookup} // <--- PASS SELECTED LOOKUP for editing
