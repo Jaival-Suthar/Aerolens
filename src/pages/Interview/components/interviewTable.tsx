@@ -299,7 +299,7 @@ const InterviewTable: React.FC = () => {
           </div>
         </div>
       </div>
-
+      <div style={{ flex: 1, overflow: "auto" }}>
       <DataTable
         value={interviews}
         loading={loading}
@@ -309,6 +309,7 @@ const InterviewTable: React.FC = () => {
         dataKey="interviewId"
         emptyMessage="No interviews found."
         scrollable
+        scrollHeight="flex"
         paginator
         rows={rows}
         first={first}
@@ -357,7 +358,7 @@ const InterviewTable: React.FC = () => {
         <Column field="toTime" header="End Time" body={endTimeBodyTemplate} filter />
         <Column field="durationMinutes" header="Duration (min)" filter />
       </DataTable>
-
+      </div>
       <InterviewAddEditForm
         visible={visible}
         isEdit={isEdit}
