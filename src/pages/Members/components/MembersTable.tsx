@@ -274,7 +274,7 @@ const MembersTable: React.FC = () => {
           <DeleteButton onClick={handleDelete} disabled={!selectedMember} />
         </div>
       </div>
-
+      <div style={{ flex: 1, overflow: "auto" }}>
       <DataTable
         ref={dt}
         value={members}
@@ -282,6 +282,8 @@ const MembersTable: React.FC = () => {
         rows={rows}
         first={first}
         onPage={onPageChange}
+        scrollable
+        scrollHeight="flex"
         rowsPerPageOptions={[10, 20, 50]}
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Members"
@@ -317,7 +319,7 @@ const MembersTable: React.FC = () => {
         <Column field="clientName" header="Client" sortable body={(row) => formatValue(row.clientName)}/>
         <Column field="organisation" header="Organisation" sortable body={(row) => formatValue(row.organisation)}/>
       </DataTable>
-
+      </div>
       {/* ------------------- Dialogs ------------------- */}
       <MemberEdit
         visible={showEditDialog}
