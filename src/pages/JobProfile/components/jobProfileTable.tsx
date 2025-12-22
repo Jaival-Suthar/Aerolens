@@ -381,36 +381,38 @@ const jdBodyTemplate = (rowData: any) => {
 
 
   return (
-    <div className="card">
+    <div className="card" style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden"}}>
       <Toast ref={toast} />
       
       <div className="flex justify-content-between align-items-center mb-2">
-  <h2>Job Profiles Requirements</h2>
-  <div className='flex gap-2 align-items-center'>
-    {/* <SearchButton
-      value={globalFilterValue}
-      onChange={onGlobalFilterChange}
-      placeholder="Search..."
-    /> */}
-    <ExportExcelButton dtRef={dt} />
-    <AddButton onClick={handleAddNew} />
-    <EditButton 
-      onClick={() => selectedJobProfile && handleEdit(selectedJobProfile)} 
-      disabled={!selectedJobProfile} 
-    />
-    <DeleteButton 
-      onClick={() => selectedJobProfile && handleDelete(selectedJobProfile)} 
-      disabled={!selectedJobProfile} 
-    />
-  </div>
-</div>
-
+        <h2>Job Profiles Requirements</h2>
+        <div className='flex gap-2 align-items-center'>
+          {/* <SearchButton
+            value={globalFilterValue}
+            onChange={onGlobalFilterChange}
+            placeholder="Search..."
+          /> */}
+          <ExportExcelButton dtRef={dt} />
+          <AddButton onClick={handleAddNew} />
+          <EditButton 
+            onClick={() => selectedJobProfile && handleEdit(selectedJobProfile)} 
+            disabled={!selectedJobProfile} 
+          />
+          <DeleteButton 
+            onClick={() => selectedJobProfile && handleDelete(selectedJobProfile)} 
+            disabled={!selectedJobProfile} 
+          />
+        </div>
+      </div>
+      <div style={{ flex: 1, overflow: "hidden" }}>
       <DataTable
         ref={dt}
         value={jobProfiles}
         loading={loading}
         selectionMode="single"
         selection={selectedJobProfile}
+        scrollable
+        scrollHeight="flex"
         onSelectionChange={(e) => setSelectedJobProfile(e.value as JobProfile | null)}
         filterDisplay="menu"
         onFilter={(e) => setFilters(e.filters)}
@@ -500,7 +502,7 @@ const jdBodyTemplate = (rowData: any) => {
         />
 
       </DataTable>
-
+      </div>
       <JobProfileAddEdit
         visible={addEditVisible}
         onHide={closeDialog}
