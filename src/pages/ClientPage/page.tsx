@@ -213,7 +213,7 @@ const Client: React.FC = () => {
   const isTableView = activeView === VIEW_MODES.TABLE;
 
   return (
-    <div className="dashboard-container shadow-3 p-4" style={{ width: "100%", maxWidth: "100%" }}>
+    <div className="dashboard-container shadow-3 p-4" style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", width: "100%", minHeight: 0 }}>
       <Toast ref={toast} />
 
       {(isTableView || (selectedClientId && !selectedClient)) && (
@@ -244,8 +244,9 @@ const Client: React.FC = () => {
       )}
 
       {/* ✅ Only this render block replaced */}
-      <div className="card">
+      <div style={{display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0}}>
         {isTableView && (
+          
           <ClientTable
             dtRef={dt}
             onEdit={openEditDialog}
@@ -255,6 +256,7 @@ const Client: React.FC = () => {
             loading={loading}
             preSelectClientId={selectedClientId ? Number(selectedClientId) : undefined}
           />
+          
         )}
 
         {activeView === VIEW_MODES.CONTACTS && (
