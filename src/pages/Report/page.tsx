@@ -7,7 +7,7 @@ const ReportPage: React.FC = () => {
   const { accessToken } = useAuth();
 
   return (
-    <div className="p-2">
+    <div className="p-2" style={{flex: 1, minHeight: 0, overflowY: "auto"}}>
       <InterviewReportsPage accessToken={accessToken} />
     </div>
   );

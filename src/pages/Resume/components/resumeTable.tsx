@@ -342,7 +342,7 @@ const settingsItems = [
           </div>
         </div>
       </div>
-
+      <div style={{ flex: 1, overflow: "auto" }}>
       <DataTable
         ref={dt}
         value={resumes}
@@ -350,6 +350,8 @@ const settingsItems = [
         rows={rows}
         first={first}
         filterDisplay="menu"
+        scrollable
+        scrollHeight="flex"
         onFilter={(e) => setFilters(e.filters)}
         onPage={onPageChange}
         rowsPerPageOptions={[10, 20, 50]}
@@ -426,6 +428,7 @@ const settingsItems = [
           showFilterMatchModes={false}
         />
       </DataTable>
+      </div>
 
       {/* ------------------- Dialogs ------------------- */}
       <ResumeAddEdit

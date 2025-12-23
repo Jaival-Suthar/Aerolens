@@ -1,64 +1,21 @@
-import React, { useReducer, useRef, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
+import { DataTable } from 'primereact/datatable';
+import { Column } from 'primereact/column';
 import { Toast } from 'primereact/toast';
+import { FaArrowLeft } from 'react-icons/fa';
+import type { DataTablePageEvent, DataTableRowClickEvent, DataTableSelectionSingleChangeEvent } from 'primereact/datatable';
 
-import ContactTable from './contactTable';
-import ContactViewHeader from './contactViewHeader';
+import AddButton from '../../../shared/AddButton';
+import EditButton from '../../../shared/EditButton';
+import DeleteButton from '../../../shared/DeleteButton';
 
 import { useContactOperations } from '../hooks/useContactOperations';
 import { useContactsByClient } from '../hooks/useContactsByClient';
 import { DIALOG_MODES } from '../constants/contactConstants';
-import type {
-  Client,
-  Contact,
-  ClientContactsViewState,
-  ClientContactsAction,
-  DialogMode,
-} from '../types/contactTypes';
-
+import type { Client, Contact, DialogMode } from '../types/contactTypes';
 
 const ContactAddEdit = lazy(() => import('./contactAddEdit'));
 const ContactDelete = lazy(() => import('./contactDelete'));
-
-const initialState: ClientContactsViewState = {
-  selectedContact: null,
-  dialogVisible: false,
-  deleteDialogVisible: false,
-  dialogMode: DIALOG_MODES.ADD as DialogMode,
-  editContact: null,
-  contactToDelete: null,
-};
-
-
-function reducer(state: ClientContactsViewState, action: ClientContactsAction): ClientContactsViewState { 
-  switch (action.type) {
-    case 'SELECT_CONTACT':
-      return { ...state, selectedContact: action.payload };
-    case 'OPEN_DIALOG':
-      return {
-        ...state,
-        dialogVisible: true,
-        dialogMode: action.payload.mode,
-        editContact: action.payload.contact,
-      };
-    case 'OPEN_DELETE_DIALOG':
-      return {
-        ...state,
-        deleteDialogVisible: true,
-        contactToDelete: action.payload,
-      };
-    case 'CLOSE_DIALOG':
-      return { ...state, dialogVisible: false, editContact: null };
-    case 'CLOSE_DELETE_DIALOG':
-      return {
-        ...state,
-        deleteDialogVisible: false,
-        contactToDelete: null,
-        selectedContact: null,
-      };
-    default:
-      return state;
-  }
-}
 
 interface ClientContactsViewProps {
   selectedClient: Client | null;
@@ -66,7 +23,18 @@ interface ClientContactsViewProps {
 }
 
 const ClientContactsView: React.FC<ClientContactsViewProps> = ({ selectedClient, onBackClick }) => {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  // State management
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [dialogVisible, setDialogVisible] = useState(false);
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+  const [dialogMode, setDialogMode] = useState<DialogMode>(DIALOG_MODES.ADD as DialogMode);
+  const [editContact, setEditContact] = useState<Contact | null>(null);
+  const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
+
+  // Pagination state - using in-memory state instead of localStorage
+  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+  const [first, setFirst] = useState<number>(0);
+
   const toast = useRef<Toast>(null);
 
   const showToast = (severity: 'success' | 'error', message: string) => {
@@ -103,117 +71,229 @@ const ClientContactsView: React.FC<ClientContactsViewProps> = ({ selectedClient,
     }
   }, [contactsError, clearContactsError]);
 
-  const handlers = {
-    addContact: () => {
-      if (!selectedClient) {
-        showToast('error', 'Please select a client first');
-        return;
-      }
-      dispatch({
-        type: 'OPEN_DIALOG',
-        payload: { 
-          mode: DIALOG_MODES.ADD as DialogMode, 
-          contact: null 
-        },
-      });
-    },
-    editContact: (contact: Contact) => {
-      if (!contact?.clientContactId) {
-        showToast('error', 'Select a valid contact first');
-        return;
-      }
-      dispatch({ 
-        type: 'OPEN_DIALOG', 
-        payload: { mode: DIALOG_MODES.EDIT as DialogMode, contact } 
-      });
-    },
-    deleteSelected: () => {
-      if (!state.selectedContact) {
-        showToast('error', 'Select a contact first to delete');
-        return;
-      }
-      dispatch({ type: 'OPEN_DELETE_DIALOG', payload: state.selectedContact });
-    },
-    editSelected: () => {
-      if (state.selectedContact) {
-        handlers.editContact(state.selectedContact);
-      }
-    },
-    saveContact: async (contactData: Partial<Contact> & { clientId?: number }) => {
-      const result = await handleSaveContact(contactData, state.dialogMode, selectedClient);
-      if (result.success) dispatch({ type: 'CLOSE_DIALOG' });
-    },
-    deleteContact: async (contactToDelete: Contact) => {
-      const result = await handleDeleteContact(contactToDelete);
-      if (result.success) dispatch({ type: 'CLOSE_DELETE_DIALOG' });
-    },
-    selectContact: (contact: Contact | null) => {
-      if (contact && !contact.clientContactId) {
-        showToast('error', 'Invalid contact selection. ID missing.');
-        return;
-      }
-      dispatch({ type: 'SELECT_CONTACT', payload: contact });
-    },
-  };
+  // Event handler for page changes
+  const onPageChange = useCallback((event: DataTablePageEvent) => {
+    setRowsPerPage(event.rows);
+    setFirst(event.first);
+  }, []);
+
+  // Handlers
+  const handleAddContact = useCallback(() => {
+    if (!selectedClient) {
+      showToast('error', 'Please select a client first');
+      return;
+    }
+    setDialogMode(DIALOG_MODES.ADD as DialogMode);
+    setEditContact(null);
+    setDialogVisible(true);
+  }, [selectedClient]);
+
+  const handleEditContact = useCallback((contact?: Contact) => {
+    const contactToEdit = contact || selectedContact;
+    if (!contactToEdit?.clientContactId) {
+      showToast('error', 'Select a valid contact first');
+      return;
+    }
+    setDialogMode(DIALOG_MODES.EDIT as DialogMode);
+    setEditContact(contactToEdit);
+    setDialogVisible(true);
+  }, [selectedContact]);
+
+  const handleDeleteSelected = useCallback(() => {
+    if (!selectedContact) {
+      showToast('error', 'Select a contact first to delete');
+      return;
+    }
+    setContactToDelete(selectedContact);
+    setDeleteDialogVisible(true);
+  }, [selectedContact]);
+
+  const handleSaveContactWrapper = useCallback(async (contactData: Partial<Contact> & { clientId?: number }) => {
+    const result = await handleSaveContact(contactData, dialogMode, selectedClient);
+    if (result.success) {
+      setDialogVisible(false);
+      setEditContact(null);
+    }
+  }, [handleSaveContact, dialogMode, selectedClient]);
+
+  const handleDeleteContactWrapper = useCallback(async (contactToDelete: Contact) => {
+    const result = await handleDeleteContact(contactToDelete);
+    if (result.success) {
+      setDeleteDialogVisible(false);
+      setContactToDelete(null);
+      setSelectedContact(null);
+    }
+  }, [handleDeleteContact]);
+
+  const handleSelectionChange = useCallback((e: DataTableSelectionSingleChangeEvent<Contact[]>) => {
+    const contact = e.value as Contact | null;
+    if (contact && !contact.clientContactId) {
+      showToast('error', 'Invalid contact selection. ID missing.');
+      return;
+    }
+    setSelectedContact(contact);
+  }, []);
+
+  const handleRowDoubleClick = useCallback((e: DataTableRowClickEvent) => {
+    if (e.data) {
+      handleEditContact(e.data as Contact);
+    }
+  }, [handleEditContact]);
+
+  // Template functions
+  const contactPersonTemplate = useCallback((rowData: Contact) => (
+    <div>
+      <div className="font-medium">{rowData.contactPersonName}</div>
+      <div className="text-sm text-gray-600">{rowData.email}</div>
+    </div>
+  ), []);
+
+  const designationTemplate = useCallback((rowData: Contact) => (
+    <div>
+      <div className="font-medium">{rowData.designation}</div>
+      <div className="text-sm text-gray-600">{rowData.phone}</div>
+    </div>
+  ), []);
+
+  // Memoized constants
+  const cellClass = useMemo(() => "py-1 px-2", []);
+  const headerClass = useMemo(() => "py-1 px-2 font-semibold", []);
 
   if (!selectedClient) {
     return (
-      <div className="dashboard-container p-2" style={{ width: '100%', maxWidth: '100%' }}>
-        <ContactViewHeader 
-          onBackClick={onBackClick}
-          onAddContact={() => {}}
-          selectedContact={null}
-          onEditContact={() => {}}
-          onDeleteContact={() => {}}
-        />
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+        <div className="flex justify-content-between align-items-center mb-4 w-full">
+          <button
+            onClick={onBackClick}
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 border border-gray-400 rounded-lg hover:bg-gray-100 transition"
+          >
+            <FaArrowLeft />
+            Back to Clients
+          </button>
+        </div>
         <div className="text-center p-4">Please select a client to view contacts.</div>
       </div>
     );
   }
 
   return (
-    <div className="dashboard-container p-2" style={{ width: '100%', maxWidth: '100%' }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
       <Toast ref={toast} />
+      
+      {/* Header with buttons */}
+      <div className="flex justify-content-between align-items-center mb-4 w-full">
+        <div className="flex justify-content-start align-items-center">
+          <button
+            onClick={onBackClick}
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 border border-gray-400 rounded-lg hover:bg-gray-100 transition"
+          >
+            <FaArrowLeft />
+            Back to Clients
+          </button>
+        </div>
 
-      <ContactViewHeader
-        onBackClick={onBackClick}
-        onAddContact={handlers.addContact}
-        selectedContact={state.selectedContact}
-        onEditContact={handlers.editSelected}
-        onDeleteContact={handlers.deleteSelected}
-        selectedClient={selectedClient}
-      />
+        <div className="flex gap-2 ml-auto mr-6">
+          <AddButton onClick={handleAddContact} />
+          <EditButton
+            onClick={() => handleEditContact()}
+            disabled={!selectedContact?.clientContactId}
+          />
+          <DeleteButton
+            onClick={handleDeleteSelected}
+            disabled={!selectedContact?.clientContactId}
+          />
+        </div>
+      </div>
 
+      {/* Client name heading */}
       <h4 className="mb-3">Contacts for: {selectedClient.clientName}</h4>
 
-      <ContactTable
-        contacts={clientContacts}
-        loading={loadingContacts}
-        selectedContact={state.selectedContact}
-        onSelectionChange={handlers.selectContact}
-        onRowDoubleClick={handlers.editContact}
-      />
+      {/* Table with proper flex structure */}
+      <div style={{ flex: 1, overflow: "hidden" }}>
+        <DataTable
+          value={clientContacts}
+          loading={loadingContacts}
+          stripedRows
+          className="text-sm"
+          paginator
+          first={first}
+          rows={rowsPerPage}
+          scrollable
+          scrollHeight="flex"
+          onPage={onPageChange}
+          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Contacts"
+          emptyMessage={loadingContacts ? "Loading contacts..." : "No contacts found."}
+          selectionMode="single"
+          selection={selectedContact}
+          onRowDoubleClick={handleRowDoubleClick}
+          onSelectionChange={handleSelectionChange}
+          dataKey="clientContactId"
+          showGridlines
+          metaKeySelection={false}
+          rowsPerPageOptions={[10, 20, 50]}
+          tableStyle={{ minWidth: "50rem" }}
+        >
+          <Column
+            selectionMode="single"
+            headerStyle={{ width: '3rem' }}
+          />
+          <Column
+            field="clientContactId"
+            header="Contact ID"
+            sortable
+            bodyClassName={cellClass}
+            headerClassName={headerClass}
+            style={{ minWidth: '8rem' }}
+          />
+          <Column
+            field="contactPersonName"
+            header="Contact Person"
+            sortable
+            body={contactPersonTemplate}
+            bodyClassName={cellClass}
+            headerClassName={headerClass}
+            style={{ minWidth: '16rem' }}
+          />
+          <Column
+            field="designation"
+            header="Designation"
+            sortable
+            body={designationTemplate}
+            bodyClassName={cellClass}
+            headerClassName={headerClass}
+            style={{ minWidth: '14rem' }}
+          />
+        </DataTable>
+      </div>
 
-      {state.dialogVisible && (
+      {/* Dialogs */}
+      {dialogVisible && (
         <Suspense fallback={null}>
           <ContactAddEdit
-            visible={state.dialogVisible}
-            onHide={() => dispatch({ type: 'CLOSE_DIALOG' })}
-            onSave={handlers.saveContact}
-            mode={state.dialogMode}
-            contact={state.editContact}
+            visible={dialogVisible}
+            onHide={() => {
+              setDialogVisible(false);
+              setEditContact(null);
+            }}
+            onSave={handleSaveContactWrapper}
+            mode={dialogMode}
+            contact={editContact}
             clientId={selectedClient?.clientId}
           />
         </Suspense>
       )}
 
-      {state.deleteDialogVisible && (
+      {deleteDialogVisible && (
         <Suspense fallback={null}>
           <ContactDelete
-            visible={state.deleteDialogVisible}
-            onHide={() => dispatch({ type: 'CLOSE_DELETE_DIALOG' })}
-            contact={state.contactToDelete}
-            onDelete={handlers.deleteContact}
+            visible={deleteDialogVisible}
+            onHide={() => {
+              setDeleteDialogVisible(false);
+              setContactToDelete(null);
+            }}
+            contact={contactToDelete}
+            onDelete={handleDeleteContactWrapper}
           />
         </Suspense>
       )}
