@@ -1,8 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import { Toast } from "primereact/toast";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
-import { useAuth } from "./shared/auth/AuthContext"; 
+import { useAuth } from "./shared/auth/AuthContext";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
+
 /* =======================
    Types
 ======================= */
@@ -22,8 +25,7 @@ type ChangePasswordDialogProps = {
 };
 
 /* =======================
-   API (Service Layer)
-   Storage-agnostic; token passed explicitly
+   API
 ======================= */
 const API_BASE_URL = import.meta.env.VITE_BASE_URL;
 
@@ -31,7 +33,7 @@ async function changePassword(
   payload: ChangePasswordRequest,
   token: string
 ): Promise<ApiResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+  const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -59,19 +61,26 @@ export const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
   onSuccess,
 }) => {
   const { accessToken } = useAuth();
+  const toast = useRef<Toast>(null);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  // Eye toggles
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const resetState = () => {
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
-    setError(null);
     setLoading(false);
+    setShowCurrent(false);
+    setShowNew(false);
+    setShowConfirm(false);
   };
 
   const handleClose = () => {
@@ -80,15 +89,33 @@ export const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
   };
 
   const handleSubmit = async () => {
-    setError(null);
-
     if (!accessToken) {
-      setError("Not authenticated.");
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: "Not authenticated.",
+        life: 3000,
+      });
+      return;
+    }
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.current?.show({
+        severity: "error",
+        summary: "Validation Error",
+        detail: "All fields are required.",
+        life: 3000,
+      });
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError("Passwords do not match.");
+      toast.current?.show({
+        severity: "error",
+        summary: "Validation Error",
+        detail: "Passwords do not match.",
+        life: 3000,
+      });
       return;
     }
 
@@ -100,73 +127,103 @@ export const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
         accessToken
       );
 
+      toast.current?.show({
+        severity: "success",
+        summary: "Success",
+        detail: "Password changed successfully",
+        life: 3000,
+      });
+
       resetState();
-      onSuccess?.(); // notify parent of success
-      onClose();     // auto-close dialog
+      onSuccess?.();
+      onClose();
     } catch (err: any) {
-      setError(err.message || "Something went wrong.");
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: err.message || "Something went wrong.",
+        life: 3000,
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const renderPasswordField = (
+    label: string,
+    value: string,
+    onChange: (val: string) => void,
+    show: boolean,
+    toggleShow: () => void
+  ) => (
+    <div className="relative">
+      <label className="block mb-1">{label}</label>
+      <InputText
+        type={show ? "text" : "password"}
+        className="w-full pr-10"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <span
+        className="absolute top-9 right-2 cursor-pointer text-gray-500"
+        onClick={toggleShow}
+      >
+        {show ? <FaEyeSlash /> : <FaEye />}
+      </span>
+    </div>
+  );
+
   return (
-    <Dialog
-      header="Change Password"
-      visible={visible}
-      modal
-      onHide={handleClose}
-      closable={!loading}
-      style={{ width: "400px" }}
-    >
-      <div className="flex flex-column gap-3">
-        <div>
-          <label className="block mb-1">Current Password</label>
-          <InputText
-            type="password"
-            className="w-full"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-          />
-        </div>
+    <>
+      <Toast ref={toast} position="top-right" />
 
-        <div>
-          <label className="block mb-1">New Password</label>
-          <InputText
-            type="password"
-            className="w-full"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-          />
-        </div>
+      <Dialog
+        header="Change Password"
+        visible={visible}
+        modal
+        onHide={handleClose}
+        closable={!loading}
+        style={{ width: "400px" }}
+      >
+        <div className="flex flex-column gap-3">
+          {renderPasswordField(
+            "Current Password",
+            currentPassword,
+            setCurrentPassword,
+            showCurrent,
+            () => setShowCurrent(!showCurrent)
+          )}
+          {renderPasswordField(
+            "New Password",
+            newPassword,
+            setNewPassword,
+            showNew,
+            () => setShowNew(!showNew)
+          )}
+          {renderPasswordField(
+            "Confirm New Password",
+            confirmPassword,
+            setConfirmPassword,
+            showConfirm,
+            () => setShowConfirm(!showConfirm)
+          )}
 
-        <div>
-          <label className="block mb-1">Confirm New Password</label>
-          <InputText
-            type="password"
-            className="w-full"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-          />
+          <div className="flex justify-end gap-2 mt-3">
+            <Button
+              label="Cancel"
+              severity="secondary"
+              onClick={handleClose}
+              disabled={loading}
+            />
+            <Button
+              label="Save"
+              onClick={handleSubmit}
+              loading={loading}
+              severity="success"
+            />
+          </div>
         </div>
-
-        {error && <small className="text-red-500">{error}</small>}
-
-        <div className="flex justify-end gap-2 mt-3">
-          <Button
-            label="Cancel"
-            severity="secondary"
-            onClick={handleClose}
-            disabled={loading}
-          />
-          <Button
-            label="Save"
-            onClick={handleSubmit}
-            loading={loading}
-            severity="success"
-          />
-        </div>
-      </div>
-    </Dialog>
+      </Dialog>
+    </>
   );
 };
