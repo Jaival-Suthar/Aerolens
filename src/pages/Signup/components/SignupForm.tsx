@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { InputText } from "primereact/inputtext";
 import { Password } from "primereact/password";
 import { Dropdown } from "primereact/dropdown";
-import { Button } from "primereact/button";
 import { Toast } from "primereact/toast";
 import { useNavigate } from "react-router-dom";
 import { SignupFormData, SignupResponse } from "../types/signuptypes";
@@ -122,6 +121,16 @@ export default function SignupForm() {
 
 
   const handleSignupClick = async () => {
+    // ✅ AUTH GUARD — THIS IS THE KEY FIX
+  if (!accessToken) {
+    toast.current?.show({
+      severity: "warn",
+      summary: "Session not ready",
+      detail: "Please wait a moment and try again.",
+      life: 3000,
+    });
+    return;
+  }
     if (!validateFields()) return;
     const submitData = {
       ...formData,
@@ -131,7 +140,7 @@ export default function SignupForm() {
 
     try {
       setLoading(true);
-      const response: SignupResponse = await registerUser(submitData);
+      const response: SignupResponse = await registerUser(submitData, accessToken);
 
       // ✅ Always show toast based on backend message
       toast.current?.show({
@@ -407,7 +416,7 @@ export default function SignupForm() {
               icon={loading ? <FaSpinner className="spin mr-2" /> : null}
               onClick={handleSignupClick}
               loading={loading}
-              disabled={loading}
+              disabled={loading || !accessToken}
             />
           </div>
         </div>
