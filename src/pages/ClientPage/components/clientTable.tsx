@@ -19,6 +19,7 @@ const ClientTable: React.FC<ClientTableProps> = ({
   selectedClient,
   onSelectionChange,
   preSelectClientId,
+  globalFilterValue
   // filters,
   // globalFilterFields
 }) => {
@@ -39,6 +40,7 @@ const ClientTable: React.FC<ClientTableProps> = ({
   });
 const [rowsPerPage, setRowsPerPage] = useState<number>(10);
 const [first, setFirst] = useState<number>(0);
+
   useEffect(() => {
   const loadData = async () => {
     try {
@@ -158,6 +160,8 @@ useEffect(() => {
           filterDisplay="menu"
           filters={filters}
           onFilter={(e) => setFilters(e.filters)}
+          globalFilter={globalFilterValue}
+          globalFilterFields={["clientId", "clientName", "address"]}
         // filters={filters}
         // globalFilterFields={globalFilterFields}
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"

@@ -41,7 +41,7 @@ export type ClientTableProps = {
   loading?: boolean;
   preSelectClientId?: number;
   filters?: any;
-  globalFilterFields?: string[];
+  globalFilterValue?: string;
 };
 
 export type ClientsApiResponse = {
