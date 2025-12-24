@@ -5,7 +5,7 @@ interface ProfileState {
     memberId: number;
     memberName?: string;
     email: string;
-    designation: number;
+    designation: string;
     isRecruiter: boolean;
   } | null;
   isSidebarOpen: boolean;
