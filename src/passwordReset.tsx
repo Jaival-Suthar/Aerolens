@@ -1,11 +1,10 @@
-import React, { useState, useRef } from "react";
-import { Toast } from "primereact/toast";
+import React, { useState } from "react";
 import { Dialog } from "primereact/dialog";
-import { Button } from "primereact/button";
-import { InputText } from "primereact/inputtext";
-import { useAuth } from "./shared/auth/AuthContext";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
-
+import DialogButton from "./shared/DialogAddEditButton";
+import { useAuth } from "./shared/auth/AuthContext"; 
+import { PasswordInput } from "./shared/PasswordInput";
+import { Toast } from "primereact/toast";
+import { useRef } from "react";
 /* =======================
    Types
 ======================= */
@@ -25,7 +24,8 @@ type ChangePasswordDialogProps = {
 };
 
 /* =======================
-   API
+   API (Service Layer)
+   Storage-agnostic; token passed explicitly
 ======================= */
 const API_BASE_URL = import.meta.env.VITE_BASE_URL;
 
@@ -46,7 +46,11 @@ async function changePassword(
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data?.message || "Unable to change password");
+    throw {
+      errorCode: data?.error,
+      message: data?.message || "Unable to change password",
+      details: data?.details,
+    };
   }
 
   return data;
@@ -60,27 +64,25 @@ export const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { accessToken } = useAuth();
-  const toast = useRef<Toast>(null);
-
+  const { accessToken, logoutAll } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // Eye toggles
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const toast = useRef<Toast>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    currentPassword?: string;
+    newPassword?: string;
+    confirmPassword?: string;
+  }>({});
 
   const resetState = () => {
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
+    setError(null);
     setLoading(false);
-    setShowCurrent(false);
-    setShowNew(false);
-    setShowConfirm(false);
   };
 
   const handleClose = () => {
@@ -89,141 +91,224 @@ export const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
   };
 
   const handleSubmit = async () => {
-    if (!accessToken) {
+  setError(null);
+  setFieldErrors({});
+
+  if (!accessToken) {
+    toast.current?.show({
+      severity: "error",
+      summary: "Not authenticated",
+      detail: "Please login again.",
+    });
+    return;
+  }
+
+  const frontendErrors = validateNewPassword(
+  currentPassword,
+  newPassword,
+  confirmPassword
+);
+
+if (Object.keys(frontendErrors).length > 0) {
+  setFieldErrors(frontendErrors);
+
+  toast.current?.show({
+    severity: "error",
+    summary: "Invalid Password",
+    detail: "Please fix the highlighted fields.",
+  });
+
+  return; // 🚫 STOP API CALL
+}
+
+
+  try {
+    setLoading(true);
+
+    await changePassword({ currentPassword, newPassword }, accessToken);
+
+    // 1️⃣ Show toast
+    toast.current?.show({
+      severity: "success",
+      summary: "Password Changed",
+      detail: "For security reasons, please log in again.",
+      life: 2500,
+    });
+
+    // 2️⃣ Close dialog immediately
+    resetState();
+    onClose();
+
+    setTimeout(() => {
+      // 3️⃣ Invoke success callback if any
+      logoutAll();
+    }, 350);
+
+
+  } catch (err: any) {
+    // 🔥 Map backend error codes
+    if (err.errorCode === "INVALID_CURRENT_PASSWORD") {
+      setFieldErrors({
+        currentPassword: "Current password is incorrect",
+      });
+
       toast.current?.show({
         severity: "error",
-        summary: "Error",
-        detail: "Not authenticated.",
-        life: 3000,
+        summary: "Incorrect Password",
+        detail: "The current password you entered is wrong.",
       });
-      return;
     }
 
-    if (!currentPassword || !newPassword || !confirmPassword) {
+    else if (err.errorCode === "VALIDATION_ERROR" && err.details?.validationErrors) {
+      const errors: any = {};
+      err.details.validationErrors.forEach((e: any) => {
+        errors[e.field] = e.message;
+      });
+      setFieldErrors(errors);
+
       toast.current?.show({
         severity: "error",
-        summary: "Validation Error",
-        detail: "All fields are required.",
-        life: 3000,
+        summary: "Invalid Input",
+        detail: "Please fix the highlighted fields.",
       });
-      return;
     }
 
-    if (newPassword !== confirmPassword) {
-      toast.current?.show({
-        severity: "error",
-        summary: "Validation Error",
-        detail: "Passwords do not match.",
-        life: 3000,
-      });
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      await changePassword(
-        { currentPassword, newPassword },
-        accessToken
-      );
-
-      toast.current?.show({
-        severity: "success",
-        summary: "Success",
-        detail: "Password changed successfully",
-        life: 3000,
-      });
-
-      resetState();
-      onSuccess?.();
-      onClose();
-    } catch (err: any) {
+    else {
       toast.current?.show({
         severity: "error",
         summary: "Error",
         detail: err.message || "Something went wrong.",
-        life: 3000,
       });
-    } finally {
-      setLoading(false);
     }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const renderPasswordField = (
-    label: string,
-    value: string,
-    onChange: (val: string) => void,
-    show: boolean,
-    toggleShow: () => void
-  ) => (
-    <div className="relative">
-      <label className="block mb-1">{label}</label>
-      <InputText
-        type={show ? "text" : "password"}
-        className="w-full pr-10"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
-      <span
-        className="absolute top-9 right-2 cursor-pointer text-gray-500"
-        onClick={toggleShow}
-      >
-        {show ? <FaEyeSlash /> : <FaEye />}
-      </span>
-    </div>
-  );
+  const handleNewPasswordChange = (value: string) => {
+  setNewPassword(value);
+  setFieldErrors((prev) => ({ ...prev, newPassword: undefined }));
+};
+
+  const handleConfirmPasswordChange = (value: string) => {
+  setConfirmPassword(value);
+  setFieldErrors((prev) => ({
+    ...prev,
+    confirmPassword: undefined,
+  }));
+};
+
+
+  
+ const dialogFooter = (
+  <div className="flex justify-content-end gap-2 w-full">
+    <DialogButton
+      label="Cancel"
+      severity="secondary"
+      onClick={handleClose}
+      disabled={loading}
+    />
+
+    <DialogButton
+      label="Save"
+      severity="success"
+      onClick={handleSubmit}
+      loading={loading}
+      disabled={loading}
+    />
+  </div>
+);
+const validateNewPassword = (
+  currentPassword: string,
+  newPassword: string,
+  confirmPassword: string
+) => {
+  const errors: {
+    newPassword?: string;
+    confirmPassword?: string;
+  } = {};
+
+  if (!newPassword || newPassword.length < 8) {
+    errors.newPassword = "Password must be at least 8 characters long";
+  }
+
+  if (newPassword === currentPassword) {
+    errors.newPassword = "New password must be different from current password";
+  }
+
+  if (newPassword !== confirmPassword) {
+    errors.confirmPassword = "Passwords do not match";
+  }
+
+  return errors;
+};
 
   return (
     <>
-      <Toast ref={toast} position="top-right" />
+    <Toast ref={toast} position="top-right" />
+    <Dialog
+      header="Change Password"
+      visible={visible}
+      modal
+      onHide={handleClose}
+      closable={!loading}
+      style={{ width: "400px" }}
+      footer={dialogFooter}
+    >
+      <div className="flex flex-column gap-3">
+        <div>
+        <label className="block mb-1">Current Password</label>
+        <PasswordInput
+          value={currentPassword}
+          autoComplete="current-password"
+          onChange={setCurrentPassword}
+          invalid={!!fieldErrors.currentPassword}
+        />
+        {fieldErrors.currentPassword && (
+          <small className="text-red-500">
+            {fieldErrors.currentPassword}
+          </small>
+        )}
+      </div>
 
-      <Dialog
-        header="Change Password"
-        visible={visible}
-        modal
-        onHide={handleClose}
-        closable={!loading}
-        style={{ width: "400px" }}
-      >
-        <div className="flex flex-column gap-3">
-          {renderPasswordField(
-            "Current Password",
-            currentPassword,
-            setCurrentPassword,
-            showCurrent,
-            () => setShowCurrent(!showCurrent)
-          )}
-          {renderPasswordField(
-            "New Password",
-            newPassword,
-            setNewPassword,
-            showNew,
-            () => setShowNew(!showNew)
-          )}
-          {renderPasswordField(
-            "Confirm New Password",
-            confirmPassword,
-            setConfirmPassword,
-            showConfirm,
-            () => setShowConfirm(!showConfirm)
-          )}
 
-          <div className="flex justify-end gap-2 mt-3">
-            <Button
-              label="Cancel"
-              severity="secondary"
-              onClick={handleClose}
-              disabled={loading}
-            />
-            <Button
-              label="Save"
-              onClick={handleSubmit}
-              loading={loading}
-              severity="success"
-            />
-          </div>
+        <div>
+          <label className="block mb-1">New Password</label>
+          <PasswordInput
+            value={newPassword}
+            autoComplete="new-password"
+            onChange={handleNewPasswordChange}
+            invalid={!!fieldErrors.newPassword}
+          />
+          {fieldErrors.newPassword && (
+            <small className="text-red-500">
+              {fieldErrors.newPassword}
+            </small>
+          )}
         </div>
-      </Dialog>
+
+
+        <div>
+          <label className="block mb-1">Confirm New Password</label>
+          <PasswordInput
+            value={confirmPassword}
+            autoComplete="new-password"
+            onChange={handleConfirmPasswordChange}
+            invalid={!!fieldErrors.confirmPassword}
+          />
+          {fieldErrors.confirmPassword && (
+            <small className="text-red-500">
+              {fieldErrors.confirmPassword}
+            </small>
+          )}
+        </div>
+
+
+        {error && <small className="text-red-500">{error}</small>}
+
+      </div>
+    </Dialog>
     </>
   );
+  
 };

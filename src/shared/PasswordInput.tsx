@@ -6,12 +6,14 @@ type PasswordInputProps = {
   value: string;
   onChange: (value: string) => void;
   autoComplete?: string;
+  invalid?: boolean;
 };
 
 export const PasswordInput: React.FC<PasswordInputProps> = ({
   value,
   onChange,
   autoComplete,
+  invalid,
 }) => {
   const [visible, setVisible] = useState(false);
 
@@ -19,7 +21,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
     <div style={{ position: "relative" }}>
       <InputText
         type={visible ? "text" : "password"}
-        className="w-full"
+        className={`w-full ${invalid ? "p-invalid" : ""}`}
         value={value}
         autoComplete={autoComplete}
         onChange={(e) => onChange(e.target.value)}
