@@ -24,7 +24,7 @@ const DepartmentTable: React.FC<DepartmentTableProps> = ({
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   // ✅ LocalStorage Pagination (isolated for Department table)
 const savedPage = Number(localStorage.getItem("departmentTablePage") || 0);
-const savedRows = Number(localStorage.getItem("departmentTableRows") || 5);
+const savedRows = Number(localStorage.getItem("departmentTableRows") || 10);
 
 const [first, setFirst] = useState(savedPage * savedRows);
 const [rows, setRows] = useState(savedRows);
@@ -93,7 +93,7 @@ const onPageChange = (event: any) => {
 };
 
   return (
-    <>
+    <div style={{display: "flex", flexDirection: "column", flex: 1, overflow: "hidden"}}>
       <div className="flex justify-content-between align-items-center mb-4 w-full">
         <div className="flex justify-content-start align-items-center">
           <button
@@ -113,14 +113,16 @@ const onPageChange = (event: any) => {
       </div>
 
       <h4 className="mb-3">Departments for: {clientName}</h4>
-
+      <div style={{ flex: 1, overflow: "hidden" }}>
       <DataTable
         value={departments}
         paginator
         rows={rows}
         first={first}
+        scrollable
+        scrollHeight="flex"
         onPage={onPageChange}
-        rowsPerPageOptions={[5, 10, 20]}
+        rowsPerPageOptions={[10, 20, 50]}
         dataKey="departmentId"
         selectionMode="single"
         selection={selectedDepartment}
@@ -134,6 +136,7 @@ const onPageChange = (event: any) => {
         <Column field="departmentName" header="Department Name" />
         <Column field="departmentDescription" header="Description" />
       </DataTable>
+      </div>
       {/* Add/Edit Dialog */}
       <DepartmentAddEdit
         visible={showAddEditDialog}
@@ -150,7 +153,7 @@ const onPageChange = (event: any) => {
         onSuccess={handleDeleteSuccess}
         onClearSelection={handleClearSelection}
       />
-    </>
+    </div>
   );
 };
 

@@ -2,35 +2,21 @@ import { SignupFormData, SignupResponse } from "../types/signuptypes";
 const API_URL = import.meta.env.VITE_BASE_URL;
 
 // Helper to create headers with token if provided
-const makeHeaders = (accessToken?: string) => {
-  
+const makeHeaders = (accessToken?: string): HeadersInit => {
   const headers: HeadersInit = { "Content-Type": "application/json" };
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-  } else {
-  }
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
   return headers;
 };
 
-// Register User (with verbose logs)
+// Register User 
 export const registerUser = async (
   formData: SignupFormData,
-  accessToken?: string | null
+  accessToken: string 
 ): Promise<SignupResponse> => {
   const start = Date.now();
 
   try {
-    const payload = {
-      memberName: formData.fullName,
-      memberContact: formData.contactNumber,
-      email: formData.email,
-      password: formData.password ? "[REDACTED]" : undefined, // avoid logging plain password
-      designation: formData.designation,
-      isRecruiter: formData.isRecruiter,
-      isInterviewer: formData.isInterviewer,
-    };
-
-    const headers = makeHeaders(accessToken || undefined);
+    const headers = makeHeaders(accessToken);
 
     const response = await fetch(`${API_URL}/auth/register`, {
       method: "POST",
@@ -65,7 +51,16 @@ export const registerUser = async (
         throw new Error(fieldErrors || data.message || "Validation failed");
       }
 
-      throw new Error(data?.message || `Registration failed: ${response.status}`);
+      if (data?.error === "EMAIL_EXISTS") {
+        throw new Error("Email is already registered.");
+      }
+
+      if (data?.error === "TOKEN_MISSING") {
+        throw new Error("Session expired. Please try again.");
+      }
+
+      throw new Error(data?.message || "Registration failed");
+
     }
 
    

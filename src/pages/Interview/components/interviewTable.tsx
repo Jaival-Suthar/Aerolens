@@ -19,18 +19,15 @@ import { FaUserTie, FaClipboardCheck } from "react-icons/fa";
 import { useSearchParams } from "react-router-dom";
 import { FilterMatchMode } from "primereact/api";
 import type { DataTableFilterMeta } from "primereact/datatable";
-
+import type { DataTableFilterMetaData } from "primereact/datatable";
 
 const convert24to12Hour = (time24: string): string => {
   if (!time24) return '';
-  
   const [hours, minutes] = time24.split(':').map(Number);
-  
   let hour12 = hours % 12;
   if (hour12 === 0) hour12 = 12; 
   
   const period = hours >= 12 ? 'PM' : 'AM';
-  
   return `${String(hour12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${period}`;
 };
 
@@ -59,6 +56,7 @@ const InterviewTable: React.FC = () => {
   const [rows, setRows] = useState(10);
   const [first, setFirst] = useState((pageFromUrl - 1) * rows);
   const [filters, setFilters] = useState<DataTableFilterMeta>({
+  global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   candidateName: { value: null, matchMode: FilterMatchMode.CONTAINS },
   interviewerName: { value: null, matchMode: FilterMatchMode.CONTAINS },
   scheduledByName: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -225,6 +223,20 @@ const InterviewTable: React.FC = () => {
       action: handleResultDialogOpen
     }
   ];
+  const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const value = e.target.value;
+
+  setFilters((prev) => {
+    const next = { ...prev };
+    const globalFilter = next.global;
+
+    if (globalFilter && "value" in globalFilter) {
+      (globalFilter as DataTableFilterMetaData).value = value;
+    }
+
+    return next;
+  });
+};
 
   return (
     <>
@@ -233,7 +245,11 @@ const InterviewTable: React.FC = () => {
         <h2>Interviews</h2>
 
         <div className="flex gap-2 align-items-center">
-          {/* <SearchButton value={searchText} onChange={(e) => setSearchText(e.target.value)} /> */}
+          <SearchButton
+            value={('value' in (filters.global || {}) ? (filters.global as DataTableFilterMetaData).value : "") || ""}
+            onChange={onGlobalFilterChange}
+            placeholder="Search interviews..."
+          />
           <EditButton onClick={handleEdit} disabled={!selectedInterview} />
           <DeleteButton onClick={handleDelete} disabled={!selectedInterview} />
           <div style={{ position: "relative" }}>
@@ -299,7 +315,7 @@ const InterviewTable: React.FC = () => {
           </div>
         </div>
       </div>
-
+      <div style={{ flex: 1, overflow: "auto" }}>
       <DataTable
         value={interviews}
         loading={loading}
@@ -309,6 +325,7 @@ const InterviewTable: React.FC = () => {
         dataKey="interviewId"
         emptyMessage="No interviews found."
         scrollable
+        scrollHeight="flex"
         paginator
         rows={rows}
         first={first}
@@ -357,7 +374,7 @@ const InterviewTable: React.FC = () => {
         <Column field="toTime" header="End Time" body={endTimeBodyTemplate} filter />
         <Column field="durationMinutes" header="Duration (min)" filter />
       </DataTable>
-
+      </div>
       <InterviewAddEditForm
         visible={visible}
         isEdit={isEdit}

@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback, useState } from "react";
-import { DataTable, type DataTableSelectionSingleChangeEvent, type DataTableRowClickEvent } from "primereact/datatable";
+import { DataTable, type DataTableSelectionSingleChangeEvent, type DataTableRowClickEvent, DataTablePageEvent } from "primereact/datatable";
 import { Column } from "primereact/column";
 // import { Paginator, type PaginatorPageChangeEvent } from "primereact/paginator";
 import { useClientData } from "../hooks/useClientData";
@@ -19,6 +19,7 @@ const ClientTable: React.FC<ClientTableProps> = ({
   selectedClient,
   onSelectionChange,
   preSelectClientId,
+  globalFilterValue
   // filters,
   // globalFilterFields
 }) => {
@@ -37,6 +38,8 @@ const ClientTable: React.FC<ClientTableProps> = ({
     clientName: { value: null, matchMode: FilterMatchMode.CONTAINS },
     address: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
+const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+const [first, setFirst] = useState<number>(0);
 
   useEffect(() => {
   const loadData = async () => {
@@ -107,11 +110,20 @@ useEffect(() => {
     },
     [onEdit]
   );
-
+  const onPageChange = useCallback((event: DataTablePageEvent) => {
+  setRowsPerPage(event.rows);
+  setFirst(event.first);
+}, []);
   const cellClass = "py-1 px-2";
   const headerClass = "py-1 px-2 font-semibold";
   return (
-    <section className="client-table" aria-label="Client data table">
+    <section className="client-table" aria-label="Client data table" style={{
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        minHeight: 0,
+        overflow: "hidden",
+      }}>
       {error && (
         <div
           className="p-message p-message-error mb-3"
@@ -132,9 +144,12 @@ useEffect(() => {
           responsiveLayout="scroll"
           stripedRows
           paginator
-          rows={10}
+          first={first}
+          rows={rowsPerPage}
+          scrollable
+          scrollHeight="flex"
+          onPage={onPageChange}
           rowsPerPageOptions={[10, 20, 50]}
-          scrollHeight="400px"
           emptyMessage={loading ? "Loading..." : "No clients found."}
           selectionMode="single"
           selection={selectedClient}
@@ -145,12 +160,14 @@ useEffect(() => {
           filterDisplay="menu"
           filters={filters}
           onFilter={(e) => setFilters(e.filters)}
+          globalFilter={globalFilterValue}
+          globalFilterFields={["clientId", "clientName", "address"]}
         // filters={filters}
         // globalFilterFields={globalFilterFields}
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Clients"
       >
-        <Column selectionMode="single" headerStyle={{ width: "3rem" }} frozen />
+        <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
         <Column
           field="clientId"
           header="Client ID"

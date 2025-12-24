@@ -38,10 +38,8 @@ const Client: React.FC = () => {
   const [selectedClient, setSelectedClient] = useState<ClientType | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  // const [globalFilterValue, setGlobalFilterValue] = useState('');
-  // const [filters, setFilters] = useState<any>({
-  //   global: { value: null, matchMode: FilterMatchMode.CONTAINS }
-  // });
+  const [globalFilterValue, setGlobalFilterValue] = useState('');
+ 
   // --- Refs ---
   const toast = useRef<Toast | null>(null);
   const dt = useRef<React.ElementRef<typeof DataTable>>(null);
@@ -201,19 +199,14 @@ const Client: React.FC = () => {
     }
   }, [activeView, setSearchParams]);
 
-  //   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-//   const value = e.target.value;
-//   const _filters = { ...filters };
-//   _filters['global'].value = value;
-  
-//   setFilters(_filters);
-//   setGlobalFilterValue(value);
-// };
 
   const isTableView = activeView === VIEW_MODES.TABLE;
+  const  onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setGlobalFilterValue(e.target.value);
+  }
 
   return (
-    <div className="dashboard-container shadow-3 p-4" style={{ width: "100%", maxWidth: "100%" }}>
+    <div className="dashboard-container shadow-3 p-4" style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", width: "100%", minHeight: 0 }}>
       <Toast ref={toast} />
 
       {(isTableView || (selectedClientId && !selectedClient)) && (
@@ -230,11 +223,11 @@ const Client: React.FC = () => {
             />
           </div>
           <div className="flex gap-2 mr-6">
-            {/* <SearchButton
+            <SearchButton
               value={globalFilterValue}
               onChange={onGlobalFilterChange}
               placeholder="Search clients..."
-            /> */}
+            />
             <ExportExcelButton dtRef={dt} />
             <AddButton onClick={openAddDialog} disabled={loading} data-testid="AddBtn" />
             <EditButton onClick={handleEditSelected} disabled={!selectedClient || loading} data-testid="EditBtn" />
@@ -244,17 +237,21 @@ const Client: React.FC = () => {
       )}
 
       {/* ✅ Only this render block replaced */}
-      <div className="card">
+      <div style={{display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0}}>
         {isTableView && (
+          
           <ClientTable
-            dtRef={dt}
-            onEdit={openEditDialog}
-            refreshTrigger={refreshTrigger}
-            selectedClient={selectedClient}
-            onSelectionChange={handleSelectionChange}
-            loading={loading}
-            preSelectClientId={selectedClientId ? Number(selectedClientId) : undefined}
-          />
+          dtRef={dt}
+          onEdit={openEditDialog}
+          refreshTrigger={refreshTrigger}
+          selectedClient={selectedClient}
+          onSelectionChange={handleSelectionChange}
+          loading={loading}
+          preSelectClientId={selectedClientId ? Number(selectedClientId) : undefined}
+          globalFilterValue={globalFilterValue}
+        />
+
+          
         )}
 
         {activeView === VIEW_MODES.CONTACTS && (
