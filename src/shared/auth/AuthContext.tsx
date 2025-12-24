@@ -297,6 +297,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     setAccessToken(null);
     clearProfile();
+    window.location.replace("/login");
   };
 
   // ✅ Optional: Keep test function if needed
