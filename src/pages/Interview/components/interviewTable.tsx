@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
+import { Dropdown } from "primereact/dropdown";
+import { Calendar } from "primereact/calendar";
 import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
@@ -21,28 +23,17 @@ import { FilterMatchMode } from "primereact/api";
 import type { DataTableFilterMeta } from "primereact/datatable";
 import type { DataTableFilterMetaData } from "primereact/datatable";
 
-
 const convert24to12Hour = (time24: string): string => {
   if (!time24) return '';
-  
   const [hours, minutes] = time24.split(':').map(Number);
-  
   let hour12 = hours % 12;
-  if (hour12 === 0) hour12 = 12; 
-  
+  if (hour12 === 0) hour12 = 12;
   const period = hours >= 12 ? 'PM' : 'AM';
-  
   return `${String(hour12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${period}`;
 };
 
-// ============================================================
-// MAIN COMPONENT
-// ============================================================
-
 const InterviewTable: React.FC = () => {
   const { accessToken } = useAuth();
-  // const [searchText, setSearchText] = useState("");
-
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [showResultDialog, setShowResultDialog] = useState(false);
@@ -81,51 +72,37 @@ const InterviewTable: React.FC = () => {
   setSearchParams({ page: newPage.toString() });
 };
 
+  const onPageChange = (e: any) => {
+    setFirst(e.first);
+    setRows(e.rows);
+    const newPage = e.page + 1;
+    setSearchParams({ page: newPage.toString() });
+  };
 
   const fetchInterviews = useCallback(async () => {
-    if (!accessToken) {
-      return;
-    }
-
+    if (!accessToken) return;
     setLoading(true);
-
     try {
       const response = await getInterviews(accessToken);
       if (response?.success) {
         setInterviews(Array.isArray(response.data) ? response.data : []);
       } else {
-        toast.current?.show({
-          severity: "error",
-          summary: "Error",
-          detail: response?.message || "Unknown error",
-        });
+        toast.current?.show({ severity: "error", summary: "Error", detail: response?.message || "Unknown error" });
       }
     } catch (err: any) {
-      toast.current?.show({
-        severity: "error",
-        summary: "Error",
-        detail: "Failed to fetch interviews",
-      });
+      toast.current?.show({ severity: "error", summary: "Error", detail: "Failed to fetch interviews" });
     } finally {
       setLoading(false);
     }
   }, [accessToken]);
 
-  useEffect(() => {
-    fetchInterviews();
-  }, [fetchInterviews]);
+  useEffect(() => { fetchInterviews(); }, [fetchInterviews]);
 
   const handleAdd = () => {
     if (!selectedInterview) {
-      toast.current?.show({
-        severity: "warn",
-        summary: "No Selection",
-        detail: "Please select an interview row to schedule next round for that candidate",
-        life: 3000,
-      });
+      toast.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select an interview row to schedule next round for that candidate", life: 3000 });
       return;
     }
-    
     setIsEdit(false);
     setEditingInterview(null);
     setVisible(true);
@@ -150,12 +127,7 @@ const InterviewTable: React.FC = () => {
 
   const handleResultDialogOpen = () => {
     if (!selectedInterview) {
-      toast.current?.show({
-        severity: "warn",
-        summary: "No Selection",
-        detail: "Please select an interview to finalize",
-        life: 3000,
-      });
+      toast.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select an interview to finalize", life: 3000 });
       return;
     }
     setShowSettingsMenu(false);
@@ -169,44 +141,25 @@ const InterviewTable: React.FC = () => {
 
   const dateBodyTemplate = (rowData: Interview) => {
     const date = new Date(rowData.interviewDate);
-    return date.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
   };
   
-  const timeBodyTemplate = (rowData: Interview) => {
-    return convert24to12Hour(rowData.fromTime);
-  };
+  const timeBodyTemplate = (rowData: Interview) => convert24to12Hour(rowData.fromTime);
+  const endTimeBodyTemplate = (rowData: Interview) => convert24to12Hour(rowData.toTime);
 
-  const endTimeBodyTemplate = (rowData: Interview) => {
-    return convert24to12Hour(rowData.toTime);
-  };
-
-  // Result badge styling
   const resultBodyTemplate = (rowData: Interview) => {
     const result = rowData.result || "Pending";
-    
     const getBadgeClass = (result: string) => {
       switch (result) {
-        case "Selected":
-          return "bg-green-100 text-green-800";
-        case "Rejected":
-          return "bg-red-100 text-red-800";
-        case "Cancelled":
-          return "bg-gray-100 text-gray-800";
+        case "Selected": return "bg-green-100 text-green-800";
+        case "Rejected": return "bg-red-100 text-red-800";
+        case "Cancelled": return "bg-gray-100 text-gray-800";
         case "Pending":
-        default:
-          return "bg-yellow-100 text-yellow-800";
+        default: return "bg-yellow-100 text-yellow-800";
       }
     };
-
     return (
-      <span
-        className={`px-2 py-1 border-round text-sm font-semibold ${getBadgeClass(result)}`}
-        style={{ display: "inline-block" }}
-      >
+      <span className={`px-2 py-1 border-round text-sm font-semibold ${getBadgeClass(result)}`} style={{ display: "inline-block" }}>
         {result}
       </span>
     );
@@ -216,10 +169,7 @@ const InterviewTable: React.FC = () => {
     {
       label: "Schedule Next Interview",
       icon: <FaUserTie style={{ marginRight: 8, marginLeft: 4 }} />,
-      action: () => {
-        setShowSettingsMenu(false);
-        handleAdd();
-      }
+      action: () => { setShowSettingsMenu(false); handleAdd(); }
     },
     {
       label: "Interview Result",
@@ -247,7 +197,6 @@ const InterviewTable: React.FC = () => {
       <Toast ref={toast} />
       <div className="flex justify-content-between align-items-center mb-2">
         <h2>Interviews</h2>
-
         <div className="flex gap-2 align-items-center">
           <SearchButton
             value={('value' in (filters.global || {}) ? (filters.global as DataTableFilterMetaData).value : "") || ""}
@@ -258,60 +207,21 @@ const InterviewTable: React.FC = () => {
           <DeleteButton onClick={handleDelete} disabled={!selectedInterview} />
           <div style={{ position: "relative" }}>
             <CogButton
-              onClick={(e) => {
-                e.stopPropagation();      // prevents the opening click from closing it
-                setShowSettingsMenu((prev) => !prev);
-              }}
+              onClick={(e) => { e.stopPropagation(); setShowSettingsMenu((prev) => !prev); }}
             />
-
             {showSettingsMenu && (
-              <div
-                className="card shadow-3"
-                style={{
-                  position: "absolute",
-                  right: 0,
-                  top: 50,
-                  zIndex: 1000,
-                  minWidth: 220,
-                  backgroundColor: "white",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "8px",
-                  padding: "0.5rem",
-                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
-                }}
-              >
+              <div className="card shadow-3" style={{ position: "absolute", right: 0, top: 50, zIndex: 1000, minWidth: 220, backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "0.5rem" }}>
                 {settingsItems.map((item, idx) => (
                   <div
                     key={idx}
                     className="p-2 cursor-pointer border-round transition-colors transition-duration-150"
                     onClick={item.action}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      borderRadius: "6px",
-                      marginBottom: idx < settingsItems.length - 1 ? "4px" : "0",
-                      transition: "background-color 0.15s ease"
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "#f3f4f6";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                    }}
+                    style={{ display: "flex", alignItems: "center", borderRadius: "6px", marginBottom: idx < settingsItems.length - 1 ? "4px" : "0", transition: "background-color 0.15s ease" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                   >
-                    <span style={{ fontSize: "16px", color: "#6b7280" }}>
-                      {item.icon}
-                    </span>
-                    <span 
-                      style={{ 
-                        marginLeft: "12px",
-                        fontSize: "14px",
-                        fontWeight: "500",
-                        color: "#374151"
-                      }}
-                    >
-                      {item.label}
-                    </span>
+                    <span style={{ fontSize: "16px", color: "#6b7280" }}>{item.icon}</span>
+                    <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>{item.label}</span>
                   </div>
                 ))}
               </div>
@@ -319,66 +229,106 @@ const InterviewTable: React.FC = () => {
           </div>
         </div>
       </div>
+
       <div style={{ flex: 1, overflow: "auto" }}>
-      <DataTable
-        value={interviews}
-        loading={loading}
-        selectionMode="single"
-        selection={selectedInterview}
-        onSelectionChange={(e) => setSelectedInterview(e.value as Interview | null)}
-        dataKey="interviewId"
-        emptyMessage="No interviews found."
-        scrollable
-        scrollHeight="flex"
-        paginator
-        rows={rows}
-        first={first}
-        onPage={onPageChange}
-        filterDisplay="menu"
-        filters={filters}
-        onFilter={(e) => setFilters(e.filters)}
-        rowsPerPageOptions={[10, 20, 50]}
-        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Members"
-        totalRecords={interviews.length}
-        // globalFilter={searchText}
-        // globalFilterFields={[
-        //   "candidateName",
-        //   "interviewerName",
-        //   "scheduledByName",
-        //   "roundNumber",
-        //   "totalInterviews",
-        //   "result",
-        //   "interviewDate",
-        //   "fromTime",
-        //   "toTime",
-        //   "durationMinutes"
-        // ]}
-      >
-        <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
-        <Column field="candidateName" header="Candidate Name" filter />
-        <Column field="interviewerName" header="Interviewer" filter />
-        <Column field="scheduledByName" header="Scheduled By" filter />
-        <Column field="roundNumber" header="Round No." filter />
-        <Column field="totalInterviews" header="Total Rounds" filter />
-        <Column
-          field="result"
-          header="Result"
-          body={resultBodyTemplate}
-          filter
-          showFilterMatchModes={false}
-        />
-        <Column
-          field="interviewDate"
-          header="Date"
-          body={dateBodyTemplate}
-          filter
-        />
-        <Column field="fromTime" header="Start Time" body={timeBodyTemplate} filter />
-        <Column field="toTime" header="End Time" body={endTimeBodyTemplate} filter />
-        <Column field="durationMinutes" header="Duration (min)" filter />
-      </DataTable>
+        <DataTable
+          value={interviews}
+          loading={loading}
+          selectionMode="single"
+          selection={selectedInterview}
+          onSelectionChange={(e) => setSelectedInterview(e.value as Interview | null)}
+          dataKey="interviewId"
+          emptyMessage="No interviews found."
+          scrollable
+          scrollHeight="flex"
+          paginator
+          rows={rows}
+          first={first}
+          onPage={onPageChange}
+          filterDisplay="menu"
+          filters={filters}
+          onFilter={(e) => setFilters(e.filters)}
+          rowsPerPageOptions={[10, 20, 50]}
+          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Members"
+          totalRecords={interviews.length}
+        >
+          <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
+
+          <Column field="candidateName" header="Candidate Name" filter />
+          
+          <Column
+            field="interviewerName"
+            header="Interviewer"
+            filter
+            filterElement={(options) => (
+              <Dropdown
+                value={options.value}
+                options={interviews.map(i => i.interviewerName).filter((v, i, a) => a.indexOf(v) === i)}
+                onChange={(e) => options.filterCallback(e.value)}
+                placeholder="Select Interviewer"
+                showClear
+              />
+            )}
+          />
+
+          <Column
+            field="scheduledByName"
+            header="Scheduled By"
+            filter
+            filterElement={(options) => (
+              <Dropdown
+                value={options.value}
+                options={interviews.map(i => i.scheduledByName).filter((v, i, a) => a.indexOf(v) === i)}
+                onChange={(e) => options.filterCallback(e.value)}
+                placeholder="Select Scheduler"
+                showClear
+              />
+            )}
+          />
+
+          <Column field="roundNumber" header="Round No." filter />
+          <Column field="totalInterviews" header="Total Rounds" filter />
+
+          <Column
+            field="result"
+            header="Result"
+            body={resultBodyTemplate}
+            filter
+            filterElement={(options) => (
+              <Dropdown
+                value={options.value}
+                options={["Pending", "Selected", "Rejected", "Cancelled"]}
+                onChange={(e) => options.filterCallback(e.value)}
+                placeholder="Select Result"
+                showClear
+              />
+            )}
+          />
+
+          <Column
+            field="interviewDate"
+            header="Date"
+            body={dateBodyTemplate}
+            filter
+            filterElement={(options) => (
+              <Calendar
+                value={options.value}
+                onChange={(e) => options.filterCallback(e.value)}
+                dateFormat="dd/mm/yy"
+                placeholder="Select a date"
+                showIcon
+                showButtonBar
+              />
+            )}
+          />
+
+          <Column field="fromTime" header="Start Time" body={timeBodyTemplate} filter />
+          <Column field="toTime" header="End Time" body={endTimeBodyTemplate} filter />
+          <Column field="durationMinutes" header="Duration (min)" filter />
+        </DataTable>
       </div>
+
       <InterviewAddEditForm
         visible={visible}
         isEdit={isEdit}
@@ -386,10 +336,7 @@ const InterviewTable: React.FC = () => {
         candidateId={isEdit ? editingInterview?.candidateId : selectedInterview?.candidateId}
         candidateName={isEdit ? editingInterview?.candidateName : selectedInterview?.candidateName}
         onHide={() => setVisible(false)}
-        onSuccess={() => {
-          setVisible(false);
-          fetchInterviews();
-        }}
+        onSuccess={() => { setVisible(false); fetchInterviews(); }}
         externalToast={toast}
       />
 
