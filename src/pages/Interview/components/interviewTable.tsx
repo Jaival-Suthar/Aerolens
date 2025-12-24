@@ -19,6 +19,7 @@ import { FaUserTie, FaClipboardCheck } from "react-icons/fa";
 import { useSearchParams } from "react-router-dom";
 import { FilterMatchMode } from "primereact/api";
 import type { DataTableFilterMeta } from "primereact/datatable";
+import type { DataTableFilterMetaData } from "primereact/datatable";
 
 
 const convert24to12Hour = (time24: string): string => {
@@ -59,6 +60,7 @@ const InterviewTable: React.FC = () => {
   const [rows, setRows] = useState(10);
   const [first, setFirst] = useState((pageFromUrl - 1) * rows);
   const [filters, setFilters] = useState<DataTableFilterMeta>({
+  global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   candidateName: { value: null, matchMode: FilterMatchMode.CONTAINS },
   interviewerName: { value: null, matchMode: FilterMatchMode.CONTAINS },
   scheduledByName: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -225,6 +227,20 @@ const InterviewTable: React.FC = () => {
       action: handleResultDialogOpen
     }
   ];
+  const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const value = e.target.value;
+
+  setFilters((prev) => {
+    const next = { ...prev };
+    const globalFilter = next.global;
+
+    if (globalFilter && "value" in globalFilter) {
+      (globalFilter as DataTableFilterMetaData).value = value;
+    }
+
+    return next;
+  });
+};
 
   return (
     <>
@@ -233,7 +249,11 @@ const InterviewTable: React.FC = () => {
         <h2>Interviews</h2>
 
         <div className="flex gap-2 align-items-center">
-          {/* <SearchButton value={searchText} onChange={(e) => setSearchText(e.target.value)} /> */}
+          <SearchButton
+            value={('value' in (filters.global || {}) ? (filters.global as DataTableFilterMetaData).value : "") || ""}
+            onChange={onGlobalFilterChange}
+            placeholder="Search interviews..."
+          />
           <EditButton onClick={handleEdit} disabled={!selectedInterview} />
           <DeleteButton onClick={handleDelete} disabled={!selectedInterview} />
           <div style={{ position: "relative" }}>
