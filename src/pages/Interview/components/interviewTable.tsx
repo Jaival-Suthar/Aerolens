@@ -21,6 +21,7 @@ import { FaUserTie, FaClipboardCheck } from "react-icons/fa";
 import { useSearchParams } from "react-router-dom";
 import { FilterMatchMode } from "primereact/api";
 import type { DataTableFilterMeta } from "primereact/datatable";
+import type { DataTableFilterMetaData } from "primereact/datatable";
 
 const convert24to12Hour = (time24: string): string => {
   if (!time24) return '';
@@ -50,17 +51,26 @@ const InterviewTable: React.FC = () => {
   const [rows, setRows] = useState(10);
   const [first, setFirst] = useState((pageFromUrl - 1) * rows);
   const [filters, setFilters] = useState<DataTableFilterMeta>({
-    candidateName: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    interviewerName: { value: null, matchMode: FilterMatchMode.EQUALS },
-    scheduledByName: { value: null, matchMode: FilterMatchMode.EQUALS },
-    roundNumber: { value: null, matchMode: FilterMatchMode.EQUALS },
-    totalInterviews: { value: null, matchMode: FilterMatchMode.EQUALS },
-    result: { value: null, matchMode: FilterMatchMode.EQUALS },
-    interviewDate: { value: null, matchMode: FilterMatchMode.EQUALS },
-    fromTime: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    toTime: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    durationMinutes: { value: null, matchMode: FilterMatchMode.EQUALS }
-  });
+  global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  candidateName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  interviewerName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  scheduledByName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  roundNumber: { value: null, matchMode: FilterMatchMode.EQUALS },
+  totalInterviews: { value: null, matchMode: FilterMatchMode.EQUALS },
+  result: { value: null, matchMode: FilterMatchMode.EQUALS },
+  interviewDate: { value: null, matchMode: FilterMatchMode.EQUALS },
+  fromTime: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  toTime: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  durationMinutes: { value: null, matchMode: FilterMatchMode.EQUALS }
+});
+  const onPageChange = (e: any) => {
+  setFirst(e.first);
+  setRows(e.rows);
+
+  // PrimeReact page starts from 0, but URL starts from 1
+  const newPage = e.page + 1;
+  setSearchParams({ page: newPage.toString() });
+};
 
   const onPageChange = (e: any) => {
     setFirst(e.first);
@@ -167,6 +177,20 @@ const InterviewTable: React.FC = () => {
       action: handleResultDialogOpen
     }
   ];
+  const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const value = e.target.value;
+
+  setFilters((prev) => {
+    const next = { ...prev };
+    const globalFilter = next.global;
+
+    if (globalFilter && "value" in globalFilter) {
+      (globalFilter as DataTableFilterMetaData).value = value;
+    }
+
+    return next;
+  });
+};
 
   return (
     <>
@@ -174,6 +198,11 @@ const InterviewTable: React.FC = () => {
       <div className="flex justify-content-between align-items-center mb-2">
         <h2>Interviews</h2>
         <div className="flex gap-2 align-items-center">
+          <SearchButton
+            value={('value' in (filters.global || {}) ? (filters.global as DataTableFilterMetaData).value : "") || ""}
+            onChange={onGlobalFilterChange}
+            placeholder="Search interviews..."
+          />
           <EditButton onClick={handleEdit} disabled={!selectedInterview} />
           <DeleteButton onClick={handleDelete} disabled={!selectedInterview} />
           <div style={{ position: "relative" }}>

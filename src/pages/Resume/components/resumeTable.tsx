@@ -21,6 +21,97 @@ import { FaUserTie } from "react-icons/fa";
 import CogButton from "../../../shared/CogButton";
 import { Toast } from "primereact/toast";
 import InterviewScheduler from "../../../shared/InterviewScheduler";
+import ViewButton from "../../../shared/ViewButton";
+import DetailsGrid from "../../../shared/DetailsGrid";
+import DetailsSection from "../../../shared/DetailsSection";
+import PremiumDetailsDialog from "../../../shared/PremiumDetailsDialog";
+import ColumnSettingsButton from "../../../shared/ColumnSettingsButton";
+
+const ALL_COLUMNS = [
+  {
+    field: "candidateName",
+    header: "Candidate Name",
+    sortable: true,
+    filter: true
+  },
+  {
+    field: "contact",
+    header: "Candidate Contact",
+    body: "candidateContactTemplate",
+    sortable: true,
+    filter: true,
+    filterField: "contactNumber"
+  },
+  {
+    field: "jobRole",
+    header: "Role",
+    sortable: true,
+    filter: true
+  },
+  {
+    field: "preferredJobLocation.city",
+    header: "Location",
+    body: "formatLocation",
+    sortable: true,
+    filter: true
+  },
+  {
+    field: "experienceYears",
+    header: "YOE",
+    sortable: true,
+    filter: true
+  },
+  {
+    field: "statusName",
+    header: "Status",
+    sortable: true,
+    filter: true
+  },
+  {
+    field: "currentCTC",
+    header: "Current CTC",
+    sortable: true,
+    filter: true
+  },
+  {
+    field: "expectedCTC",
+    header: "Expected CTC",
+    sortable: true,
+    filter: true
+  },
+  {
+    field: "noticePeriod",
+    header: "Notice Period",
+    sortable: true,
+    filter: true
+  },
+  {
+    field: "linkedinProfileUrl",
+    header: "LinkedIn Profile",
+    body: "linkedInTemplate"
+  },
+  {
+    field: "notes",
+    header: "Notes",
+    sortable: true,
+    filter: true
+  },
+  {
+    field: "recruiterName",
+    header: "Recruiter",
+    sortable: true,
+    filter: true
+  }
+];
+
+const DEFAULT_COLUMN_FIELDS = [
+  "candidateName",
+  "contact",
+  "preferredJobLocation.city",
+  "jobRole",
+  "experienceYears",
+  "statusName"
+];
 
 const ResumeTable: React.FC = () => {
   const { accessToken } = useAuth(); // ✅ from AuthContext
@@ -38,8 +129,15 @@ const ResumeTable: React.FC = () => {
   const pageFromUrl = Number(searchParams.get("page")) || 1;
   const [first, setFirst] = useState((pageFromUrl - 1) * 10); 
   const dt = useRef<DataTable<any>>(null);
-  // const [globalFilterValue, setGlobalFilterValue] = useState('');
+  const [visibleColumns, setVisibleColumns] = useState(
+  ALL_COLUMNS.filter(col =>
+    DEFAULT_COLUMN_FIELDS.includes(col.field)
+  )
+);
+  const [viewCandidate, setViewCandidate] = useState<Candidate | null>(null);
+  const [globalFilterValue, setGlobalFilterValue] = useState('');
   const [filters, setFilters] = useState<any>({
+  global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   candidateName: { value: null, matchMode: FilterMatchMode.CONTAINS },
   recruiterName: { value: null, matchMode: FilterMatchMode.CONTAINS },
   recruiterContact: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -113,15 +211,50 @@ const ResumeTable: React.FC = () => {
     setSelectedResume(null);
     loadResumes();
   };
+  const getNestedValue = (obj: any, path: string) => {
+  return path.split(".").reduce((acc, key) => acc?.[key], obj);
+};
+  const getColumnDisplayValue = (
+  col: any,
+  candidate: Candidate
+) => {
+  switch (col.body) {
+    case "candidateContactTemplate":
+      return `${candidate.contactNumber || "-"} | ${candidate.email || "-"}`;
 
-//   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-//   const value = e.target.value;
-//   const _filters = { ...filters };
-//   _filters['global'].value = value;
-  
-//   setFilters(_filters);
-//   setGlobalFilterValue(value);
-// };
+    case "formatLocation":
+      const city = candidate.preferredJobLocation?.city;
+      const country = candidate.preferredJobLocation?.country;
+      return city || country ? `${city}, ${country}` : "-";
+
+    case "linkedInTemplate":
+      return candidate.linkedinProfileUrl || "-";
+
+    default:
+      return getNestedValue(candidate, col.field);
+  }
+};
+  const buildDetailsData = (candidate: Candidate) => {
+  return ALL_COLUMNS
+    .filter(col => col.field !== "resume") // safety, even if added later
+    .map(col => ({
+      label: col.header,
+      value: getColumnDisplayValue(col, candidate),
+    }))
+    .filter(item => item.value !== null && item.value !== undefined && item.value !== "");
+};
+
+
+  const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const value = e.target.value;
+  const _filters = { ...filters };
+
+  _filters['global'].value = value;
+
+  setFilters(_filters);
+  setGlobalFilterValue(value);
+};
+
 
   /** ------------------- Resume Actions ------------------- */
   const handleDownloadResume = async (candidateId: number) => {
@@ -266,6 +399,13 @@ const settingsItems = [
     }
   }
 ];
+  const resetToDefaultColumns = () => {
+  setVisibleColumns(
+    ALL_COLUMNS.filter(col =>
+      DEFAULT_COLUMN_FIELDS.includes(col.field)
+    )
+  );
+};
 
 
   /** ------------------- JSX ------------------- */
@@ -275,15 +415,27 @@ const settingsItems = [
       <div className="flex justify-content-between align-items-center mb-2">
         <h2>Candidate Resume Management</h2>
         <div className="flex gap-2">
-          {/* <SearchButton
+          <SearchButton
             value={globalFilterValue}
             onChange={onGlobalFilterChange}
             placeholder="Search candidates..."
-          /> */}
+          />
+          <ColumnSettingsButton
+            value={visibleColumns}
+            options={ALL_COLUMNS}
+            optionLabel="header"
+            onChange={setVisibleColumns}
+            onReset={resetToDefaultColumns}
+          />
           <ExportExcelButton dtRef={dt} />
           <AddButton onClick={handleAdd} />
           <EditButton onClick={handleEdit} disabled={!selectedResume} />
           <DeleteButton onClick={handleDelete} disabled={!selectedResume} />
+          <ViewButton
+            onClick={() => setViewCandidate(selectedResume)}
+            disabled={!selectedResume}
+            tooltip="View Candidate Details"
+          />
           <div style={{ position: "relative" }}>
             <CogButton onClick={() => setShowSettingsMenu((prev) => !prev)} />
 
@@ -363,70 +515,48 @@ const settingsItems = [
         loading={loading}
         emptyMessage="No candidates found."
         filters={filters}  
-        // globalFilterFields={[  
-        //   'candidateName', 
-        //   'contactNumber', 
-        //   'email', 
-        //   'recruiterName', 
-        //   'jobRole',
-        //   'preferredJobLocation',
-        //   'statusName'
-        // ]}
+        globalFilterFields={[  
+          'candidateName', 
+          'contactNumber', 
+          'email', 
+          'recruiterName', 
+          'jobRole',
+          'preferredJobLocation.city',
+          'preferredJobLocation.country',
+          'statusName',
+          'currentCTC',
+          'expectedCTC',
+          'noticePeriod',
+          'experienceYears',
+          'notes'
+        ]}
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Candidates"
       >
 
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
-        <Column field="candidateName" header="Candidate Name" sortable filter/>
-        <Column
-          header="Candidate Contact"
-          body={candidateContactTemplate}
-          sortable
-          filter
-          filterField="contactNumber"
-          showFilterMatchModes={false}
-          showApplyButton={false}
-          showClearButton={true}
-        />
-        <Column field="recruiterName" header="Recruiter" sortable filter/>
-        <Column
-          header="Recruiter Contact"
-          body={recruiterContactTemplate}
-          sortable
-          filter
-          filterField="recruiterContact"
-          showFilterMatchModes={false}
-          showApplyButton={false}
-          showClearButton={true}
-        />
-        <Column field="jobRole" header="Role" sortable filter/>
-        <Column
-          header="Location"
-          body={formatLocation}
-          sortable
-          filter
-          filterField="preferredJobLocation.city"
-          showFilterMatchModes={false}
-        />
-        <Column field="currentCTC" header="Current CTC" sortable filter/>
-        <Column field="expectedCTC" header="Expected CTC" sortable filter/>  
-        <Column field="noticePeriod" header="Notice Period" sortable filter/>
-        <Column field="experienceYears" header="YOE" sortable filter/>
-        <Column field="statusName" header="Status" sortable filter showFilterMatchModes={false}/>
-        <Column
-          field="linkedinProfileUrl"
-          header="LinkedIn Profile"
-          body={linkedInTemplate}
-        />
+        {visibleColumns.map((col) => {
+          let bodyTemplate;
+
+          if (col.body === "candidateContactTemplate") bodyTemplate = candidateContactTemplate;
+          if (col.body === "formatLocation") bodyTemplate = formatLocation;
+          if (col.body === "linkedInTemplate") bodyTemplate = linkedInTemplate;
+
+          return (
+            <Column
+              key={col.field}
+              field={col.field}
+              header={col.header}
+              body={bodyTemplate}
+              sortable={col.sortable}
+              filter={col.filter}
+              filterField={col.filterField || col.field}
+              showFilterMatchModes={false}
+            />
+          );
+        })}
+
         <Column header="Resume" body={resumeActionTemplate} style={{ width: "8rem" }} />
-        <Column
-          field="notes"
-          header="Notes"
-          body={(rowData) => rowData.notes || "-"}
-          sortable
-          filter
-          showFilterMatchModes={false}
-        />
       </DataTable>
       </div>
 
@@ -452,6 +582,19 @@ const settingsItems = [
         candidateName={selectedResume?.candidateName || null}
         toast={toastRef}
       />
+      <PremiumDetailsDialog
+        visible={!!viewCandidate}
+        title="Candidate Details"
+        onHide={() => setViewCandidate(null)}
+      >
+        {viewCandidate && (
+          <DetailsSection title="Complete Candidate Information">
+            <DetailsGrid
+              items={buildDetailsData(viewCandidate)}
+            />
+          </DetailsSection>
+        )}
+      </PremiumDetailsDialog>
     </>
   );
 };
