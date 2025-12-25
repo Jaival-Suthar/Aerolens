@@ -286,7 +286,8 @@ const InterviewTable: React.FC = () => {
               <Calendar
                 value={options.value}
                 onChange={(e) => options.filterCallback(e.value)}
-                dateFormat="dd/mm/yy"
+                dateFormat="dd M yy" // or dd MMM yyyy for full year
+
                 placeholder="Select a date"
                 showIcon
                 showButtonBar
