@@ -276,24 +276,26 @@ const InterviewTable: React.FC = () => {
               />
             )}
           />
-
           <Column
-            field="interviewDate"
-            header="Date"
-            body={dateBodyTemplate}
-            filter
-            filterElement={(options) => (
-              <Calendar
-                value={options.value}
-                onChange={(e) => options.filterCallback(e.value)}
-                dateFormat="dd M yy" // or dd MMM yyyy for full year
+  field="interviewDate"
+  header="Date"
+  dataType="date"
+  body={dateBodyTemplate}
+  filter
+  filterField="interviewDate"
+  filterMatchMode="equals"      // keeps the EQUALS behavior
+  filterElement={(options) => (
+    <Calendar
+      value={options.value}
+      onChange={(e) => options.filterCallback(e.value)}
+      dateFormat="dd M yy"
+      placeholder="Select a date"
+      showIcon
+      showButtonBar
+    />
+  )}
+/>
 
-                placeholder="Select a date"
-                showIcon
-                showButtonBar
-              />
-            )}
-          />
 
           <Column field="fromTime" header="Start Time" body={timeBodyTemplate} filter />
           <Column field="toTime" header="End Time" body={endTimeBodyTemplate} filter />
