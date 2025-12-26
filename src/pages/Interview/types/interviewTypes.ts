@@ -20,6 +20,7 @@ export interface Interview {
   result?: string;
   recruiterNotes?: string;
   interviewerFeedback?: string;
+  meetingUrl?: string;
 }
   
   // Response from GET /api/interview
@@ -92,6 +93,7 @@ export interface FinalizeInterviewRequest {
   result: InterviewResult;
   recruiterNotes?: string;
   interviewerFeedback?: string;
+  meetingUrl?: string;
 }
 
 // Response from PUT /api/interview/:interviewId/finalize
@@ -103,6 +105,15 @@ export interface FinalizeInterviewResponse {
     result: InterviewResult;
     recruiterNotes?: string;
     interviewerFeedback?: string;
+    meetingUrl?: string;
   };
   statusCode: number;
+}
+export interface ApiError {
+  success: false;
+  message: string;
+  error: {
+    code: string;
+    details?: any;
+  };
 }

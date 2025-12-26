@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputTextarea } from "primereact/inputtextarea";
 import { Dropdown } from "primereact/dropdown";
-import { Button } from "primereact/button";
+import DialogButton from "../../../shared/DialogAddEditButton";
+import { FaCheck } from "react-icons/fa";
 import { Toast } from "primereact/toast";
 import { useAuth } from "../../../shared/auth/AuthContext";
-import { finalizeInterview } from "../services/interviewService";
+import { finalizeInterview, getFinalizeInterviewData } from "../services/interviewService";
 import { Interview, InterviewResult } from "../types/interviewTypes";
+import { InputText } from "primereact/inputtext";
 
 interface InterviewResultDialogProps {
   visible: boolean;
@@ -15,6 +17,23 @@ interface InterviewResultDialogProps {
   onSuccess: () => void;
   externalToast?: React.RefObject<Toast>;
 }
+
+const normalizeResult = (value?: string): InterviewResult => {
+  if (!value) return "Pending";
+
+  switch (value.toLowerCase()) {
+    case "selected":
+      return "Selected";
+    case "rejected":
+      return "Rejected";
+    case "cancelled":
+      return "Cancelled";
+    case "pending":
+    default:
+      return "Pending";
+  }
+};
+
 
 const InterviewResultDialog: React.FC<InterviewResultDialogProps> = ({
   visible,
@@ -31,6 +50,7 @@ const InterviewResultDialog: React.FC<InterviewResultDialogProps> = ({
   const [recruiterNotes, setRecruiterNotes] = useState("");
   const [interviewerFeedback, setInterviewerFeedback] = useState("");
   const [loading, setLoading] = useState(false);
+  const [meetingUrl, setMeetingUrl] = useState("");
 
   const resultOptions: { label: string; value: InterviewResult }[] = [
     { label: "Pending", value: "Pending" },
@@ -41,18 +61,50 @@ const InterviewResultDialog: React.FC<InterviewResultDialogProps> = ({
 
   // Reset form when dialog opens with selected interview data
   useEffect(() => {
-    if (visible && selectedInterview) {
-      setResult((selectedInterview.result as InterviewResult) || "Pending");
-      setRecruiterNotes(selectedInterview.recruiterNotes || "");
-      setInterviewerFeedback(selectedInterview.interviewerFeedback || "");
-    } else if (!visible) {
-      // Reset form when dialog closes
-      setResult("Pending");
-      setRecruiterNotes("");
-      setInterviewerFeedback("");
+  if (!visible || !selectedInterview || !accessToken) return;
+
+  const loadFinalizeData = async () => {
+    setLoading(true);
+
+    try {
+      const response = await getFinalizeInterviewData(
+        selectedInterview.interviewId,
+        accessToken
+      );
+
+      if (response?.success) {
+        const data = response.data;
+
+        setResult(normalizeResult(data.result));
+        setRecruiterNotes(data.recruiterNotes || "");
+        setInterviewerFeedback(data.interviewerFeedback || "");
+        setMeetingUrl(data.meetingUrl || "");
+      }
+    } catch (error: any) {
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: "Failed to load finalize interview data",
+        life: 3000,
+      });
+    } finally {
       setLoading(false);
     }
-  }, [visible, selectedInterview]);
+  };
+
+  loadFinalizeData();
+}, [visible, selectedInterview, accessToken]);
+
+  useEffect(() => {
+  if (!visible) {
+    setResult("Pending");
+    setRecruiterNotes("");
+    setInterviewerFeedback("");
+    setMeetingUrl("");
+    setLoading(false);
+  }
+}, [visible]);
+
 
   const handleSubmit = async () => {
     if (!selectedInterview) {
@@ -105,6 +157,22 @@ const InterviewResultDialog: React.FC<InterviewResultDialogProps> = ({
       });
       return;
     }
+    if (meetingUrl) {
+      try {
+        const url = new URL(meetingUrl);
+        if (url.protocol !== "https:") {
+          throw new Error();
+        }
+      } catch {
+        toast.current?.show({
+          severity: "warn",
+          summary: "Validation Error",
+          detail: "Meeting URL must be a valid HTTPS link",
+          life: 3000,
+        });
+        return;
+      }
+    }
 
     setLoading(true);
 
@@ -113,6 +181,7 @@ const InterviewResultDialog: React.FC<InterviewResultDialogProps> = ({
         result,
         recruiterNotes: recruiterNotes.trim() || undefined,
         interviewerFeedback: interviewerFeedback.trim() || undefined,
+        meetingUrl: meetingUrl.trim() || undefined,
       };
 
       const response = await finalizeInterview(
@@ -152,19 +221,20 @@ const InterviewResultDialog: React.FC<InterviewResultDialogProps> = ({
 
   const dialogFooter = (
     <div className="flex justify-content-end gap-2">
-      <Button
+      <DialogButton
         label="Cancel"
-        icon="pi pi-times"
+        severity="secondary"
         onClick={onHide}
-        className="p-button-text"
         disabled={loading}
       />
-      <Button
+
+      <DialogButton
         label="Submit"
-        icon="pi pi-check"
+        severity="success"
+        icon={<FaCheck style={{ fontSize: 16, marginRight: 8 }} />}
         onClick={handleSubmit}
-        autoFocus
         loading={loading}
+        disabled={loading}
       />
     </div>
   );
@@ -209,6 +279,23 @@ const InterviewResultDialog: React.FC<InterviewResultDialogProps> = ({
             options={resultOptions}
             onChange={(e) => setResult(e.value)}
             placeholder="Select Result"
+            disabled={loading}
+            className="w-full"
+          />
+        </div>
+
+        <div className="field mb-3">
+          <label htmlFor="meetingUrl" className="font-semibold mb-2">
+            Interview Recording URL
+            <span className="text-sm ml-2" style={{ color: "#6c757d" }}>
+              (optional, HTTPS only)
+            </span>
+          </label>
+          <InputText
+            id="meetingUrl"
+            value={meetingUrl}
+            onChange={(e) => setMeetingUrl(e.target.value)}
+            placeholder="https://drive.google.com/..."
             disabled={loading}
             className="w-full"
           />
