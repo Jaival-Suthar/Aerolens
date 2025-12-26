@@ -17,10 +17,11 @@ import { useAuth } from "../../../shared/auth/AuthContext";
 
 import CogButton from "../../../shared/CogButton";
 import InterviewResultDialog from "./interviewResultDialog";
-import { FaUserTie, FaClipboardCheck } from "react-icons/fa";
+import { FaUserTie, FaClipboardCheck, FaLink } from "react-icons/fa";
 import { useSearchParams } from "react-router-dom";
 import { FilterMatchMode } from "primereact/api";
 import type { DataTableFilterMeta } from "primereact/datatable";
+import type { DataTableFilterMetaData } from "primereact/datatable";
 
 const convert24to12Hour = (time24: string): string => {
   if (!time24) return '';
@@ -50,7 +51,8 @@ const InterviewTable: React.FC = () => {
   const [rows, setRows] = useState(10);
   const [first, setFirst] = useState((pageFromUrl - 1) * rows);
   const [filters, setFilters] = useState<DataTableFilterMeta>({
-    candidateName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  candidateName: { value: null, matchMode: FilterMatchMode.CONTAINS },
     interviewerName: { value: null, matchMode: FilterMatchMode.EQUALS },
     scheduledByName: { value: null, matchMode: FilterMatchMode.EQUALS },
     roundNumber: { value: null, matchMode: FilterMatchMode.EQUALS },
@@ -138,22 +140,92 @@ const InterviewTable: React.FC = () => {
   const endTimeBodyTemplate = (rowData: Interview) => convert24to12Hour(rowData.toTime);
 
   const resultBodyTemplate = (rowData: Interview) => {
-    const result = rowData.result || "Pending";
-    const getBadgeClass = (result: string) => {
-      switch (result) {
-        case "Selected": return "bg-green-100 text-green-800";
-        case "Rejected": return "bg-red-100 text-red-800";
-        case "Cancelled": return "bg-gray-100 text-gray-800";
-        case "Pending":
-        default: return "bg-yellow-100 text-yellow-800";
-      }
-    };
+  const result = rowData.result || "Pending";
+
+  const styles: Record<string, { bg: string; border: string; text: string; dot: string }> = {
+    Selected: {
+      bg: "#ecfdf5",
+      border: "#10b981",
+      text: "#065f46",
+      dot: "#10b981",
+    },
+    Rejected: {
+      bg: "#fef2f2",
+      border: "#ef4444",
+      text: "#7f1d1d",
+      dot: "#ef4444",
+    },
+    Cancelled: {
+      bg: "#f3f4f6",
+      border: "#9ca3af",
+      text: "#374151",
+      dot: "#9ca3af",
+    },
+    Pending: {
+      bg: "#fffbeb",
+      border: "#f59e0b",
+      text: "#92400e",
+      dot: "#f59e0b",
+    },
+  };
+
+  const s = styles[result];
+
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "8px",
+        padding: "4px 10px",
+        borderRadius: "999px",
+        backgroundColor: s.bg,
+        border: `1px solid ${s.border}`,
+        color: s.text,
+        fontSize: "12px",
+        fontWeight: 600,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span
+        style={{
+          width: "8px",
+          height: "8px",
+          borderRadius: "50%",
+          backgroundColor: s.dot,
+        }}
+      />
+      {result}
+    </div>
+  );
+};
+
+
+  const meetingUrlBodyTemplate = (rowData: Interview) => {
+    if (!rowData.meetingUrl) {
+      return <span style={{ color: "#9ca3af" }}>-</span>;
+    }
+
     return (
-      <span className={`px-2 py-1 border-round text-sm font-semibold ${getBadgeClass(result)}`} style={{ display: "inline-block" }}>
-        {result}
-      </span>
+      <a
+        href={rowData.meetingUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Open Interview Recording"
+        style={{
+          color: "#2563eb",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "6px",
+          textDecoration: "none",
+        }}
+        onClick={(e) => e.stopPropagation()} // ⛔ prevent row selection change
+      >
+        <FaLink />
+      </a>
     );
   };
+
 
   const settingsItems = [
     {
@@ -167,6 +239,49 @@ const InterviewTable: React.FC = () => {
       action: handleResultDialogOpen
     }
   ];
+  const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const value = e.target.value;
+
+  setFilters((prev) => {
+    const next = { ...prev };
+    const globalFilter = next.global;
+
+    if (globalFilter && "value" in globalFilter) {
+      (globalFilter as DataTableFilterMetaData).value = value;
+    }
+
+    return next;
+  });
+};
+
+
+  const roundProgressBodyTemplate = (rowData: Interview) => {
+  const current = rowData.roundNumber;
+  const total = rowData.totalInterviews;
+
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "6px",
+        padding: "4px 10px",
+        borderRadius: "999px",
+        background: "#eef2ff",
+        color: "#3730a3",
+        fontSize: "12px",
+        fontWeight: 600,
+        border: "1px solid #c7d2fe",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span>Round</span>
+      <span>{current}</span>
+      <span style={{ opacity: 0.6 }}>/</span>
+      <span>{total}</span>
+    </div>
+  );
+};
 
   return (
     <>
@@ -174,6 +289,11 @@ const InterviewTable: React.FC = () => {
       <div className="flex justify-content-between align-items-center mb-2">
         <h2>Interviews</h2>
         <div className="flex gap-2 align-items-center">
+          <SearchButton
+            value={('value' in (filters.global || {}) ? (filters.global as DataTableFilterMetaData).value : "") || ""}
+            onChange={onGlobalFilterChange}
+            placeholder="Search interviews..."
+          />
           <EditButton onClick={handleEdit} disabled={!selectedInterview} />
           <DeleteButton onClick={handleDelete} disabled={!selectedInterview} />
           <div style={{ position: "relative" }}>
@@ -202,33 +322,44 @@ const InterviewTable: React.FC = () => {
       </div>
 
       <div style={{ flex: 1, overflow: "auto" }}>
-        <DataTable
-          value={interviews}
-          loading={loading}
-          selectionMode="single"
-          selection={selectedInterview}
-          onSelectionChange={(e) => setSelectedInterview(e.value as Interview | null)}
-          dataKey="interviewId"
-          emptyMessage="No interviews found."
-          scrollable
-          scrollHeight="flex"
-          paginator
-          rows={rows}
-          first={first}
-          onPage={onPageChange}
-          filterDisplay="menu"
-          filters={filters}
-          onFilter={(e) => setFilters(e.filters)}
-          rowsPerPageOptions={[10, 20, 50]}
-          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Members"
-          totalRecords={interviews.length}
-        >
-          <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
-
-          <Column field="candidateName" header="Candidate Name" filter />
-          
-          <Column
+      <DataTable
+        value={interviews}
+        loading={loading}
+        selectionMode="single"
+        selection={selectedInterview}
+        onSelectionChange={(e) => setSelectedInterview(e.value as Interview | null)}
+        dataKey="interviewId"
+        emptyMessage="No interviews found."
+        scrollable
+        scrollHeight="flex"
+        paginator
+        rows={rows}
+        first={first}
+        onPage={onPageChange}
+        filterDisplay="menu"
+        filters={filters}
+        onFilter={(e) => setFilters(e.filters)}
+        rowsPerPageOptions={[10, 20, 50]}
+        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Members"
+        totalRecords={interviews.length}
+        // globalFilter={searchText}
+        // globalFilterFields={[
+        //   "candidateName",
+        //   "interviewerName",
+        //   "scheduledByName",
+        //   "roundNumber",
+        //   "totalInterviews",
+        //   "result",
+        //   "interviewDate",
+        //   "fromTime",
+        //   "toTime",
+        //   "durationMinutes"
+        // ]}
+      >
+        <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
+        <Column field="candidateName" header="Candidate Name" filter />
+        <Column
             field="interviewerName"
             header="Interviewer"
             filter
@@ -242,8 +373,7 @@ const InterviewTable: React.FC = () => {
               />
             )}
           />
-
-          <Column
+        <Column
             field="scheduledByName"
             header="Scheduled By"
             filter
@@ -257,16 +387,22 @@ const InterviewTable: React.FC = () => {
               />
             )}
           />
+        <Column
+          header="Round"
+          body={roundProgressBodyTemplate}
+          style={{ width: "8rem", textAlign: "center" }}
+          filter
+          filterField="roundNumber"
+          showFilterMatchModes={false}
+        />
 
-          <Column field="roundNumber" header="Round No." filter />
-          <Column field="totalInterviews" header="Total Rounds" filter />
-
-          <Column
-            field="result"
-            header="Result"
-            body={resultBodyTemplate}
-            filter
-            filterElement={(options) => (
+        <Column
+          field="result"
+          header="Result"
+          body={resultBodyTemplate}
+          filter
+          showFilterMatchModes={false}
+          filterElement={(options) => (
               <Dropdown
                 value={options.value}
                 options={["Pending", "Selected", "Rejected", "Cancelled"]}
@@ -275,32 +411,23 @@ const InterviewTable: React.FC = () => {
                 showClear
               />
             )}
-          />
-          <Column
-  field="interviewDate"
-  header="Date"
-  dataType="date"
-  body={dateBodyTemplate}
-  filter
-  filterField="interviewDate"
-  filterMatchMode="equals"      // keeps the EQUALS behavior
-  filterElement={(options) => (
-    <Calendar
-      value={options.value}
-      onChange={(e) => options.filterCallback(e.value)}
-      dateFormat="dd M yy"
-      placeholder="Select a date"
-      showIcon
-      showButtonBar
-    />
-  )}
-/>
+        />
+        <Column
+          field="interviewDate"
+          header="Date"
+          body={dateBodyTemplate}
+          filter
+        />
+        <Column
+          header="Recording"
+          body={meetingUrlBodyTemplate}
+          style={{ textAlign: "center", width: "6rem" }}
+        />
 
-
-          <Column field="fromTime" header="Start Time" body={timeBodyTemplate} filter />
-          <Column field="toTime" header="End Time" body={endTimeBodyTemplate} filter />
-          <Column field="durationMinutes" header="Duration (min)" filter />
-        </DataTable>
+        <Column field="fromTime" header="Start Time" body={timeBodyTemplate} filter />
+        <Column field="toTime" header="End Time" body={endTimeBodyTemplate} filter />
+        <Column field="durationMinutes" header="Duration (min)" filter />
+      </DataTable>
       </div>
 
       <InterviewAddEditForm

@@ -30,9 +30,36 @@ import { useAuth } from '../../../shared/auth/AuthContext';
 import { FilterMatchMode } from 'primereact/api';
 import type { DataTableFilterMeta } from 'primereact/datatable';
 import { FaDownload, FaEye } from 'react-icons/fa';
+import ColumnSettingsButton from "../../../shared/ColumnSettingsButton";
+import ViewButton from "../../../shared/ViewButton";
+import PremiumDetailsDialog from "../../../shared/PremiumDetailsDialog";
+import DetailsSection from "../../../shared/DetailsSection";
+import DetailsGrid from "../../../shared/DetailsGrid";
+import type {
+  DataTableFilterMetaData,
+} from 'primereact/datatable';
+import SearchButton from '../../../shared/SearchButton';
+const ALL_JOBPROFILE_COLUMNS = [
+  { field: "clientName", header: "Client", sortable: true, filter: true },
+  { field: "departmentName", header: "Department", sortable: true, filter: true },
+  { field: "jobRole", header: "Role", sortable: true, filter: true },
+  { field: "techSpecification", header: "Tech Stack", filter: true },
+  { field: "positions", header: "Positions", sortable: true, filter: true },
+  { field: "workArrangement", header: "Work Arrangement", sortable: true, filter: true },
+  { field: "location", header: "Location", sortable: true, filter: true },
+  { field: "receivedOnDisplay", header: "Received On", filter: true },
+  { field: "estimatedCloseDateDisplay", header: "Close Date", filter: true },
+  { field: "status", header: "Status", sortable: true, filter: true },
+];
 
-
-// import SearchButton from '../../../shared/SearchButton';
+const DEFAULT_JOBPROFILE_COLUMNS = [
+  "clientName",
+  "departmentName",
+  "jobRole",
+  "positions",
+  "location",
+  "status"
+];
 
 const JobProfileMain: React.FC = () => {
   const toast = useRef<Toast>(null);
@@ -50,9 +77,10 @@ const JobProfileMain: React.FC = () => {
   const pageFromUrl = Number(searchParams.get("page")) || 1;
   const [first, setFirst] = useState((pageFromUrl - 1) * 10);
   const [rows, setRows] = useState(10);
-  // const [globalFilterValue, setGlobalFilterValue] = useState('');
+  const [globalFilterValue, setGlobalFilterValue] = useState('');
   const [locations, setLocations] = useState<Location[]>([]);
   const [filters, setFilters] = useState<DataTableFilterMeta>({
+  global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   clientName: { value: null, matchMode: FilterMatchMode.CONTAINS },
   departmentName: { value: null, matchMode: FilterMatchMode.CONTAINS },
   jobRole: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -66,9 +94,13 @@ const JobProfileMain: React.FC = () => {
   status: { value: null, matchMode: FilterMatchMode.CONTAINS }
 });
 
-
+const [visibleColumns, setVisibleColumns] = useState(
+  ALL_JOBPROFILE_COLUMNS.filter(col =>
+    DEFAULT_JOBPROFILE_COLUMNS.includes(col.field)
+  )
+);
 const [statusOptions, setStatusOptions] = useState<string[]>([]);
-
+const [viewJobProfile, setViewJobProfile] = useState<JobProfile | null>(null);
   useEffect(() => {
     loadData();
   }, []);
@@ -229,14 +261,19 @@ const [statusOptions, setStatusOptions] = useState<string[]>([]);
     setSelectedJobProfile(null);
   };
 
-//   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-//   const value = e.target.value;
-//   const _filters = { ...filters };
-//   _filters['global'].value = value;
-  
-//   setFilters(_filters);
-//   setGlobalFilterValue(value);
-// };
+  const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const value = e.target.value;
+
+  const _filters = { ...filters };
+
+  const globalFilter = _filters['global'] as DataTableFilterMetaData;
+
+  globalFilter.value = value;
+
+  setFilters(_filters);
+  setGlobalFilterValue(value);
+};
+
 
   // Simplified status mapping
   const STATUS_SEVERITY_MAP: Record<string, 'info' | 'warning' | 'success' | 'danger'> = {
@@ -379,6 +416,39 @@ const jdBodyTemplate = (rowData: any) => {
   );
 };
 
+  const getNestedValue = (obj: any, path: string) =>
+  path.split(".").reduce((acc, key) => acc?.[key], obj);
+
+  const getJobProfileDisplayValue = (
+    col: any,
+    jp: JobProfile
+  ) => {
+    switch (col.field) {
+      case "location":
+        return jp.location
+          ? `${jp.location.city}, ${jp.location.country}`
+          : "-";
+
+      case "workArrangement":
+        return jp.workArrangement
+          ? capitalizeFirstLetter(jp.workArrangement)
+          : "-";
+
+      case "status":
+        return jp.status || "-";
+
+      default:
+        return getNestedValue(jp, col.field) ?? "-";
+    }
+  };
+
+  const buildJobProfileDetails = (jp: JobProfile) => {
+  return ALL_JOBPROFILE_COLUMNS.map(col => ({
+    label: col.header,
+    value: getJobProfileDisplayValue(col, jp),
+    field: col.field,
+  }));
+};
 
   return (
     <div className="card" style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden"}}>
@@ -387,11 +457,24 @@ const jdBodyTemplate = (rowData: any) => {
       <div className="flex justify-content-between align-items-center mb-2">
         <h2>Job Profiles Requirements</h2>
         <div className='flex gap-2 align-items-center'>
-          {/* <SearchButton
+          <SearchButton
             value={globalFilterValue}
             onChange={onGlobalFilterChange}
             placeholder="Search..."
-          /> */}
+          />
+          <ColumnSettingsButton
+            value={visibleColumns}
+            options={ALL_JOBPROFILE_COLUMNS}
+            optionLabel="header"
+            onChange={setVisibleColumns}
+            onReset={() =>
+              setVisibleColumns(
+                ALL_JOBPROFILE_COLUMNS.filter(col =>
+                  DEFAULT_JOBPROFILE_COLUMNS.includes(col.field)
+                )
+              )
+            }
+          />
           <ExportExcelButton dtRef={dt} />
           <AddButton onClick={handleAddNew} />
           <EditButton 
@@ -401,6 +484,11 @@ const jdBodyTemplate = (rowData: any) => {
           <DeleteButton 
             onClick={() => selectedJobProfile && handleDelete(selectedJobProfile)} 
             disabled={!selectedJobProfile} 
+          />
+          <ViewButton
+            onClick={() => setViewJobProfile(selectedJobProfile)}
+            disabled={!selectedJobProfile}
+            tooltip="View Job Profile Details"
           />
         </div>
       </div>
@@ -434,67 +522,28 @@ const jdBodyTemplate = (rowData: any) => {
           headerStyle={{ width: '3rem' }}
           frozen
         />
-        <Column field="clientName" header="Client" sortable filter/>
-        <Column field="departmentName" header="Department" sortable filter/>
-        <Column field="jobRole" header="Role" sortable filter/>
-        <Column 
-          field="jobProfileDescription" 
-          header="Description" 
-          style={{ maxWidth: '200px' }}
-          filter
-        />
-        <Column 
-          field="techSpecification" 
-          header="Tech Stack" 
-          style={{ maxWidth: '200px' }}
-          filter
-        />
-        <Column 
-          field="positions" 
-          header="Positions" 
-          sortable 
-          style={{ width: '8rem' }}
-          filter
-        />
-        <Column 
-          field="workArrangement"
-          header="Work Arrangement"
-          sortable
-          body={workArrangementBodyTemplate}
-          filter
-        />
-        <Column
-          header="Location"
-          body={locationBodyTemplate}
-          sortable
-          filter
-          filterField="location.city"
-          showFilterMatchModes={false}
-        />
-        <Column
-          header="Received On"
-          body={(row) => row.receivedOnDisplay || '-'}
-          filter
-          filterField="receivedOnDisplay"
-          showFilterMatchModes={false}
-        />
-        <Column
-          header="Close Date"
-          sortable
-          body={(row) => row.estimatedCloseDateDisplay || '-'}
-          filter
-          filterField="estimatedCloseDateDisplay"
-          showFilterMatchModes={false}
-          showApplyButton={false}
-          showClearButton={true}
-        />
-        <Column 
-          field="status" 
-          header="Status" 
-          body={statusBodyTemplate}
-          sortable 
-          filter
-        />
+        {visibleColumns.map((col) => {
+          let body;
+
+          if (col.field === "location") body = locationBodyTemplate;
+          if (col.field === "workArrangement") body = workArrangementBodyTemplate;
+          if (col.field === "status") body = statusBodyTemplate;
+
+          return (
+            <Column
+              key={col.field}
+              field={col.field}
+              header={col.header}
+              body={body}
+              sortable={col.sortable}
+              filter={col.filter}
+              filterField={col.field === "location" ? "location.city" : col.field}
+              showFilterMatchModes={false}
+            />
+          );
+        })}
+
+        {/* JD column ALWAYS visible */}
         <Column
           header="JD"
           body={jdBodyTemplate}
@@ -522,6 +571,59 @@ const jdBodyTemplate = (rowData: any) => {
         clients={clients}
         loading={loading}
       />
+      <PremiumDetailsDialog
+        visible={!!viewJobProfile}
+        title="Job Profile Details"
+        onHide={() => setViewJobProfile(null)}
+      >
+        {viewJobProfile && (
+          <>
+            {/* 🔹 Core Information */}
+            <DetailsSection title="Job Overview">
+              <DetailsGrid
+                items={buildJobProfileDetails(viewJobProfile).filter(
+                  i => !["techSpecification"].includes(i.field)
+                )}
+              />
+            </DetailsSection>
+
+            {/* 🔹 Tech Stack */}
+            {viewJobProfile.techSpecification && (
+              <DetailsSection title="Tech Stack">
+                <div
+                  style={{
+                    fontSize: "var(--value-size)",
+                    lineHeight: 1.6,
+                    color: "#111827",
+                    whiteSpace: "pre-line",
+                  }}
+                >
+                  {viewJobProfile.techSpecification}
+                </div>
+              </DetailsSection>
+            )}
+
+            {/* 🔹 Job Description (500+ chars safe) */}
+            {viewJobProfile.jobProfileDescription && (
+              <DetailsSection title="Job Description">
+                <div
+                  style={{
+                    fontSize: "var(--value-size)",
+                    lineHeight: 1.65,
+                    color: "#111827",
+                    whiteSpace: "pre-line",
+                    maxHeight: "260px",
+                    overflowY: "auto",
+                    paddingRight: "6px",
+                  }}
+                >
+                  {viewJobProfile.jobProfileDescription}
+                </div>
+              </DetailsSection>
+            )}
+          </>
+        )}
+      </PremiumDetailsDialog>
     </div>
   );
 };
