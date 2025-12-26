@@ -416,7 +416,7 @@ const InterviewTable: React.FC = () => {
           field="interviewDate"
           header="Date"
           body={dateBodyTemplate}
-          filter
+          sortable
         />
         <Column
           header="Recording"
