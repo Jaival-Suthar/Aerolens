@@ -174,21 +174,21 @@ export const AddLookupForm: React.FC<AddLookupFormProps> = ({
 
   // --- Dialog Footer ---
   const dialogFooter = (
-    <div>
+    <div className="flex justify-content-end gap-2">
       <DialogButton
         label="Cancel"
         severity="secondary"
         onClick={handleHide}
-        className="w-auto"
         disabled={loading}
       />
+
       <DialogButton
         label={isEdit ? "Save Changes" : "Add Lookup"}
-        severity={"success"} // Use primary for Edit
-        icon={isEdit ? <FaPencilAlt style={{ fontSize: 14, marginRight: 8, marginLeft: 4 }} /> : <FaCheck style={{ fontSize: 16, marginRight: 8, marginLeft: 4 }} />}
+        severity="success"
+        icon={<FaCheck style={{ fontSize: 16, marginRight: 8 }} />}
         onClick={handleSubmit}
-        className="w-auto"
         loading={loading}
+        disabled={loading}
       />
     </div>
   );

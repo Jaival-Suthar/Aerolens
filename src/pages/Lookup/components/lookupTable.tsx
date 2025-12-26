@@ -6,7 +6,7 @@ import AddButton from '../../../shared/AddButton';
 import EditButton from '../../../shared/EditButton'; 
 import DeleteButton from '../../../shared/DeleteButton';
 import SearchButton from '../../../shared/SearchButton';  // ← ADD
-import { AddLookupForm } from './AddLookupForm';
+import { AddLookupForm } from './AddEditLookupForm';
 import { DeleteLookupForm } from './DeleteLookupForm';
 import { FilterMatchMode } from 'primereact/api';  // ← ADD
 
