@@ -15,7 +15,7 @@ import { useAuth } from "../../../shared/auth/AuthContext";
 
 import CogButton from "../../../shared/CogButton";
 import InterviewResultDialog from "./interviewResultDialog";
-import { FaUserTie, FaClipboardCheck } from "react-icons/fa";
+import { FaUserTie, FaClipboardCheck, FaLink } from "react-icons/fa";
 import { useSearchParams } from "react-router-dom";
 import { FilterMatchMode } from "primereact/api";
 import type { DataTableFilterMeta } from "primereact/datatable";
@@ -182,31 +182,92 @@ const InterviewTable: React.FC = () => {
 
   // Result badge styling
   const resultBodyTemplate = (rowData: Interview) => {
-    const result = rowData.result || "Pending";
-    
-    const getBadgeClass = (result: string) => {
-      switch (result) {
-        case "Selected":
-          return "bg-green-100 text-green-800";
-        case "Rejected":
-          return "bg-red-100 text-red-800";
-        case "Cancelled":
-          return "bg-gray-100 text-gray-800";
-        case "Pending":
-        default:
-          return "bg-yellow-100 text-yellow-800";
-      }
-    };
+  const result = rowData.result || "Pending";
+
+  const styles: Record<string, { bg: string; border: string; text: string; dot: string }> = {
+    Selected: {
+      bg: "#ecfdf5",
+      border: "#10b981",
+      text: "#065f46",
+      dot: "#10b981",
+    },
+    Rejected: {
+      bg: "#fef2f2",
+      border: "#ef4444",
+      text: "#7f1d1d",
+      dot: "#ef4444",
+    },
+    Cancelled: {
+      bg: "#f3f4f6",
+      border: "#9ca3af",
+      text: "#374151",
+      dot: "#9ca3af",
+    },
+    Pending: {
+      bg: "#fffbeb",
+      border: "#f59e0b",
+      text: "#92400e",
+      dot: "#f59e0b",
+    },
+  };
+
+  const s = styles[result];
+
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "8px",
+        padding: "4px 10px",
+        borderRadius: "999px",
+        backgroundColor: s.bg,
+        border: `1px solid ${s.border}`,
+        color: s.text,
+        fontSize: "12px",
+        fontWeight: 600,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span
+        style={{
+          width: "8px",
+          height: "8px",
+          borderRadius: "50%",
+          backgroundColor: s.dot,
+        }}
+      />
+      {result}
+    </div>
+  );
+};
+
+
+  const meetingUrlBodyTemplate = (rowData: Interview) => {
+    if (!rowData.meetingUrl) {
+      return <span style={{ color: "#9ca3af" }}>-</span>;
+    }
 
     return (
-      <span
-        className={`px-2 py-1 border-round text-sm font-semibold ${getBadgeClass(result)}`}
-        style={{ display: "inline-block" }}
+      <a
+        href={rowData.meetingUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Open Interview Recording"
+        style={{
+          color: "#2563eb",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "6px",
+          textDecoration: "none",
+        }}
+        onClick={(e) => e.stopPropagation()} // ⛔ prevent row selection change
       >
-        {result}
-      </span>
+        <FaLink />
+      </a>
     );
   };
+
 
   const settingsItems = [
     {
@@ -236,6 +297,35 @@ const InterviewTable: React.FC = () => {
 
     return next;
   });
+};
+
+
+  const roundProgressBodyTemplate = (rowData: Interview) => {
+  const current = rowData.roundNumber;
+  const total = rowData.totalInterviews;
+
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "6px",
+        padding: "4px 10px",
+        borderRadius: "999px",
+        background: "#eef2ff",
+        color: "#3730a3",
+        fontSize: "12px",
+        fontWeight: 600,
+        border: "1px solid #c7d2fe",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span>Round</span>
+      <span>{current}</span>
+      <span style={{ opacity: 0.6 }}>/</span>
+      <span>{total}</span>
+    </div>
+  );
 };
 
   return (
@@ -355,8 +445,15 @@ const InterviewTable: React.FC = () => {
         <Column field="candidateName" header="Candidate Name" filter />
         <Column field="interviewerName" header="Interviewer" filter />
         <Column field="scheduledByName" header="Scheduled By" filter />
-        <Column field="roundNumber" header="Round No." filter />
-        <Column field="totalInterviews" header="Total Rounds" filter />
+        <Column
+          header="Round"
+          body={roundProgressBodyTemplate}
+          style={{ width: "8rem", textAlign: "center" }}
+          filter
+          filterField="roundNumber"
+          showFilterMatchModes={false}
+        />
+
         <Column
           field="result"
           header="Result"
@@ -370,6 +467,12 @@ const InterviewTable: React.FC = () => {
           body={dateBodyTemplate}
           filter
         />
+        <Column
+          header="Recording"
+          body={meetingUrlBodyTemplate}
+          style={{ textAlign: "center", width: "6rem" }}
+        />
+
         <Column field="fromTime" header="Start Time" body={timeBodyTemplate} filter />
         <Column field="toTime" header="End Time" body={endTimeBodyTemplate} filter />
         <Column field="durationMinutes" header="Duration (min)" filter />
