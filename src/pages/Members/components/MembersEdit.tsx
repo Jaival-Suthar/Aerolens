@@ -11,6 +11,8 @@ import { FaCheck, FaPlus, FaTrash } from 'react-icons/fa';
 import { patchMember } from '../services/memberService';
 import { useAuth } from '../../../shared/auth/AuthContext';
 import type { Member, Location, ClientOption, MemberPatchPayload } from '../types/memberTypes';
+import DialogButton from "../../../shared/DialogAddEditButton";
+
 
 interface Skill {
   skillName: string;
@@ -216,6 +218,11 @@ const MemberEdit: React.FC<Props> = ({
       isValid = false;
     }
 
+    if (!form.location?.country || !form.location?.city) {
+      newErrors.location = 'Country and City are required';
+      isValid = false;
+    }
+
 
     setErrors(newErrors);
 
@@ -266,30 +273,37 @@ const MemberEdit: React.FC<Props> = ({
       onSuccess();
       onHide();
     } catch (error: any) {
-      console.error('Update failed:', error);
-      toast.current?.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: error.message || 'Failed to update member',
-        life: 3000,
-      });
-    } finally {
+    toast.current?.show({
+      severity: 'error',
+      summary: 'Validation Error',
+      detail: error.message || 'Please fix highlighted fields',
+      life: 3000,
+    });
+  } finally {
       setSubmitting(false);
     }
   };
 
   const footer = (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-      <Button label="Cancel" severity="secondary" onClick={onHide} disabled={submitting} />
-      <Button
-        icon={<FaCheck />}
-        label="Update Member"
-        severity="success"
-        onClick={handleSubmit}
-        loading={submitting}
-      />
-    </div>
-  );
+  <div className="flex justify-content-end gap-2">
+    <DialogButton
+      label="Cancel"
+      severity="secondary"
+      onClick={onHide}
+      disabled={submitting}
+    />
+
+    <DialogButton
+      label="Update Member"
+      severity="success"
+      icon={<FaCheck style={{ fontSize: 16, marginRight: 8 }} />}
+      onClick={handleSubmit}
+      loading={submitting}
+      disabled={submitting}
+    />
+  </div>
+);
+
 
   return (
     <>
@@ -371,9 +385,10 @@ const MemberEdit: React.FC<Props> = ({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                  Country
+                  Country *
                 </label>
                 <Dropdown
+                  key={`country-${errors.location}`}
                   value={form.location?.country}
                   options={availableCountries.map(c => ({ label: c, value: c }))}
                   onChange={e =>
@@ -390,7 +405,7 @@ const MemberEdit: React.FC<Props> = ({
 
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                  City 
+                  City *
                 </label>
                 <Dropdown
                   value={form.location?.city}
