@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import DialogButton from "../../../shared/DialogAddEditButton";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Calendar } from "primereact/calendar";
@@ -84,26 +85,6 @@ interface ValidationErrors {
   interviewerId?: string;
   scheduledById?: string;
 }
-
-// Mock Button Component
-const DialogButton: React.FC<any> = ({ label, severity, onClick, icon, loading, disabled, className }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled || loading}
-    className={`p-button p-component ${severity === 'secondary' ? 'p-button-secondary' : 'p-button-success'} ${className}`}
-    style={{ 
-      padding: '0.5rem 1rem', 
-      marginLeft: '0.5rem',
-      display: 'inline-flex',
-      alignItems: 'center',
-      opacity: disabled ? 0.6 : 1,
-      cursor: disabled ? 'not-allowed' : 'pointer'
-    }}
-  >
-    {icon}
-    {loading ? 'Loading...' : label}
-  </button>
-);
 
 // ============================================================
 // MAIN COMPONENT
@@ -210,6 +191,29 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
     }
   }, [visible, isEdit, interviewToEdit]);
 
+  const mapBackendErrors = (apiError: any): ValidationErrors => {
+  const mapped: ValidationErrors = {};
+  const errorCode = apiError?.error;
+  const details = apiError?.details || {};
+
+  if (
+    errorCode === "INTERVIEWER_TIME_CONFLICT" ||
+    errorCode === "CANDIDATE_TIME_CONFLICT"
+  ) {
+    // 🔴 highlight-only fields
+    if (details.interviewerId) mapped.interviewerId = "conflict";
+    if (details.interviewDate) mapped.interviewDate = "conflict";
+
+    // 🟡 single visible message
+    if (details.fromTime) mapped.time = apiError.message;
+
+    return mapped;
+  }
+
+  return mapped;
+};
+
+
   // Validation
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
@@ -231,8 +235,8 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
       const selectedDate = new Date(formData.interviewDate);
       selectedDate.setHours(0, 0, 0, 0);
       
-      if (selectedDate < today) {
-        newErrors.interviewDate = "Interview date cannot be in the past";
+      if (!formData.interviewDate) {
+        newErrors.interviewDate = "Interview date is required";
       }
     }
 
@@ -337,13 +341,17 @@ const hasChanges =
     onSuccess();  // ✅ This will trigger the external toast in InterviewScheduler
     onHide();
   } catch (err: any) {
-    toastRef.current?.show({
-      severity: "error",
-      summary: "Error",
-      detail: err.message || "Something went wrong",
-      life: 2000,  // ✅ Changed to 2 seconds
-    });
-  } finally {
+  const fieldErrors = mapBackendErrors(err);
+  setErrors(fieldErrors);
+
+  toastRef.current?.show({
+    severity: "error",
+    summary: err.error || "Error",
+    detail: err.message,
+    life: 3000,
+  });
+}
+ finally {
     setLoading(false);
   }
 };
@@ -400,30 +408,24 @@ const hasChanges =
 
   // Dialog Footer
   const dialogFooter = (
-    <div>
-      <DialogButton
-        label="Cancel"
-        severity="secondary"
-        onClick={handleHide}
-        className="w-auto"
-        disabled={loading}
-      />
-      <DialogButton
-        label={isEdit ? "Save Changes" : "Schedule Interview"}
-        severity="success"
-        icon={
-          isEdit ? (
-            <FaPencilAlt style={{ fontSize: 14, marginRight: 8, marginLeft: 4 }} />
-          ) : (
-            <FaCheck style={{ fontSize: 16, marginRight: 8, marginLeft: 4 }} />
-          )
-        }
-        onClick={handleSubmit}
-        className="w-auto"
-        loading={loading}
-      />
-    </div>
-  );
+  <div className="flex justify-content-end gap-2">
+    <DialogButton
+      label="Cancel"
+      severity="secondary"
+      onClick={handleHide}
+      disabled={loading}
+    />
+
+    <DialogButton
+      label={isEdit ? "Save Changes" : "Schedule Interview"}
+      severity="success"
+      icon={<FaCheck style={{ fontSize: 16, marginRight: 8 }} />}
+      onClick={handleSubmit}
+      loading={loading}
+      disabled={loading}
+    />
+  </div>
+);
 
   const endTime = calculateEndTime();
 
@@ -469,13 +471,11 @@ const hasChanges =
               onChange={(e) => handleInputChange("interviewDate", e.value)}
               dateFormat="dd/mm/yy"
               placeholder="Select date"
-              minDate={new Date()}
               showIcon
               icon={() => <FaCalendarAlt />}
               className={errors.interviewDate ? "p-invalid" : ""}
               disabled={loading}
             />
-            {errors.interviewDate && <small className="p-error">{errors.interviewDate}</small>}
           </div>
 
           {/* Time Selection Row - 12 Hour Format */}
@@ -514,7 +514,11 @@ const hasChanges =
                 />
               </div>
             </div>
-            {errors.time && <small className="p-error">{errors.time}</small>}
+            {errors.time && (
+              <small className="p-error">
+                {errors.time} — please adjust the start time.
+              </small>
+            )}
             <div className="flex align-items-center gap-2 mt-2">
               <FaClock style={{ color: '#6366f1' }} />
               <small className="text-600">Selected: <strong>{displayTime}</strong></small>
@@ -567,7 +571,6 @@ const hasChanges =
               className={errors.interviewerId ? "p-invalid" : ""}
               disabled={loading}
             />
-            {errors.interviewerId && <small className="p-error">{errors.interviewerId}</small>}
           </div>
 
           {/* Scheduled By Dropdown */}

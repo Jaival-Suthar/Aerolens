@@ -11,21 +11,22 @@ const makeHeaders = (accessToken?: string, isFormData = false): HeadersInit => {
 };
 
 const checkStatus = async (res: Response) => {
-
   const contentType = res.headers.get("content-type");
 
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`HTTP ${res.status}: ${errorText}`);
+  let body: any = null;
+  if (contentType?.includes("application/json")) {
+    body = await res.json();
+  } else {
+    body = await res.text();
   }
 
-  if (contentType && contentType.includes("application/json")) {
-    const json = await res.json();
-    return json;
-  } else {
-    return {};
+  if (!res.ok) {
+    throw body;
   }
+
+  return body;
 };
+
 
 // GET FORM DATA (candidates, interviewers, recruiters)
 export const getInterviewFormData = async (token: string) => {
@@ -152,3 +153,23 @@ export const finalizeInterview = async (
     throw err;
   }
 };
+
+export const getFinalizeInterviewData = async (
+  interviewId: number,
+  token: string
+) => {
+  const url = `${BASE_URL}/interview/${interviewId}/finalize-data`;
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: makeHeaders(token),
+    });
+
+    return await checkStatus(res);
+  } catch (err) {
+    console.error("[getFinalizeInterviewData] ERROR:", err);
+    throw err;
+  }
+};
+
