@@ -13,6 +13,7 @@ import {
   FaCog,
   FaUser,
   FaUserTie,
+  FaStore
 } from "react-icons/fa";
 import { useProfileStore } from "./shared/store/profile";
 import Logo from "./assets/Logo.webp";
@@ -80,6 +81,12 @@ const AppNavbar: React.FC = () => {
           icon: <FaDatabase style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/lookup-data"),
           className: isMenuActive("/lookup-data") ? "nav-subitem-active" : "",
+        },
+        {
+          label: "Vendor",
+          icon: <FaStore style={{ marginRight: 8, marginLeft: 4 }} />,
+          command: () => handleNavigation("/vendor"),
+          className: isMenuActive("/vendor") ? "nav-subitem-active" : "",
         },
       ],
     },

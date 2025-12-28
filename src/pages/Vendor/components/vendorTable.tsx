@@ -67,8 +67,8 @@ const VendorTable: React.FC = () => {
       >
         <Column selectionMode="single" style={{ width: "3rem" }} />
         <Column field="organisationName" header="Organisation Name" sortable />
-        <Column field="phone" header="Phone" />
-        <Column field="email" header="Email" />
+        <Column field="phone" header="Phone" sortable/>
+        <Column field="email" header="Email" sortable />
       </DataTable>
 
       <VendorAddEdit

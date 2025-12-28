@@ -14,6 +14,7 @@ const LoginPage = lazy(() => import('./pages/Login/Login'));
 const SignUpPage = lazy(() => import('./pages/Signup/page'));
 const Members = lazy(() => import('./pages/Members/page'));
 const ReportPage = lazy(() => import('./pages/Report/page'));
+const Vendor = lazy(() => import('./pages/Vendor/page'));
 
 const LoadingSpinner = () => (
   <div
@@ -96,6 +97,8 @@ const AppContent: React.FC = () => {
             <Route path="/lookup-data" element={<AppLayout><LookupPage /></AppLayout>} />
             <Route path="/members" element={<AppLayout><Members /></AppLayout>} />
             <Route path="/reports" element={<AppLayout><ReportPage /></AppLayout>} />
+            <Route path="/vendor" element={<AppLayout><Vendor /></AppLayout>} />
+
             <Route path="*" element={<NotFound />} />
           </>
         )}
