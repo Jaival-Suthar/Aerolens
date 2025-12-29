@@ -17,7 +17,7 @@ const MonthlyInterviewCards: React.FC<Props> = ({
 }) => {
   if (!interviewers.length) {
     return (
-      <div className="mt-4 text-center p-4" style={{ color: "#6b7280" }}>
+      <div className="mt-4 text-center p-4" style={{ color: "#374151" }}>
         No interviewer data available
       </div>
     );
@@ -43,7 +43,7 @@ const MonthlyInterviewCards: React.FC<Props> = ({
               marginBottom: "6px"
             }}
           />
-          <p className="text-sm m-0" style={{ color: "#6b7280" }}>
+          <p className="text-sm m-0" style={{ color: "#374151" }}>
             {showAllTime
               ? "Complete interviewer performance history"
               : "Interview distribution, outcomes, and time investment"}
@@ -239,7 +239,7 @@ const MonthlyInterviewCards: React.FC<Props> = ({
               {/* Cancelled */}
               {i.cancelled > 0 && (
                 <>
-                  <div className="text-sm mb-1 font-medium" style={{ color: "#6b7280" }}>
+                  <div className="text-sm mb-1 font-medium" style={{ color: "#374151" }}>
                     Cancelled: {i.cancelled} ({cancelledPercent}%)
                   </div>
                   <div className="mb-2">

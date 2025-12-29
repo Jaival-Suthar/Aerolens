@@ -474,7 +474,7 @@ const settingsItems = [
                     e.currentTarget.style.backgroundColor = "transparent";
                   }}
                 >
-                  <span style={{ fontSize: "16px", color: "#6b7280" }}>
+                  <span style={{ fontSize: "16px", color: "#374151" }}>
                     {item.icon}
                   </span>
                   <span 

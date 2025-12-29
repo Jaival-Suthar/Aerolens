@@ -520,7 +520,7 @@ const MemberEdit: React.FC<Props> = ({
               backgroundColor: '#f9fafb'
             }}>
               {formSkills.length === 0 && (
-                <div style={{ textAlign: 'center', color: '#6b7280', padding: '2rem' }}>
+                <div style={{ textAlign: 'center', color: '#374151', padding: '2rem' }}>
                   No skills added yet. Click "Add Skill" to begin.
                 </div>
               )}
