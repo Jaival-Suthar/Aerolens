@@ -14,18 +14,25 @@ const LoginPage = lazy(() => import('./pages/Login/Login'));
 const SignUpPage = lazy(() => import('./pages/Signup/page'));
 const Members = lazy(() => import('./pages/Members/page'));
 const ReportPage = lazy(() => import('./pages/Report/page'));
-
+const navigate = useNavigate();
 const LoadingSpinner = () => (
   <div
     className="flex align-items-center justify-content-center h-screen"
-    data-testid="loading-spinner"
+    role="status"
+    aria-live="polite"
+    aria-label="Loading application"
   >
-    <FaSpinner className="spin text-4xl text-primary" />
+    <FaSpinner
+      className="spin text-4xl text-primary"
+      aria-hidden="true"
+    />
   </div>
 );
 
 
+
 const NotFound: React.FC = () => (
+  
   <div
     className="flex flex-column align-items-center justify-content-center h-screen"
     data-testid="not-found"
@@ -33,12 +40,12 @@ const NotFound: React.FC = () => (
     <FaExclamationTriangle className="text-6xl text-orange-500 mb-3" />
 
     <h1 className="text-4xl font-bold text-900 mb-2">404</h1>
-    <p className="text-xl text-600 mb-4">Page not found</p>
+    <p className="text-xl text-600 mb-4" role="status">Page not found</p>
 
     <button
       className="p-button p-component"
-      onClick={() => (window.location.href = "/home")}
-      data-testid="go-dashboard-btn"
+      onClick={() => navigate("/home")}
+      aria-label="Go to home page"
     >
       <span className="p-button-label">Go to Home Page</span>
     </button>
@@ -51,6 +58,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <AppNavbar />
 
     <main
+      role='main'
       className="main-content p-2"
       style={{
         background: "#fff",
