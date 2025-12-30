@@ -120,8 +120,8 @@ export interface RecruiterItem {
 }
 
 export interface StatusItem {
-  lookupKey: number;
-  value: string;
+  statusId: number;
+  statusName: string;
 }
 
 export interface LocationItem {

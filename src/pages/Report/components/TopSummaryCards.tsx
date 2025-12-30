@@ -14,7 +14,7 @@ interface Props {
 const TopSummaryCards: React.FC<Props> = ({ summary }) => {
   if (!summary) {
     return (
-      <div className="p-4 text-center" style={{ color: "#6b7280" }}>
+      <div className="p-4 text-center" style={{ color: "#374151" }}>
         Loading interview summary…
       </div>
     );
@@ -50,7 +50,7 @@ const TopSummaryCards: React.FC<Props> = ({ summary }) => {
             marginBottom: "6px"
           }}
         />
-        <p className="m-0" style={{ color: "#6b7280", fontSize: "0.875rem" }}>
+        <p className="m-0" style={{ color: "#374151", fontSize: "0.875rem" }}>
           Cumulative performance snapshot
         </p>
       </div>
@@ -96,7 +96,7 @@ const TopSummaryCards: React.FC<Props> = ({ summary }) => {
               <div
                 className="text-xs font-medium mb-2"
                 style={{ 
-                  color: "#6b7280", 
+                  color: "#374151", 
                   letterSpacing: "0.03em",
                   textTransform: "uppercase",
                   fontSize: "0.7rem"

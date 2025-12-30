@@ -74,7 +74,7 @@ const Dashboard: React.FC = () => {
                         margin: 0,
                         fontSize: '0.875rem',
                         fontWeight: '500',
-                        color: '#6b7280',
+                        color: '#374151',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em'
                     }}>
@@ -117,7 +117,7 @@ const Dashboard: React.FC = () => {
 
                 <div style={{
                     fontSize: '0.875rem',
-                    color: '#6b7280',
+                    color: '#374151',
                     marginBottom: '0.75rem'
                 }}>
                     {stat.description}

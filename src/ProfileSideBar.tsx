@@ -4,7 +4,7 @@ import { useProfileStore } from './shared/store/profile';
 import { Divider } from 'primereact/divider';
 import { Button } from 'primereact/button';
 import { useAuth } from './shared/auth/AuthContext';
-import { FaSignOutAlt, FaUserCircle } from 'react-icons/fa';
+import { FaSignOutAlt, FaUserCircle, FaKey } from 'react-icons/fa';
 import { ChangePasswordDialog } from './passwordReset';
 
 export const ProfileSidebar: React.FC = () => {
@@ -36,7 +36,7 @@ export const ProfileSidebar: React.FC = () => {
         style={{
           fontSize: '0.75rem',
           fontWeight: 600,
-          color: '#6b7280',
+          color: '#374151',
           textTransform: 'uppercase',
           letterSpacing: '0.04em',
           marginBottom: '4px',
@@ -90,6 +90,8 @@ export const ProfileSidebar: React.FC = () => {
         visible={isSidebarOpen}
         position="right"
         onHide={closeSidebar}
+        aria-label="User profile sidebar"
+        role="complementary"
         style={{ width: '380px' }}
         baseZIndex={1000}
       >
@@ -105,11 +107,17 @@ export const ProfileSidebar: React.FC = () => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <FaUserCircle size={36} />
+            <FaUserCircle size={36} aria-hidden="true"/>
             <div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+              <h2
+                style={{
+                  fontSize: '1.1rem',
+                  fontWeight: 700,
+                  margin: 0,
+                }}
+              >
                 {member?.memberName || 'User Profile'}
-              </div>
+              </h2>
               <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>
                 Account Overview
               </div>
@@ -130,7 +138,7 @@ export const ProfileSidebar: React.FC = () => {
               />
             </>
           ) : (
-            <p style={{ textAlign: 'center', color: '#6b7280' }}>
+            <p style={{ textAlign: 'center', color: '#374151' }}>
               No profile data available
             </p>
           )}
@@ -150,7 +158,10 @@ export const ProfileSidebar: React.FC = () => {
           >
             <Button
               label="Change Password"
-              icon="pi pi-key"
+              icon={<FaKey aria-hidden="true"/>}
+              aria-label='Change Password'
+              aria-haspopup="dialog"
+              aria-controls="change-password-dialog"
               onClick={() => {
                 closeSidebar(); 
                 setIsChangePasswordOpen(true);
@@ -169,7 +180,8 @@ export const ProfileSidebar: React.FC = () => {
 
             <Button
               label="Logout"
-              icon={<FaSignOutAlt />}
+              icon={<FaSignOutAlt aria-hidden="true"/>}
+              aria-label='Log out of account'
               onClick={handleLogout}
               style={{
                 background: '#b91c1c', // deep red (Tailwind red-700)

@@ -18,14 +18,14 @@ import type {
   ClientOption,
   DepartmentOption,
   Location,
-
+  ApiResponse
 } from '../types/jobProfileTypes';
-import { FaCheck } from 'react-icons/fa';
+import { FaCheck, FaTimes } from 'react-icons/fa';
 
 interface Props {
   visible: boolean;
   onHide: () => void;
-  onSave: (jobProfile: JobProfilePayload) => Promise<void>;
+  onSave: (jobProfile: JobProfilePayload) => Promise<ApiResponse<any>>;
   jobProfile?: JobProfile | null;
   clients: ClientOption[];
   locations: Location[];
@@ -400,32 +400,14 @@ const handleSubmit = async () => {
   setSubmitting(true);
   try {
     await onSave(payload);
-    
-    const successMessage = jobProfile 
-      ? 'Job Profile updated successfully!' 
-      : 'Job Profile created successfully!';
-      
-    toast.current?.show({ 
-      severity: 'success', 
-      summary: 'Success', 
-      detail: successMessage, 
-      life: 3000 
-    });
-    
     onHide();
-  } catch (err) {
-    console.error('Save failed', err);
-    toast.current?.show({ 
-      severity: 'error', 
-      summary: 'Error', 
-      detail: 'Failed to save job profile. Please try again.', 
-      life: 3000 
-    });
-  } finally {
+  } catch (err: any) {
+  console.error('Save failed', err);
+  throw err;
+} finally {
     setSubmitting(false);
   }
 };
-
 
   const footer = (
     <div className="flex justify-content-end gap-2">
@@ -655,32 +637,106 @@ const handleSubmit = async () => {
             <label className="font">
               Job Description File (JD)
             </label>
-
-            <FileUpload
-              mode="basic"
-              name="JD"
-              accept=".pdf,.doc,.docx"
-              maxFileSize={5 * 1024 * 1024} // 5MB
-              auto={false}
-              customUpload
-              chooseLabel="Upload JD"
-              chooseOptions={{
-                label: "Upload JD",
-                className: "p-button-secondary p-button-sm",
+            <div
+              className="jd-dropzone"
+              onDragOver={(e) => {
+                if (jdFile) return;
+                e.preventDefault();
+                e.stopPropagation();
               }}
-              onSelect={(e) => {
-                const selectedFile = e.files?.[0];
-                if (selectedFile) {
-                  setJdFile(selectedFile);
+              onDrop={(e) => {
+                if (jdFile) return;
+                e.preventDefault();
+                e.stopPropagation();
+
+                const file = e.dataTransfer.files?.[0];
+                if (file) {
+                  setJdFile(file);
                 }
               }}
-            />
+              style={{
+                border: "2px dashed #cbd5e1",
+                borderRadius: "8px",
+                padding: "1rem",
+                textAlign: "center",
+                background: "#f8fafc",
+                opacity: jdFile ? 0.95 : 1
+              }}
+            >
 
-            {jdFile && (
-              <small className="p-success block mt-1">
-                Selected file: <strong>{jdFile.name}</strong>
-              </small>
+
+            {/* CASE A: No file selected */}
+            {!jdFile && (
+              <>
+                <p style={{ marginBottom: "0.75rem", color: "#475569", fontSize: "0.875rem" }}>
+                  Drag & Drop JD Here or Browse Files
+                </p>
+
+                <FileUpload
+                  mode="basic"
+                  name="JD"
+                  accept=".pdf,.doc,.docx"
+                  maxFileSize={5 * 1024 * 1024}
+                  auto={false}
+                  customUpload
+                  uploadHandler={() => {}}
+                  chooseLabel="Browse Files"
+                  chooseOptions={{
+                    label: "Browse Files",
+                    className: "p-button-secondary p-button-sm",
+                  }}
+                  onSelect={(e) => {
+                    const selectedFile = e.files?.[0];
+                    if (selectedFile) {
+                      setJdFile(selectedFile);
+                    }
+                  }}
+                />
+              </>
             )}
+
+            {/* CASE B: File selected */}
+            {jdFile && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "1rem",
+                  background: "#f0fdf4",
+                  border: "1px solid #86efac",
+                  borderRadius: "6px",
+                  padding: "0.75rem 1rem"
+                }}
+              >
+                <div style={{ textAlign: "left" }}>
+                  <strong style={{ color: "#0f172a" }}>{jdFile.name}</strong>
+                  <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                    {(jdFile.size / 1024 / 1024).toFixed(2)} MB
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setJdFile(null)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "#fee2e2",       // light red
+                    border: "1px solid #fecaca",
+                    borderRadius: "999px",
+                    width: "36px",
+                    height: "36px",
+                    cursor: "pointer"
+                  }}
+                  title="Remove file"
+                >
+                  <FaTimes style={{ color: "#b91c1c", fontSize: "16px" }} />
+                </button>
+              </div>
+            )}
+            </div>
 
             <small className="text-muted block mt-1">
               Supported formats: PDF, DOC, DOCX (max 5MB)
