@@ -1,90 +1,143 @@
-import React, { useState, useCallback } from "react";
-import { DataTable, type DataTableSelectionSingleChangeEvent, type DataTablePageEvent } from "primereact/datatable";
+import React, { useRef, useState, useEffect } from "react";
+import { DataTable, type DataTableFilterMeta } from "primereact/datatable";
 import { Column } from "primereact/column";
-
+import { Dropdown } from "primereact/dropdown";
+import { Toast } from "primereact/toast";
+import SearchButton from "../../../shared/SearchButton";
 import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
-
-import VendorAddEdit from "./VendorAddEdit"
-import VendorDelete from "./VendorDelete";
+import 'primereact/resources/themes/saga-blue/theme.css';
+import VendorAddEdit from "./vendorAddEdit";
+import VendorDelete from "./vendorDelete";
 import type { VendorType } from "../types/vendorTypes";
+import { FilterMatchMode } from "primereact/api";
+import { useVendorService } from "../services/useVendor";
 
 const VendorTable: React.FC = () => {
-  const [vendors, setVendors] = useState<VendorType[]>([
-    { vendorId: "v1", organisationName: "Vendor A", phone: "1234567890", email: "a@vendor.com" },
-    { vendorId: "v2", organisationName: "Vendor B", phone: "0987654321", email: "b@vendor.com" },
-  ]);
+  const toast = useRef<Toast>(null);
+  const { getAllVendors } = useVendorService();
+
+  const [vendors, setVendors] = useState<VendorType[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<VendorType | null>(null);
+  const [filters, setFilters] = useState<DataTableFilterMeta>({
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    vendorName: { value: null, matchMode: FilterMatchMode.EQUALS },
+    vendorPhone: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    vendorEmail: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  });
   const [showAddEdit, setShowAddEdit] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [editVendor, setEditVendor] = useState<VendorType | null>(null);
+// Add at the top with other useState
+const [globalFilterValue, setGlobalFilterValue] = useState<string>("");
 
-  // Add or Edit handler
-  const handleSave = (vendor: VendorType) => {
-    setVendors((prev) => {
-      const existingIndex = prev.findIndex(v => v.vendorId === vendor.vendorId);
-      if (existingIndex >= 0) {
-        // Edit
-        const newVendors = [...prev];
-        newVendors[existingIndex] = vendor;
-        return newVendors;
-      } else {
-        // Add
-        return [...prev, vendor];
-      }
-    });
+  // fetch vendors on mount and whenever called by children
+  const fetchVendors = async () => {
+    try {
+      const data = await getAllVendors();
+      setVendors(data);
+    } catch (error) {
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Failed to fetch vendors',
+        life: 3000,
+      });
+    }
   };
 
-  // Delete handler
-  const handleDelete = () => {
-    if (!selectedVendor) return;
-    setVendors((prev) => prev.filter(v => v.vendorId !== selectedVendor.vendorId));
-    setSelectedVendor(null);
+  useEffect(() => {
+    fetchVendors(); // show data immediately on table open
+  }, []);
+  const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setGlobalFilterValue(value); // update input value
+    setFilters(prev => ({
+      ...prev,
+      global: { value, matchMode: FilterMatchMode.CONTAINS } // update datatable filters
+    }));
   };
-
-  const onPageChange = useCallback((e: DataTablePageEvent) => {}, []);
-
+  
+ 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-      <div className="flex gap-2 mb-2">
-        <AddButton onClick={() => { setEditVendor(null); setShowAddEdit(true); }} />
-        <EditButton onClick={() => { if (selectedVendor) { setEditVendor(selectedVendor); setShowAddEdit(true); } }} disabled={!selectedVendor} />
-        <DeleteButton onClick={() => setShowDelete(true)} disabled={!selectedVendor} />
+    <>
+      <Toast ref={toast} />
+
+      <div className="flex justify-content-between align-items-center mb-2">
+        <h2>Vendor</h2>
+        <div className="flex gap-2">
+        <SearchButton
+  value={globalFilterValue}   // use state instead of filters.global
+  onChange={onGlobalFilterChange} // update both input and datatable filter
+  placeholder="Search vendors..."
+/>
+
+          <AddButton onClick={() => { setEditVendor(null); setSelectedVendor(null); setShowAddEdit(true); }} />
+          <EditButton
+            disabled={!selectedVendor}
+            onClick={() => { if (selectedVendor) { setEditVendor(selectedVendor); setShowAddEdit(true); } }}
+          />
+          <DeleteButton
+            disabled={!selectedVendor}
+            onClick={() => setShowDelete(true)}
+          />
+        </div>
       </div>
 
-      <DataTable
-        value={vendors}
-        selectionMode="single"
-        selection={selectedVendor}
-        onSelectionChange={(e: DataTableSelectionSingleChangeEvent<VendorType[]>) => setSelectedVendor(e.value ?? null)}
-        dataKey="vendorId"
-        paginator
-        rows={10}
-        scrollable
-        scrollHeight="flex"
-        onPage={onPageChange}
-      >
-        <Column selectionMode="single" style={{ width: "3rem" }} />
-        <Column field="organisationName" header="Organisation Name" sortable />
-        <Column field="phone" header="Phone" sortable/>
-        <Column field="email" header="Email" sortable />
-      </DataTable>
+      <div style={{ flex: 1, overflow: "auto" }}>
+        <DataTable
+          value={vendors}
+          dataKey="vendorId"
+          selectionMode="single"
+          selection={selectedVendor}
+          onSelectionChange={(e: any) => setSelectedVendor(e.value ?? null)}
+          filters={filters}
+          filterDisplay="menu"
+          onFilter={(e) => setFilters(e.filters)}
+          globalFilterFields={['vendorName', 'vendorPhone', 'vendorEmail']}
+          scrollable
+          scrollHeight="flex"
+          tableStyle={{ minWidth: "80rem" }}
+          emptyMessage="No vendors found"
+        >
+          <Column selectionMode="single" bodyStyle={{ textAlign: 'center' }} />
+          <Column
+            field="vendorName"
+            header="Organization Name"
+            sortable
+            filter
+            filterElement={(options) => (
+              <Dropdown
+                value={options.value}
+                options={vendors.map(v => v.vendorName).filter((v, i, a) => a.indexOf(v) === i)}
+                onChange={(e) => options.filterCallback(e.value)}
+                placeholder="Select Organization"
+                showClear
+              />
+            )}
+          />
+          <Column field="vendorPhone" header="Phone" sortable filter filterPlaceholder="Search by phone" />
+          <Column field="vendorEmail" header="Email" sortable filter filterPlaceholder="Search by email" />
+        </DataTable>
+      </div>
 
+      {/* Add / Edit Vendor */}
       <VendorAddEdit
         visible={showAddEdit}
         vendorToEdit={editVendor}
-        onHide={() => setShowAddEdit(false)}
-        onSave={handleSave}
+        onHide={() => { setShowAddEdit(false); setEditVendor(null); }}
+        onUpdate={fetchVendors} // child handles API, parent refreshes table
       />
 
+      {/* Delete Vendor */}
       <VendorDelete
         visible={showDelete}
         vendorToDelete={selectedVendor}
         onHide={() => setShowDelete(false)}
-        onConfirm={handleDelete}
+        onUpdate={fetchVendors} // child handles API, parent refreshes table
       />
-    </div>
+    </>
   );
 };
 

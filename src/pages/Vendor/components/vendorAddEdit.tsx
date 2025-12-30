@@ -1,78 +1,116 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
-import { Button } from "primereact/button";
+import { Toast } from "primereact/toast";
+import { FaCheck } from "react-icons/fa";
+import DialogButton from "../../../shared/DialogAddEditButton";
 import type { VendorType } from "../types/vendorTypes";
+import { useVendorService } from "../services/useVendor";
 
 type VendorAddEditProps = {
   visible: boolean;
   vendorToEdit: VendorType | null;
   onHide: () => void;
-  onSave: (vendor: VendorType) => void;
+  onUpdate: () => void; // callback to refresh parent table
 };
 
-const VendorAddEdit: React.FC<VendorAddEditProps> = ({ visible, vendorToEdit, onHide, onSave }) => {
-  const [organisationName, setOrganisationName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
+const VendorAddEdit: React.FC<VendorAddEditProps> = ({ visible, vendorToEdit, onHide, onUpdate }) => {
+  const [formData, setFormData] = useState({ vendorName: "", vendorPhone: "", vendorEmail: "" });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitted, setSubmitted] = useState(false);
+  const toast = useRef<Toast>(null);
+  const { createVendor, updateVendor } = useVendorService();
 
   useEffect(() => {
     if (vendorToEdit) {
-      setOrganisationName(vendorToEdit.organisationName);
-      setPhone(vendorToEdit.phone || "");
-      setEmail(vendorToEdit.email || "");
+      setFormData({
+        vendorName: vendorToEdit.vendorName,
+        vendorPhone: vendorToEdit.vendorPhone || "",
+        vendorEmail: vendorToEdit.vendorEmail || "",
+      });
     } else {
-      setOrganisationName("");
-      setPhone("");
-      setEmail("");
+      setFormData({ vendorName: "", vendorPhone: "", vendorEmail: "" });
     }
-  }, [vendorToEdit]);
+    setErrors({});
+    setSubmitted(false);
+  }, [vendorToEdit, visible]);
 
-  const handleSave = () => {
-    if (!organisationName.trim()) {
-      alert("Organisation Name is mandatory");
-      return;
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.vendorName.trim()) newErrors.vendorName = "Organization Name is required";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    setSubmitted(true);
+    if (!validateForm()) return;
+
+    try {
+      if (vendorToEdit?.vendorId) {
+        await updateVendor(vendorToEdit.vendorId, formData);
+        toast.current?.show({ severity: "success", summary: "Success", detail: "Vendor updated!", life: 3000 });
+      } else {
+        await createVendor(formData);
+        toast.current?.show({ severity: "success", summary: "Success", detail: "Vendor added!", life: 3000 });
+      }
+
+      onHide();
+      onUpdate(); // refresh parent table
+    } catch (error) {
+      toast.current?.show({ severity: "error", summary: "Error", detail: "Failed to save vendor", life: 3000 });
     }
-
-    const newVendor: VendorType = {
-      vendorId: vendorToEdit?.vendorId || `v${Date.now()}`, // temporary ID
-      organisationName,
-      phone,
-      email,
-    };
-
-    onSave(newVendor);
-    onHide();
   };
 
   return (
-    <Dialog
-      header={vendorToEdit ? "Edit Vendor" : "Add Vendor"}
-      visible={visible}
-      onHide={onHide}
-      style={{ width: "400px" }}
-      modal
-    >
-      <div className="p-fluid">
+    <>
+      <Toast ref={toast} />
+      <Dialog
+        header={vendorToEdit ? "Edit Vendor" : "Add Vendor"}
+        visible={visible}
+        onHide={onHide}
+        style={{ width: "400px" }}
+        modal
+        className="p-fluid"
+        footer={
+          <div className="flex justify-content-end gap-2">
+            <DialogButton label="Cancel" severity="secondary" onClick={onHide} />
+            <DialogButton
+              label={vendorToEdit ? "Update Vendor" : "Add Vendor"}
+              severity="success"
+              icon={<FaCheck className="mr-2" />}
+              onClick={handleSave}
+            />
+          </div>
+        }
+      >
         <div className="p-field">
-          <label htmlFor="organisationName">Organisation Name*</label>
-          <InputText id="organisationName" value={organisationName} onChange={(e) => setOrganisationName(e.target.value)} />
+          <label className="font-bold">Organization Name*</label>
+          <InputText
+            value={formData.vendorName}
+            onChange={(e) => setFormData(prev => ({ ...prev, vendorName: e.target.value }))}
+            className={submitted && errors.vendorName ? "p-invalid" : ""}
+          />
+          {submitted && errors.vendorName && <small className="p-error">{errors.vendorName}</small>}
         </div>
+        <br />
         <div className="p-field">
-          <label htmlFor="phone">Phone</label>
-          <InputText id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <label className="font-bold">Phone</label>
+          <InputText
+            value={formData.vendorPhone}
+            onChange={(e) => setFormData(prev => ({ ...prev, vendorPhone: e.target.value }))}
+          />
         </div>
+        <br />
         <div className="p-field">
-          <label htmlFor="email">Email</label>
-          <InputText id="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <label className="font-bold">Email</label>
+          <InputText
+            value={formData.vendorEmail}
+            onChange={(e) => setFormData(prev => ({ ...prev, vendorEmail: e.target.value }))}
+          />
         </div>
-      </div>
-
-      <div className="flex justify-content-end mt-4 gap-2">
-        <Button label="Cancel" onClick={onHide} className="p-button-text" />
-        <Button label="Save" onClick={handleSave} />
-      </div>
-    </Dialog>
+      </Dialog>
+    </>
   );
 };
 

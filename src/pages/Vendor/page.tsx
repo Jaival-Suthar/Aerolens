@@ -1,10 +1,17 @@
 import React from "react";
-import VendorTable from "./components/VendorTable";
+import VendorTable from "./components/vendorTable"
 
 const Page: React.FC = () => {
   return (
-    <div className="p-4 flex flex-col gap-4">
-      <h2>Vendors</h2>
+    <div 
+    className="p-2"
+    style={{
+    display: "flex",
+    flexDirection: "column",
+    flex: 1,
+    overflow: "hidden",
+  }}
+    >
       <VendorTable />
     </div>
   );
