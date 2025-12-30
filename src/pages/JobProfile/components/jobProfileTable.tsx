@@ -199,9 +199,13 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfile | null>(null);
       
       setSelectedJobProfile(response.data);
       setAddEditVisible(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching job profile:', error);
-      showError(error instanceof Error ? error.message : 'Failed to fetch job profile');
+      showError(
+        error?.message ||
+        error?.error ||
+        'Failed to fetch job profile'
+      );
     } finally {
       setLoading(false);
     }
@@ -227,8 +231,14 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfile | null>(null);
       setAddEditVisible(false);
       setSelectedJobProfile(null);
       loadData();
-    } catch (error) {
-      showError(error instanceof Error ? error.message : 'An unexpected error occurred');
+      return response;
+    } catch (error: any) {
+      const message =
+        error?.message ||
+        error?.error ||
+        'Something went wrong';
+      showError(message);
+      throw error;
     }
   };
 
@@ -246,8 +256,12 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfile | null>(null);
       setDeleteVisible(false);
       setSelectedJobProfile(null);
       loadData();
-    } catch (error) {
-      showError(error instanceof Error ? error.message : 'An unexpected error occurred');
+    } catch (error: any) {
+      showError(
+        error?.message ||
+        error?.error ||
+        'An unexpected error occurred'
+      );
     }
   };
 
