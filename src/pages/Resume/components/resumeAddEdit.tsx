@@ -4,7 +4,7 @@ import { InputText } from "primereact/inputtext";
 import { Dropdown } from "primereact/dropdown";
 import { InputNumber } from "primereact/inputnumber";
 import { FileUpload } from "primereact/fileupload";
-import { FaCheck } from "react-icons/fa";
+import { FaCheck, FaTimes } from "react-icons/fa";
 import { Toast } from "primereact/toast";
 import DialogButton from "../../../shared/DialogAddEditButton";
 import {
@@ -131,8 +131,8 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   const statusOptions = useMemo(() => {
     if (!createData?.status) return [];
     return createData.status.map(s => ({ 
-      label: s.value, 
-      value: s.lookupKey 
+      label: s.statusName, 
+      value: s.statusId 
     }));
   }, [createData?.status]);
 
@@ -516,12 +516,16 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             id="statusName"
             label="Status"
             value={
-              createData?.status.find(s => s.value === formData.statusName)?.lookupKey || null
+              createData?.status.find(
+                s => s.statusName === formData.statusName
+              )?.statusId || null
             }
             options={statusOptions}
             onChange={(e: { value: number }) => {
-              const status = createData?.status.find(s => s.lookupKey === e.value);
-              handleChange("statusName", status?.value || "");
+              const status = createData?.status.find(
+                s => s.statusId === e.value
+              );
+              handleChange("statusName", status?.statusName || "");
             }}
             onBlur={() => handleBlur("statusName")}
             error={shouldShowError("statusName")}
@@ -543,15 +547,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             required={false}
             colSize="col-12 md:col-6"
           />
-
-          {/* Full Width Bottom Section */}
-          <FileUploadField
-            file={formData.resumeFile}
-            onSelect={(file) => handleChange("resumeFile", file)}
-            error={shouldShowError("resumeFile")}
-            colSize="col-12 md:col-6"
-          />
-          
           <InputField
             id="notes"
             label="Notes"
@@ -562,6 +557,122 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             required={false}
             colSize="col-12"
           />
+          {/* Full Width Bottom Section */}
+          <div className="field col-12">
+            <label className="font-bold">
+              Upload Resume (PDF / DOCX)
+            </label>
+
+            <div
+              onDragOver={(e) => {
+                if (formData.resumeFile) return;
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDrop={(e) => {
+                if (formData.resumeFile) return;
+                e.preventDefault();
+                e.stopPropagation();
+
+                const file = e.dataTransfer.files?.[0];
+                if (file) {
+                  handleChange("resumeFile", file);
+                }
+              }}
+              style={{
+                border: "2px dashed #cbd5e1",
+                borderRadius: "8px",
+                padding: "1rem",
+                textAlign: "center",
+                background: "#f8fafc",
+                opacity: formData.resumeFile ? 0.95 : 1
+              }}
+            >
+
+              {/* CASE A: No file */}
+              {!formData.resumeFile && (
+                <>
+                  <p style={{ marginBottom: "0.75rem", color: "#475569", fontSize: "0.875rem" }}>
+                    Drag & drop resume here or browse files
+                  </p>
+
+                  <FileUpload
+                    mode="basic"
+                    name="resume"
+                    accept=".pdf,.docx"
+                    maxFileSize={5 * 1024 * 1024}
+                    auto={false}
+                    customUpload
+                    uploadHandler={() => {}}
+                    chooseLabel="Browse Files"
+                    chooseOptions={{
+                      label: "Browse Files",
+                      className: "p-button-secondary p-button-sm",
+                    }}
+                    onSelect={(e) => {
+                      const selectedFile = e.files?.[0];
+                      if (selectedFile) {
+                        handleChange("resumeFile", selectedFile);
+                      }
+                    }}
+                  />
+                </>
+              )}
+
+              {/* CASE B: File selected */}
+              {formData.resumeFile && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "1rem",
+                    background: "#f0fdf4",
+                    border: "1px solid #86efac",
+                    borderRadius: "6px",
+                    padding: "0.75rem 1rem"
+                  }}
+                >
+                  <div style={{ textAlign: "left" }}>
+                    <strong style={{ color: "#0f172a" }}>
+                      {formData.resumeFile.name}
+                    </strong>
+                    <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                      {(formData.resumeFile.size / 1024 / 1024).toFixed(2)} MB
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleChange("resumeFile", null)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "#fee2e2",
+                      border: "1px solid #fecaca",
+                      borderRadius: "999px",
+                      width: "36px",
+                      height: "36px",
+                      cursor: "pointer"
+                    }}
+                    title="Remove file"
+                  >
+                    <FaTimes style={{ color: "#b91c1c", fontSize: "16px" }} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <small className="text-muted block mt-1">
+              Supported formats: PDF, DOCX (max 5MB)
+            </small>
+
+            {shouldShowError("resumeFile") && (
+              <small className="p-error">{shouldShowError("resumeFile")}</small>
+            )}
+          </div>
+          
         </div>
       </Dialog>
     </>
@@ -648,36 +759,6 @@ const InputNumberField = ({ id, label, value, onChange, onBlur, prefix, error, c
       prefix={prefix} 
       className={error ? "p-invalid" : ""} 
     />
-    {error && <small className="p-error">{error}</small>}
-  </div>
-);
-
-interface FileUploadFieldProps {
-  file: File | null;
-  onSelect: (file: File) => void;
-  error?: string;
-  colSize?: string;
-}
-
-const FileUploadField = ({ file, onSelect, error, colSize = "col-12 md:col-6" }: FileUploadFieldProps) => (
-  <div className={`field ${colSize}`}>
-    <label className="font-bold">Upload Resume (PDF or DOCX)</label>
-    <FileUpload
-      mode="basic"
-      name="resume"
-      accept=".pdf,.docx"
-      maxFileSize={5 * 1024 * 1024}
-      auto={false}
-      customUpload
-      onSelect={(e) => e.files[0] && onSelect(e.files[0])}
-      chooseLabel="Select File"
-      chooseOptions={{
-        label: "Upload File",
-        className: "p-button-danger p-button-sm",
-      }}
-      className={error ? "p-invalid" : ""}
-    />
-    {file && <small className="p-success">File selected: {file.name}</small>}
     {error && <small className="p-error">{error}</small>}
   </div>
 );
