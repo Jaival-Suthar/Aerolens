@@ -52,7 +52,8 @@ function ColumnSettingsButton<T>({
       {/* Overlay anchored to button */}
       <OverlayPanel
         ref={overlayRef}
-        style={{ width: "260px" }}
+        appendTo={document.body}
+        style={{ width: "260px", transform: "translateX(-40%)" }}
         dismissable
         showCloseIcon
       >
