@@ -36,7 +36,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
           top: "50%",
           transform: "translateY(-50%)",
           cursor: "pointer",
-          color: "#6b7280",
+          color: "#374151",
         }}
       >
         {visible ? <FiEyeOff size={18} /> : <FiEye size={18} />}

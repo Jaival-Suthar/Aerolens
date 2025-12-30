@@ -55,18 +55,7 @@ export const fetchJobProfileLookupData = async (
       credentials: 'include',
       headers: makeHeaders(accessToken || undefined),
     });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch lookup data: ${response.status}`);
-    }
-
     const result = await response.json();
-    
-    // ✅ API returns: { success: true, message: "...", data: [...] }
-    if (!result.success || !Array.isArray(result.data)) {
-      console.error('Unexpected lookup response structure:', result);
-      return { profileStatuses: [] };
-    }
     
     const profileStatuses = result.data
       .filter((item: any) => item.tag === "profileStatus")
@@ -88,13 +77,8 @@ export const getClients = async (
       credentials: 'include',
       headers: makeHeaders(accessToken || undefined),
     });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch clients: ${response.status}`);
-    }
     
     const data = await response.json();
-    //console.log('Raw client data:', data);
-    if (!data.success) throw new Error(data.message || 'Failed to fetch clients');
     
     const clients = Array.isArray(data.data?.clientData)
       ? data.data.clientData.map((client: any): ClientOption => {
@@ -147,12 +131,7 @@ export const getDepartments = async (accessToken: string | null): Promise<Depart
       headers: makeHeaders(accessToken || undefined),
     });
     
-    if (!response.ok) {
-      throw new Error(`Failed to fetch departments: ${response.status}`);
-    }
-    
     const data = await response.json();
-    if (!data.success) throw new Error(data.message || 'Failed to fetch departments');
     
     return data.departments as DepartmentOption[];
   } catch (error) {
@@ -172,12 +151,13 @@ export const getJobProfiles = async (
     });
     
     if (!jobProfileResponse.ok) {
-      throw new Error(`Failed to fetch job profiles: ${jobProfileResponse.status}`);
+      const err = await jobProfileResponse.json();
+      throw err;
     }
     
     const jobProfileData = await jobProfileResponse.json();
     if (!jobProfileData.success) {
-      throw new Error(jobProfileData.message || 'Failed to fetch job profiles');
+      throw jobProfileData;
     }
     const rawProfiles = Array.isArray(jobProfileData.data) ? jobProfileData.data : [];
 
@@ -211,12 +191,14 @@ export const getJobProfileById = async (
       credentials: 'include',
       headers: makeHeaders(accessToken || undefined),
     });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch job profile: ${response.status}`);
-    }
     
     const data = await response.json();
-    if (!data.success) throw new Error(data.message || 'Job profile not found');
+    if (!response.ok || !data?.success) {
+      throw data || {
+        success: false,
+        message: 'Failed to fetch job profile'
+      };
+    }
 
     const mappedData = mapApiJobProfile(data.data);
     return {
@@ -266,11 +248,7 @@ export const createJobProfile = async (
 
     // ✅ backend-controlled error message
     if (!response.ok || !data?.success) {
-      throw new Error(
-        data?.message ||
-        (data?.details?.map((d: any) => d.message).join(', ')) ||
-        'Failed to create job profile'
-      );
+      throw data; // 🔥 preserve backend response
     }
 
     return {
@@ -318,17 +296,10 @@ export const updateJobProfile = async (
     });
 
 
-    if (!response.ok) {
-      throw new Error(`Failed to update job profile: ${response.status}`);
-    }
-    
     const data = await response.json();
-    if (!data.success) {
-      if (data.error === 'VALIDATION_ERROR' && data.details) {
-        const errMsg = data.details.map((d: any) => d.message).join(', ');
-        throw new Error(errMsg);
-      }
-      throw new Error(data.message || 'Failed to update job profile');
+
+    if (!response.ok || !data.success) {
+      throw data;
     }
 
     const mappedData = mapApiJobProfile(data.data);
@@ -366,7 +337,11 @@ export const deleteJobProfile = async (
 ): Promise<ApiResponse<null>> => {
   try {
     if (!id || typeof id !== 'number') {
-      throw new Error('Valid job profile ID is required for deletion');
+      throw {
+        success: false,
+        error: 'INVALID_JOB_PROFILE_ID',
+        message: 'Valid job profile ID is required for deletion'
+      };
     }
 
     const response = await fetch(`${API_BASE_URL}/jobProfile/${id}`, {
@@ -374,14 +349,14 @@ export const deleteJobProfile = async (
       credentials: 'include',
       headers: makeHeaders(accessToken || undefined),
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to delete job profile: ${errorText}`);
-    }
     
     const data = await response.json();
-    if (!data.success) throw new Error(data.message || 'Failed to delete job profile');
+    if (!response.ok || !data?.success) {
+      throw data || {
+        success: false,
+        message: 'Failed to delete job profile'
+      };
+    }
 
     return {
       success: true,

@@ -37,7 +37,7 @@ const DailyInterviewCards: React.FC<Props> = ({
           backgroundClip: "padding-box, border-box",
         }}
       >
-        <p className="m-0" style={{ color: "#6b7280" }}>
+        <p className="m-0" style={{ color: "#374151" }}>
           No interviews scheduled for {date}
         </p>
       </div>
@@ -53,7 +53,7 @@ const DailyInterviewCards: React.FC<Props> = ({
       case "pending":
         return "#f59e0b";
       default:
-        return "#6b7280";
+        return "#374151";
     }
   };
 
@@ -144,7 +144,7 @@ const DailyInterviewCards: React.FC<Props> = ({
               </div>
 
               {/* Interview Details */}
-              <div className="text-sm" style={{ color: "#6b7280" }}>
+              <div className="text-sm" style={{ color: "#374151" }}>
                 <div className="mb-1">
                   <strong style={{ color: "#072844" }}>Interviewer:</strong>{" "}
                   {interview.interviewerName}

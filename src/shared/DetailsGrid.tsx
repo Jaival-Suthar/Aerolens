@@ -24,7 +24,7 @@ const DetailsGrid: React.FC<Props> = ({ items }) => {
               fontSize: "var(--label-size)",
               textTransform: "uppercase",
               letterSpacing: "0.03em",
-              color: "#6b7280",
+              color: "#374151",
               marginBottom: "2px",
             }}
           >

@@ -180,7 +180,7 @@ export default function SignupForm() {
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ textAlign: "center" }}>
           <i className="pi pi-spin pi-spinner" style={{ fontSize: "2rem" }}></i>
-          <p style={{ marginTop: "1rem", color: "#6b7280" }}>Loading...</p>
+          <p style={{ marginTop: "1rem", color: "#374151" }}>Loading...</p>
         </div>
       </div>
     );
@@ -203,7 +203,7 @@ export default function SignupForm() {
     background: "#fff",
   };
 
-  const iconStyle: React.CSSProperties = { marginRight: "8px", color: "#6b7280", fontSize: "14px" };
+  const iconStyle: React.CSSProperties = { marginRight: "8px", color: "#374151", fontSize: "14px" };
   const fieldContainerStyle: React.CSSProperties = { marginBottom: "12px" };
 
   return (
