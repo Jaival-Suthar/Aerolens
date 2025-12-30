@@ -20,6 +20,11 @@ import { useSearchParams } from "react-router-dom";
 import { FilterMatchMode } from "primereact/api";
 import type { DataTableFilterMeta } from "primereact/datatable";
 import type { DataTableFilterMetaData } from "primereact/datatable";
+import ColumnSettingsButton from "../../../shared/ColumnSettingsButton";
+import ViewButton from "../../../shared/ViewButton";
+import PremiumDetailsDialog from "../../../shared/PremiumDetailsDialog";
+import DetailsSection from "../../../shared/DetailsSection";
+import DetailsGrid from "../../../shared/DetailsGrid";
 
 const convert24to12Hour = (time24: string): string => {
   if (!time24) return '';
@@ -30,6 +35,31 @@ const convert24to12Hour = (time24: string): string => {
   const period = hours >= 12 ? 'PM' : 'AM';
   return `${String(hour12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${period}`;
 };
+const ALL_COLUMNS = [
+  { field: "candidateName", header: "Candidate Name", filter: true },
+  { field: "interviewerName", header: "Interviewer", filter: true },
+  { field: "scheduledByName", header: "Scheduled By", filter: true },
+
+  { field: "roundProgress", header: "Round", body: "roundProgress", filter: true, filterField: "roundNumber" },
+  { field: "result", header: "Result", body: "result", filter: true },
+  { field: "interviewDate", header: "Date", body: "date" },
+
+  // ⬇️ Optional columns
+  { field: "meetingUrl", header: "Recording", body: "recording" },
+  { field: "fromTime", header: "Start Time", body: "startTime", filter: true },
+  { field: "toTime", header: "End Time", body: "endTime", filter: true },
+  { field: "durationMinutes", header: "Duration (min)", filter: true },
+];
+
+const DEFAULT_COLUMN_FIELDS = [
+  "candidateName",
+  "interviewerName",
+  "scheduledByName",
+  "roundProgress",
+  "result",
+  "interviewDate",
+  "fromTime" // start time stays visible
+];
 
 // ============================================================
 // MAIN COMPONENT
@@ -52,7 +82,7 @@ const InterviewTable: React.FC = () => {
   const toast = useRef<Toast>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const pageFromUrl = Number(searchParams.get("page")) || 1;
-
+  const [viewInterview, setViewInterview] = useState<Interview | null>(null);
   const [rows, setRows] = useState(10);
   const [first, setFirst] = useState((pageFromUrl - 1) * rows);
   const [filters, setFilters] = useState<DataTableFilterMeta>({
@@ -68,6 +98,19 @@ const InterviewTable: React.FC = () => {
   toTime: { value: null, matchMode: FilterMatchMode.CONTAINS },
   durationMinutes: { value: null, matchMode: FilterMatchMode.EQUALS }
 });
+  const [visibleColumns, setVisibleColumns] = useState(
+  ALL_COLUMNS.filter(col =>
+    DEFAULT_COLUMN_FIELDS.includes(col.field)
+  )
+);
+  const resetToDefaultColumns = () => {
+  setVisibleColumns(
+    ALL_COLUMNS.filter(col =>
+      DEFAULT_COLUMN_FIELDS.includes(col.field)
+    )
+  );
+};
+
   const onPageChange = (e: any) => {
   setFirst(e.first);
   setRows(e.rows);
@@ -327,6 +370,43 @@ const InterviewTable: React.FC = () => {
     </div>
   );
 };
+  const buildInterviewDetailsData = (interview: Interview) => {
+  return ALL_COLUMNS
+    .map(col => {
+      let value: any = null;
+
+      switch (col.body) {
+        case "roundProgress":
+          value = `Round ${interview.roundNumber} / ${interview.totalInterviews}`;
+          break;
+
+        case "date":
+          value = new Date(interview.interviewDate).toLocaleDateString("en-GB");
+          break;
+
+        case "startTime":
+          value = convert24to12Hour(interview.fromTime);
+          break;
+
+        case "endTime":
+          value = convert24to12Hour(interview.toTime);
+          break;
+
+        case "result":
+          value = interview.result || "Pending";
+          break;
+
+        default:
+          value = (interview as any)[col.field];
+      }
+
+      return {
+        label: col.header,
+        value: value ?? "-"
+      };
+    })
+    .filter(item => item.value !== "-" && item.value !== null);
+};
 
   return (
     <>
@@ -340,8 +420,16 @@ const InterviewTable: React.FC = () => {
             onChange={onGlobalFilterChange}
             placeholder="Search interviews..."
           />
+          <ColumnSettingsButton
+            value={visibleColumns}
+            options={ALL_COLUMNS}
+            optionLabel="header"
+            onChange={setVisibleColumns}
+            onReset={resetToDefaultColumns}
+          />
           <EditButton onClick={handleEdit} disabled={!selectedInterview} />
           <DeleteButton onClick={handleDelete} disabled={!selectedInterview} />
+          <ViewButton onClick={() => setViewInterview(selectedInterview)} disabled={!selectedInterview} tooltip="View Interview Details" />
           <div style={{ position: "relative" }}>
             <CogButton
               onClick={(e) => {
@@ -442,40 +530,27 @@ const InterviewTable: React.FC = () => {
         // ]}
       >
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
-        <Column field="candidateName" header="Candidate Name" filter />
-        <Column field="interviewerName" header="Interviewer" filter />
-        <Column field="scheduledByName" header="Scheduled By" filter />
-        <Column
-          header="Round"
-          body={roundProgressBodyTemplate}
-          style={{ width: "8rem", textAlign: "center" }}
-          filter
-          filterField="roundNumber"
-          showFilterMatchModes={false}
-        />
+        {visibleColumns.map((col) => {
+          let bodyTemplate;
 
-        <Column
-          field="result"
-          header="Result"
-          body={resultBodyTemplate}
-          filter
-          showFilterMatchModes={false}
-        />
-        <Column
-          field="interviewDate"
-          header="Date"
-          body={dateBodyTemplate}
-          filter
-        />
-        <Column
-          header="Recording"
-          body={meetingUrlBodyTemplate}
-          style={{ textAlign: "center", width: "6rem" }}
-        />
+          if (col.body === "roundProgress") bodyTemplate = roundProgressBodyTemplate;
+          if (col.body === "result") bodyTemplate = resultBodyTemplate;
+          if (col.body === "date") bodyTemplate = dateBodyTemplate;
+          if (col.body === "recording") bodyTemplate = meetingUrlBodyTemplate;
+          if (col.body === "startTime") bodyTemplate = timeBodyTemplate;
+          if (col.body === "endTime") bodyTemplate = endTimeBodyTemplate;
 
-        <Column field="fromTime" header="Start Time" body={timeBodyTemplate} filter />
-        <Column field="toTime" header="End Time" body={endTimeBodyTemplate} filter />
-        <Column field="durationMinutes" header="Duration (min)" filter />
+          return (
+            <Column
+              key={col.field}
+              field={col.field}
+              header={col.header}
+              body={bodyTemplate}
+              filter={col.filter}
+              showFilterMatchModes={false}
+            />
+          );
+        })}
       </DataTable>
       </div>
       <InterviewAddEditForm
@@ -507,6 +582,19 @@ const InterviewTable: React.FC = () => {
         onSuccess={handleResultSuccess}
         externalToast={toast}
       />
+      <PremiumDetailsDialog
+        visible={!!viewInterview}
+        title="Interview Details"
+        onHide={() => setViewInterview(null)}
+      >
+        {viewInterview && (
+          <DetailsSection title="Complete Interview Information">
+            <DetailsGrid
+              items={buildInterviewDetailsData(viewInterview)}
+            />
+          </DetailsSection>
+        )}
+      </PremiumDetailsDialog>
     </>
   );
 };
