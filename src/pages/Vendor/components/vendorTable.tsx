@@ -17,6 +17,7 @@ import { useVendorService } from "../services/useVendor";
 const VendorTable: React.FC = () => {
   const toast = useRef<Toast>(null);
   const { getAllVendors } = useVendorService();
+  const [loading, setLoading] = useState(true);
 
   const [vendors, setVendors] = useState<VendorType[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<VendorType | null>(null);
@@ -35,6 +36,7 @@ const [globalFilterValue, setGlobalFilterValue] = useState<string>("");
   // fetch vendors on mount and whenever called by children
   const fetchVendors = async () => {
     try {
+      setLoading(true);
       const data = await getAllVendors();
       setVendors(data);
     } catch (error) {
@@ -44,6 +46,9 @@ const [globalFilterValue, setGlobalFilterValue] = useState<string>("");
         detail: 'Failed to fetch vendors',
         life: 3000,
       });
+    }
+    finally {
+      setLoading(false);
     }
   };
 
@@ -99,7 +104,7 @@ const [globalFilterValue, setGlobalFilterValue] = useState<string>("");
           scrollable
           scrollHeight="flex"
           tableStyle={{ minWidth: "80rem" }}
-          emptyMessage="No vendors found"
+          loading={loading}
         >
           <Column selectionMode="single" bodyStyle={{ textAlign: 'center' }} />
           <Column
