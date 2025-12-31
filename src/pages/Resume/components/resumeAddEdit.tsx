@@ -322,12 +322,12 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
           noticePeriod: formData.noticePeriod,
           experienceYears: formData.experienceYears,
           statusName: formData.statusName,
-          ...(formData.contactNumber && { contactNumber: formData.contactNumber }),
-          ...(formData.email && { email: formData.email }),
-          ...(typeof formData.currentCTC === "number" && { currentCTC: formData.currentCTC }),
-          ...(typeof formData.expectedCTC === "number" && { expectedCTC: formData.expectedCTC }),
-          ...(formData.linkedinProfileUrl && { linkedinProfileUrl: formData.linkedinProfileUrl }),
-          ...(formData.notes && { notes: formData.notes }),
+          contactNumber: formData.contactNumber ?? null,
+          email: formData.email ?? null,
+          currentCTC: formData.currentCTC ?? null,
+          expectedCTC: formData.expectedCTC ?? null,
+          linkedinProfileUrl: formData.linkedinProfileUrl ?? null,
+          notes: formData.notes ?? null,
         };
 
         await updateCandidate(accessToken, selectedResume.candidateId, updateData);
