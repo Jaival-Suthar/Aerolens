@@ -210,11 +210,10 @@ export default function SignupForm() {
     <div
       style={{
         minHeight: "100vh",
-        padding: "20px",
+        padding: "5px",
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
-        paddingTop: "40px",
       }}
     >
       {/* ✅ Toast Component */}
@@ -222,7 +221,7 @@ export default function SignupForm() {
 
       <div style={{ maxWidth: "1200px" }}>
         {/* Header */}
-        <div style={{ marginBottom: "12px" }}>
+        <div style={{ marginBottom: "6px" }}>
           <h1
             style={{
               fontSize: "24px",
@@ -242,7 +241,7 @@ export default function SignupForm() {
         <div
           style={{
             background: "white",
-            padding: "20px",
+            padding: "10px",
             borderRadius: "8px",
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
             maxWidth: "900px",
