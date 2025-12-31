@@ -115,12 +115,14 @@ const logger = {
 /* ------------------------------------------------------------------------- */
 /*  HEADER BUILDER                                                          */
 /* ------------------------------------------------------------------------- */
-const makeHeaders = (accessToken?: string, isFormData = false): HeadersInit => {
-  const headers: HeadersInit = {};
-  if (!isFormData) headers["Content-Type"] = "application/json";
+const makeHeaders = (accessToken?: string): HeadersInit => {
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
   return headers;
 };
+
 
 /* ------------------------------------------------------------------------- */
 /*  FORM DATA BUILDER                                                       */
@@ -129,19 +131,28 @@ const buildCandidateFormData = (candidate: AddEditCandidate): FormData => {
   const fd = new FormData();
 
   fd.append("candidateName", candidate.candidateName);
-  fd.append("contactNumber", candidate.contactNumber);
-  fd.append("email", candidate.email);
   fd.append("recruiterName", candidate.recruiterName ?? "");
   fd.append("jobRole", candidate.jobRole);
   if (candidate.preferredJobLocation) {
     fd.append("preferredJobLocation[city]", candidate.preferredJobLocation.city);
     fd.append("preferredJobLocation[country]", candidate.preferredJobLocation.country);
   }
-
-  fd.append("currentCTC", String(candidate.currentCTC));
-  fd.append("expectedCTC", String(candidate.expectedCTC));
   fd.append("noticePeriod", String(candidate.noticePeriod));
   fd.append("experienceYears", String(candidate.experienceYears));
+  if (candidate.contactNumber?.trim()) {
+    fd.append("contactNumber", candidate.contactNumber);
+  }
+
+  if (candidate.email?.trim()) {
+    fd.append("email", candidate.email);
+  }
+    if (typeof candidate.currentCTC === "number") {
+    fd.append("currentCTC", String(candidate.currentCTC));
+  }
+
+  if (typeof candidate.expectedCTC === "number") {
+    fd.append("expectedCTC", String(candidate.expectedCTC));
+  }
   if (candidate.notes) fd.append("notes", candidate.notes);
   if (candidate.linkedinProfileUrl && candidate.linkedinProfileUrl.trim()) {
     fd.append("linkedinProfileUrl", candidate.linkedinProfileUrl);
@@ -180,11 +191,15 @@ async function apiFetch<T>(
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `API Error (${response.status}) – ${errorText || response.statusText}`
-      );
+      let errorPayload: any;
+      try {
+        errorPayload = await response.json();
+      } catch {
+        errorPayload = { message: response.statusText };
+      }
+      throw errorPayload; 
     }
+
 
     if (response.status === 204) return {} as T;
     const data = await response.json();
@@ -267,8 +282,10 @@ export const updateCandidate = async (
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to update candidate: ${response.statusText}`);
+      const errorPayload = await response.json();
+      throw errorPayload; // 🔥 forward backend error
     }
+
 
     return await response.json();
   } catch (error) {
@@ -336,10 +353,14 @@ export const downloadResume = async (
     const response = await fetch(url, { headers });
 
     if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Failed to download resume: ${text}`);
+      let errorPayload;
+      try {
+        errorPayload = await response.json();
+      } catch {
+        errorPayload = { message: "Failed to download resume" };
+      }
+      throw errorPayload;
     }
-//this is a comment
     return await response.blob();
   } catch (error) {
     logger.error("Error in downloadResume:", error);

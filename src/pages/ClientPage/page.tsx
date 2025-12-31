@@ -222,7 +222,7 @@ const Client: React.FC = () => {
               data-testid="SettingsBtn"
             />
           </div>
-          <div className="flex gap-2 mr-6">
+          <div className="flex gap-2">
             <SearchButton
               value={globalFilterValue}
               onChange={onGlobalFilterChange}
