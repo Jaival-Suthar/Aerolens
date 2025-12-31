@@ -37,8 +37,8 @@ export interface Candidate {
 /* ------------------ UPDATE PAYLOAD ------------------ */
 export interface CandidateUpdatePayload {
   candidateName?: string;
-  contactNumber?: string;
-  email?: string;
+  contactNumber?: string | null;
+  email?: string | null;
 
   recruiterId?: number | null;
   recruiterName?: string | null;
@@ -50,14 +50,14 @@ export interface CandidateUpdatePayload {
     country: string;
   };
 
-  currentCTC?: number;
-  expectedCTC?: number;
+  currentCTC?: number | null;
+  expectedCTC?: number | null;
   noticePeriod?: number;
   experienceYears?: number;
 
   statusName?: string;
-  linkedinProfileUrl?: string;
-  notes?: string;
+  linkedinProfileUrl?: string | null;
+  notes?: string | null;
 }
 
 
