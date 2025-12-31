@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
-import { FaDownload, FaEye } from "react-icons/fa";
+import { FaDownload, FaEye, FaRoute } from "react-icons/fa";
 
 import ResumeAddEdit from "../components/resumeAddEdit";
 import ResumeDelete from "./resumeDelete";
@@ -26,6 +26,7 @@ import DetailsGrid from "../../../shared/DetailsGrid";
 import DetailsSection from "../../../shared/DetailsSection";
 import PremiumDetailsDialog from "../../../shared/PremiumDetailsDialog";
 import ColumnSettingsButton from "../../../shared/ColumnSettingsButton";
+import CandidateRoundsDialog from "../../Interview/components/CandidateRoundsDialog";
 
 const ALL_COLUMNS = [
   {
@@ -128,6 +129,7 @@ const ResumeTable: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const pageFromUrl = Number(searchParams.get("page")) || 1;
   const [first, setFirst] = useState((pageFromUrl - 1) * 10); 
+  const [showRoundsDialog, setShowRoundsDialog] = useState(false);
   const dt = useRef<DataTable<any>>(null);
   const [visibleColumns, setVisibleColumns] = useState(
   ALL_COLUMNS.filter(col =>
@@ -255,6 +257,20 @@ const ResumeTable: React.FC = () => {
   setGlobalFilterValue(value);
 };
 
+  const handleViewAllRounds = () => {
+  if (!selectedResume) {
+    toastRef.current?.show({
+      severity: "warn",
+      summary: "No Selection",
+      detail: "Please select a candidate first",
+      life: 3000,
+    });
+    return;
+  }
+
+  setShowRoundsDialog(true);
+};
+
 
   /** ------------------- Resume Actions ------------------- */
   const handleDownloadResume = async (candidateId: number) => {
@@ -379,6 +395,14 @@ const formatLocation = (row: Candidate) => {
 
 const settingsItems = [
   {
+    label: "View Interview Rounds",
+    icon: <FaRoute style={{ marginRight: 8, marginLeft: 4 }} />,
+    action: () => {
+      setShowSettingsMenu(false);
+      handleViewAllRounds();
+    }
+  },
+  {
     label: "Schedule Interview",
     icon: <FaUserTie style={{ marginRight: 8, marginLeft: 4 }} />,
     action: () => {
@@ -437,7 +461,7 @@ const settingsItems = [
             tooltip="View Candidate Details"
           />
           <div style={{ position: "relative" }}>
-            <CogButton onClick={() => setShowSettingsMenu((prev) => !prev)} />
+            <CogButton onClick={() => setShowSettingsMenu((prev) => !prev)} disabled={!selectedResume}/>
 
             {showSettingsMenu && (
             <div
@@ -595,6 +619,12 @@ const settingsItems = [
           </DetailsSection>
         )}
       </PremiumDetailsDialog>
+      <CandidateRoundsDialog
+        visible={showRoundsDialog}
+        candidateId={selectedResume?.candidateId ?? null}
+        candidateName={selectedResume?.candidateName}
+        onHide={() => setShowRoundsDialog(false)}
+      />
     </>
   );
 };

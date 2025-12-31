@@ -27,6 +27,7 @@ interface DropdownFieldProps {
   error?: string;
   disabled?: boolean;
   colSize?: string;
+  required?: boolean;
 }
 
 // ---------- HELPERS ----------
@@ -36,14 +37,14 @@ const linkedinRegex = /^https?:\/\/(www\.)?linkedin\.com\/.*$/i;
 
 const INITIAL_FORM: AddEditCandidate = {
   candidateName: "",
-  contactNumber: "",
-  email: "",
+  contactNumber: undefined,
+  email: undefined,
   recruiterId: null,
   recruiterName: null,
   jobRole: "",
   preferredJobLocation: { city: '', country: '' },
-  currentCTC: 0,
-  expectedCTC: 0,
+  currentCTC: undefined,
+  expectedCTC: undefined,
   noticePeriod: 0,
   experienceYears: 0,
   statusName: "",
@@ -60,12 +61,12 @@ const validateField = (field: keyof AddEditCandidate, value: any) => {
     case "recruiterName":
       return value ? "" : "Recruiter is required.";
     case "contactNumber":
-      if (!value) return "Contact number is required.";
+      if (!value) return ""; // OPTIONAL
       if (!phoneRegex.test(value.replace(/[\s-]/g, "")))
         return "Enter a valid Indian or US phone number.";
       return "";
     case "email":
-      if (!value) return "Email is required.";
+      if (!value) return ""; // OPTIONAL
       if (!emailRegex.test(value)) return "Enter a valid email.";
       return "";
     case "jobRole":
@@ -75,8 +76,10 @@ const validateField = (field: keyof AddEditCandidate, value: any) => {
       if (!value.city) return "City is required.";
       return "";
     case "currentCTC":
+      if (value === undefined || value === null) return "";
       return value > 0 ? "" : "Current CTC must be greater than 0.";
     case "expectedCTC":
+      if (value === undefined || value === null) return "";
       return value > 0 ? "" : "Expected CTC must be greater than 0.";
     case "noticePeriod":
       return value >= 0 ? "" : "Notice period is required.";
@@ -112,7 +115,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   const isEditMode = Boolean(selectedResume);
 
   const [formData, setFormData] = useState<AddEditCandidate>(INITIAL_FORM);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [submitted, setSubmitted] = useState(false);
   const toast = useRef<Toast>(null);
   
@@ -209,14 +212,14 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
 
       setFormData({
         candidateName: selectedResume.candidateName,
-        contactNumber: selectedResume.contactNumber,
-        email: selectedResume.email,
+        contactNumber: selectedResume.contactNumber ?? undefined,
+        email: selectedResume.email ?? undefined,
         recruiterId: selectedResume.recruiterId,
         recruiterName: selectedResume.recruiterName,
         jobRole: selectedResume.jobRole,
         preferredJobLocation: selectedResume.preferredJobLocation || { city: '', country: '' },
-        currentCTC: selectedResume.currentCTC,
-        expectedCTC: selectedResume.expectedCTC,
+        currentCTC: selectedResume.currentCTC ?? undefined,
+        expectedCTC: selectedResume.expectedCTC ?? undefined,
         noticePeriod: selectedResume.noticePeriod,
         experienceYears: selectedResume.experienceYears,
         statusName: selectedResume.statusName,
@@ -232,11 +235,16 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   }, [visible, selectedResume, isEditMode, createData]);
 
   const handleChange = useCallback(
-    (field: keyof AddEditCandidate, value: any) => {
-      setFormData((prev) => ({ ...prev, [field]: value }));
-    },
-    []
-  );
+  (field: keyof AddEditCandidate, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  },
+  [errors]
+);
+
 
   const handleBlur = useCallback(
     (field: keyof AddEditCandidate) => {
@@ -244,6 +252,47 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     },
     []
   );
+
+  const handleBackendErrors = (error: any) => {
+  // Case 1: backend validationErrors array (current backend)
+  if (Array.isArray(error?.details?.validationErrors)) {
+    const fieldErrors: Record<string, string> = {};
+
+    error.details.validationErrors.forEach((err: any) => {
+      if (err.field && err.message) {
+        fieldErrors[err.field] = err.message;
+      }
+    });
+
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(fieldErrors);
+      return;
+    }
+  }
+
+  // Case 2: single-field backend error (future-proof)
+  if (error?.details?.field && error?.message) {
+    setErrors({
+      [error.details.field]: error.message,
+    });
+    return;
+  }
+
+  // Case 3: already-normalized error object
+  if (error?.details?.errors) {
+    setErrors(error.details.errors);
+    return;
+  }
+
+  // Case 4: fallback (non-validation error)
+  toast.current?.show({
+    severity: "error",
+    summary: "Error",
+    detail: error?.message || "Something went wrong",
+    life: 2000,
+  });
+};
+
 
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
@@ -266,19 +315,19 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
       if (isEditMode && selectedResume) {
         const updateData = {
           candidateName: formData.candidateName,
-          contactNumber: formData.contactNumber,
-          email: formData.email,
           recruiterId: formData.recruiterId,
           recruiterName: formData.recruiterName,
           jobRole: formData.jobRole,
           preferredJobLocation: formData.preferredJobLocation,
-          currentCTC: formData.currentCTC,
-          expectedCTC: formData.expectedCTC,
           noticePeriod: formData.noticePeriod,
           experienceYears: formData.experienceYears,
           statusName: formData.statusName,
-          linkedinProfileUrl: formData.linkedinProfileUrl || undefined,
-          notes: formData.notes?.trim() || "",
+          ...(formData.contactNumber && { contactNumber: formData.contactNumber }),
+          ...(formData.email && { email: formData.email }),
+          ...(typeof formData.currentCTC === "number" && { currentCTC: formData.currentCTC }),
+          ...(typeof formData.expectedCTC === "number" && { expectedCTC: formData.expectedCTC }),
+          ...(formData.linkedinProfileUrl && { linkedinProfileUrl: formData.linkedinProfileUrl }),
+          ...(formData.notes && { notes: formData.notes }),
         };
 
         await updateCandidate(accessToken, selectedResume.candidateId, updateData);
@@ -307,15 +356,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
       onHide();
     } catch (err: any) {
       console.error("Error saving candidate:", err);
-      toast.current?.show({
-        severity: "error",
-        summary: "Error",
-        detail:
-          err?.response?.data?.message ||
-          err?.message ||
-          "Something went wrong. Please try again.",
-        life: 5000,
-      });
+      handleBackendErrors(err);
     }
   }, [
     formData,
@@ -375,6 +416,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             onBlur={() => handleBlur("contactNumber")}
             error={shouldShowError("contactNumber")}
             colSize="col-12 md:col-4"
+            required={false}
           />
 
           <InputField
@@ -385,6 +427,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             onBlur={() => handleBlur("email")}
             error={shouldShowError("email")}
             colSize="col-12 md:col-4"
+            required={false}
           />
 
           <InputField
@@ -500,6 +543,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             onBlur={() => handleBlur("currentCTC")}
             error={shouldShowError("currentCTC")}
             colSize="col-12 md:col-4"
+            required={false}
           />
 
           <InputNumberField
@@ -510,6 +554,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             onBlur={() => handleBlur("expectedCTC")}
             error={shouldShowError("expectedCTC")}
             colSize="col-12 md:col-4"
+            required={false}
           />
 
           <DropdownField
@@ -683,7 +728,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
 interface InputFieldProps {
   id: string;
   label: string;
-  value: string;
+  value?: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur: () => void;
   placeholder?: string;
@@ -699,7 +744,7 @@ const InputField = ({ id, label, value, onChange, onBlur, placeholder, error, re
     </label>
     <InputText 
       id={id}
-      value={value} 
+      value={value ?? ""}
       onChange={onChange} 
       onBlur={onBlur} 
       placeholder={placeholder} 
@@ -719,10 +764,11 @@ const DropdownField = ({
   placeholder, 
   error,
   disabled = false,
+  required = true,
   colSize = "col-12 md:col-6"
 }: DropdownFieldProps) => (
   <div className={`field ${colSize}`}>
-    <label htmlFor={id} className="font-bold">{label} *</label>
+    <label htmlFor={id} className="font-bold">{label} {required && "*"}</label>
     <Dropdown 
       id={id}
       value={value} 
@@ -740,20 +786,21 @@ const DropdownField = ({
 interface InputNumberFieldProps {
   id: string;
   label: string;
-  value: number | null;
+  value?: number | null;
   onChange: (val: number | null) => void;
   onBlur: () => void;
   prefix?: string;
   error?: string;
   colSize?: string;
+  required?: boolean;
 }
 
-const InputNumberField = ({ id, label, value, onChange, onBlur, prefix, error, colSize = "col-12 md:col-6" }: InputNumberFieldProps) => (
+const InputNumberField = ({ id, label, value, onChange, onBlur, prefix, error, required=true, colSize = "col-12 md:col-6" }: InputNumberFieldProps) => (
   <div className={`field ${colSize}`}>
-    <label htmlFor={id} className="font-bold">{label} *</label>
+    <label htmlFor={id} className="font-bold">{label} {required && "*"}</label>
     <InputNumber 
       id={id}
-      value={value} 
+      value={value ?? null}
       onValueChange={(e) => onChange(e.value ?? null)} 
       onBlur={onBlur} 
       prefix={prefix} 

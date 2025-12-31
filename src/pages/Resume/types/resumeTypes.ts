@@ -81,8 +81,8 @@ export interface ResumeAddEditProps {
 /* ------------------ ADD/EDIT PAYLOAD ------------------ */
 export interface AddEditCandidate {
   candidateName: string;
-  contactNumber: string;
-  email: string;
+  contactNumber?: string;
+  email?: string;
 
   recruiterId: number | null;
   recruiterName: string | null;
@@ -94,8 +94,8 @@ export interface AddEditCandidate {
     country: string;
   };
 
-  currentCTC: number;
-  expectedCTC: number;
+  currentCTC?: number;
+  expectedCTC?: number;
   noticePeriod: number;
   experienceYears: number;
 

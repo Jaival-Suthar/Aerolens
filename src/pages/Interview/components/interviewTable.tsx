@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
 import { Toast } from "primereact/toast";
@@ -12,10 +11,10 @@ import SearchButton from "../../../shared/SearchButton";
 import { Interview } from "../types/interviewTypes";
 import { getInterviews } from "../services/interviewService";
 import { useAuth } from "../../../shared/auth/AuthContext";
-
+import CandidateRoundsDialog from "./CandidateRoundsDialog";
 import CogButton from "../../../shared/CogButton";
 import InterviewResultDialog from "./interviewResultDialog";
-import { FaUserTie, FaClipboardCheck, FaLink } from "react-icons/fa";
+import { FaUserTie, FaClipboardCheck, FaLink, FaRoute } from "react-icons/fa";
 import { useSearchParams } from "react-router-dom";
 import { FilterMatchMode } from "primereact/api";
 import type { DataTableFilterMeta } from "primereact/datatable";
@@ -85,6 +84,7 @@ const InterviewTable: React.FC = () => {
   const [viewInterview, setViewInterview] = useState<Interview | null>(null);
   const [rows, setRows] = useState(10);
   const [first, setFirst] = useState((pageFromUrl - 1) * rows);
+  const [showRoundsDialog, setShowRoundsDialog] = useState(false);
   const [filters, setFilters] = useState<DataTableFilterMeta>({
   global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   candidateName: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -119,6 +119,20 @@ const InterviewTable: React.FC = () => {
   const newPage = e.page + 1;
   setSearchParams({ page: newPage.toString() });
 };
+const handleViewAllRounds = () => {
+  if (!selectedInterview) {
+    toast.current?.show({
+      severity: "warn",
+      summary: "No Selection",
+      detail: "Please select an interview first",
+      life: 3000,
+    });
+    return;
+  }
+
+  setShowRoundsDialog(true);
+};
+
 
 
   const fetchInterviews = useCallback(async () => {
@@ -314,6 +328,14 @@ const InterviewTable: React.FC = () => {
 
   const settingsItems = [
     {
+      label: "View Interview Rounds",
+      icon: <FaRoute style={{ marginRight: 8, marginLeft: 4 }} />,
+      action: () => {
+        setShowSettingsMenu(false);
+        handleViewAllRounds();
+      }
+    },
+    {
       label: "Schedule Next Interview",
       icon: <FaUserTie style={{ marginRight: 8, marginLeft: 4 }} />,
       action: () => {
@@ -436,6 +458,7 @@ const InterviewTable: React.FC = () => {
                 e.stopPropagation();      // prevents the opening click from closing it
                 setShowSettingsMenu((prev) => !prev);
               }}
+              disabled={!selectedInterview}
             />
 
             {showSettingsMenu && (
@@ -595,6 +618,13 @@ const InterviewTable: React.FC = () => {
           </DetailsSection>
         )}
       </PremiumDetailsDialog>
+      <CandidateRoundsDialog
+        visible={showRoundsDialog}
+        candidateId={selectedInterview?.candidateId ?? null}
+        candidateName={selectedInterview?.candidateName}
+        onHide={() => setShowRoundsDialog(false)}
+      />
+
     </>
   );
 };
