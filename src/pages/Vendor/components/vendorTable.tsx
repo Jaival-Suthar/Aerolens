@@ -7,16 +7,15 @@ import SearchButton from "../../../shared/SearchButton";
 import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
-import 'primereact/resources/themes/saga-blue/theme.css';
+// import 'primereact/resources/themes/saga-blue/theme.css';
 import VendorAddEdit from "./vendorAddEdit";
 import VendorDelete from "./vendorDelete";
 import type { VendorType } from "../types/vendorTypes";
 import { FilterMatchMode } from "primereact/api";
-import { useVendorService } from "../services/useVendor";
-
+import { useVendorService as VendorService } from "../services/useVendor";
 const VendorTable: React.FC = () => {
   const toast = useRef<Toast>(null);
-  const { getAllVendors } = useVendorService();
+  const { getAllVendors } = VendorService();
   const [loading, setLoading] = useState(true);
 
   const [vendors, setVendors] = useState<VendorType[]>([]);
