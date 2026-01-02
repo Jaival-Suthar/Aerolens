@@ -1,26 +1,55 @@
 import React, { useRef } from "react";
 import { Dialog } from "primereact/dialog";
+import { Toast } from "primereact/toast";
 import DialogDeleteButton from "../../../shared/DialogDeleteButton";
 import type { VendorType } from "../types/vendorTypes";
-import { useVendorService } from "../services/useVendor";
-import { Toast } from "primereact/toast";
+import { VendorService } from "../services/useVendor";
+import { useAuth } from "../../../shared/auth/AuthContext";
 
 type VendorDeleteProps = {
   visible: boolean;
   vendorToDelete: VendorType | null;
   onHide: () => void;
-  onUpdate: () => void; // callback to refresh parent table
+  onUpdate: () => void;
 };
 
-const VendorDelete: React.FC<VendorDeleteProps> = ({ visible, vendorToDelete, onHide, onUpdate }) => {
-  const { deleteVendor } = useVendorService();
+const VendorDelete: React.FC<VendorDeleteProps> = ({
+  visible,
+  vendorToDelete,
+  onHide,
+  onUpdate,
+}) => {
+  const { accessToken } = useAuth(); // ✅ explicit auth (same as Add/Edit)
   const toast = useRef<Toast>(null);
 
   const handleDelete = async () => {
-    if (!vendorToDelete) return;
+    // ✅ defensive validation
+    if (!accessToken) {
+      toast.current?.show({
+        severity: "error",
+        summary: "Authentication Error",
+        detail: "You are not authorized to perform this action.",
+        life: 4000,
+      });
+      return;
+    }
+
+    if (!vendorToDelete?.vendorId) {
+      toast.current?.show({
+        severity: "warn",
+        summary: "Invalid Action",
+        detail: "No vendor selected for deletion.",
+        life: 3000,
+      });
+      return;
+    }
 
     try {
-      await deleteVendor(vendorToDelete.vendorId);
+      await VendorService.deleteVendor(
+        accessToken,
+        vendorToDelete.vendorId
+      );
+
       toast.current?.show({
         severity: "success",
         summary: "Deleted",
@@ -29,13 +58,18 @@ const VendorDelete: React.FC<VendorDeleteProps> = ({ visible, vendorToDelete, on
       });
 
       onHide();
-      onUpdate(); // refresh parent table
-    } catch (error) {
+      onUpdate();
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to delete vendor";
+
       toast.current?.show({
         severity: "error",
-        summary: "Error",
-        detail: "Failed to delete vendor",
-        life: 3000,
+        summary: "Delete Failed",
+        detail: message,
+        life: 4000,
       });
     }
   };
@@ -56,7 +90,8 @@ const VendorDelete: React.FC<VendorDeleteProps> = ({ visible, vendorToDelete, on
         }
       >
         <p>
-          Are you sure you want to delete vendor <strong>{vendorToDelete?.vendorName}</strong>?
+          Are you sure you want to delete vendor{" "}
+          <strong>{vendorToDelete?.vendorName}</strong>?
         </p>
       </Dialog>
     </>
