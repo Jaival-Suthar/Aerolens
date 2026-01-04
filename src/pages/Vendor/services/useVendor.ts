@@ -2,6 +2,7 @@ import type {
   VendorType,
   CreateVendorPayload,
   UpdateVendorPayload,
+  ApiResponse
 } from "../types/vendorTypes";
 // //         <SearchButton
 //   value={globalFilterValue}   // use state instead of filters.global
@@ -64,13 +65,26 @@ async function apiFetch<T>(
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API Error (${response.status}) – ${errorText || response.statusText}`);
+      const contentType = response.headers.get("content-type");
+      const errorBody = contentType?.includes("application/json")
+        ? await response.json()
+        : { message: await response.text() };
+
+      // 🔐 Auth expiry is handled centrally
+      if (response.status === 401 && errorBody?.error === "TOKEN_EXPIRED") {
+        // Trigger global auth handling here
+        // logout(), refresh flow, redirect, etc.
+
+        throw errorBody; // ✅ preserve backend message
+      }
+
+      throw errorBody;
     }
+
 
     if (response.status === 204) return {} as T; // No Content
     const data = await response.json();
-    return (data.data ?? data) as T;
+    return data as T;
   } catch (error) {
     logger.error("Network/API failure:", error);
     throw error;
@@ -82,30 +96,43 @@ async function apiFetch<T>(
 /* ------------------------------------------------------------------------- */
 export const VendorService = {
   // -------------------- GET ALL --------------------
-  getAllVendors: (token: string): Promise<VendorType[]> =>
-    apiFetch<VendorType[]>(ROUTES.BASE, { method: "GET" }, token),
+  getAllVendors: (token: string): Promise<ApiResponse<VendorType[]>> =>
+  apiFetch<ApiResponse<VendorType[]>>(ROUTES.BASE, { method: "GET" }, token),
 
   // -------------------- CREATE --------------------
-  createVendor: (token: string, vendor: CreateVendorPayload): Promise<VendorType> =>
-    apiFetch<VendorType>(
-      ROUTES.BASE,
-      { method: "POST", body: JSON.stringify(vendor) },
-      token
-    ),
+  createVendor: (
+  token: string,
+  vendor: CreateVendorPayload
+): Promise<ApiResponse<VendorType>> =>
+  apiFetch<ApiResponse<VendorType>>(
+    ROUTES.BASE,
+    { method: "POST", body: JSON.stringify(vendor) },
+    token
+  ),
+
 
   // -------------------- UPDATE --------------------
-  updateVendor: (token: string, vendorId: number, vendor: UpdateVendorPayload): Promise<VendorType> =>
-    apiFetch<VendorType>(
-      ROUTES.BY_ID(vendorId),
-      { method: "PATCH", body: JSON.stringify(vendor) },
-      token
-    ),
+ updateVendor: (
+  token: string,
+  vendorId: number,
+  vendor: UpdateVendorPayload
+): Promise<ApiResponse<VendorType>> =>
+  apiFetch<ApiResponse<VendorType>>(
+    ROUTES.BY_ID(vendorId),
+    { method: "PATCH", body: JSON.stringify(vendor) },
+    token
+  ),
+
 
   // -------------------- DELETE --------------------
-  deleteVendor: (token: string, vendorId: number): Promise<void> =>
-    apiFetch<void>(
-      ROUTES.BY_ID(vendorId),
-      { method: "DELETE" },
-      token
-    ),
+ deleteVendor: (
+  token: string,
+  vendorId: number
+): Promise<ApiResponse<null>> =>
+  apiFetch<ApiResponse<null>>(
+    ROUTES.BY_ID(vendorId),
+    { method: "DELETE" },
+    token
+  ),
+
 };

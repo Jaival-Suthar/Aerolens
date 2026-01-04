@@ -43,7 +43,6 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
-  const [backendError, setBackendError] = useState<string | null>(null);
 
   useEffect(() => {
     if (vendorToEdit) {
@@ -58,7 +57,6 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
 
     setErrors({});
     setSubmitted(false);
-    setBackendError(null);
   }, [vendorToEdit, visible]);
 
   const validateForm = () => {
@@ -75,49 +73,69 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
+  const normalizePayload = (data: VendorFormData) => ({
+  vendorName: data.vendorName.trim(),
+  vendorPhone: data.vendorPhone.trim() || null,
+  vendorEmail: data.vendorEmail.trim() || null,
+});
   const handleSave = async () => {
     setSubmitted(true);
-    setBackendError(null);
 
     if (!validateForm()) return;
     if (!accessToken) return;
 
     try {
       if (vendorToEdit?.vendorId) {
-        await VendorService.updateVendor(accessToken, vendorToEdit.vendorId, formData);
+        const payload = normalizePayload(formData);
+        const res = await VendorService.updateVendor(accessToken, vendorToEdit.vendorId, payload);
         toast.current?.show({
           severity: "success",
           summary: "Success",
-          detail: "Vendor updated!",
-          life: 3000,
+          detail: res.message ?? "Vendor updated!",
+          life: 2000,
         });
       } else {
-        await VendorService.createVendor(accessToken, formData);
+        const payload = normalizePayload(formData);
+        const res = await VendorService.createVendor(accessToken, payload);
         toast.current?.show({
           severity: "success",
           summary: "Success",
-          detail: "Vendor added!",
-          life: 3000,
+          detail: res.message ?? "Vendor added!",
+          life: 2000,
         });
       }
-
+      setSubmitted(false);
       onHide();
       onUpdate();
-    } catch (error: any) {
-      // Surface backend message if available, fallback to generic
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "An unexpected error occurred while saving vendor";
+    } catch (error: unknown) {
+     // 1️⃣ Auth errors → ignore silently
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        (error as any).error === "TOKEN_EXPIRED"
+      ) {
+        return;
+      }
 
-      setBackendError(message);
+      // 2️⃣ Validation errors → map to fields
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        Array.isArray((error as any).details?.validationErrors)
+      ) {
+        const fieldErrors: Record<string, string> = {};
+        (error as any).details.validationErrors.forEach((e: any) => {
+          fieldErrors[e.field] = e.message;
+        });
+        setErrors(fieldErrors);
+        return;
+      }
 
+      // 3️⃣ Everything else → toast message
       toast.current?.show({
         severity: "error",
         summary: "Error",
-        detail: message,
-        life: 4000,
+        detail: (error as any)?.message || "Something went wrong",
       });
     }
   };
@@ -145,7 +163,7 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
         }
       >
         <div className="p-field">
-          <label className="font-bold">Organization Name*</label>
+          <label className="font-bold mb-2 block">Organization Name*</label>
           <InputText
             value={formData.vendorName}
             onChange={(e) =>
@@ -161,7 +179,7 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
         <br />
 
         <div className="p-field">
-          <label className="font-bold">Phone</label>
+          <label className="font-bold mb-2 block">Phone</label>
           <InputText
             value={formData.vendorPhone}
             onChange={(e) =>
@@ -177,7 +195,7 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
         <br />
 
         <div className="p-field">
-          <label className="font-bold">Email</label>
+          <label className="font-bold mb-2 block">Email</label>
           <InputText
             value={formData.vendorEmail}
             onChange={(e) =>
@@ -189,13 +207,6 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
             <small className="p-error">{errors.vendorEmail}</small>
           )}
         </div>
-
-        {/* Optional backend error displayed below form fields */}
-        {backendError && (
-          <div className="p-field">
-            <small className="p-error">{backendError}</small>
-          </div>
-        )}
       </Dialog>
     </>
   );

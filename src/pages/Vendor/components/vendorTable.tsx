@@ -45,16 +45,27 @@ const VendorTable: React.FC = () => {
     if (!accessToken) return; // guard in case token is missing
     try {
       setLoading(true);
-      const data = await VendorService.getAllVendors(accessToken);
-      setVendors(data);
-    } catch (error) {
-      toast.current?.show({
-        severity: "error",
-        summary: "Error",
-        detail: "Failed to fetch vendors",
-        life: 3000,
-      });
-    } finally {
+      const res = await VendorService.getAllVendors(accessToken);
+      setVendors(res.data);
+    } catch (error: unknown) {
+    let message = "Something went wrong";
+
+    if (error instanceof Error) {
+      message = error.message;
+    } else if (
+      typeof error === "object" &&
+      error !== null &&
+      "message" in error
+    ) {
+      message = String((error as any).message);
+    }
+
+    toast.current?.show({
+      severity: "error",
+      summary: "Error",
+      detail: message,
+    });
+  } finally {
       setLoading(false);
     }
   };
@@ -62,6 +73,9 @@ const VendorTable: React.FC = () => {
   useEffect(() => {
     fetchVendors(); // fetch immediately on mount
   }, [accessToken]);
+  useEffect(() => {
+  setSelectedVendor(null);
+}, [vendors]);
 
   // --- Pagination handler (updates URL) ---
   const onPageChange = (event: any) => {

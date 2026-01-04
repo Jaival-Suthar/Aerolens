@@ -38,3 +38,17 @@ export type VendorTableProps = {
   onDelete: (vendor: VendorType) => void;
   globalFilterValue?: string;
 };
+
+export type ApiError = {
+  success?: false;
+  code?: string;
+  message?: string;
+  details?: any;
+};
+
+export type ApiResponse<T> = {
+  success: boolean;
+  message: string;
+  data: T;
+};
+

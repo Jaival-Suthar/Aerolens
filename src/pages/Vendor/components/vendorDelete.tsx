@@ -29,7 +29,7 @@ const VendorDelete: React.FC<VendorDeleteProps> = ({
         severity: "error",
         summary: "Authentication Error",
         detail: "You are not authorized to perform this action.",
-        life: 4000,
+        life: 2000,
       });
       return;
     }
@@ -39,13 +39,13 @@ const VendorDelete: React.FC<VendorDeleteProps> = ({
         severity: "warn",
         summary: "Invalid Action",
         detail: "No vendor selected for deletion.",
-        life: 3000,
+        life: 2000,
       });
       return;
     }
 
     try {
-      await VendorService.deleteVendor(
+      const res = await VendorService.deleteVendor(
         accessToken,
         vendorToDelete.vendorId
       );
@@ -53,8 +53,8 @@ const VendorDelete: React.FC<VendorDeleteProps> = ({
       toast.current?.show({
         severity: "success",
         summary: "Deleted",
-        detail: `Vendor "${vendorToDelete.vendorName}" deleted successfully`,
-        life: 3000,
+        detail: res.message ?? `Vendor "${vendorToDelete.vendorName}" deleted successfully`,
+        life: 2000,
       });
 
       onHide();
@@ -69,7 +69,7 @@ const VendorDelete: React.FC<VendorDeleteProps> = ({
         severity: "error",
         summary: "Delete Failed",
         detail: message,
-        life: 4000,
+        life: 2000,
       });
     }
   };
