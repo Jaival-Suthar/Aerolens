@@ -391,6 +391,38 @@ const handleViewAllRounds = () => {
     })
     .filter(item => item.value !== "-" && item.value !== null);
 };
+  const uniqueValues = <T,>(arr: (T | null | undefined)[]) =>
+  Array.from(new Set(arr.filter(Boolean)));
+
+const interviewerFilterTemplate = (options: any) => (
+  <Dropdown
+    value={options.value}
+    options={uniqueValues(interviews.map(i => i.interviewerName))}
+    onChange={(e) => options.filterCallback(e.value)}
+    placeholder="Select Interviewer"
+    showClear
+  />
+);
+
+const scheduledByFilterTemplate = (options: any) => (
+  <Dropdown
+    value={options.value}
+    options={uniqueValues(interviews.map(i => i.scheduledByName))}
+    onChange={(e) => options.filterCallback(e.value)}
+    placeholder="Select Scheduler"
+    showClear
+  />
+);
+
+const resultFilterTemplate = (options: any) => (
+  <Dropdown
+    value={options.value}
+    options={["Pending", "Selected", "Rejected", "Cancelled"]}
+    onChange={(e) => options.filterCallback(e.value)}
+    placeholder="Select Result"
+    showClear
+  />
+);
 
   return (
     <>
@@ -492,14 +524,24 @@ const handleViewAllRounds = () => {
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
         {visibleColumns.map((col) => {
           let bodyTemplate;
-
+          let filterElement;
           if (col.body === "roundProgress") bodyTemplate = roundProgressBodyTemplate;
           if (col.body === "result") bodyTemplate = resultBodyTemplate;
           if (col.body === "date") bodyTemplate = dateBodyTemplate;
           if (col.body === "recording") bodyTemplate = meetingUrlBodyTemplate;
           if (col.body === "startTime") bodyTemplate = timeBodyTemplate;
           if (col.body === "endTime") bodyTemplate = endTimeBodyTemplate;
+          if (col.field === "interviewerName") {
+            filterElement = interviewerFilterTemplate;
+          }
 
+          if (col.field === "scheduledByName") {
+            filterElement = scheduledByFilterTemplate;
+          }
+
+          if (col.field === "result") {
+            filterElement = resultFilterTemplate;
+          }
           return (
             <Column
               key={col.field}
@@ -507,6 +549,7 @@ const handleViewAllRounds = () => {
               header={col.header}
               body={bodyTemplate}
               filter={col.filter}
+              filterElement={filterElement}
               showFilterMatchModes={false}
             />
           );
