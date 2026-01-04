@@ -6,124 +6,92 @@ import type {
   DialogMode,
   ContactAddEditPayload,
 } from "../types/contactTypes";
-import { useAuth } from "../../../shared/auth/AuthContext"; // ✅ Import AuthContext
+import { useAuth } from "../../../shared/auth/AuthContext";
+import type { ApiError } from "../../../types/apiError";
 
 interface ContactOperationsResult {
   success: boolean;
-  error?: Error;
 }
 
-export const useContactOperations = (
-  showSuccess: (message: string) => void,
-  showError: (message: string) => void
-) => {
+export const useContactOperations = () => {
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
-  const { accessToken } = useAuth(); // ✅ Get token from context
-  const { createContact, updateContact, deleteContact } = useContact(); // ✅ These now expect token as first param
+  const { accessToken } = useAuth();
+  const { createContact, updateContact, deleteContact } = useContact();
 
   const triggerRefresh = useCallback(() => {
     setRefreshTrigger((prev) => prev + 1);
   }, []);
 
-  // ---------------------- SAVE (ADD / UPDATE) CONTACT ----------------------
+  // ---------------------- SAVE (ADD / UPDATE) ----------------------
   const handleSaveContact = useCallback(
-    async (
-      contactData: ContactAddEditPayload,
-      dialogMode: DialogMode,
-      selectedClient: Client | null
-    ): Promise<ContactOperationsResult> => {
-      try {
-        if (!accessToken) throw new Error("Access token not found. Please log in again.");
+  async (
+    contactData: ContactAddEditPayload,
+    dialogMode: DialogMode,
+    selectedClient: Client | null
+  ) => {
+    if (!accessToken) {
+      throw {
+        error: "UNAUTHORIZED",
+        message: "Session expired",
+      };
+    }
 
-        if (dialogMode === "add") {
-          if (!selectedClient?.clientId) {
-            throw new Error("Client ID is required for adding a contact");
-          }
+    let response;
 
-          const newContactData = {
-            ...contactData,
-            clientId: selectedClient.clientId,
-          };
+    if (dialogMode === "add") {
+      response = await createContact(accessToken, {
+        ...contactData,
+        clientId: selectedClient?.clientId,
+      });
+    } else {
+      const contactId =
+        (contactData as Partial<Contact>).clientContactId ||
+        (contactData as Partial<Contact>).contactId;
 
-          await createContact(accessToken, newContactData); // ✅ Pass token
-          showSuccess("Contact added successfully");
-        } else {
-          const contactId =
-            (contactData as Partial<Contact>).clientContactId ||
-            (contactData as Partial<Contact>).contactId;
+      response = await updateContact(accessToken, {
+        ...contactData,
+        clientContactId: contactId,
+      });
+    }
 
-          if (!contactId) {
-            throw new Error("Contact ID is required for update operation");
-          }
+    triggerRefresh();
 
-          const updateContactData = {
-            ...contactData,
-            clientContactId: contactId,
-            clientId: selectedClient?.clientId,
-          };
+    // 🔥 PASS BACKEND MESSAGE UP
+    return {
+      success: true,
+      message: response.message,
+    };
+  },
+  [accessToken, createContact, updateContact, triggerRefresh]
+);
 
-          await updateContact(accessToken, updateContactData); // ✅ Pass token
-          showSuccess("Contact updated successfully");
-        }
 
-        triggerRefresh();
-        return { success: true };
-      } catch (err) {
-        console.error("Error saving contact:", err);
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to save contact";
-        showError(errorMessage);
-        return { success: false, error: err as Error };
-      }
-    },
-    [
-      accessToken,
-      createContact,
-      updateContact,
-      showSuccess,
-      showError,
-      triggerRefresh,
-    ]
-  );
-
-  // ---------------------- DELETE CONTACT ----------------------
+  // ---------------------- DELETE ----------------------
   const handleDeleteContact = useCallback(
-    async (contactToDelete: Contact): Promise<ContactOperationsResult> => {
-      try {
-        if (!accessToken) throw new Error("Access token not found. Please log in again.");
-        if (!contactToDelete.clientContactId) {
-          throw new Error("Contact ID is required for deletion operation");
-        }
+  async (contact: Contact) => {
+    const response = await deleteContact(
+      accessToken,
+      contact.clientContactId!
+    );
 
-        await deleteContact(accessToken, contactToDelete.clientContactId); // ✅ Pass token
-        showSuccess("Contact deleted successfully");
-        triggerRefresh();
-        return { success: true };
-      } catch (err) {
-        console.error("Error deleting contact:", err);
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to delete contact";
-        showError(errorMessage);
-        return { success: false, error: err as Error };
-      }
-    },
-    [accessToken, deleteContact, showSuccess, showError, triggerRefresh]
-  );
+    triggerRefresh();
 
-  // ---------------------- VALIDATION ----------------------
+    return {
+      success: true,
+      message: response.message,
+    };
+  },
+  [accessToken, deleteContact, triggerRefresh]
+);
+
+
+
+  // ---------------------- SELECTION VALIDATION (UI-ONLY) ----------------------
   const validateContactSelection = useCallback(
-    (contact: Contact | null, showError: (message: string) => void): boolean => {
-      if (!contact) {
-        showError("Please select a contact first");
-        return false;
-      }
-      if (!contact.clientContactId) {
-        showError("Contact ID is missing. Cannot perform this operation.");
-        return false;
-      }
-      return true;
+    (contact: Contact | null): boolean => {
+      return Boolean(contact?.clientContactId);
     },
-    [showError]
+    []
   );
 
   return {

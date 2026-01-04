@@ -82,10 +82,40 @@ const ContactAddEdit: React.FC<ContactAddEditProps> = ({
     loadDesignations();
   }, [visible, getDesignations, accessToken]);
   
+  const handleBackendErrors = (error: any) => {
+  // Case 1: backend validationErrors array
+  if (Array.isArray(error?.details?.validationErrors)) {
+    const fieldErrors: Errors = {};
+
+    error.details.validationErrors.forEach((err: any) => {
+      if (err.field && err.message) {
+        fieldErrors[err.field as keyof Errors] = err.message;
+      }
+    });
+
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(fieldErrors);
+      return;
+    }
+  }
+
+  // Case 2: single-field error
+  if (error?.details?.field && error?.message) {
+    setErrors({
+      [error.details.field]: error.message,
+    });
+    return;
+  }
+
+  // Case 3: form-level error
+  if (error?.message) {
+    setErrors({ general: error.message });
+  }
+};
 
 
   // Type only for function interface, not for object mutation.
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Validate based on mode
     const newErrors: Errors = {};
 
@@ -97,28 +127,46 @@ const ContactAddEdit: React.FC<ContactAddEditProps> = ({
       newErrors.designation = "Designation is required";
     }
     if (phone && phone.trim() !== "") {
-      // Remove all non-digit characters to count actual digits
-      const digitsOnly = phone.replace(/\D/g, "");
-      
-      // Check if it contains valid characters
-      const phoneRegex = /^[\d\s\-\+\(\)]+$/;
-      if (!phoneRegex.test(phone.trim())) {
-        newErrors.phone = "Phone number can only contain numbers, spaces, +, -, and parentheses";
-      }
-      // Check length based on country code presence
-      else if (phone.trim().startsWith("+")) {
-        // With country code: 11-13 digits (e.g., +1-xxx or +91-xxx)
-        if (digitsOnly.length < 11 || digitsOnly.length > 13) {
-          newErrors.phone = "Phone number with country code must be 11-13 digits";
-        }
-      }
-      else {
-        // Without country code: exactly 10 digits
+  const trimmedPhone = phone.trim();
+
+  // Allow only valid characters
+  const phoneRegex = /^[\d\s+\-()]+$/;
+    if (!phoneRegex.test(trimmedPhone)) {
+      newErrors.phone =
+        "Phone number can only contain numbers, spaces, +, -, and parentheses";
+    } else {
+      // Remove all non-digit characters
+      const digitsOnly = trimmedPhone.replace(/\D/g, "");
+
+      // Case 1: Without country code → exactly 10 digits
+      if (!trimmedPhone.startsWith("+")) {
         if (digitsOnly.length !== 10) {
           newErrors.phone = "Phone number must be exactly 10 digits";
         }
       }
+      // Case 2: With country code
+      else {
+        // India (+91) → 12 digits total
+        if (trimmedPhone.startsWith("+91")) {
+          if (digitsOnly.length !== 12) {
+            newErrors.phone =
+              "Indian phone number with +91 must be 10 digits after country code";
+          }
+        }
+        // US (+1) → 11 digits total
+        else if (trimmedPhone.startsWith("+1")) {
+          if (digitsOnly.length !== 11) {
+            newErrors.phone =
+              "US phone number with +1 must be 10 digits after country code";
+          }
+        }
+        // Any other country code → not allowed
+        else {
+          newErrors.phone = "Only US (+1) and India (+91) phone numbers are allowed";
+        }
+      }
     }
+  }
     if (!email || email.trim() === "") {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(email.trim())) {
@@ -164,7 +212,19 @@ const ContactAddEdit: React.FC<ContactAddEditProps> = ({
     };
 
 
-    if (onSave) onSave(payload);
+    try {
+      await onSave(payload);
+    } catch (error: any) {
+      // 🔥 Backend validation → highlight fields
+      if (error?.error === "VALIDATION_ERROR") {
+        handleBackendErrors(error);
+        return;
+      }
+
+      // 🔥 Non-validation errors → show as general (still no toast)
+      handleBackendErrors(error);
+    }
+
   };
 
 
