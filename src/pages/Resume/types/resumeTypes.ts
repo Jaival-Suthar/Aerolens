@@ -12,7 +12,11 @@ export interface Candidate {
 
   jobRole: string;
 
-  preferredJobLocation: {
+  expectedLocation: {
+    city: string;
+    country: string;
+  } | null;
+  currentLocation?: {
     city: string;
     country: string;
   } | null;
@@ -45,10 +49,14 @@ export interface CandidateUpdatePayload {
 
   jobRole?: string;
 
-  preferredJobLocation?: {
+  expectedLocation?: {
     city: string;
     country: string;
   };
+   currentLocation?: {
+    city: string;
+    country: string;
+  } | null;
 
   currentCTC?: number | null;
   expectedCTC?: number | null;
@@ -89,10 +97,14 @@ export interface AddEditCandidate {
 
   jobRole: string;
 
-  preferredJobLocation?: {
+  expectedLocation?: {
     city: string;
     country: string;
   };
+   currentLocation?: {
+    city: string;
+    country: string;
+  } | null;
 
   currentCTC?: number;
   expectedCTC?: number;
@@ -105,6 +117,39 @@ export interface AddEditCandidate {
   resumeFile: File | null;
   notes?: string;
 }
+// API PAYLOAD (NULLABLE)
+export interface AddEditCandidateApiPayload {
+  candidateName: string;
+
+  contactNumber: string | null;
+  email: string | null;
+
+  recruiterId: number | null;
+  recruiterName: string | null;
+
+  jobRole: string;
+
+  expectedLocation?: {
+    city: string;
+    country: string;
+  };
+
+  currentLocation?: {
+    city: string;
+    country: string;
+  } | null;
+
+  currentCTC?: number | null;
+  expectedCTC?: number | null;
+
+  noticePeriod: number;
+  experienceYears: number;
+
+  statusName: string;
+  linkedinProfileUrl?: string | null;
+  notes?: string | null;
+}
+
 
 
 /* ------------------ API RESPONSE ------------------ */
