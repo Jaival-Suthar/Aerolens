@@ -110,3 +110,26 @@ export const fetchDesignations = async (
     throw error;
   }
 };
+
+export const fetchVendors = async (
+  accessToken: string | null
+): Promise<{ label: string; value: string }[]> => {
+  const headers = makeHeaders(accessToken || undefined);
+
+  const response = await fetch(`${API_URL}/member/create-data`, {
+    method: "GET",
+    headers,
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to load vendors");
+  }
+
+  const result = await response.json();
+
+  return (result.data.vendors || []).map((v: any) => ({
+    label: v.vendorName,
+    value: String(v.vendorId),
+  }));
+};

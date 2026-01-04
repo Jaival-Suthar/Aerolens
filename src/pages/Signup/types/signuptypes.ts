@@ -5,6 +5,8 @@ export interface SignupFormData {
   password: string;
   confirmPassword: string;
   designation: string;
+  vendorId?: string; // ✅ Added vendor field
+
   isRecruiter: boolean;
   isInterviewer: boolean;
 }
