@@ -127,25 +127,30 @@ const Client: React.FC = () => {
   const handleSaveClient = useCallback(
   async (client: ClientType | ClientAddType) => {
     setLoading(true);
+
     try {
+      let response;
+
       if (dialogMode === "add") {
         const newClient = client as ClientAddType;
-        await createClient(accessToken, {
+
+        response = await createClient(accessToken, {
           name: newClient.clientName.trim(),
           address: newClient.address.trim(),
         });
-        showToast("success", "Success", "Client added successfully");
       } else {
         const existingClient = client as ClientType;
-        if (!existingClient.clientId) {
-          throw new Error("Invalid client ID");
-        }
-        await updateClient(accessToken, {
+
+        response = await updateClient(accessToken, {
           id: existingClient.clientId,
           name: existingClient.clientName.trim(),
           address: existingClient.address.trim(),
         });
-        showToast("success", "Success", "Client updated successfully");
+      }
+
+      // ✅ BACKEND SUCCESS MESSAGE
+      if (response?.message) {
+        showToast("success", "Success", response.message);
       }
 
       setRefreshTrigger((prev) => prev + 1);
@@ -153,8 +158,17 @@ const Client: React.FC = () => {
     } catch (error: any) {
       console.error("Save client error:", error);
 
-      // 🚨 IMPORTANT: rethrow backend error
-      throw error?.response?.data || error;
+      // 🔥 VALIDATION ERRORS → let ClientAddEdit handle field highlights
+      if (error?.error === "VALIDATION_ERROR") {
+        throw error;
+      }
+
+      // 🔥 OTHER BACKEND ERRORS → show toast
+      showToast(
+        "error",
+        "Error",
+        error?.message || "Something went wrong"
+      );
     } finally {
       setLoading(false);
     }
@@ -164,27 +178,38 @@ const Client: React.FC = () => {
 
 
   const handleDeleteClient = useCallback(
-    async (client?: ClientType | null) => {
-      if (!client || client.clientId === undefined) {
-        showToast("error", "Error", "Invalid client selected.");
-        return;
-      }
-      setLoading(true);
-      try {
-        await deleteClient(accessToken, Number(client.clientId));
+  async (client?: ClientType | null) => {
+    if (!client?.clientId) return;
+
+    setLoading(true);
+    try {
+      const response = await deleteClient(accessToken, client.clientId);
+
+      // ✅ backend-driven success message (if backend sends one)
+      if ((response as any)?.message) {
+        showToast("success", "Success", (response as any).message);
+      } else {
         showToast("success", "Success", "Client deleted successfully");
-        setRefreshTrigger((prev) => prev + 1);
-        setSelectedClient(null);
-        closeDeleteDialog();
-      } catch (error) {
-        console.error("Delete client error:", error);
-        showToast("error", "Error", "Failed to delete client. Retry.");
-      } finally {
-        setLoading(false);
       }
-    },
-    [showToast, closeDeleteDialog, accessToken]
-  );
+
+      setRefreshTrigger((prev) => prev + 1);
+      setSelectedClient(null);
+      closeDeleteDialog();
+    } catch (error: any) {
+      console.error("Delete client error:", error);
+
+      showToast(
+        "error",
+        "Error",
+        error?.message || "Failed to delete client"
+      );
+    } finally {
+      setLoading(false);
+    }
+  },
+  [showToast, closeDeleteDialog, accessToken]
+);
+
 
   const handleEditSelected = useCallback(() => {
     if (selectedClient) {

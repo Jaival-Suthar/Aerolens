@@ -47,13 +47,11 @@ const ClientContactsView: React.FC<ClientContactsViewProps> = ({ selectedClient,
 
   // Get operations
   const {
-    handleSaveContact,
-    handleDeleteContact,
-    refreshTrigger,
-  } = useContactOperations(
-    (msg: string) => showToast('success', msg),
-    (msg: string) => showToast('error', msg)
-  );
+  handleSaveContact,
+  handleDeleteContact,
+  refreshTrigger,
+} = useContactOperations();
+
 
   // Get contacts for this client
   const {
@@ -66,10 +64,11 @@ const ClientContactsView: React.FC<ClientContactsViewProps> = ({ selectedClient,
   // Handle errors from contacts hook
   useEffect(() => {
     if (contactsError) {
-      showToast('error', contactsError);
+      showToast('error', contactsError.message);
       clearContactsError();
     }
   }, [contactsError, clearContactsError]);
+
 
   // Event handler for page changes
   const onPageChange = useCallback((event: DataTablePageEvent) => {
@@ -108,22 +107,51 @@ const ClientContactsView: React.FC<ClientContactsViewProps> = ({ selectedClient,
     setDeleteDialogVisible(true);
   }, [selectedContact]);
 
-  const handleSaveContactWrapper = useCallback(async (contactData: Partial<Contact> & { clientId?: number }) => {
-    const result = await handleSaveContact(contactData, dialogMode, selectedClient);
-    if (result.success) {
+  const handleSaveContactWrapper = useCallback(
+  async (contactData: Partial<Contact> & { clientId?: number }) => {
+    try {
+      const result = await handleSaveContact(
+        contactData,
+        dialogMode,
+        selectedClient
+      );
+
+      if (result?.message) {
+        showToast("success", result.message);
+      }
+
       setDialogVisible(false);
       setEditContact(null);
-    }
-  }, [handleSaveContact, dialogMode, selectedClient]);
+    } catch (error: any) {
+      if (error?.error === "VALIDATION_ERROR") {
+        throw error; // 🔥 dialog highlights fields
+      }
 
-  const handleDeleteContactWrapper = useCallback(async (contactToDelete: Contact) => {
-    const result = await handleDeleteContact(contactToDelete);
-    if (result.success) {
+      showToast("error", error?.message);
+    }
+  },
+  [handleSaveContact, dialogMode, selectedClient]
+);
+
+  const handleDeleteContactWrapper = useCallback(
+  async (contact: Contact) => {
+    try {
+      const result = await handleDeleteContact(contact);
+
+      if (result?.message) {
+        showToast("success", result.message);
+      }
+
       setDeleteDialogVisible(false);
       setContactToDelete(null);
       setSelectedContact(null);
+    } catch (error: any) {
+      showToast("error", error?.message);
     }
-  }, [handleDeleteContact]);
+  },
+  [handleDeleteContact]
+);
+
 
   const handleSelectionChange = useCallback((e: DataTableSelectionSingleChangeEvent<Contact[]>) => {
     const contact = e.value as Contact | null;
