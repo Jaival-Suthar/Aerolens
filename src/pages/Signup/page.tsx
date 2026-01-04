@@ -3,7 +3,7 @@ import SignupForm from "./components/SignupForm";
 
 const SignupPage: React.FC = () => {
   return (
-    <div>
+    <div className="p-2" style={{flex: 1, minHeight: 0, overflowY: "auto"}}>
       <SignupForm />
     </div>
   );

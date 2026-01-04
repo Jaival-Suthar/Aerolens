@@ -37,8 +37,8 @@ export interface Candidate {
 /* ------------------ UPDATE PAYLOAD ------------------ */
 export interface CandidateUpdatePayload {
   candidateName?: string;
-  contactNumber?: string;
-  email?: string;
+  contactNumber?: string | null;
+  email?: string | null;
 
   recruiterId?: number | null;
   recruiterName?: string | null;
@@ -50,14 +50,14 @@ export interface CandidateUpdatePayload {
     country: string;
   };
 
-  currentCTC?: number;
-  expectedCTC?: number;
+  currentCTC?: number | null;
+  expectedCTC?: number | null;
   noticePeriod?: number;
   experienceYears?: number;
 
   statusName?: string;
-  linkedinProfileUrl?: string;
-  notes?: string;
+  linkedinProfileUrl?: string | null;
+  notes?: string | null;
 }
 
 
@@ -81,8 +81,8 @@ export interface ResumeAddEditProps {
 /* ------------------ ADD/EDIT PAYLOAD ------------------ */
 export interface AddEditCandidate {
   candidateName: string;
-  contactNumber: string;
-  email: string;
+  contactNumber?: string;
+  email?: string;
 
   recruiterId: number | null;
   recruiterName: string | null;
@@ -94,8 +94,8 @@ export interface AddEditCandidate {
     country: string;
   };
 
-  currentCTC: number;
-  expectedCTC: number;
+  currentCTC?: number;
+  expectedCTC?: number;
   noticePeriod: number;
   experienceYears: number;
 
@@ -120,8 +120,8 @@ export interface RecruiterItem {
 }
 
 export interface StatusItem {
-  lookupKey: number;
-  value: string;
+  statusId: number;
+  statusName: string;
 }
 
 export interface LocationItem {

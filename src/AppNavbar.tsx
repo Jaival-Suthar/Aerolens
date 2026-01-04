@@ -144,6 +144,10 @@ const AppNavbar: React.FC = () => {
       <img
         src={Logo}
         alt="Aerolens Logo"
+        width={96}
+        height={24}
+        role="img"
+        decoding="async"
         style={{
           height: 24,
           width: "auto",
@@ -164,9 +168,12 @@ const AppNavbar: React.FC = () => {
       }}
     >
       <div style={{ position: "relative" }}>
-        <Menu model={settingsItems} popup ref={settingsMenu} />
+        <Menu id="settings-menu" model={settingsItems} popup ref={settingsMenu} />
         <Button
           icon={<FaCog />}
+          aria-label="Open Settings"
+          aria-haspopup="menu"
+          aria-controls="settings-menu"
           className="p-button-rounded p-button-text"
           tooltip="Settings"
           tooltipOptions={{ position: "bottom" }}
@@ -182,8 +189,10 @@ const AppNavbar: React.FC = () => {
 
       <Button
         icon={<FaUser />}
+        aria-label="Open User Profile"
         className="p-button-rounded p-button-text"
         tooltip="User Profile"
+        aria-hidden="true"
         tooltipOptions={{ position: "bottom" }}
         style={{
           width: 32,
@@ -256,7 +265,7 @@ const AppNavbar: React.FC = () => {
           }
         }
       `}</style>
-
+      <nav aria-label="Main navigation">
       <div
         style={{
           background: "#fff",
@@ -268,6 +277,8 @@ const AppNavbar: React.FC = () => {
       >
         <Menubar
           model={items}
+          role="menubar"
+          aria-label="Primary navigation menu"
           start={startTemplate}
           end={endTemplate}
           style={{
@@ -284,6 +295,7 @@ const AppNavbar: React.FC = () => {
           className="shadow-none"
         />
       </div>
+      </nav>
     </>
   );
 };

@@ -1,7 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from './shared/auth/AuthContext';
 import { FaSpinner, FaExclamationTriangle } from "react-icons/fa";
+import ProtectedRoute from './shared/ProtectedRoute';
 
 const AppNavbar = lazy(() => import('./AppNavbar'));
 const Client = lazy(() => import('./pages/ClientPage/page'));
@@ -19,32 +19,39 @@ const Vendor = lazy(() => import('./pages/Vendor/page'));
 const LoadingSpinner = () => (
   <div
     className="flex align-items-center justify-content-center h-screen"
-    data-testid="loading-spinner"
+    role="status"
+    aria-live="polite"
+    aria-label="Loading application"
   >
-    <FaSpinner className="spin text-4xl text-primary" />
+    <FaSpinner
+      className="spin text-4xl text-primary"
+      aria-hidden="true"
+    />
   </div>
 );
 
-
-const NotFound: React.FC = () => (
-  <div
-    className="flex flex-column align-items-center justify-content-center h-screen"
-    data-testid="not-found"
-  >
-    <FaExclamationTriangle className="text-6xl text-orange-500 mb-3" />
-
-    <h1 className="text-4xl font-bold text-900 mb-2">404</h1>
-    <p className="text-xl text-600 mb-4">Page not found</p>
-
-    <button
-      className="p-button p-component"
-      onClick={() => (window.location.href = "/home")}
-      data-testid="go-dashboard-btn"
+const NotFound: React.FC = () => {
+  const navigate = useNavigate();
+  return (
+    <div
+      className="flex flex-column align-items-center justify-content-center h-screen"
+      data-testid="not-found"
     >
-      <span className="p-button-label">Go to Home Page</span>
-    </button>
-  </div>
-);
+      <FaExclamationTriangle className="text-6xl text-orange-500 mb-3" />
+
+      <h1 className="text-4xl font-bold text-900 mb-2">404</h1>
+      <p className="text-xl text-600 mb-4" role="status">Page not found</p>
+
+      <button
+        className="p-button p-component"
+        onClick={() => navigate("/home")}
+        aria-label="Go to home page"
+      >
+        <span className="p-button-label">Go to Home Page</span>
+      </button>
+    </div>
+  );
+};
 
 
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -52,6 +59,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <AppNavbar />
 
     <main
+      role='main'
       className="main-content p-2"
       style={{
         background: "#fff",
@@ -68,40 +76,108 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  React.useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login', { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
-
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <Routes>
-        {/* Public Routes */}
-        <Route path="/login" element={isAuthenticated ? <Navigate to="/home" replace /> : <LoginPage />} />
+        {/* Public */}
+        <Route path="/login" element={<LoginPage />} />
 
-        {/* Authenticated Routes */}
-        {isAuthenticated && (
-          <>
-            <Route path="/" element={<Navigate to="/home" replace />} />
-            <Route path="/create-user" element={<AppLayout><SignUpPage /></AppLayout>} />
-            <Route path="/home" element={<AppLayout><Home /></AppLayout>} />
-            <Route path="/client" element={<AppLayout><Client /></AppLayout>} />
-            <Route path="/job-profile" element={<AppLayout><JobProfile /></AppLayout>} />
-            <Route path="/resume" element={<AppLayout><Resume /></AppLayout>} />
-            <Route path="/interview" element={<AppLayout><Interview /></AppLayout>} />
-            <Route path="/lookup-data" element={<AppLayout><LookupPage /></AppLayout>} />
-            <Route path="/members" element={<AppLayout><Members /></AppLayout>} />
-            <Route path="/reports" element={<AppLayout><ReportPage /></AppLayout>} />
-            <Route path="/vendor" element={<AppLayout><Vendor /></AppLayout>} />
+        {/* Protected */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Navigate to="/home" replace />
+            </ProtectedRoute>
+          }
+        />
 
-            <Route path="*" element={<NotFound />} />
-          </>
-        )}
+        <Route
+          path="/create-user"
+          element={
+            <ProtectedRoute>
+              <AppLayout><SignUpPage /></AppLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/home"
+          element={
+            <ProtectedRoute>
+              <AppLayout><Home /></AppLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/client"
+          element={
+            <ProtectedRoute>
+              <AppLayout><Client /></AppLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/job-profile"
+          element={
+            <ProtectedRoute>
+              <AppLayout><JobProfile /></AppLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/resume"
+          element={
+            <ProtectedRoute>
+              <AppLayout><Resume /></AppLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/interview"
+          element={
+            <ProtectedRoute>
+              <AppLayout><Interview /></AppLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/lookup-data"
+          element={
+            <ProtectedRoute>
+              <AppLayout><LookupPage /></AppLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/members"
+          element={
+            <ProtectedRoute>
+              <AppLayout><Members /></AppLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <AppLayout><ReportPage /></AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vendor"
+          element={<ProtectedRoute><AppLayout><Vendor/></AppLayout></ProtectedRoute>}
+        />
+
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
   );

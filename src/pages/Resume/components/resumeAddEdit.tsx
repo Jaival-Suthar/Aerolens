@@ -4,7 +4,7 @@ import { InputText } from "primereact/inputtext";
 import { Dropdown } from "primereact/dropdown";
 import { InputNumber } from "primereact/inputnumber";
 import { FileUpload } from "primereact/fileupload";
-import { FaCheck } from "react-icons/fa";
+import { FaCheck, FaTimes } from "react-icons/fa";
 import { Toast } from "primereact/toast";
 import DialogButton from "../../../shared/DialogAddEditButton";
 import {
@@ -27,6 +27,7 @@ interface DropdownFieldProps {
   error?: string;
   disabled?: boolean;
   colSize?: string;
+  required?: boolean;
 }
 
 // ---------- HELPERS ----------
@@ -36,14 +37,14 @@ const linkedinRegex = /^https?:\/\/(www\.)?linkedin\.com\/.*$/i;
 
 const INITIAL_FORM: AddEditCandidate = {
   candidateName: "",
-  contactNumber: "",
-  email: "",
+  contactNumber: undefined,
+  email: undefined,
   recruiterId: null,
   recruiterName: null,
   jobRole: "",
   preferredJobLocation: { city: '', country: '' },
-  currentCTC: 0,
-  expectedCTC: 0,
+  currentCTC: undefined,
+  expectedCTC: undefined,
   noticePeriod: 0,
   experienceYears: 0,
   statusName: "",
@@ -60,12 +61,12 @@ const validateField = (field: keyof AddEditCandidate, value: any) => {
     case "recruiterName":
       return value ? "" : "Recruiter is required.";
     case "contactNumber":
-      if (!value) return "Contact number is required.";
+      if (!value) return ""; // OPTIONAL
       if (!phoneRegex.test(value.replace(/[\s-]/g, "")))
         return "Enter a valid Indian or US phone number.";
       return "";
     case "email":
-      if (!value) return "Email is required.";
+      if (!value) return ""; // OPTIONAL
       if (!emailRegex.test(value)) return "Enter a valid email.";
       return "";
     case "jobRole":
@@ -75,8 +76,10 @@ const validateField = (field: keyof AddEditCandidate, value: any) => {
       if (!value.city) return "City is required.";
       return "";
     case "currentCTC":
+      if (value === undefined || value === null) return "";
       return value > 0 ? "" : "Current CTC must be greater than 0.";
     case "expectedCTC":
+      if (value === undefined || value === null) return "";
       return value > 0 ? "" : "Expected CTC must be greater than 0.";
     case "noticePeriod":
       return value >= 0 ? "" : "Notice period is required.";
@@ -112,7 +115,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   const isEditMode = Boolean(selectedResume);
 
   const [formData, setFormData] = useState<AddEditCandidate>(INITIAL_FORM);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [submitted, setSubmitted] = useState(false);
   const toast = useRef<Toast>(null);
   
@@ -131,8 +134,8 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   const statusOptions = useMemo(() => {
     if (!createData?.status) return [];
     return createData.status.map(s => ({ 
-      label: s.value, 
-      value: s.lookupKey 
+      label: s.statusName, 
+      value: s.statusId 
     }));
   }, [createData?.status]);
 
@@ -209,14 +212,14 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
 
       setFormData({
         candidateName: selectedResume.candidateName,
-        contactNumber: selectedResume.contactNumber,
-        email: selectedResume.email,
+        contactNumber: selectedResume.contactNumber ?? undefined,
+        email: selectedResume.email ?? undefined,
         recruiterId: selectedResume.recruiterId,
         recruiterName: selectedResume.recruiterName,
         jobRole: selectedResume.jobRole,
         preferredJobLocation: selectedResume.preferredJobLocation || { city: '', country: '' },
-        currentCTC: selectedResume.currentCTC,
-        expectedCTC: selectedResume.expectedCTC,
+        currentCTC: selectedResume.currentCTC ?? undefined,
+        expectedCTC: selectedResume.expectedCTC ?? undefined,
         noticePeriod: selectedResume.noticePeriod,
         experienceYears: selectedResume.experienceYears,
         statusName: selectedResume.statusName,
@@ -232,11 +235,16 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   }, [visible, selectedResume, isEditMode, createData]);
 
   const handleChange = useCallback(
-    (field: keyof AddEditCandidate, value: any) => {
-      setFormData((prev) => ({ ...prev, [field]: value }));
-    },
-    []
-  );
+  (field: keyof AddEditCandidate, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  },
+  [errors]
+);
+
 
   const handleBlur = useCallback(
     (field: keyof AddEditCandidate) => {
@@ -244,6 +252,47 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     },
     []
   );
+
+  const handleBackendErrors = (error: any) => {
+  // Case 1: backend validationErrors array (current backend)
+  if (Array.isArray(error?.details?.validationErrors)) {
+    const fieldErrors: Record<string, string> = {};
+
+    error.details.validationErrors.forEach((err: any) => {
+      if (err.field && err.message) {
+        fieldErrors[err.field] = err.message;
+      }
+    });
+
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(fieldErrors);
+      return;
+    }
+  }
+
+  // Case 2: single-field backend error (future-proof)
+  if (error?.details?.field && error?.message) {
+    setErrors({
+      [error.details.field]: error.message,
+    });
+    return;
+  }
+
+  // Case 3: already-normalized error object
+  if (error?.details?.errors) {
+    setErrors(error.details.errors);
+    return;
+  }
+
+  // Case 4: fallback (non-validation error)
+  toast.current?.show({
+    severity: "error",
+    summary: "Error",
+    detail: error?.message || "Something went wrong",
+    life: 2000,
+  });
+};
+
 
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
@@ -266,19 +315,19 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
       if (isEditMode && selectedResume) {
         const updateData = {
           candidateName: formData.candidateName,
-          contactNumber: formData.contactNumber,
-          email: formData.email,
           recruiterId: formData.recruiterId,
           recruiterName: formData.recruiterName,
           jobRole: formData.jobRole,
           preferredJobLocation: formData.preferredJobLocation,
-          currentCTC: formData.currentCTC,
-          expectedCTC: formData.expectedCTC,
           noticePeriod: formData.noticePeriod,
           experienceYears: formData.experienceYears,
           statusName: formData.statusName,
-          linkedinProfileUrl: formData.linkedinProfileUrl || undefined,
-          notes: formData.notes?.trim() || "",
+          contactNumber: formData.contactNumber ?? null,
+          email: formData.email ?? null,
+          currentCTC: formData.currentCTC ?? null,
+          expectedCTC: formData.expectedCTC ?? null,
+          linkedinProfileUrl: formData.linkedinProfileUrl ?? null,
+          notes: formData.notes ?? null,
         };
 
         await updateCandidate(accessToken, selectedResume.candidateId, updateData);
@@ -307,15 +356,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
       onHide();
     } catch (err: any) {
       console.error("Error saving candidate:", err);
-      toast.current?.show({
-        severity: "error",
-        summary: "Error",
-        detail:
-          err?.response?.data?.message ||
-          err?.message ||
-          "Something went wrong. Please try again.",
-        life: 5000,
-      });
+      handleBackendErrors(err);
     }
   }, [
     formData,
@@ -375,6 +416,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             onBlur={() => handleBlur("contactNumber")}
             error={shouldShowError("contactNumber")}
             colSize="col-12 md:col-4"
+            required={false}
           />
 
           <InputField
@@ -385,6 +427,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             onBlur={() => handleBlur("email")}
             error={shouldShowError("email")}
             colSize="col-12 md:col-4"
+            required={false}
           />
 
           <InputField
@@ -500,6 +543,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             onBlur={() => handleBlur("currentCTC")}
             error={shouldShowError("currentCTC")}
             colSize="col-12 md:col-4"
+            required={false}
           />
 
           <InputNumberField
@@ -510,18 +554,23 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             onBlur={() => handleBlur("expectedCTC")}
             error={shouldShowError("expectedCTC")}
             colSize="col-12 md:col-4"
+            required={false}
           />
 
           <DropdownField
             id="statusName"
             label="Status"
             value={
-              createData?.status.find(s => s.value === formData.statusName)?.lookupKey || null
+              createData?.status.find(
+                s => s.statusName === formData.statusName
+              )?.statusId || null
             }
             options={statusOptions}
             onChange={(e: { value: number }) => {
-              const status = createData?.status.find(s => s.lookupKey === e.value);
-              handleChange("statusName", status?.value || "");
+              const status = createData?.status.find(
+                s => s.statusId === e.value
+              );
+              handleChange("statusName", status?.statusName || "");
             }}
             onBlur={() => handleBlur("statusName")}
             error={shouldShowError("statusName")}
@@ -543,15 +592,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             required={false}
             colSize="col-12 md:col-6"
           />
-
-          {/* Full Width Bottom Section */}
-          <FileUploadField
-            file={formData.resumeFile}
-            onSelect={(file) => handleChange("resumeFile", file)}
-            error={shouldShowError("resumeFile")}
-            colSize="col-12 md:col-6"
-          />
-          
           <InputField
             id="notes"
             label="Notes"
@@ -562,6 +602,122 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             required={false}
             colSize="col-12"
           />
+          {/* Full Width Bottom Section */}
+          <div className="field col-12">
+            <label className="font-bold">
+              Upload Resume (PDF / DOCX)
+            </label>
+
+            <div
+              onDragOver={(e) => {
+                if (formData.resumeFile) return;
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDrop={(e) => {
+                if (formData.resumeFile) return;
+                e.preventDefault();
+                e.stopPropagation();
+
+                const file = e.dataTransfer.files?.[0];
+                if (file) {
+                  handleChange("resumeFile", file);
+                }
+              }}
+              style={{
+                border: "2px dashed #cbd5e1",
+                borderRadius: "8px",
+                padding: "1rem",
+                textAlign: "center",
+                background: "#f8fafc",
+                opacity: formData.resumeFile ? 0.95 : 1
+              }}
+            >
+
+              {/* CASE A: No file */}
+              {!formData.resumeFile && (
+                <>
+                  <p style={{ marginBottom: "0.75rem", color: "#475569", fontSize: "0.875rem" }}>
+                    Drag & drop resume here or browse files
+                  </p>
+
+                  <FileUpload
+                    mode="basic"
+                    name="resume"
+                    accept=".pdf,.docx"
+                    maxFileSize={5 * 1024 * 1024}
+                    auto={false}
+                    customUpload
+                    uploadHandler={() => {}}
+                    chooseLabel="Browse Files"
+                    chooseOptions={{
+                      label: "Browse Files",
+                      className: "p-button-secondary p-button-sm",
+                    }}
+                    onSelect={(e) => {
+                      const selectedFile = e.files?.[0];
+                      if (selectedFile) {
+                        handleChange("resumeFile", selectedFile);
+                      }
+                    }}
+                  />
+                </>
+              )}
+
+              {/* CASE B: File selected */}
+              {formData.resumeFile && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "1rem",
+                    background: "#f0fdf4",
+                    border: "1px solid #86efac",
+                    borderRadius: "6px",
+                    padding: "0.75rem 1rem"
+                  }}
+                >
+                  <div style={{ textAlign: "left" }}>
+                    <strong style={{ color: "#0f172a" }}>
+                      {formData.resumeFile.name}
+                    </strong>
+                    <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                      {(formData.resumeFile.size / 1024 / 1024).toFixed(2)} MB
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleChange("resumeFile", null)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "#fee2e2",
+                      border: "1px solid #fecaca",
+                      borderRadius: "999px",
+                      width: "36px",
+                      height: "36px",
+                      cursor: "pointer"
+                    }}
+                    title="Remove file"
+                  >
+                    <FaTimes style={{ color: "#b91c1c", fontSize: "16px" }} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <small className="text-muted block mt-1">
+              Supported formats: PDF, DOCX (max 5MB)
+            </small>
+
+            {shouldShowError("resumeFile") && (
+              <small className="p-error">{shouldShowError("resumeFile")}</small>
+            )}
+          </div>
+          
         </div>
       </Dialog>
     </>
@@ -572,7 +728,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
 interface InputFieldProps {
   id: string;
   label: string;
-  value: string;
+  value?: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur: () => void;
   placeholder?: string;
@@ -588,7 +744,7 @@ const InputField = ({ id, label, value, onChange, onBlur, placeholder, error, re
     </label>
     <InputText 
       id={id}
-      value={value} 
+      value={value ?? ""}
       onChange={onChange} 
       onBlur={onBlur} 
       placeholder={placeholder} 
@@ -608,10 +764,11 @@ const DropdownField = ({
   placeholder, 
   error,
   disabled = false,
+  required = true,
   colSize = "col-12 md:col-6"
 }: DropdownFieldProps) => (
   <div className={`field ${colSize}`}>
-    <label htmlFor={id} className="font-bold">{label} *</label>
+    <label htmlFor={id} className="font-bold">{label} {required && "*"}</label>
     <Dropdown 
       id={id}
       value={value} 
@@ -629,55 +786,26 @@ const DropdownField = ({
 interface InputNumberFieldProps {
   id: string;
   label: string;
-  value: number | null;
+  value?: number | null;
   onChange: (val: number | null) => void;
   onBlur: () => void;
   prefix?: string;
   error?: string;
   colSize?: string;
+  required?: boolean;
 }
 
-const InputNumberField = ({ id, label, value, onChange, onBlur, prefix, error, colSize = "col-12 md:col-6" }: InputNumberFieldProps) => (
+const InputNumberField = ({ id, label, value, onChange, onBlur, prefix, error, required=true, colSize = "col-12 md:col-6" }: InputNumberFieldProps) => (
   <div className={`field ${colSize}`}>
-    <label htmlFor={id} className="font-bold">{label} *</label>
+    <label htmlFor={id} className="font-bold">{label} {required && "*"}</label>
     <InputNumber 
       id={id}
-      value={value} 
+      value={value ?? null}
       onValueChange={(e) => onChange(e.value ?? null)} 
       onBlur={onBlur} 
       prefix={prefix} 
       className={error ? "p-invalid" : ""} 
     />
-    {error && <small className="p-error">{error}</small>}
-  </div>
-);
-
-interface FileUploadFieldProps {
-  file: File | null;
-  onSelect: (file: File) => void;
-  error?: string;
-  colSize?: string;
-}
-
-const FileUploadField = ({ file, onSelect, error, colSize = "col-12 md:col-6" }: FileUploadFieldProps) => (
-  <div className={`field ${colSize}`}>
-    <label className="font-bold">Upload Resume (PDF or DOCX)</label>
-    <FileUpload
-      mode="basic"
-      name="resume"
-      accept=".pdf,.docx"
-      maxFileSize={5 * 1024 * 1024}
-      auto={false}
-      customUpload
-      onSelect={(e) => e.files[0] && onSelect(e.files[0])}
-      chooseLabel="Select File"
-      chooseOptions={{
-        label: "Upload File",
-        className: "p-button-danger p-button-sm",
-      }}
-      className={error ? "p-invalid" : ""}
-    />
-    {file && <small className="p-success">File selected: {file.name}</small>}
     {error && <small className="p-error">{error}</small>}
   </div>
 );

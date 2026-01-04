@@ -180,7 +180,7 @@ export default function SignupForm() {
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ textAlign: "center" }}>
           <i className="pi pi-spin pi-spinner" style={{ fontSize: "2rem" }}></i>
-          <p style={{ marginTop: "1rem", color: "#6b7280" }}>Loading...</p>
+          <p style={{ marginTop: "1rem", color: "#374151" }}>Loading...</p>
         </div>
       </div>
     );
@@ -203,18 +203,17 @@ export default function SignupForm() {
     background: "#fff",
   };
 
-  const iconStyle: React.CSSProperties = { marginRight: "8px", color: "#6b7280", fontSize: "14px" };
+  const iconStyle: React.CSSProperties = { marginRight: "8px", color: "#374151", fontSize: "14px" };
   const fieldContainerStyle: React.CSSProperties = { marginBottom: "12px" };
 
   return (
     <div
       style={{
         minHeight: "100vh",
-        padding: "20px",
+        padding: "5px",
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
-        paddingTop: "40px",
       }}
     >
       {/* ✅ Toast Component */}
@@ -222,7 +221,7 @@ export default function SignupForm() {
 
       <div style={{ maxWidth: "1200px" }}>
         {/* Header */}
-        <div style={{ marginBottom: "12px" }}>
+        <div style={{ marginBottom: "6px" }}>
           <h1
             style={{
               fontSize: "24px",
@@ -242,7 +241,7 @@ export default function SignupForm() {
         <div
           style={{
             background: "white",
-            padding: "20px",
+            padding: "10px",
             borderRadius: "8px",
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
             maxWidth: "900px",
