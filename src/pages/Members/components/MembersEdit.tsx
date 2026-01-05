@@ -8,11 +8,10 @@ import { Checkbox } from 'primereact/checkbox';
 import { classNames } from 'primereact/utils';
 import { Toast } from 'primereact/toast';
 import { FaCheck, FaPlus, FaTrash } from 'react-icons/fa';
-import { patchMember } from '../services/memberService';
+import { patchMember, getMemberById } from '../services/memberService';
 import { useAuth } from '../../../shared/auth/AuthContext';
-import type { Member, Location, ClientOption, MemberPatchPayload } from '../types/memberTypes';
+import type { Member, MemberPatchPayload, MemberFormData } from '../types/memberTypes';
 import DialogButton from "../../../shared/DialogAddEditButton";
-
 
 interface Skill {
   skillName: string;
@@ -37,10 +36,7 @@ interface Props {
   onHide: () => void;
   selectedMember: Member | null;
   onSuccess: () => void;
-  clients: ClientOption[];
-  locations: Location[];
-  designations: string[];
-  skillOptions: string[];
+  formData: MemberFormData;
 }
 
 const proficiencyLevels = [
@@ -55,86 +51,114 @@ const MemberEdit: React.FC<Props> = ({
   onHide,
   selectedMember,
   onSuccess,
-  clients,
-  locations,
-  designations,
-  skillOptions,
+  formData
 }) => {
   const { accessToken } = useAuth();
   const [form, setForm] = useState<Partial<MemberPatchPayload>>({});
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [formSkills, setFormSkills] = useState<Skill[]>([]);
+  const [loading, setLoading] = useState(false);
   const toast = useRef<Toast>(null);
 
-  // Load member data when dialog opens
   useEffect(() => {
-    if (visible && selectedMember) {
-      // Find clientId from clientName
-      const selectedClient = clients.find(c => c.clientName === selectedMember.clientName);
-      
+  if (!visible || !selectedMember) return;
+
+  const fetchMember = async () => {
+    try {
+      setLoading(true);
+      const res = await getMemberById(accessToken, selectedMember.memberId);
+
+      const m = res.data;
+
       setForm({
-        memberName: selectedMember.memberName,
-        memberContact: selectedMember.memberContact,
-        email: selectedMember.email,
-        designation: selectedMember.designation,
-        clientId: selectedClient?.clientId,
-        organisation: selectedMember.organisation || '',
-        isRecruiter: selectedMember.isRecruiter,
-        isInterviewer: selectedMember.isInterviewer,
-        interviewerCapacity: selectedMember.interviewerCapacity || 0,
+        memberName: m.memberName,
+        memberContact: m.memberContact,
+        email: m.email,
+        designationId: m.designationId,
+        vendorId: m.vendorId ?? null,
+        clientId: m.clientId,
+        organisation: m.organisation ?? '',
+        isRecruiter: m.isRecruiter,
+        isInterviewer: m.isInterviewer,
+        interviewerCapacity: m.interviewerCapacity ?? 0,
         location: {
-          city: selectedMember.location?.city || '',
-          country: selectedMember.location?.country || '',
+          city: m.location.city,
+          country: m.location.country,
         },
       });
 
-      // Map skills
       setFormSkills(
-        selectedMember.skills?.length > 0
-          ? selectedMember.skills.map(skill => ({
-              skillName: skill.skillName,
-              proficiencyLevel: skill.proficiencyLevel,
-              yearsOfExperience: skill.yearsOfExperience,
-            }))
-          : []
+        m.skills.map(s => ({
+          skillName: s.skillName,
+          proficiencyLevel: s.proficiencyLevel,
+          yearsOfExperience: s.yearsOfExperience,
+        }))
       );
-      setErrors({});
+    } catch (e) {
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Failed to load member details',
+      });
+    } finally {
+      setLoading(false);
     }
-  }, [visible, selectedMember, clients]);
+  };
+
+  fetchMember();
+}, [visible, selectedMember?.memberId]);
 
   // Get unique countries
   const availableCountries = useMemo(() => {
-    const countries = locations.map(loc => loc.country);
+    const countries = formData.locations.map(loc => loc.country);
     return Array.from(new Set(countries)).sort();
-  }, [locations]);
+  }, [formData.locations]);
 
   // Get cities for selected country
   const availableCities = useMemo(() => {
     if (!form.location?.country) return [];
-    const cities = locations
+    const cities = formData.locations
       .filter(loc => loc.country === form.location?.country)
       .map(loc => loc.city);
     return Array.from(new Set(cities)).sort();
-  }, [form.location?.country, locations]);
+  }, [form.location?.country, formData.locations]);
 
   // Prepare dropdown options
   const clientOptions = useMemo(
-    () => clients.map(client => ({
-      label: client.clientName,
-      value: client.clientId,
-    })),
-    [clients]
+    () =>
+      formData.clients.map((client) => ({
+        label: client.clientName,
+        value: client.clientId,
+      })),
+    [formData.clients]
   );
 
   const designationOptions = useMemo(
-    () => designations.map(d => ({ label: d, value: d })),
-    [designations]
+    () =>
+      formData.designations.map((d) => ({
+        label: d.value,
+        value: d.lookupKey,
+      })),
+    [formData.designations]
   );
 
   const skillNameOptions = useMemo(
-    () => skillOptions.map(s => ({ label: s, value: s })),
-    [skillOptions]
+    () =>
+      formData.skills.map((s) => ({
+        label: s.skillName,
+        value: s.skillName,
+      })),
+    [formData.skills]
+  );
+
+  const vendorOptions = useMemo(
+    () =>
+      formData.vendors.map((v) => ({
+        label: v.vendorName,
+        value: v.vendorId,
+      })),
+    [formData.vendors]
   );
 
   // Update form field
@@ -142,26 +166,33 @@ const MemberEdit: React.FC<Props> = ({
     field: K,
     value: MemberPatchPayload[K]
   ) => {
-    setForm(prev => {
+    setForm((prev) => {
       const newForm = { ...prev, [field]: value };
 
-      // Reset city if country changes
-      if (field === 'location' && value && typeof value === 'object' && 'country' in value) {
+      if (
+        field === 'location' &&
+        value &&
+        typeof value === 'object' &&
+        'country' in value
+      ) {
         const currentCity = prev.location?.city;
+
         if (currentCity && value.country) {
-          const isCityValid = locations
-            .filter(loc => loc.country === value.country)
-            .some(loc => loc.city === currentCity);
+          const isCityValid = formData.locations
+            .filter((loc) => loc.country === value.country)
+            .some((loc) => loc.city === currentCity);
+
           if (!isCityValid) {
             newForm.location = { ...value, city: '' };
           }
         }
       }
+
       return newForm;
     });
 
     if (errors[field as keyof FormErrors]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   };
 
@@ -213,7 +244,7 @@ const MemberEdit: React.FC<Props> = ({
       isValid = false;
     }
 
-    if (!form.designation) {
+    if (!form.designationId) {
       newErrors.designation = 'Designation is required';
       isValid = false;
     }
@@ -223,7 +254,6 @@ const MemberEdit: React.FC<Props> = ({
       isValid = false;
     }
 
-
     setErrors(newErrors);
 
     if (!isValid) {
@@ -231,7 +261,7 @@ const MemberEdit: React.FC<Props> = ({
         severity: 'error',
         summary: 'Validation Error',
         detail: 'Please correct the highlighted fields',
-        life: 3000,
+        life: 2000,
       });
     }
 
@@ -246,21 +276,17 @@ const MemberEdit: React.FC<Props> = ({
       memberName: form.memberName!.trim(),
       memberContact: form.memberContact!.trim(),
       email: form.email!.trim(),
-      designation: form.designation!,
-      clientId: form.clientId,
-      organisation: form.organisation?.trim() || '',
-      isRecruiter: form.isRecruiter || false,
-      isInterviewer: form.isInterviewer || false,
-      interviewerCapacity: form.interviewerCapacity || 0,
-      location: {
-        city: form.location!.city,
-        country: form.location!.country,
-      },
-      skills: formSkills.filter(
-        skill => skill.skillName && skill.proficiencyLevel
-      ),
+      designationId: form.designationId!,
+      isRecruiter: Boolean(form.isRecruiter), // ← Explicit conversion
+      isInterviewer: Boolean(form.isInterviewer),
+      interviewerCapacity: form.isInterviewer ? form.interviewerCapacity : null,
+      vendorId: Boolean(form.isRecruiter) ? (form.vendorId ?? null) : null,
+      clientId: form.clientId ?? null,
+      organisation: form.organisation?.trim(),
+      location: form.location!,
+      skills: formSkills.filter(s => s.skillName && s.proficiencyLevel),
     };
-
+  
     setSubmitting(true);
     try {
       const response = await patchMember(accessToken, selectedMember.memberId, payload);
@@ -268,7 +294,7 @@ const MemberEdit: React.FC<Props> = ({
         severity: 'success',
         summary: 'Success',
         detail: response.message || 'Member updated successfully',
-        life: 3000,
+        life: 2000,
       });
       onSuccess();
       onHide();
@@ -277,7 +303,7 @@ const MemberEdit: React.FC<Props> = ({
       severity: 'error',
       summary: 'Validation Error',
       detail: error.message || 'Please fix highlighted fields',
-      life: 3000,
+      life: 2000,
     });
   } finally {
       setSubmitting(false);
@@ -371,9 +397,9 @@ const MemberEdit: React.FC<Props> = ({
                 Designation *
               </label>
               <Dropdown
-                value={form.designation}
+                value={form.designationId}
                 options={designationOptions}
-                onChange={e => updateField('designation', e.value)}
+                onChange={e => updateField('designationId', e.value)}
                 placeholder="Select Designation"
                 className={classNames({ 'p-invalid': errors.designation })}
                 style={{ width: '100%' }}
@@ -456,38 +482,60 @@ const MemberEdit: React.FC<Props> = ({
             </div>
 
             {/* Checkboxes */}
-            <div style={{ display: 'flex', gap: '1.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Checkbox
-                  inputId="isRecruiter"
-                  checked={form.isRecruiter || false}
-                  onChange={e => updateField('isRecruiter', e.checked || false)}
-                />
-                <label htmlFor="isRecruiter">Is Recruiter</label>
-              </div>
+<div style={{ display: 'flex', gap: '1.5rem' }}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+    <Checkbox
+      inputId="isRecruiter"
+      checked={!!form.isRecruiter}
+      onChange={(e) => updateField('isRecruiter', e.checked)}
+    />
+    <label htmlFor="isRecruiter">Is Recruiter</label>
+  </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Checkbox
-                  inputId="isInterviewer"
-                  checked={form.isInterviewer || false}
-                  onChange={e => updateField('isInterviewer', e.checked || false)}
-                />
-                <label htmlFor="isInterviewer">Can Take Interviews</label>
-              </div>
-            </div>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+    <Checkbox
+      inputId="isInterviewer"
+      checked={!!form.isInterviewer}
+      onChange={(e) => updateField('isInterviewer', e.checked)}
+    />
+    <label htmlFor="isInterviewer">Can Take Interviews</label>
+  </div>
+</div>
 
-            {/* Interviewer Capacity */}
+
+            {/* Vendor (conditional) */}
+            {form.isRecruiter && (
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
+                  Vendor
+                </label>
+                <Dropdown
+                  value={form.vendorId}
+                  options={vendorOptions}
+                  onChange={e => updateField('vendorId', e.value)}
+                  placeholder="Select Vendor"
+                  showClear
+                  style={{ width: '100%' }}
+                />
+              </div>
+            )}
+
+            {/* Interviewer Capacity (conditional) */}
             {form.isInterviewer && (
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
                   Interviews Per Day (Capacity)
                 </label>
                 <InputNumber
-                  value={form.interviewerCapacity || 0}
-                  onValueChange={e => updateField('interviewerCapacity', e.value || 0)}
+                  value={form.interviewerCapacity ?? null}
+                  onValueChange={(e) =>
+                    setForm(prev => ({
+                      ...prev,
+                      interviewerCapacity: e.value ?? null,
+                    }))
+                  }
                   min={1}
                   max={10}
-                  className={classNames({ 'p-invalid': errors.interviewerCapacity })}
                   style={{ width: '100%' }}
                 />
                 {errors.interviewerCapacity && (
