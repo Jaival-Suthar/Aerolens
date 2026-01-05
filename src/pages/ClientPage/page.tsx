@@ -89,6 +89,7 @@ const Client: React.FC = () => {
   const closeAddEditDialog = useCallback(() => {
     setDialogVisible(false);
     setEditClient(null);
+    setSelectedClient(null);
   }, []);
 
   const openEditDialog = useCallback((client: ClientType) => {
@@ -154,6 +155,7 @@ const Client: React.FC = () => {
       }
 
       setRefreshTrigger((prev) => prev + 1);
+      setSelectedClient(null);
       closeAddEditDialog();
     } catch (error: any) {
       console.error("Save client error:", error);
