@@ -122,6 +122,7 @@ const ClientContactsView: React.FC<ClientContactsViewProps> = ({ selectedClient,
 
       setDialogVisible(false);
       setEditContact(null);
+      setSelectedContact(null);
     } catch (error: any) {
       if (error?.error === "VALIDATION_ERROR") {
         throw error; // 🔥 dialog highlights fields
@@ -303,6 +304,7 @@ const ClientContactsView: React.FC<ClientContactsViewProps> = ({ selectedClient,
             onHide={() => {
               setDialogVisible(false);
               setEditContact(null);
+              setSelectedContact(null);
             }}
             onSave={handleSaveContactWrapper}
             mode={dialogMode}
