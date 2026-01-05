@@ -1,6 +1,7 @@
-import { SignupFormData, SignupResponse } from "../types/signuptypes";
+import { SignupFormData, SignupResponse, MemberCreateDataResponse } from "../types/signuptypes";
 const API_URL = import.meta.env.VITE_BASE_URL;
-
+import { normalizeApiError } from "../../../utils/apiErrorHandler";
+import { ApiError } from "../../../types/apiError";
 // Helper to create headers with token if provided
 const makeHeaders = (accessToken?: string): HeadersInit => {
   const headers: HeadersInit = { "Content-Type": "application/json" };
@@ -13,8 +14,6 @@ export const registerUser = async (
   formData: SignupFormData,
   accessToken: string 
 ): Promise<SignupResponse> => {
-  const start = Date.now();
-
   try {
     const headers = makeHeaders(accessToken);
 
@@ -26,87 +25,45 @@ export const registerUser = async (
         memberName: formData.fullName,
         memberContact: formData.contactNumber,
         email: formData.email,
-        password: formData.password, // send actual password in body to API
-        designation: formData.designation,
+        password: formData.password,
+        designationId: formData.designationId,
+        vendorId: formData.vendorId ?? null,  
         isRecruiter: formData.isRecruiter,
         isInterviewer: formData.isInterviewer,
       }),
     });
 
-    // try to parse body safely
-    let data: any = null;
-    try {
-      data = await response.clone().json();
-    } catch (parseErr) {
-      const text = await response.clone().text().catch(() => "<unreadable>");
-      data = { rawText: text };
-    }
-
+    // ✅ Use shared error handler
     if (!response.ok) {
-      // Handle validation error format
-      if (data && data.error === "VALIDATION_ERROR" && Array.isArray(data.details)) {
-        const fieldErrors = data.details
-          .map((d: { field: string; message: string }) => `${d.field}: ${d.message}`)
-          .join(", ");
-        throw new Error(fieldErrors || data.message || "Validation failed");
-      }
-
-      if (data?.error === "EMAIL_EXISTS") {
-        throw new Error("Email is already registered.");
-      }
-
-      if (data?.error === "TOKEN_MISSING") {
-        throw new Error("Session expired. Please try again.");
-      }
-
-      throw new Error(data?.message || "Registration failed");
-
+      const error = await normalizeApiError(response);
+      throw error; // Pass backend error as-is
     }
 
-   
+    const data = await response.json();
     return data as SignupResponse;
+    
   } catch (error: any) {
-    throw error;
+    throw error; // Re-throw to preserve error structure
   }
 };
 
 // Fetch Designations (with verbose logs)
-export const fetchDesignations = async (
-  accessToken: string | null
-): Promise<string[]> => {
-  const start = Date.now();
+export const fetchMemberCreateData = async (
+  accessToken: string
+): Promise<MemberCreateDataResponse["data"]> => {
+  const headers = makeHeaders(accessToken);
 
-  try {
-    const headers = makeHeaders(accessToken || undefined);
+  const response = await fetch(`${API_URL}/member/create-data`, {
+    method: "GET",
+    headers,
+    credentials: "include",
+  });
 
-
-    const url = `${API_URL}/lookup?page=1&limit=100`;
- 
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers,
-      credentials: "include",
-    });
-
-    
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "<unreadable>");
-     
-      throw new Error(`Failed to fetch designations: ${response.status} - ${text}`);
-    }
-
-    const result = await response.json();
-    
-
-    const designations = (result.data || [])
-      .filter((item: any) => item.tag === "designation")
-      .map((item: any) => item.value);
-
-   
-    return designations;
-  } catch (error: any) {
+  if (!response.ok) {
+    const error = await normalizeApiError(response);
     throw error;
   }
+
+  const result = await response.json();
+  return result.data;
 };
