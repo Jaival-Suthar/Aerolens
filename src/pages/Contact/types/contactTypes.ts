@@ -4,7 +4,7 @@
  * Core domain entities and type definitions for contacts and clients.
  * Consistent naming. No duplication. Use strict types.
  */
-
+import type { ApiError } from "../../../types/apiError";
 export interface Contact {
   readonly clientContactId?: number; // Prefer clientContactId, fallback to id
   readonly contactId?: number;       // Backwards compatibility in codebase
@@ -153,7 +153,7 @@ export interface UseContactOperationsReturn {
 export interface UseContactsByClientReturn {
   contacts: Contact[];
   loading: boolean;
-  error: string | null;
+  error: ApiError | null;
   clearError: () => void;
 }
 

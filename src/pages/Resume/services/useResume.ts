@@ -133,19 +133,23 @@ const buildCandidateFormData = (candidate: AddEditCandidate): FormData => {
   fd.append("candidateName", candidate.candidateName);
   fd.append("recruiterName", candidate.recruiterName ?? "");
   fd.append("jobRole", candidate.jobRole);
-  if (candidate.preferredJobLocation) {
-    fd.append("preferredJobLocation[city]", candidate.preferredJobLocation.city);
-    fd.append("preferredJobLocation[country]", candidate.preferredJobLocation.country);
+  if (candidate.expectedLocation) {
+    fd.append("expectedLocation[city]", candidate.expectedLocation.city);
+    fd.append("expectedLocation[country]", candidate.expectedLocation.country);
+  }
+
+  if (candidate.currentLocation) {
+    fd.append("currentLocation[city]", candidate.currentLocation.city);
+    fd.append("currentLocation[country]", candidate.currentLocation.country);
   }
   fd.append("noticePeriod", String(candidate.noticePeriod));
   fd.append("experienceYears", String(candidate.experienceYears));
-  if (candidate.contactNumber?.trim()) {
-    fd.append("contactNumber", candidate.contactNumber);
-  }
+  const contact = candidate.contactNumber?.trim();
+  if (contact) fd.append("contactNumber", contact);
 
-  if (candidate.email?.trim()) {
-    fd.append("email", candidate.email);
-  }
+  const email = candidate.email?.trim();
+  if (email) fd.append("email", email);
+
     if (typeof candidate.currentCTC === "number") {
     fd.append("currentCTC", String(candidate.currentCTC));
   }

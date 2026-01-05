@@ -6,27 +6,19 @@ import type {
   ClientDetailsApiResponse,
   ContactPayload,
 } from "../types/contactTypes";
+import type { ApiError } from "../../../types/apiError";
+import { normalizeApiError } from "../../../utils/apiErrorHandler";
 
 export const useContact = () => {
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
   const API_URL = import.meta.env.VITE_BASE_URL;
 
-  // Helper: Build headers dynamically
+  // ---------------------- HEADERS ----------------------
   const makeHeaders = (accessToken?: string) => {
     const headers: HeadersInit = { "Content-Type": "application/json" };
     if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
     return headers;
-  };
-
-  const handleApiResponse = async <T>(
-    response: Response
-  ): Promise<ApiResponse<T>> => {
-    const data: ApiResponse<T> = await response.json();
-    if (!response.ok)
-      throw new Error(data.message || `HTTP error! status: ${response.status}`);
-    //console.log("API Response Data:", data);
-    return data;
   };
 
   // ---------------------- GET CLIENT DETAILS ----------------------
@@ -35,30 +27,24 @@ export const useContact = () => {
       accessToken: string | null,
       clientId: number
     ): Promise<ApiResponse<ClientDetailsApiResponse>> => {
-      //console.log("Fetching client details for clientId:", clientId);
       setLoading(true);
       setError(null);
-      try {
-        if (!clientId) throw new Error("Client ID is required");
 
+      try {
         const response = await fetch(`${API_URL}/client/${clientId}`, {
           method: "GET",
           headers: makeHeaders(accessToken || undefined),
           credentials: "include",
         });
 
-        const contentType = response.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-          throw new Error(
-            `Expected JSON but got ${contentType || "unknown content type"}`
-          );
+        if (!response.ok) {
+          const apiError = await normalizeApiError(response);
+          throw apiError;
         }
 
-        return await handleApiResponse<ClientDetailsApiResponse>(response);
+        return response.json();
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Unknown error";
-        setError(errorMessage);
+        setError(err as ApiError);
         throw err;
       } finally {
         setLoading(false);
@@ -75,6 +61,7 @@ export const useContact = () => {
     ): Promise<ApiResponse<Contact>> => {
       setLoading(true);
       setError(null);
+
       try {
         const response = await fetch(`${API_URL}/contact`, {
           method: "POST",
@@ -82,11 +69,15 @@ export const useContact = () => {
           credentials: "include",
           body: JSON.stringify(contactData),
         });
-        return await handleApiResponse<Contact>(response);
+
+        if (!response.ok) {
+          const apiError = await normalizeApiError(response);
+          throw apiError;
+        }
+
+        return response.json();
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Unknown error";
-        setError(errorMessage);
+        setError(err as ApiError);
         throw err;
       } finally {
         setLoading(false);
@@ -103,20 +94,16 @@ export const useContact = () => {
     ): Promise<ApiResponse<Contact>> => {
       setLoading(true);
       setError(null);
+
       try {
         const contactId = (contactData as Partial<Contact>).clientContactId;
-        if (!contactId)
-          throw new Error("Contact ID is required for update operation");
 
-        const updatePayload: Partial<ContactPayload> = {};
-        if (contactData.contactPersonName !== undefined)
-          updatePayload.contactPersonName = contactData.contactPersonName;
-        if (contactData.designation !== undefined)
-          updatePayload.designation = contactData.designation;
-        if (contactData.phone !== undefined)
-          updatePayload.phone = contactData.phone;
-        if (contactData.email !== undefined)
-          updatePayload.email = contactData.email;
+        const updatePayload: Partial<ContactPayload> = {
+          contactPersonName: contactData.contactPersonName,
+          designation: contactData.designation,
+          phone: contactData.phone,
+          email: contactData.email,
+        };
 
         const response = await fetch(`${API_URL}/contact/${contactId}`, {
           method: "PATCH",
@@ -125,11 +112,14 @@ export const useContact = () => {
           body: JSON.stringify(updatePayload),
         });
 
-        return await handleApiResponse<Contact>(response);
+        if (!response.ok) {
+          const apiError = await normalizeApiError(response);
+          throw apiError;
+        }
+
+        return response.json();
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Unknown error";
-        setError(errorMessage);
+        setError(err as ApiError);
         throw err;
       } finally {
         setLoading(false);
@@ -146,21 +136,22 @@ export const useContact = () => {
     ): Promise<ApiResponse<void>> => {
       setLoading(true);
       setError(null);
-      try {
-        if (!clientContactId)
-          throw new Error("Contact ID is required for delete operation");
 
+      try {
         const response = await fetch(`${API_URL}/contact/${clientContactId}`, {
           method: "DELETE",
           headers: makeHeaders(accessToken || undefined),
           credentials: "include",
         });
 
-        return await handleApiResponse<void>(response);
+        if (!response.ok) {
+          const apiError = await normalizeApiError(response);
+          throw apiError;
+        }
+
+        return response.json();
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Unknown error";
-        setError(errorMessage);
+        setError(err as ApiError);
         throw err;
       } finally {
         setLoading(false);
@@ -168,37 +159,34 @@ export const useContact = () => {
     },
     [API_URL]
   );
+
   // ---------------------- GET DESIGNATIONS ----------------------
   const getDesignations = useCallback(
     async (accessToken: string | null): Promise<string[]> => {
       setLoading(true);
       setError(null);
+
       try {
         const response = await fetch(`${API_URL}/lookup?page=1&limit=100`, {
           method: "GET",
           headers: makeHeaders(accessToken || undefined),
           credentials: "include",
         });
-  
-        const contentType = response.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-          throw new Error(
-            `Expected JSON but got ${contentType || "unknown content type"}`
-          );
+
+        if (!response.ok) {
+          const apiError = await normalizeApiError(response);
+          throw apiError;
         }
-  
+
         const data = await response.json();
-        if (!data.success) throw new Error(data.message || "Failed to fetch");
-  
-        // Filter only designations
-        const designations = data.data
-          .filter((item: any) => item.tag === "designation")
-          .map((item: any) => item.value);
-  
-        return designations || [];
+
+        return (
+          data?.data
+            ?.filter((item: any) => item.tag === "designation")
+            .map((item: any) => item.value) ?? []
+        );
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Unknown error";
-        setError(errorMessage);
+        setError(err as ApiError);
         throw err;
       } finally {
         setLoading(false);
@@ -206,7 +194,7 @@ export const useContact = () => {
     },
     [API_URL]
   );
-  
+
   const clearError = useCallback(() => setError(null), []);
 
   return {
@@ -216,8 +204,8 @@ export const useContact = () => {
     updateContact,
     getClientDetails,
     deleteContact,
+    getDesignations,
     clearError,
-    getDesignations
   };
 };
 

@@ -50,8 +50,15 @@ const ALL_COLUMNS = [
     filter: true
   },
   {
-    field: "preferredJobLocation.city",
-    header: "Location",
+    field: "currentLocation.city",
+    header: "Current Working Location",
+    body: "formatCurrentLocation",
+    sortable: true,
+    filter: true
+  },
+  {
+    field: "expectedLocation.city",
+    header: "Expected Working Location",
     body: "formatLocation",
     sortable: true,
     filter: true
@@ -108,7 +115,7 @@ const ALL_COLUMNS = [
 const DEFAULT_COLUMN_FIELDS = [
   "candidateName",
   "contact",
-  "preferredJobLocation.city",
+  "expectedLocation.city",
   "jobRole",
   "experienceYears",
   "statusName"
@@ -143,7 +150,8 @@ const ResumeTable: React.FC = () => {
   candidateName: { value: null, matchMode: FilterMatchMode.CONTAINS },
   recruiterName: { value: null, matchMode: FilterMatchMode.CONTAINS },
   recruiterContact: { value: null, matchMode: FilterMatchMode.CONTAINS },
-  "preferredJobLocation.city": { value: null, matchMode: FilterMatchMode.CONTAINS },
+  "expectedLocation.city": { value: null, matchMode: FilterMatchMode.CONTAINS },
+  "currentLocation.city": { value: null, matchMode: FilterMatchMode.CONTAINS },
   jobRole: { value: null, matchMode: FilterMatchMode.CONTAINS },
   statusName: { value: null, matchMode: FilterMatchMode.CONTAINS },
   contactNumber: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -225,8 +233,8 @@ const ResumeTable: React.FC = () => {
       return `${candidate.contactNumber || "-"} | ${candidate.email || "-"}`;
 
     case "formatLocation":
-      const city = candidate.preferredJobLocation?.city;
-      const country = candidate.preferredJobLocation?.country;
+      const city = candidate.expectedLocation?.city;
+      const country = candidate.expectedLocation?.country;
       return city || country ? `${city}, ${country}` : "-";
 
     case "linkedInTemplate":
@@ -385,8 +393,17 @@ const recruiterContactTemplate = (row: Candidate) => {
 };
 
 const formatLocation = (row: Candidate) => {
-  const city = row.preferredJobLocation?.city || "";
-  const country = row.preferredJobLocation?.country || "";
+  const city = row.expectedLocation?.city || "";
+  const country = row.expectedLocation?.country || "";
+
+  if (!city && !country) return "-";
+
+  return `${city}, ${country}`;
+};
+
+const formatCurrentLocation = (row: Candidate) => {
+  const city = row.currentLocation?.city || "";
+  const country = row.currentLocation?.country || "";
 
   if (!city && !country) return "-";
 
@@ -545,8 +562,10 @@ const settingsItems = [
           'email', 
           'recruiterName', 
           'jobRole',
-          'preferredJobLocation.city',
-          'preferredJobLocation.country',
+          'expectedLocation.city',
+          'expectedLocation.country',
+          'currentLocation.city',
+          'currentLocation.country',
           'statusName',
           'currentCTC',
           'expectedCTC',
@@ -565,6 +584,7 @@ const settingsItems = [
           if (col.body === "candidateContactTemplate") bodyTemplate = candidateContactTemplate;
           if (col.body === "formatLocation") bodyTemplate = formatLocation;
           if (col.body === "linkedInTemplate") bodyTemplate = linkedInTemplate;
+          if (col.body === "formatCurrentLocation") bodyTemplate = formatCurrentLocation;
 
           return (
             <Column
