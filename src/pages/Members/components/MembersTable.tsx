@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-
+import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
 import ExportExcelButton from "../../../shared/ExportExcelButton";
 import SearchButton from "../../../shared/SearchButton";
-
+import SignupForm from "../../Signup/components/SignupForm";
 import { useSearchParams } from "react-router-dom";
 import { Member, Location, ClientOption } from "../types/memberTypes";
 import { getMembers, deleteMember, fetchMemberLookupData, getClients } from "../services/memberService";
@@ -28,7 +28,7 @@ const MembersTable: React.FC = () => {
 
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
+  const [showCreateUser, setShowCreateUser] = useState(false);
   const [loading, setLoading] = useState(false);
 
 
@@ -79,7 +79,7 @@ const MembersTable: React.FC = () => {
       severity: 'success',
       summary: 'Success',
       detail: message,
-      life: 4000
+      life: 2000
     });
   };
 
@@ -88,8 +88,11 @@ const MembersTable: React.FC = () => {
       severity: 'error',
       summary: 'Error',
       detail: message,
-      life: 5000
+      life: 2000
     });
+  };
+  const handleAddNew = () => {
+    setShowCreateUser(true);
   };
 
   /** ------------------- Load Data ------------------- */
@@ -137,6 +140,10 @@ const MembersTable: React.FC = () => {
     setShowEditDialog(false);
     loadMembers();
   };
+  const handleCreateSuccess = () => {
+  setShowCreateUser(false);
+  loadMembers(); // refresh table
+};
 
   const handleDeleteSuccess = async () => {
     if (!selectedMember) return;
@@ -268,8 +275,7 @@ const MembersTable: React.FC = () => {
           />
 
           <ExportExcelButton dtRef={dt} />
-
-          {/* Removed AddButton */}
+          <AddButton onClick={handleAddNew} />
           <EditButton onClick={handleEdit} disabled={!selectedMember} />
           <DeleteButton onClick={handleDelete} disabled={!selectedMember} />
         </div>
@@ -333,12 +339,17 @@ const MembersTable: React.FC = () => {
       />
 
         <MemberDelete
-            visible={showDeleteDialog}
-            onHide={() => setShowDeleteDialog(false)}
-            selectedMember={selectedMember}
-            onDelete={handleDeleteSuccess}   // after API success, reload & close
-            loading={loading}
-            />
+          visible={showDeleteDialog}
+          onHide={() => setShowDeleteDialog(false)}
+          selectedMember={selectedMember}
+          onDelete={handleDeleteSuccess}   // after API success, reload & close
+          loading={loading}
+        />
+        <SignupForm
+          visible={showCreateUser}
+          onHide={() => setShowCreateUser(false)}
+          onSuccess={handleCreateSuccess}
+        />
     </>
   );
 };

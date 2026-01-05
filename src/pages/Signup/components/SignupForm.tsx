@@ -18,9 +18,11 @@ const PASSWORD_ERROR_MESSAGE =
 export default function SignupForm({
   visible,
   onHide,
+  onSuccess,
 }: {
   visible: boolean;
   onHide: () => void;
+  onSuccess?: () => void
 }) {
   const { accessToken, isAuthenticated } = useAuth();
   const toast = useRef<Toast>(null);
@@ -138,7 +140,10 @@ export default function SignupForm({
         detail: res.message,
       });
 
-      if (res.success) onHide();
+      if (res.success) {
+        onSuccess?.();
+        onHide();
+      }
     } finally {
       setLoading(false);
     }
