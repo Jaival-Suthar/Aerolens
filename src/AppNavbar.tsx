@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef, useState  } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Menubar } from "primereact/menubar";
 import { Button } from "primereact/button";
@@ -17,12 +17,13 @@ import {
 } from "react-icons/fa";
 import { useProfileStore } from "./shared/store/profile";
 import Logo from "./assets/Logo.webp";
+import SignupForm from "./pages/Signup/components/SignupForm";
 
 const AppNavbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toggleSidebar } = useProfileStore();
-
+  const [showCreateUser, setShowCreateUser] = useState(false);
   const handleNavigation = useCallback(
     (path: string) => {
       navigate(path);
@@ -42,7 +43,7 @@ const AppNavbar: React.FC = () => {
     {
       label: "Create User",
       icon: <FaUser style={{ marginRight: 8, marginLeft: 4 }} />,
-      command: () => handleNavigation("/create-user"),
+      command: () => setShowCreateUser(true),
     },
   ];
 
@@ -296,6 +297,11 @@ const AppNavbar: React.FC = () => {
         />
       </div>
       </nav>
+      {/* Create User Dialog */}
+      <SignupForm
+        visible={showCreateUser}
+        onHide={() => setShowCreateUser(false)}
+      />
     </>
   );
 };

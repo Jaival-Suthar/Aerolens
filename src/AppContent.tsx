@@ -11,7 +11,6 @@ const Resume = lazy(() => import('./pages/Resume/page'));
 const Interview = lazy(() => import('./pages/Interview/page')); // ⭐️ NEW LAZY IMPORT
 const LookupPage = lazy(() => import('./pages/Lookup/page'));
 const LoginPage = lazy(() => import('./pages/Login/Login'));
-const SignUpPage = lazy(() => import('./pages/Signup/page'));
 const Members = lazy(() => import('./pages/Members/page'));
 const ReportPage = lazy(() => import('./pages/Report/page'));
 const Vendor = lazy(() => import('./pages/Vendor/page'));
@@ -88,15 +87,6 @@ const AppContent: React.FC = () => {
           element={
             <ProtectedRoute>
               <Navigate to="/home" replace />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/create-user"
-          element={
-            <ProtectedRoute>
-              <AppLayout><SignUpPage /></AppLayout>
             </ProtectedRoute>
           }
         />

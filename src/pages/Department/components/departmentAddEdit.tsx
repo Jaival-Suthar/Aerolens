@@ -1,8 +1,7 @@
 // src/pages/Department/components/DepartmentAddEdit.tsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputTextarea } from "primereact/inputtextarea";
-import { Toast } from "primereact/toast";
 import { addDepartment, updateDepartment } from "../services/useDepartment";
 import { DepartmentAddEditProps } from "../types/departmentTypes";
 import { FaCheck } from "react-icons/fa";
@@ -15,15 +14,18 @@ const DepartmentAddEdit: React.FC<DepartmentAddEditProps> = ({
   selectedDepartment,
   clientId,
   onSuccess,
+  onError,
 }) => {
   const [departmentName, setDepartmentName] = useState<string>("");
   const [departmentDescription, setDepartmentDescription] = useState<string>("");
-  const [submitted, setSubmitted] = useState<boolean>(false);
 
   const { accessToken } = useAuth();
   const isEditMode = selectedDepartment !== null;
-
-  const toast = useRef<Toast>(null);
+  const [errors, setErrors] = useState<{
+    departmentName?: string;
+    departmentDescription?: string;
+    general?: string;
+  }>({});
 
   useEffect(() => {
     if (isEditMode && selectedDepartment) {
@@ -33,50 +35,77 @@ const DepartmentAddEdit: React.FC<DepartmentAddEditProps> = ({
       setDepartmentName("");
       setDepartmentDescription("");
     }
+    // ✅ Clear errors when dialog opens/closes
+    setErrors({});
   }, [selectedDepartment, visible, isEditMode]);
 
-  const handleSave = async (): Promise<void> => {
-    setSubmitted(true);
+  // ✅ FIXED: Now actually used to clear field errors on input change
+  const clearFieldError = (field: "departmentName" | "departmentDescription") => {
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
 
-    if (!departmentName.trim() || !departmentDescription.trim()) return;
+  const handleSave = async () => {
+    const newErrors: any = {};
+
+    if (!departmentName.trim()) newErrors.departmentName = "Required";
+    if (!departmentDescription.trim()) newErrors.departmentDescription = "Required";
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
 
     try {
-      if (!accessToken) {
-        toast.current?.show({ severity: "error", summary: "Auth Error", detail: "No token found. Please log in again.", life: 3000 });
-        return;
-      }
+      let response;
 
       if (isEditMode && selectedDepartment) {
-        await updateDepartment(accessToken, {
-          ...selectedDepartment,
+        response = await updateDepartment(accessToken, {
+          departmentId: selectedDepartment.departmentId,
           departmentName: departmentName.trim(),
           departmentDescription: departmentDescription.trim(),
         });
-        toast.current?.show({ severity: "success", summary: "Success", detail: "Department updated successfully.", life: 3000 });
       } else {
-        await addDepartment(accessToken, {
+        response = await addDepartment(accessToken, {
           clientId,
           departmentName: departmentName.trim(),
           departmentDescription: departmentDescription.trim(),
         });
-        toast.current?.show({ severity: "success", summary: "Success", detail: "Department added successfully.", life: 3000 });
       }
 
-      onSuccess();
-      onHide();
-      setDepartmentName("");
-      setDepartmentDescription("");
-      setSubmitted(false);
-    } catch (error) {
-      console.error("Error saving department:", error);
-      toast.current?.show({ severity: "error", summary: "Error", detail: "Failed to save department. Please try again later.", life: 3000 });
+      // ✅ Call success handler
+      onSuccess(response);
+
+      // ✅ Close dialog after a brief delay
+      setTimeout(() => {
+        onHide();
+      }, 0);
+    } catch (error: any) {
+      // ✅ FIXED: Handle validation errors in dialog
+      if (Array.isArray(error?.details?.validationErrors)) {
+        const fieldErrors: any = {};
+        error.details.validationErrors.forEach((e: any) => {
+          fieldErrors[e.field] = e.message;
+        });
+        setErrors(fieldErrors);
+        return; // Stay in dialog to show field errors
+      }
+
+      // ✅ FIXED: For general errors, show in dialog AND notify parent
+      setErrors({ general: error?.message || "An error occurred" });
+      
+      // ✅ Call error handler so parent can show toast
+      if (onError) {
+        onError(error);
+      }
+      
+      // ✅ Don't throw - let user see the error message in dialog
     }
   };
 
   const handleCancel = (): void => {
     setDepartmentName("");
     setDepartmentDescription("");
-    setSubmitted(false);
+    setErrors({});
     onHide();
   };
 
@@ -101,7 +130,6 @@ const DepartmentAddEdit: React.FC<DepartmentAddEditProps> = ({
 
   return (
     <>
-      <Toast ref={toast} />
       <Dialog
         visible={visible}
         onHide={handleCancel}
@@ -111,6 +139,12 @@ const DepartmentAddEdit: React.FC<DepartmentAddEditProps> = ({
         modal
         className="p-fluid"
       >
+        {errors.general && (
+          <div className="mb-3">
+            <small className="p-error block">{errors.general}</small>
+          </div>
+        )}
+
         <div className="field">
           <label htmlFor="departmentName" className="font-bold">
             Department Name *
@@ -118,15 +152,16 @@ const DepartmentAddEdit: React.FC<DepartmentAddEditProps> = ({
           <InputTextarea
             id="departmentName"
             value={departmentName}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-              setDepartmentName(e.target.value)
-            }
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+              setDepartmentName(e.target.value);
+              clearFieldError("departmentName"); // ✅ Clear error on change
+            }}
             placeholder="Enter department name"
             required
-            className={submitted && !departmentName.trim() ? "p-invalid" : ""}
+            className={errors.departmentName ? "p-invalid" : ""}
           />
-          {submitted && !departmentName.trim() && (
-            <small className="p-error">Department Name is required.</small>
+          {errors.departmentName && (
+            <small className="p-error">{errors.departmentName}</small>
           )}
         </div>
 
@@ -137,15 +172,16 @@ const DepartmentAddEdit: React.FC<DepartmentAddEditProps> = ({
           <InputTextarea
             id="departmentDescription"
             value={departmentDescription}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-              setDepartmentDescription(e.target.value)
-            }
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+              setDepartmentDescription(e.target.value);
+              clearFieldError("departmentDescription"); // ✅ Clear error on change
+            }}
             placeholder="Enter department description"
             required
-            className={submitted && !departmentDescription.trim() ? "p-invalid" : ""}
+            className={errors.departmentDescription ? "p-invalid" : ""}
           />
-          {submitted && !departmentDescription.trim() && (
-            <small className="p-error">Department Description is required.</small>
+          {errors.departmentDescription && (
+            <small className="p-error">{errors.departmentDescription}</small>
           )}
         </div>
       </Dialog>

@@ -1,23 +1,21 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-
+import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
 import ExportExcelButton from "../../../shared/ExportExcelButton";
 import SearchButton from "../../../shared/SearchButton";
-
+import SignupForm from "../../Signup/components/SignupForm";
 import { useSearchParams } from "react-router-dom";
-import { Member, Location, ClientOption } from "../types/memberTypes";
-import { getMembers, deleteMember, fetchMemberLookupData, getClients } from "../services/memberService";
+import { Member, MemberFormData } from "../types/memberTypes";
+import { getMembers, deleteMember, getMemberFormData } from "../services/memberService";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import { FilterMatchMode } from "primereact/api";
 import { Toast } from 'primereact/toast';
 import { Tooltip } from "primereact/tooltip";
-
-
-import MemberEdit from "./MembersEdit";     // ✔ Only Edit dialog
-import MemberDelete from "./MembersDelete"; // ✔ Delete dialog only
+import MemberEdit from "./MembersEdit";
+import MemberDelete from "./MembersDelete";
 
 const MembersTable: React.FC = () => {
   const toast = useRef<Toast>(null);
@@ -28,9 +26,8 @@ const MembersTable: React.FC = () => {
 
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
+  const [showCreateUser, setShowCreateUser] = useState(false);
   const [loading, setLoading] = useState(false);
-
 
   const dt = useRef<DataTable<any>>(null);
 
@@ -41,45 +38,27 @@ const MembersTable: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const pageFromUrl = Number(searchParams.get("page")) || 1;
   const [rows, setRows] = useState(10);
-  const [first, setFirst] = useState((pageFromUrl - 1) * 10); 
+  const [first, setFirst] = useState((pageFromUrl - 1) * 10);
   const tooltipRef = useRef<Tooltip>(null);
-  const [clients, setClients] = useState<ClientOption[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [designations, setDesignations] = useState<string[]>([]);
-  const [skillOptions, setSkillOptions] = useState<string[]>([]);
+  const [formData, setFormData] = useState<MemberFormData | null>(null);
+
   useEffect(() => {
-    const loadLookupData = async () => {
-      try {
-        const [clientsData, memberLookup] = await Promise.all([
-          getClients(accessToken),
-          fetchMemberLookupData(accessToken)
-        ]);
-        
-        setClients(clientsData.clients);
-        setLocations(clientsData.locations);
-        setDesignations(memberLookup.designations);
-        setSkillOptions(memberLookup.skills);
-      } catch (error) {
-        console.error('Failed to load lookup data:', error);
-      }
-    };
-    
-    if (accessToken) {
-      loadLookupData();
-    }
+    if (!accessToken) return;
+
+    getMemberFormData(accessToken)
+      .then(setFormData)
+      .catch(err => {
+        console.error("Failed to load member form data:", err);
+        showError("Failed to load form data");
+      });
   }, [accessToken]);
-  useEffect(() => {
-  if (accessToken) {
-    loadMembers();
-  }
-}, [accessToken]);
 
   const showSuccess = (message: string) => {
     toast.current?.show({
       severity: 'success',
       summary: 'Success',
       detail: message,
-      life: 4000
+      life: 2000
     });
   };
 
@@ -88,29 +67,32 @@ const MembersTable: React.FC = () => {
       severity: 'error',
       summary: 'Error',
       detail: message,
-      life: 5000
+      life: 2000
     });
   };
 
-  /** ------------------- Load Data ------------------- */
+  const handleAddNew = () => {
+    setShowCreateUser(true);
+  };
+
   const loadMembers = useCallback(async () => {
     if (!accessToken) return;
     setLoading(true);
 
     try {
       const res = await getMembers(accessToken);
-        setMembers(
-          Array.isArray(res.data)
-            ? res.data.map((m: Member) => ({
-                ...m,
-                locationString: `${m.location?.city || ""} ${m.location?.country || ""}`.trim(),
-                skillsString: m.skills?.map(s => s.skillName).join(", ") || ""
-              }))
-            : []
-        );
-        setTimeout(() => {
-          tooltipRef.current?.updateTargetEvents();
-        }, 0);
+      setMembers(
+        Array.isArray(res.data)
+          ? res.data.map((m: Member) => ({
+              ...m,
+              locationString: `${m.location?.city || ""} ${m.location?.country || ""}`.trim(),
+              skillsString: m.skills?.map(s => s.skillName).join(", ") || ""
+            }))
+          : []
+      );
+      setTimeout(() => {
+        tooltipRef.current?.updateTargetEvents();
+      }, 0);
     } catch (err) {
       console.error("Error loading members:", err);
       setMembers([]);
@@ -119,7 +101,10 @@ const MembersTable: React.FC = () => {
     }
   }, [accessToken]);
 
-  /** ------------------- Handlers ------------------- */
+  useEffect(() => {
+    loadMembers();
+  }, [loadMembers]);
+
   const handleEdit = () => {
     if (selectedMember) {
       setEditingMember(selectedMember);
@@ -135,6 +120,11 @@ const MembersTable: React.FC = () => {
 
   const handleEditSuccess = () => {
     setShowEditDialog(false);
+    loadMembers();
+  };
+
+  const handleCreateSuccess = () => {
+    setShowCreateUser(false);
     loadMembers();
   };
 
@@ -159,15 +149,13 @@ const MembersTable: React.FC = () => {
   };
 
   const onPageChange = (event: any) => {
-  setFirst(event.first);
-  setRows(event.rows);
+    setFirst(event.first);
+    setRows(event.rows);
 
-  const newPage = event.page + 1; // PrimeReact starts from 0
+    const newPage = event.page + 1;
     setSearchParams({ page: newPage.toString() });
   };
 
-
-  /** ------------------- Global Search ------------------- */
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const _filters = { ...filters };
@@ -179,8 +167,9 @@ const MembersTable: React.FC = () => {
   const formatValue = (value: any) => {
     return value === null || value === undefined || value === "" ? "-" : value;
   };
+
   const formatSkillsDetailed = (skills: Member["skills"]) => {
-  if (!skills?.length) return "-";
+    if (!skills?.length) return "-";
 
     return (
       <div
@@ -223,9 +212,6 @@ const MembersTable: React.FC = () => {
     );
   };
 
-
-
-
   const formatContactDetails = (row: Member) => {
     return (
       <div>
@@ -251,12 +237,11 @@ const MembersTable: React.FC = () => {
     );
   };
 
-
-  /** ------------------- JSX ------------------- */
   return (
     <>
-        <Toast ref={toast} position="top-right" />
-        <Tooltip ref={tooltipRef} target=".skill-tag" />
+      <Toast ref={toast} position="top-right" />
+      <Tooltip ref={tooltipRef} target=".skill-tag" />
+      
       <div className="flex justify-content-between align-items-center mb-2">
         <h2>Member Management</h2>
 
@@ -266,79 +251,85 @@ const MembersTable: React.FC = () => {
             onChange={onGlobalFilterChange}
             placeholder="Search members..."
           />
-
           <ExportExcelButton dtRef={dt} />
-
-          {/* Removed AddButton */}
+          <AddButton onClick={handleAddNew} />
           <EditButton onClick={handleEdit} disabled={!selectedMember} />
           <DeleteButton onClick={handleDelete} disabled={!selectedMember} />
         </div>
       </div>
+      
       <div style={{ flex: 1, overflow: "auto" }}>
-      <DataTable
-        ref={dt}
-        value={members}
-        paginator
-        rows={rows}
-        first={first}
-        onPage={onPageChange}
-        scrollable
-        scrollHeight="flex"
-        rowsPerPageOptions={[10, 20, 50]}
-        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Members"
-        selectionMode="single"
-        selection={selectedMember}
-        dataKey="memberId"
-        onSelectionChange={(e) => setSelectedMember(e.value)}
-        tableStyle={{ minWidth: "80rem" }}
-        loading={loading}
-        emptyMessage="No members found."
-        responsiveLayout="scroll"
-        filters={filters}
-        globalFilterFields={[
-          "member",
-          "Contact Details",
-          "Location",
-          "Skills",
-          "interviewerCapacity",
-          "Recruiter",
-          "Interviewer",
-          "clientName",
-          "organisation",
-        ]}
-      >
-        <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
-        <Column header="Member" body={formatNameDesignation} sortable />
-        <Column header="Contact Details" body={formatContactDetails} sortable />
-        <Column header="Location" body={(row) => formatLocation(row)} sortable />
-        <Column header="Skills" body={(row) => formatSkillsDetailed(row.skills)} style={{ width: "17rem", maxWidth: "17rem" }} />
-        <Column field="interviewerCapacity" header="Capacity" sortable body={(row) => row.interviewerCapacity ?? "-"} />
-        <Column header="Recruiter" body={(row) => (row.isRecruiter ? "Yes" : "No")} sortable />
-        <Column header="Interviewer" body={(row) => (row.isInterviewer ? "Yes" : "No")} sortable />
-        <Column field="clientName" header="Client" sortable body={(row) => formatValue(row.clientName)}/>
-        <Column field="organisation" header="Organisation" sortable body={(row) => formatValue(row.organisation)}/>
-      </DataTable>
+        <DataTable
+          ref={dt}
+          value={members}
+          paginator
+          rows={rows}
+          first={first}
+          onPage={onPageChange}
+          scrollable
+          scrollHeight="flex"
+          rowsPerPageOptions={[10, 20, 50]}
+          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Members"
+          selectionMode="single"
+          selection={selectedMember}
+          dataKey="memberId"
+          onSelectionChange={(e) => setSelectedMember(e.value)}
+          tableStyle={{ minWidth: "80rem" }}
+          loading={loading}
+          emptyMessage="No members found."
+          responsiveLayout="scroll"
+          filters={filters}
+          globalFilterFields={[
+            "memberName",
+            "email",
+            "memberContact",
+            "location.city",
+            "location.country",
+            "skills.skillName",
+            "interviewerCapacity",
+            "clientName",
+            "organisation",
+            "vendorName",
+          ]}
+        >
+          <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
+          <Column field="memberName" header="Member" body={formatNameDesignation} sortable />
+          <Column header="Contact Details" body={formatContactDetails} sortable />
+          <Column field="locationString" header="Location" body={(row) => formatLocation(row)} sortable />
+          <Column field="skillsString" header="Skills" body={(row) => formatSkillsDetailed(row.skills)} style={{ width: "17rem", maxWidth: "17rem" }} sortable/>
+          <Column field="interviewerCapacity" header="Capacity" sortable body={(row) => row.interviewerCapacity ?? "-"} />
+          <Column header="Recruiter" body={(row) => (row.isRecruiter ? "Yes" : "No")} sortable />
+          <Column header="Interviewer" body={(row) => (row.isInterviewer ? "Yes" : "No")} sortable />
+          <Column field="vendorName" header="Vendor" sortable body={(row) => formatValue(row.vendorName)} />
+          <Column field="clientName" header="Client" sortable body={(row) => formatValue(row.clientName)}/>
+          <Column field="organisation" header="Organisation" sortable body={(row) => formatValue(row.organisation)}/>
+        </DataTable>
       </div>
-      {/* ------------------- Dialogs ------------------- */}
-      <MemberEdit
-        visible={showEditDialog}
-        onHide={() => setShowEditDialog(false)}
-        selectedMember={editingMember}
-        onSuccess={handleEditSuccess}
-        clients={clients}
-        locations={locations}
-        designations={designations}
-        skillOptions={skillOptions}
-      />
 
-        <MemberDelete
-            visible={showDeleteDialog}
-            onHide={() => setShowDeleteDialog(false)}
-            selectedMember={selectedMember}
-            onDelete={handleDeleteSuccess}   // after API success, reload & close
-            loading={loading}
-            />
+      {formData && (
+        <MemberEdit
+          visible={showEditDialog}
+          onHide={() => setShowEditDialog(false)}
+          selectedMember={editingMember}
+          onSuccess={handleEditSuccess}
+          formData={formData}
+        />
+      )}
+
+      <MemberDelete
+        visible={showDeleteDialog}
+        onHide={() => setShowDeleteDialog(false)}
+        selectedMember={selectedMember}
+        onDelete={handleDeleteSuccess}
+        loading={loading}
+      />
+      
+      <SignupForm
+        visible={showCreateUser}
+        onHide={() => setShowCreateUser(false)}
+        onSuccess={handleCreateSuccess}
+      />
     </>
   );
 };

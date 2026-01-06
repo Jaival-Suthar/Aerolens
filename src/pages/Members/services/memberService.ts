@@ -1,9 +1,10 @@
 import { 
   Member,
   ApiResponse,
-  ClientOption,
   MemberPatchPayload,
-  Location
+  MemberLocation,
+  MemberApi,
+  MemberFormData
 } from '../types/memberTypes';
 
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
@@ -18,35 +19,35 @@ const makeHeaders = (accessToken?: string): HeadersInit => {
 // --------------------------
 // API → Frontend Mapper
 // --------------------------
-export function mapApiMember(data: any): Member {
+export function mapApiMember(data: MemberApi): Member {
   return {
     memberId: data.memberId,
     memberName: data.memberName,
     memberContact: data.memberContact,
     email: data.email,
-    designation: data.designation,
 
-    isRecruiter: Boolean(data.isRecruiter),
-    isActive: Boolean(data.isActive),
+    designationId: data.designationId,
+    designation: data.designation ?? null,
 
-    lastLogin: data.lastLogin || null,
-    createdAt: data.createdAt || null,
-    updatedAt: data.updatedAt || null,
+    isRecruiter: data.isRecruiter,
+    isInterviewer: data.isInterviewer,
+    interviewerCapacity: data.interviewerCapacity ?? null,
+
+    vendorId: data.vendorId ?? null,
+    vendorName: data.vendorName ?? null,
+    clientId: data.clientId ?? null,
+    clientName: data.clientName ?? null,
+    organisation: data.organisation ?? null,
 
     location: {
-      city: data.city || "",
-      country: data.country || "",
+      city: (data as any).cityName ?? data.city ?? null,
+      country: data.country ?? null,
     },
 
-    clientName: data.clientName ?? "",
-    organisation: data.organisation ?? "",
-
-    isInterviewer: Boolean(data.isInterviewer),
-    interviewerCapacity: data.interviewerCapacity ?? 0,
-
-    skills: Array.isArray(data.skills) ? data.skills : [],
+    skills: data.skills ?? [],
   };
 }
+
 
 // --------------------------
 // GET ALL Members
@@ -67,7 +68,7 @@ export const getMembers = async (
 
     const data = await response.json();
     console.log("getMembers response data:", data);
-    // Backend returns: { success: true, message, data: [...] }
+    
     if (!data.success) {
       throw new Error(data.message || "Failed to fetch members");
     }
@@ -164,104 +165,33 @@ export const patchMember = async (
   }
 };
 
-// --------------------------
-// GET Lookup Data (Designations, Skills)
-// --------------------------
-export const fetchMemberLookupData = async (
+// memberService.ts
+export const getMemberFormData = async (
   accessToken: string | null
-): Promise<{ designations: string[]; skills: string[] }> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/lookup?page=1&limit=100`, {
-      credentials: 'include',
-      headers: makeHeaders(accessToken || undefined),
-    });
+): Promise<MemberFormData> => {
+  const response = await fetch(`${API_BASE_URL}/member/form-data`, {
+    credentials: "include",
+    headers: makeHeaders(accessToken || undefined),
+  });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch lookup data: ${response.status}`);
-    }
+  const res = await response.json();
 
-    const result = await response.json();
-    
-    if (!result.success || !Array.isArray(result.data)) {
-      console.error('Unexpected lookup response structure:', result);
-      return { designations: [], skills: [] };
-    }
-    
-    const designations = result.data
-      .filter((item: any) => item.tag === "designation")
-      .map((item: any) => item.value);
-    
-    const skills = result.data
-      .filter((item: any) => item.tag === "skill")
-      .map((item: any) => item.value);
-    
-    console.log('Fetched designations:', designations);
-    console.log('Fetched skills:', skills);
-    
-    return { designations, skills };
-  } catch (error) {
-    console.error('Error fetching member lookup data:', error);
-    throw error;
+  if (!response.ok || !res.success) {
+    throw new Error(res.message || "Failed to load member form data");
   }
+
+  return {
+    designations: res.data.designations.map((d: any) => ({
+      lookupKey: d.designationId,
+      value: d.designationName,
+    })),
+    vendors: res.data.vendors,
+    clients: res.data.clients,
+    skills: res.data.skills,
+    locations: res.data.locations,
+  };
 };
 
-export const getClients = async (
-  accessToken: string | null
-): Promise<{ clients: ClientOption[]; locations: Location[] }> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/client/all`, {
-      credentials: 'include',
-      headers: makeHeaders(accessToken || undefined),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch clients: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    if (!data.success) throw new Error(data.message || 'Failed to fetch clients');
-    
-    const clients = Array.isArray(data.data?.clientData)
-      ? data.data.clientData.map((client: any): ClientOption => {
-          let departmentsArray = [];
-
-          if (typeof client.departments === 'string') {
-            try {
-              departmentsArray = JSON.parse(client.departments);
-            } catch (err) {
-              console.error("Failed to parse departments:", err);
-              departmentsArray = [];
-            }
-          } else if (Array.isArray(client.departments)) {
-            departmentsArray = client.departments;
-          }
-          
-          return {
-            clientId: client.clientId,
-            clientName: client.clientName,
-            departments: departmentsArray.map((dept: any) => ({
-              departmentId: dept.departmentId,
-              departmentName: dept.departmentName
-            }))
-          };
-        })
-      : [];
-
-    // Extract locations from the response
-    const locations = Array.isArray(data.data?.locationData)
-      ? data.data.locationData.map((loc: any): Location => ({
-          city: loc.city,
-          state: loc.state,
-          country: loc.country
-        }))
-      : [];
-    
-    return { clients, locations };
-  } catch (error) {
-    console.error('Error in getClients:', error);
-    throw error;
-  }
-};
 
 export const deleteMember = async (
   accessToken: string | null,
@@ -271,10 +201,10 @@ export const deleteMember = async (
   if (!memberId || memberId <= 0) throw new Error("Invalid memberId");
 
   try {
-    const response = await fetch(`${API_BASE_URL}/member/${memberId}`, { // Fixed endpoint to match others
+    const response = await fetch(`${API_BASE_URL}/member/${memberId}`, {
       method: "DELETE",
       credentials: "include",
-      headers: makeHeaders(accessToken), // Always call makeHeaders with accessToken
+      headers: makeHeaders(accessToken),
     });
 
     const data = await response.json();
@@ -299,4 +229,3 @@ export const deleteMember = async (
     throw error;
   }
 };
-

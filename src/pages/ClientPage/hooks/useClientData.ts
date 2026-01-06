@@ -2,12 +2,13 @@ import { useState, useCallback, useEffect } from "react";
 import type { ClientType } from "../types/clientTypes";
 import { getAllClients } from "../services/clientService";
 import { useAuth } from "../../../shared/auth/AuthContext";
+import type { ApiError } from "../../../types/apiError";
 
 export const useClientData = (refreshTrigger = 0) => {  // ← Keep this param
   const { accessToken } = useAuth();
   const [clients, setClients] = useState<ClientType[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
 
   const loadClients = useCallback(async () => {
     setLoading(true);
@@ -17,8 +18,7 @@ export const useClientData = (refreshTrigger = 0) => {  // ← Keep this param
       setError(null);
       return { data: allClients, meta: { total: allClients.length } };
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      setError(message);
+      setError(err as ApiError);
       throw err;
     } finally {
       setLoading(false);

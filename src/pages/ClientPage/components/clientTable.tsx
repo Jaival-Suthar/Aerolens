@@ -132,7 +132,9 @@ useEffect(() => {
         >
           <div className="p-message-wrapper">
             <FaTimesCircle aria-hidden="true" style={{ fontSize: 20, color: "#f44336" }} />
-            <div className="p-message-text">Error loading clients: {error}</div>
+            <div className="p-message-text">
+              {error.details?.validationErrors?.[0]?.message ?? error.message}
+            </div>
           </div>
         </div>
       )}

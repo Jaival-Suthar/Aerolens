@@ -1,5 +1,8 @@
 const API_URL: string = import.meta.env.VITE_BASE_URL;
 import type { ClientType, ClientsApiResponse } from "../types/clientTypes";
+import type { ApiError } from "../../../types/apiError";
+import { normalizeApiError } from "../../../utils/apiErrorHandler";
+
 
 // Helper to create headers with token if provided
 const makeHeaders = (accessToken?: string) => {
@@ -21,10 +24,9 @@ export const getAllClients = async (
       }
     );
     if (!response.ok) {
-      throw new Error(
-        `Failed to fetch clients: ${response.status} ${await response.text()}`
-      );
-    }
+    const apiError: ApiError = await normalizeApiError(response);
+    throw apiError;
+  }
     const json: ClientsApiResponse = await response.json();
     return json.data;
   } catch (error) {
@@ -47,9 +49,8 @@ export const getClients = async (
       }
     );
     if (!response.ok) {
-      throw new Error(
-        `Failed to fetch clients: ${response.status} ${await response.text()}`
-      );
+      const apiError: ApiError = await normalizeApiError(response);
+      throw apiError;
     }
     const json: ClientsApiResponse = await response.json();
     return json;
@@ -72,8 +73,8 @@ export const createClient = async (
   });
 
   if (!response.ok) {
-    const errorJson = await response.json();
-    throw errorJson; // 🔥 THIS IS THE KEY
+    const apiError: ApiError = await normalizeApiError(response);
+    throw apiError;
   }
 
   return response.json();
@@ -108,8 +109,8 @@ export const updateClient = async (
     });
 
     if (!response.ok) {
-      const errorJson = await response.json();
-      throw errorJson;
+      const apiError: ApiError = await normalizeApiError(response);
+      throw apiError;
     }
 
     const data: ClientType = await response.json();
@@ -136,8 +137,8 @@ export const deleteClient = async (
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to delete client: ${errorText}`);
+      const apiError: ApiError = await normalizeApiError(response);
+      throw apiError;
     }
   } catch (error) {
     console.error("Error in deleteClient:", error);
