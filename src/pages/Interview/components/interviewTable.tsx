@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Dropdown } from "primereact/dropdown";
-import { Calendar } from "primereact/calendar";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
 import { Toast } from "primereact/toast";
@@ -68,7 +67,6 @@ const DEFAULT_COLUMN_FIELDS = [
 const InterviewTable: React.FC = () => {
   const { accessToken } = useAuth();
   const [interviews, setInterviews] = useState<Interview[]>([]);
-  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [showResultDialog, setShowResultDialog] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
