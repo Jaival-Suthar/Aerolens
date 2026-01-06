@@ -71,7 +71,7 @@ const ALL_COLUMNS = [
   },
   {
     field: "statusName",
-    header: "Status",
+    header: "Interview Status",
     sortable: true,
     filter: true
   },
@@ -454,7 +454,7 @@ const settingsItems = [
     <>
       <Toast ref={toastRef} />
       <div className="flex justify-content-between align-items-center mb-2">
-        <h2>Candidate Resume Management</h2>
+        <h2 style={{ color: "#07253f" }}>Candidate Resume Management</h2>
         <div className="flex gap-2">
           <SearchButton
             value={globalFilterValue}

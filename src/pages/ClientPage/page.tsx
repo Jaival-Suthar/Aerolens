@@ -233,11 +233,11 @@ const Client: React.FC = () => {
   }
 
   return (
-    <div className="dashboard-container shadow-3 p-4" style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", width: "100%", minHeight: 0 }}>
+    <div className="dashboard-container shadow-3 p-2" style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", width: "100%", minHeight: 0 }}>
       <Toast ref={toast} />
 
       {(isTableView || (selectedClientId && !selectedClient)) && (
-        <div className="flex justify-content-between align-items-center mb-4 w-full">
+        <div className="flex justify-content-between align-items-center mb-2 w-full">
           <div className="flex align-items-center gap-3">
             <SplitButton
               icon={<FaCog style={{ fontSize: 16 }} />}
@@ -248,6 +248,7 @@ const Client: React.FC = () => {
               aria-label="Settings"
               data-testid="SettingsBtn"
             />
+            <h2 style={{ color: "#07253f" }}> Client </h2>
           </div>
           <div className="flex gap-2">
             <SearchButton

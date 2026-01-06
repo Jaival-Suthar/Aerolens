@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
+import { Dropdown } from "primereact/dropdown";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
 import { Toast } from "primereact/toast";
@@ -29,8 +30,7 @@ const convert24to12Hour = (time24: string): string => {
   if (!time24) return '';
   const [hours, minutes] = time24.split(':').map(Number);
   let hour12 = hours % 12;
-  if (hour12 === 0) hour12 = 12; 
-  
+  if (hour12 === 0) hour12 = 12;
   const period = hours >= 12 ? 'PM' : 'AM';
   return `${String(hour12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${period}`;
 };
@@ -39,7 +39,7 @@ const ALL_COLUMNS = [
   { field: "interviewerName", header: "Interviewer", filter: true },
   { field: "scheduledByName", header: "Scheduled By", filter: true },
 
-  { field: "roundProgress", header: "Round", body: "roundProgress", filter: true, filterField: "roundNumber" },
+  { field: "roundProgress", header: "Round", body: "roundProgress" },
   { field: "result", header: "Result", body: "result", filter: true },
   { field: "interviewDate", header: "Date", body: "date" },
 
@@ -66,10 +66,7 @@ const DEFAULT_COLUMN_FIELDS = [
 
 const InterviewTable: React.FC = () => {
   const { accessToken } = useAuth();
-  // const [searchText, setSearchText] = useState("");
-
   const [interviews, setInterviews] = useState<Interview[]>([]);
-  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [showResultDialog, setShowResultDialog] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
@@ -86,18 +83,18 @@ const InterviewTable: React.FC = () => {
   const [first, setFirst] = useState((pageFromUrl - 1) * rows);
   const [showRoundsDialog, setShowRoundsDialog] = useState(false);
   const [filters, setFilters] = useState<DataTableFilterMeta>({
-  global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   candidateName: { value: null, matchMode: FilterMatchMode.CONTAINS },
-  interviewerName: { value: null, matchMode: FilterMatchMode.CONTAINS },
-  scheduledByName: { value: null, matchMode: FilterMatchMode.CONTAINS },
-  roundNumber: { value: null, matchMode: FilterMatchMode.EQUALS },
-  totalInterviews: { value: null, matchMode: FilterMatchMode.EQUALS },
-  result: { value: null, matchMode: FilterMatchMode.EQUALS },
-  interviewDate: { value: null, matchMode: FilterMatchMode.EQUALS },
-  fromTime: { value: null, matchMode: FilterMatchMode.CONTAINS },
-  toTime: { value: null, matchMode: FilterMatchMode.CONTAINS },
-  durationMinutes: { value: null, matchMode: FilterMatchMode.EQUALS }
-});
+    interviewerName: { value: null, matchMode: FilterMatchMode.EQUALS },
+    scheduledByName: { value: null, matchMode: FilterMatchMode.EQUALS },
+    roundNumber: { value: null, matchMode: FilterMatchMode.EQUALS },
+    totalInterviews: { value: null, matchMode: FilterMatchMode.EQUALS },
+    result: { value: null, matchMode: FilterMatchMode.EQUALS },
+    interviewDate: { value: null, matchMode: FilterMatchMode.EQUALS },
+    fromTime: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    toTime: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    durationMinutes: { value: null, matchMode: FilterMatchMode.EQUALS }
+  });
   const [visibleColumns, setVisibleColumns] = useState(
   ALL_COLUMNS.filter(col =>
     DEFAULT_COLUMN_FIELDS.includes(col.field)
@@ -110,6 +107,7 @@ const InterviewTable: React.FC = () => {
     )
   );
 };
+
 
   const onPageChange = (e: any) => {
   setFirst(e.first);
@@ -136,49 +134,29 @@ const handleViewAllRounds = () => {
 
 
   const fetchInterviews = useCallback(async () => {
-    if (!accessToken) {
-      return;
-    }
-
+    if (!accessToken) return;
     setLoading(true);
-
     try {
       const response = await getInterviews(accessToken);
       if (response?.success) {
         setInterviews(Array.isArray(response.data) ? response.data : []);
       } else {
-        toast.current?.show({
-          severity: "error",
-          summary: "Error",
-          detail: response?.message || "Unknown error",
-        });
+        toast.current?.show({ severity: "error", summary: "Error", detail: response?.message || "Unknown error" });
       }
     } catch (err: any) {
-      toast.current?.show({
-        severity: "error",
-        summary: "Error",
-        detail: "Failed to fetch interviews",
-      });
+      toast.current?.show({ severity: "error", summary: "Error", detail: "Failed to fetch interviews" });
     } finally {
       setLoading(false);
     }
   }, [accessToken]);
 
-  useEffect(() => {
-    fetchInterviews();
-  }, [fetchInterviews]);
+  useEffect(() => { fetchInterviews(); }, [fetchInterviews]);
 
   const handleAdd = () => {
     if (!selectedInterview) {
-      toast.current?.show({
-        severity: "warn",
-        summary: "No Selection",
-        detail: "Please select an interview row to schedule next round for that candidate",
-        life: 3000,
-      });
+      toast.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select an interview row to schedule next round for that candidate", life: 3000 });
       return;
     }
-    
     setIsEdit(false);
     setEditingInterview(null);
     setVisible(true);
@@ -203,12 +181,7 @@ const handleViewAllRounds = () => {
 
   const handleResultDialogOpen = () => {
     if (!selectedInterview) {
-      toast.current?.show({
-        severity: "warn",
-        summary: "No Selection",
-        detail: "Please select an interview to finalize",
-        life: 3000,
-      });
+      toast.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select an interview to finalize", life: 3000 });
       return;
     }
     setShowSettingsMenu(false);
@@ -222,22 +195,12 @@ const handleViewAllRounds = () => {
 
   const dateBodyTemplate = (rowData: Interview) => {
     const date = new Date(rowData.interviewDate);
-    return date.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
   };
   
-  const timeBodyTemplate = (rowData: Interview) => {
-    return convert24to12Hour(rowData.fromTime);
-  };
+  const timeBodyTemplate = (rowData: Interview) => convert24to12Hour(rowData.fromTime);
+  const endTimeBodyTemplate = (rowData: Interview) => convert24to12Hour(rowData.toTime);
 
-  const endTimeBodyTemplate = (rowData: Interview) => {
-    return convert24to12Hour(rowData.toTime);
-  };
-
-  // Result badge styling
   const resultBodyTemplate = (rowData: Interview) => {
   const result = rowData.result || "Pending";
 
@@ -338,10 +301,7 @@ const handleViewAllRounds = () => {
     {
       label: "Schedule Next Interview",
       icon: <FaUserTie style={{ marginRight: 8, marginLeft: 4 }} />,
-      action: () => {
-        setShowSettingsMenu(false);
-        handleAdd();
-      }
+      action: () => { setShowSettingsMenu(false); handleAdd(); }
     },
     {
       label: "Interview Result",
@@ -429,13 +389,44 @@ const handleViewAllRounds = () => {
     })
     .filter(item => item.value !== "-" && item.value !== null);
 };
+  const uniqueValues = <T,>(arr: (T | null | undefined)[]) =>
+  Array.from(new Set(arr.filter(Boolean)));
+
+const interviewerFilterTemplate = (options: any) => (
+  <Dropdown
+    value={options.value}
+    options={uniqueValues(interviews.map(i => i.interviewerName))}
+    onChange={(e) => options.filterCallback(e.value)}
+    placeholder="Select Interviewer"
+    showClear
+  />
+);
+
+const scheduledByFilterTemplate = (options: any) => (
+  <Dropdown
+    value={options.value}
+    options={uniqueValues(interviews.map(i => i.scheduledByName))}
+    onChange={(e) => options.filterCallback(e.value)}
+    placeholder="Select Scheduler"
+    showClear
+  />
+);
+
+const resultFilterTemplate = (options: any) => (
+  <Dropdown
+    value={options.value}
+    options={["Pending", "Selected", "Rejected", "Cancelled"]}
+    onChange={(e) => options.filterCallback(e.value)}
+    placeholder="Select Result"
+    showClear
+  />
+);
 
   return (
     <>
       <Toast ref={toast} />
       <div className="flex justify-content-between align-items-center mb-2">
-        <h2>Interviews</h2>
-
+        <h2 style={{ color: "#07253f" }}>Interviews</h2>
         <div className="flex gap-2 align-items-center">
           <SearchButton
             value={('value' in (filters.global || {}) ? (filters.global as DataTableFilterMetaData).value : "") || ""}
@@ -460,41 +451,16 @@ const handleViewAllRounds = () => {
               }}
               disabled={!selectedInterview}
             />
-
             {showSettingsMenu && (
-              <div
-                className="card shadow-3"
-                style={{
-                  position: "absolute",
-                  right: 0,
-                  top: 50,
-                  zIndex: 1000,
-                  minWidth: 220,
-                  backgroundColor: "white",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "8px",
-                  padding: "0.5rem",
-                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
-                }}
-              >
+              <div className="card shadow-3" style={{ position: "absolute", right: 0, top: 50, zIndex: 1000, minWidth: 220, backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "0.5rem" }}>
                 {settingsItems.map((item, idx) => (
                   <div
                     key={idx}
                     className="p-2 cursor-pointer border-round transition-colors transition-duration-150"
                     onClick={item.action}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      borderRadius: "6px",
-                      marginBottom: idx < settingsItems.length - 1 ? "4px" : "0",
-                      transition: "background-color 0.15s ease"
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "#f3f4f6";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                    }}
+                    style={{ display: "flex", alignItems: "center", borderRadius: "6px", marginBottom: idx < settingsItems.length - 1 ? "4px" : "0", transition: "background-color 0.15s ease" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                   >
                     <span style={{ fontSize: "16px", color: "#374151" }}>
                       {item.icon}
@@ -516,6 +482,7 @@ const handleViewAllRounds = () => {
           </div>
         </div>
       </div>
+
       <div style={{ flex: 1, overflow: "auto" }}>
       <DataTable
         value={interviews}
@@ -555,14 +522,24 @@ const handleViewAllRounds = () => {
         <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
         {visibleColumns.map((col) => {
           let bodyTemplate;
-
+          let filterElement;
           if (col.body === "roundProgress") bodyTemplate = roundProgressBodyTemplate;
           if (col.body === "result") bodyTemplate = resultBodyTemplate;
           if (col.body === "date") bodyTemplate = dateBodyTemplate;
           if (col.body === "recording") bodyTemplate = meetingUrlBodyTemplate;
           if (col.body === "startTime") bodyTemplate = timeBodyTemplate;
           if (col.body === "endTime") bodyTemplate = endTimeBodyTemplate;
+          if (col.field === "interviewerName") {
+            filterElement = interviewerFilterTemplate;
+          }
 
+          if (col.field === "scheduledByName") {
+            filterElement = scheduledByFilterTemplate;
+          }
+
+          if (col.field === "result") {
+            filterElement = resultFilterTemplate;
+          }
           return (
             <Column
               key={col.field}
@@ -570,12 +547,15 @@ const handleViewAllRounds = () => {
               header={col.header}
               body={bodyTemplate}
               filter={col.filter}
+              filterElement={filterElement}
+              sortable
               showFilterMatchModes={false}
             />
           );
         })}
       </DataTable>
       </div>
+
       <InterviewAddEditForm
         visible={visible}
         isEdit={isEdit}
@@ -583,10 +563,7 @@ const handleViewAllRounds = () => {
         candidateId={isEdit ? editingInterview?.candidateId : selectedInterview?.candidateId}
         candidateName={isEdit ? editingInterview?.candidateName : selectedInterview?.candidateName}
         onHide={() => setVisible(false)}
-        onSuccess={() => {
-          setVisible(false);
-          fetchInterviews();
-        }}
+        onSuccess={() => { setVisible(false); fetchInterviews(); }}
         externalToast={toast}
       />
 

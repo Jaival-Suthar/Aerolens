@@ -150,7 +150,7 @@ const DepartmentTable: React.FC<DepartmentTableProps> = ({
   return (
     <div style={{display: "flex", flexDirection: "column", flex: 1, overflow: "hidden"}}>
       <Toast ref={toast} />
-      <div className="flex justify-content-between align-items-center mb-4 w-full">
+      <div className="flex justify-content-between align-items-center mt-1 w-full">
         <div className="flex justify-content-start align-items-center">
           <button
             onClick={onBackClick}
@@ -168,7 +168,7 @@ const DepartmentTable: React.FC<DepartmentTableProps> = ({
         </div>
       </div>
 
-      <h4 className="mb-3">Departments for: {clientName}</h4>
+      <h4 className="mb-3" style={{ color: "#07253f" }}>Departments for: {clientName}</h4>
       <div style={{ flex: 1, overflow: "hidden" }}>
         <DataTable
           value={departments}

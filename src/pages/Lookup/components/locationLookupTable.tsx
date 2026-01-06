@@ -81,7 +81,7 @@ const LocationLookupTable: React.FC<LocationLookupTableProps> = ({
   return (
      <div className="card" style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
       <div className="flex justify-content-between align-items-center mb-2" style={{position: "sticky", top: 0, zIndex: 2, background: "white", paddingBottom: "0.5rem"}}>
-        <h2>Location Lookup</h2>
+        <h2 style={{ color: "#07253f" }}>Location Lookup</h2>
 
         <div className="flex gap-2">
           <SearchButton

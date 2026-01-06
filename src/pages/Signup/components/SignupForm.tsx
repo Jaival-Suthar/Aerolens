@@ -156,7 +156,7 @@ export default function SignupForm({
       onHide={onHide}
       modal
       dismissableMask
-      style={{ width: "60vw" }}
+      style={{ width: "60vw",  color: "#07253f"  }}
       breakpoints={{ "960px": "80vw", "640px": "95vw" }}
     >
       <Toast ref={toast} />
