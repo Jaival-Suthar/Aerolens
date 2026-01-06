@@ -16,7 +16,7 @@ import {
   FaBuilding  
 } from "react-icons/fa";
 import { useProfileStore } from "./shared/store/profile";
-import Logo from "./assets/Logo.webp";
+import SmallLogo from "./assets/SmallLogo.svg";
 import SignupForm from "./pages/Signup/components/SignupForm";
 
 const AppNavbar: React.FC = () => {
@@ -143,17 +143,9 @@ const AppNavbar: React.FC = () => {
       }}
     >
       <img
-        src={Logo}
+        src={SmallLogo}
         alt="Aerolens Logo"
-        width={96}
         height={24}
-        role="img"
-        decoding="async"
-        style={{
-          height: 24,
-          width: "auto",
-          filter: "brightness(0) saturate(100%) invert(0%)",
-        }}
       />
     </div>
   );
