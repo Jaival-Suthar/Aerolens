@@ -16,6 +16,32 @@ import { Toast } from 'primereact/toast';
 import { Tooltip } from "primereact/tooltip";
 import MemberEdit from "./MembersEdit";
 import MemberDelete from "./MembersDelete";
+import ColumnSettingsButton from "../../../shared/ColumnSettingsButton";
+import ViewButton from "../../../shared/ViewButton";
+import PremiumDetailsDialog from "../../../shared/PremiumDetailsDialog";
+import DetailsGrid from "../../../shared/DetailsGrid";
+import DetailsSection from "../../../shared/DetailsSection";
+
+const ALL_MEMBER_COLUMNS = [
+  { field: "memberName", header: "Member", sortable: true, filter: false },
+  { field: "contactDetails", header: "Contact Details", sortable: false, filter: false },
+  { field: "skills", header: "Skills", sortable: false, filter: false },
+  { field: "interviewerCapacity", header: "Capacity", sortable: true, filter: false },
+  { field: "isRecruiter", header: "Recruiter", sortable: true, filter: false },
+  { field: "isInterviewer", header: "Interviewer", sortable: true, filter: false },
+  { field: "location", header: "Location", sortable: true, filter: false },
+  { field: "vendorName", header: "Vendor", sortable: true, filter: false },
+  { field: "clientName", header: "Client", sortable: true, filter: false },
+  { field: "organisation", header: "Organisation", sortable: true, filter: false },
+];
+const DEFAULT_MEMBER_COLUMNS = [
+  "memberName",
+  "contactDetails",
+  "skills",
+  "interviewerCapacity",
+  "isRecruiter",
+  "isInterviewer",
+];
 
 const MembersTable: React.FC = () => {
   const toast = useRef<Toast>(null);
@@ -23,7 +49,7 @@ const MembersTable: React.FC = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
-
+  const [viewMember, setViewMember] = useState<Member | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showCreateUser, setShowCreateUser] = useState(false);
@@ -41,6 +67,11 @@ const MembersTable: React.FC = () => {
   const [first, setFirst] = useState((pageFromUrl - 1) * 10);
   const tooltipRef = useRef<Tooltip>(null);
   const [formData, setFormData] = useState<MemberFormData | null>(null);
+  const [visibleColumns, setVisibleColumns] = useState(
+  ALL_MEMBER_COLUMNS.filter(col =>
+    DEFAULT_MEMBER_COLUMNS.includes(col.field)
+  )
+);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -237,6 +268,29 @@ const MembersTable: React.FC = () => {
     );
   };
 
+  const buildMemberDetails = (member: Member) => {
+  return [
+    { label: "Name", value: member.memberName || "-", field: "memberName" },
+    { label: "Designation", value: member.designation || "-", field: "designation" },
+    { label: "Email", value: member.email || "-", field: "email" },
+    { label: "Contact", value: member.memberContact || "-", field: "memberContact" },
+    {
+      label: "Location",
+      value: member.location
+        ? `${member.location.city}, ${member.location.country}`
+        : "-",
+      field: "location",
+    },
+    { label: "Capacity", value: member.interviewerCapacity ?? "-", field: "interviewerCapacity" },
+    { label: "Recruiter", value: member.isRecruiter ? "Yes" : "No", field: "isRecruiter" },
+    { label: "Interviewer", value: member.isInterviewer ? "Yes" : "No", field: "isInterviewer" },
+    { label: "Vendor", value: member.vendorName || "-", field: "vendorName" },
+    { label: "Client", value: member.clientName || "-", field: "clientName" },
+    { label: "Organisation", value: member.organisation || "-", field: "organisation" },
+  ];
+};
+
+
   return (
     <>
       <Toast ref={toast} position="top-right" />
@@ -245,16 +299,34 @@ const MembersTable: React.FC = () => {
       <div className="flex justify-content-between align-items-center mb-2">
         <h2 style={{ color: "#07253f" }}>Member Management</h2>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 align-items-center">
           <SearchButton
             value={globalFilterValue}
             onChange={onGlobalFilterChange}
             placeholder="Search members..."
           />
+          <ColumnSettingsButton
+            value={visibleColumns}
+            options={ALL_MEMBER_COLUMNS}
+            optionLabel="header"
+            onChange={setVisibleColumns}
+            onReset={() =>
+              setVisibleColumns(
+                ALL_MEMBER_COLUMNS.filter(col =>
+                  DEFAULT_MEMBER_COLUMNS.includes(col.field)
+                )
+              )
+            }
+          />
           <ExportExcelButton dtRef={dt} />
           <AddButton onClick={handleAddNew} />
           <EditButton onClick={handleEdit} disabled={!selectedMember} />
           <DeleteButton onClick={handleDelete} disabled={!selectedMember} />
+          <ViewButton
+            onClick={() => setViewMember(selectedMember)}
+            disabled={!selectedMember}
+            tooltip="View Member Details"
+          />
         </div>
       </div>
       
@@ -294,16 +366,50 @@ const MembersTable: React.FC = () => {
           ]}
         >
           <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
-          <Column field="memberName" header="Member" body={formatNameDesignation} sortable />
-          <Column header="Contact Details" body={formatContactDetails} sortable />
-          <Column field="locationString" header="Location" body={(row) => formatLocation(row)} sortable />
-          <Column field="skillsString" header="Skills" body={(row) => formatSkillsDetailed(row.skills)} style={{ width: "17rem", maxWidth: "17rem" }} sortable/>
-          <Column field="interviewerCapacity" header="Capacity" sortable body={(row) => row.interviewerCapacity ?? "-"} />
-          <Column header="Recruiter" body={(row) => (row.isRecruiter ? "Yes" : "No")} sortable />
-          <Column header="Interviewer" body={(row) => (row.isInterviewer ? "Yes" : "No")} sortable />
-          <Column field="vendorName" header="Vendor" sortable body={(row) => formatValue(row.vendorName)} />
-          <Column field="clientName" header="Client" sortable body={(row) => formatValue(row.clientName)}/>
-          <Column field="organisation" header="Organisation" sortable body={(row) => formatValue(row.organisation)}/>
+          {visibleColumns.map((col) => {
+          let body;
+
+          switch (col.field) {
+            case "memberName":
+              body = formatNameDesignation;
+              break;
+
+            case "contactDetails":
+              body = formatContactDetails;
+              break;
+
+            case "skills":
+              body = (row: Member) => formatSkillsDetailed(row.skills);
+              break;
+
+            case "location":
+              body = (row: Member) => formatLocation(row);
+              break;
+
+            case "isRecruiter":
+              body = (row: Member) => (row.isRecruiter ? "Yes" : "No");
+              break;
+
+            case "isInterviewer":
+              body = (row: Member) => (row.isInterviewer ? "Yes" : "No");
+              break;
+
+            default:
+              body = (row: Member) => formatValue((row as any)[col.field]);
+          }
+
+          return (
+            <Column
+              key={col.field}
+              field={col.field}
+              header={col.header}
+              body={body}
+              sortable={col.sortable}
+              filter={col.filter}
+              showFilterMatchModes={false}
+            />
+          );
+        })}
         </DataTable>
       </div>
 
@@ -330,6 +436,55 @@ const MembersTable: React.FC = () => {
         onHide={() => setShowCreateUser(false)}
         onSuccess={handleCreateSuccess}
       />
+      <PremiumDetailsDialog
+        visible={!!viewMember}
+        title="Member Details"
+        onHide={() => setViewMember(null)}
+      >
+        {viewMember && (
+          <>
+            {/* 🔹 Core Information */}
+            <DetailsSection title="Member Overview">
+              <DetailsGrid items={buildMemberDetails(viewMember)} />
+            </DetailsSection>
+
+            {/* 🔹 Skills */}
+            {viewMember.skills?.length > 0 && (
+              <DetailsSection title="Skills">
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "10px",
+                  }}
+                >
+                  {viewMember.skills.map((skill, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        background: "#eef3ff",
+                        border: "1px solid #cdd5ff",
+                        color: "#3957e8",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {skill.skillName}
+                      <span style={{ fontWeight: 400 }}>
+                        {" "}
+                        • {skill.proficiencyLevel || "-"} • {skill.yearsOfExperience || 0} yrs
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </DetailsSection>
+            )}
+          </>
+        )}
+      </PremiumDetailsDialog>
+
     </>
   );
 };
