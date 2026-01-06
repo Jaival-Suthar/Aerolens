@@ -71,7 +71,7 @@ const ALL_COLUMNS = [
   },
   {
     field: "statusName",
-    header: "Status",
+    header: "Interview Status",
     sortable: true,
     filter: true
   },

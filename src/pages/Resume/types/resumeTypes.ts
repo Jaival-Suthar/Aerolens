@@ -63,7 +63,6 @@ export interface CandidateUpdatePayload {
   noticePeriod?: number;
   experienceYears?: number;
 
-  statusName?: string;
   linkedinProfileUrl?: string | null;
   notes?: string | null;
 }
@@ -110,8 +109,6 @@ export interface AddEditCandidate {
   expectedCTC?: number;
   noticePeriod: number;
   experienceYears: number;
-
-  statusName: string;
   linkedinProfileUrl?: string;
 
   resumeFile: File | null;
@@ -145,7 +142,6 @@ export interface AddEditCandidateApiPayload {
   noticePeriod: number;
   experienceYears: number;
 
-  statusName: string;
   linkedinProfileUrl?: string | null;
   notes?: string | null;
 }
@@ -178,6 +174,5 @@ export interface LocationItem {
 
 export interface CandidateCreateData {
   recruiters: RecruiterItem[];
-  status: StatusItem[];
   locations: LocationItem[];
 }

@@ -48,7 +48,6 @@ const INITIAL_FORM: AddEditCandidate = {
   expectedCTC: undefined,
   noticePeriod: 0,
   experienceYears: 0,
-  statusName: "",
   linkedinProfileUrl: undefined,
   resumeFile: null,
   notes: undefined,
@@ -90,8 +89,6 @@ const validateField = (field: keyof AddEditCandidate, value: any) => {
       return value >= 0 ? "" : "Notice period is required.";
     case "experienceYears":
       return value >= 0 ? "" : "Experience is required.";
-    case "statusName":
-      return value ? "" : "Status is required.";
     case "linkedinProfileUrl":
       if (!value || value.trim() === "") return "";
       if (!linkedinRegex.test(value)) return "Enter a valid LinkedIn URL.";
@@ -135,14 +132,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
       value: r.recruiterId 
     }));
   }, [createData?.recruiters]);
-
-  const statusOptions = useMemo(() => {
-    if (!createData?.status) return [];
-    return createData.status.map(s => ({ 
-      label: s.statusName, 
-      value: s.statusId 
-    }));
-  }, [createData?.status]);
 
   // Group locations by country
   const locationsByCountry = useMemo(() => {
@@ -238,7 +227,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
         expectedCTC: selectedResume.expectedCTC ?? undefined,
         noticePeriod: selectedResume.noticePeriod,
         experienceYears: selectedResume.experienceYears,
-        statusName: selectedResume.statusName,
         linkedinProfileUrl: selectedResume.linkedinProfileUrl || undefined,
         resumeFile: null,
         notes: selectedResume.notes || undefined,
@@ -348,8 +336,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
 
     noticePeriod: formData.noticePeriod,
     experienceYears: formData.experienceYears,
-
-    statusName: formData.statusName,
     linkedinProfileUrl: formData.linkedinProfileUrl?.trim() || null,
     notes: formData.notes?.trim() || null,
   };
@@ -677,28 +663,6 @@ else {
             colSize="col-12 md:col-4"
             required={false}
             allowDecimal
-          />
-
-          <DropdownField
-            id="statusName"
-            label="Status"
-            value={
-              createData?.status.find(
-                s => s.statusName === formData.statusName
-              )?.statusId || null
-            }
-            options={statusOptions}
-            onChange={(e: { value: number }) => {
-              const status = createData?.status.find(
-                s => s.statusId === e.value
-              );
-              handleChange("statusName", status?.statusName || "");
-            }}
-            onBlur={() => handleBlur("statusName")}
-            error={shouldShowError("statusName")}
-            disabled={loadingOptions}
-            placeholder={loadingOptions ? "Loading..." : "Select Status"}
-            colSize="col-12 md:col-4"
           />
 
           <InputField
