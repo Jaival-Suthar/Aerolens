@@ -40,7 +40,7 @@ const ALL_COLUMNS = [
   { field: "interviewerName", header: "Interviewer", filter: true },
   { field: "scheduledByName", header: "Scheduled By", filter: true },
 
-  { field: "roundProgress", header: "Round", body: "roundProgress", filter: true, filterField: "roundNumber" },
+  { field: "roundProgress", header: "Round", body: "roundProgress" },
   { field: "result", header: "Result", body: "result", filter: true },
   { field: "interviewDate", header: "Date", body: "date" },
 
@@ -550,6 +550,7 @@ const resultFilterTemplate = (options: any) => (
               body={bodyTemplate}
               filter={col.filter}
               filterElement={filterElement}
+              sortable
               showFilterMatchModes={false}
             />
           );
