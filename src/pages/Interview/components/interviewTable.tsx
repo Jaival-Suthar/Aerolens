@@ -426,7 +426,7 @@ const resultFilterTemplate = (options: any) => (
     <>
       <Toast ref={toast} />
       <div className="flex justify-content-between align-items-center mb-2">
-        <h2>Interviews</h2>
+        <h2 style={{ color: "#07253f" }}>Interviews</h2>
         <div className="flex gap-2 align-items-center">
           <SearchButton
             value={('value' in (filters.global || {}) ? (filters.global as DataTableFilterMetaData).value : "") || ""}

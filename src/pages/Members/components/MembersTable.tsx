@@ -243,7 +243,7 @@ const MembersTable: React.FC = () => {
       <Tooltip ref={tooltipRef} target=".skill-tag" />
       
       <div className="flex justify-content-between align-items-center mb-2">
-        <h2>Member Management</h2>
+        <h2 style={{ color: "#07253f" }}>Member Management</h2>
 
         <div className="flex gap-2">
           <SearchButton

@@ -210,7 +210,7 @@ const ClientContactsView: React.FC<ClientContactsViewProps> = ({ selectedClient,
       <Toast ref={toast} />
       
       {/* Header with buttons */}
-      <div className="flex justify-content-between align-items-center mb-4 w-full">
+      <div className="flex justify-content-between align-items-center mt-1 w-full">
         <div className="flex justify-content-start align-items-center">
           <button
             onClick={onBackClick}
@@ -235,7 +235,7 @@ const ClientContactsView: React.FC<ClientContactsViewProps> = ({ selectedClient,
       </div>
 
       {/* Client name heading */}
-      <h4 className="mb-3">Contacts for: {selectedClient.clientName}</h4>
+      <h4 className="mb-3" style={{ color: "#07253f" }}>Contacts for: {selectedClient.clientName}</h4>
 
       {/* Table with proper flex structure */}
       <div style={{ flex: 1, overflow: "hidden" }}>

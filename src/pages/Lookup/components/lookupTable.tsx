@@ -95,7 +95,7 @@ const LookupTable: React.FC<LookupTableProps> = ({
           paddingBottom: "0.5rem",
         }}
       >
-        <h2>Lookup Data</h2>
+        <h2 style={{ color: "#07253f" }}>Lookup Data</h2>
         <div className="flex gap-2">
           <SearchButton  
             value={globalFilterValue}

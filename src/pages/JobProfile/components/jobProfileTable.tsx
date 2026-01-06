@@ -469,7 +469,7 @@ const jdBodyTemplate = (rowData: any) => {
       <Toast ref={toast} />
       
       <div className="flex justify-content-between align-items-center mb-2">
-        <h2>Job Profiles Requirements</h2>
+        <h2 style={{ color: "#07253f" }}>Job Profiles Requirements</h2>
         <div className='flex gap-2 align-items-center'>
           <SearchButton
             value={globalFilterValue}
