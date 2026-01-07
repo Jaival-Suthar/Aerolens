@@ -123,6 +123,9 @@ const buildCandidateFormData = (candidate: AddEditCandidate): FormData => {
 
   fd.append("candidateName", candidate.candidateName);
   fd.append("recruiterName", candidate.recruiterName ?? "");
+  if (candidate.recruiterId !== null && candidate.recruiterId !== undefined) {
+    fd.append("recruiterId", String(candidate.recruiterId));
+  }
   fd.append("jobRole", candidate.jobRole);
   if (candidate.expectedLocation) {
     fd.append("expectedLocation[city]", candidate.expectedLocation.city);
