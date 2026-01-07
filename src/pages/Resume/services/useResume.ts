@@ -68,26 +68,17 @@ export interface LookupData {
 /*  CACHED LOOKUP FETCH – /candidate/create-data                             */
 /* ------------------------------------------------------------------------- */
 
-let cachedCandidateCreateData: CandidateCreateData | null = null;
-
 export const fetchCandidateCreateData = async (
   accessToken: string | null,
   forceRefresh = false
 ): Promise<CandidateCreateData> => {
   try {
-    // Return cached copy unless explicitly refreshed
-    if (cachedCandidateCreateData && !forceRefresh) {
-      return cachedCandidateCreateData;
-    }
-
     const endpoint = `/candidate/create-data`;
     const data = await apiFetch<CandidateCreateData>(
       endpoint,
       { method: "GET" },
       accessToken || undefined
     );
-
-    cachedCandidateCreateData = data;
     return data;
   } catch (error) {
     logger.error("Error fetching create-data:", error);
@@ -217,6 +208,27 @@ async function apiFetch<T>(
 /* ========================================================================= */
 /*  EXPORTS – CRUD OPERATIONS                                                */
 /* ========================================================================= */
+
+export const getCandidateById = async (
+  accessToken: string | null,
+  candidateId: number
+): Promise<Candidate> => {
+  try {
+    const endpoint = `/candidate/${candidateId}`;
+
+    const data = await apiFetch<Candidate>(
+      endpoint,
+      { method: "GET" },
+      accessToken || undefined
+    );
+
+    return data;
+  } catch (error) {
+    logger.error("Error fetching candidate by ID:", error);
+    throw error;
+  }
+};
+
 
 // -------------------- CREATE --------------------
 export const createCandidate = async (

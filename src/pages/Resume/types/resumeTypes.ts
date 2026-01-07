@@ -52,7 +52,7 @@ export interface CandidateUpdatePayload {
   expectedLocation?: {
     city: string;
     country: string;
-  };
+  } | null;
    currentLocation?: {
     city: string;
     country: string;
@@ -83,6 +83,8 @@ export interface ResumeAddEditProps {
   onHide: () => void;
   selectedResume: Candidate | null;
   onSuccess: () => void;
+  createData: CandidateCreateData | null;
+  loadingOptions: boolean;
 }
 
 /* ------------------ ADD/EDIT PAYLOAD ------------------ */
@@ -99,7 +101,7 @@ export interface AddEditCandidate {
   expectedLocation?: {
     city: string;
     country: string;
-  };
+  } | null;
    currentLocation?: {
     city: string;
     country: string;
@@ -129,7 +131,7 @@ export interface AddEditCandidateApiPayload {
   expectedLocation?: {
     city: string;
     country: string;
-  };
+  } | null;
 
   currentLocation?: {
     city: string;

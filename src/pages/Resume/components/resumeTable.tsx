@@ -12,8 +12,8 @@ import DeleteButton from "../../../shared/DeleteButton";
 import ExportExcelButton from "../../../shared/ExportExcelButton";
 import { useSearchParams } from "react-router-dom";
 
-import { Candidate } from "../types/resumeTypes";
-import { getCandidates, downloadResume } from "../services/useResume";
+import { Candidate, CandidateCreateData } from "../types/resumeTypes";
+import { getCandidates, downloadResume, fetchCandidateCreateData } from "../services/useResume";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import SearchButton from "../../../shared/SearchButton";
 import { FilterMatchMode } from 'primereact/api';
@@ -145,6 +145,8 @@ const ResumeTable: React.FC = () => {
 );
   const [viewCandidate, setViewCandidate] = useState<Candidate | null>(null);
   const [globalFilterValue, setGlobalFilterValue] = useState('');
+  const [createData, setCreateData] = useState<CandidateCreateData | null>(null);
+  const [loadingCreateData, setLoadingCreateData] = useState(false);
   const [filters, setFilters] = useState<any>({
   global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   candidateName: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -163,25 +165,58 @@ const ResumeTable: React.FC = () => {
   notes: { value: null, matchMode: FilterMatchMode.CONTAINS }
 });
 
-
   /** ------------------- Data Loading ------------------- */
-  const loadResumes = useCallback(async () => {
-    if (!accessToken) return;
-    setLoading(true);
-    try {
-      const { candidates } = await getCandidates(accessToken, 1, 10000);
-      setResumes(Array.isArray(candidates) ? candidates : []);
-    } catch (error) {
-      console.error("Error loading resumes:", error);
-      setResumes([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [accessToken]);
+  // const loadResumes = useCallback(async () => {
+  //   if (!accessToken) return;
+  //   setLoading(true);
+  //   try {
+  //     const { candidates } = await getCandidates(accessToken, 1, 10000);
+  //     setResumes(Array.isArray(candidates) ? candidates : []);
+  //   } catch (error) {
+  //     console.error("Error loading resumes:", error);
+  //     setResumes([]);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }, [accessToken]);
 
-  useEffect(() => {
-    loadResumes();
-  }, [loadResumes]);
+  // ✅ Combined data loader - fetches both candidates and createData in parallel
+    const loadAllData = useCallback(async () => {
+      if (!accessToken) return;
+      
+      setLoading(true);
+      setLoadingCreateData(true);
+      
+      try {
+        // ✅ Fetch both in parallel (faster)
+        const [candidatesResult, createDataResult] = await Promise.all([
+          getCandidates(accessToken, 1, 10000),
+          fetchCandidateCreateData(accessToken)
+        ]);
+        
+        setResumes(Array.isArray(candidatesResult.candidates) ? candidatesResult.candidates : []);
+        setCreateData(createDataResult);
+        
+      } catch (error) {
+        console.error("Error loading data:", error);
+        setResumes([]);
+        
+        toastRef.current?.show({
+          severity: "error",
+          summary: "Error",
+          detail: "Failed to load candidate data",
+          life: 3000
+        });
+      } finally {
+        setLoading(false);
+        setLoadingCreateData(false);
+      }
+    }, [accessToken]);
+
+    // ✅ Initial load
+    useEffect(() => {
+      loadAllData();
+    }, [loadAllData]);
 
   const onPageChange = (event: any) => {
   setFirst(event.first);
@@ -190,7 +225,6 @@ const ResumeTable: React.FC = () => {
   const newPage = event.page + 1;
   setSearchParams({ page: newPage.toString() });
 };
-
 
   /** ------------------- CRUD Handlers ------------------- */
   const handleAdd = () => {
@@ -213,13 +247,14 @@ const ResumeTable: React.FC = () => {
 
   const handleAddEditSuccess = () => {
     setShowAddEditDialog(false);
-    loadResumes();
+    setSelectedResume(null);
+    loadAllData();
   };
 
   const handleDeleteSuccess = () => {
     setShowDeleteDialog(false);
     setSelectedResume(null);
-    loadResumes();
+    loadAllData();
   };
   const getNestedValue = (obj: any, path: string) => {
   return path.split(".").reduce((acc, key) => acc?.[key], obj);
@@ -610,6 +645,8 @@ const settingsItems = [
         onHide={() => setShowAddEditDialog(false)}
         selectedResume={editingResume}
         onSuccess={handleAddEditSuccess}
+        createData={createData}
+        loadingOptions={loadingCreateData}
       />
 
       <ResumeDelete
