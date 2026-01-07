@@ -151,7 +151,15 @@ const MembersTable: React.FC = () => {
 
   const handleEditSuccess = () => {
     setShowEditDialog(false);
+    setSelectedMember(null);
+    setSelectedMember(null);
     loadMembers();
+  };
+
+  const handleEditCancel = () => {
+    setShowEditDialog(false);
+    setEditingMember(null);
+    setSelectedMember(null);
   };
 
   const handleCreateSuccess = () => {
@@ -416,7 +424,7 @@ const MembersTable: React.FC = () => {
       {formData && (
         <MemberEdit
           visible={showEditDialog}
-          onHide={() => setShowEditDialog(false)}
+          onHide={handleEditCancel}
           selectedMember={editingMember}
           onSuccess={handleEditSuccess}
           formData={formData}

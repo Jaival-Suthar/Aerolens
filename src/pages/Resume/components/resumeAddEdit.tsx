@@ -11,7 +11,7 @@ import {
   createCandidate,
   updateCandidate,
   uploadResume,
-  fetchCandidateCreateData,
+  getCandidateById,
 } from "../services/useResume";
 import { ResumeAddEditProps, AddEditCandidate, CandidateCreateData, AddEditCandidateApiPayload } from "../types/resumeTypes";
 import { useAuth } from "../../../shared/auth/AuthContext";
@@ -112,6 +112,8 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   onHide,
   selectedResume,
   onSuccess,
+  createData,
+  loadingOptions,
 }) => {
   const { accessToken } = useAuth();
   const isEditMode = Boolean(selectedResume);
@@ -120,9 +122,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [submitted, setSubmitted] = useState(false);
   const toast = useRef<Toast>(null);
-  
-  const [createData, setCreateData] = useState<CandidateCreateData | null>(null);
-  const [loadingOptions, setLoadingOptions] = useState(false);
   
   // Prepare dropdown options from create-data
   const recruiterOptions = useMemo(() => {
@@ -174,69 +173,54 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   }));
 }, [formData.currentLocation?.country, locationsByCountry]);
 
-
-  // Load create-data on dialog open
-  useEffect(() => {
-    const loadCreateData = async () => {
-      if (!accessToken) return;
-      
-      setLoadingOptions(true);
-      try {
-        const data = await fetchCandidateCreateData(accessToken);
-        setCreateData(data);
-      } catch (error) {
-        console.error("Error loading create data:", error);
-        toast.current?.show({
-          severity: "error",
-          summary: "Error",
-          detail: "Failed to load form options",
-          life: 3000,
-        });
-      } finally {
-        setLoadingOptions(false);
-      }
-    };
-
-    if (visible) {
-      loadCreateData();
-    }
-  }, [visible, accessToken]);
-
   // Initialize / Reset form
   useEffect(() => {
-    if (isEditMode && selectedResume) {
-      let locationId: number | undefined;
-      if (selectedResume.expectedLocation && createData?.locations) {
-        const matchingLocation = createData.locations.find(
-          loc => loc.city === selectedResume.expectedLocation?.city && 
-                 loc.country === selectedResume.expectedLocation?.country
-        );
-        locationId = matchingLocation?.locationId;
-      }
+  const loadCandidateForEdit = async () => {
+    if (!isEditMode || !selectedResume || !accessToken) return;
+
+    try {
+      const freshCandidate = await getCandidateById(
+        accessToken,
+        selectedResume.candidateId
+      );
 
       setFormData({
-        candidateName: selectedResume.candidateName,
-        contactNumber: selectedResume.contactNumber ?? undefined,
-        email: selectedResume.email ?? undefined,
-        recruiterId: selectedResume.recruiterId,
-        recruiterName: selectedResume.recruiterName,
-        jobRole: selectedResume.jobRole,
-        expectedLocation: selectedResume.expectedLocation || { city: '', country: '' },
-        currentLocation: selectedResume.currentLocation ?? null,
-        currentCTC: selectedResume.currentCTC ?? undefined,
-        expectedCTC: selectedResume.expectedCTC ?? undefined,
-        noticePeriod: selectedResume.noticePeriod,
-        experienceYears: selectedResume.experienceYears,
-        linkedinProfileUrl: selectedResume.linkedinProfileUrl || undefined,
-        resumeFile: null,
-        notes: selectedResume.notes || undefined,
+        candidateName: freshCandidate.candidateName,
+        contactNumber: freshCandidate.contactNumber ?? undefined,
+        email: freshCandidate.email ?? undefined,
+        recruiterId: freshCandidate.recruiterId,
+        recruiterName: freshCandidate.recruiterName,
+        jobRole: freshCandidate.jobRole,
+        expectedLocation: freshCandidate.expectedLocation,
+        currentLocation: freshCandidate.currentLocation ?? null,
+        currentCTC: freshCandidate.currentCTC ?? undefined,
+        expectedCTC: freshCandidate.expectedCTC ?? undefined,
+        noticePeriod: freshCandidate.noticePeriod,
+        experienceYears: freshCandidate.experienceYears,
+        linkedinProfileUrl: freshCandidate.linkedinProfileUrl ?? undefined,
+        resumeFile: null, // never prefill file
+        notes: freshCandidate.notes ?? undefined,
       });
+    } catch (err) {
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: "Failed to load candidate details",
+      });
+    }
+  };
+
+  if (visible) {
+    if (isEditMode) {
+      loadCandidateForEdit();
     } else {
       setFormData(INITIAL_FORM);
     }
     setErrors({});
     setSubmitted(false);
-  }, [visible, selectedResume, isEditMode, createData]);
+  }
+}, [visible, isEditMode, selectedResume, accessToken]);
+
 
   const handleChange = useCallback(
   (field: keyof AddEditCandidate, value: any) => {
