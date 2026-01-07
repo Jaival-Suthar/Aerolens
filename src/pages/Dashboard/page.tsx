@@ -142,17 +142,24 @@ const Dashboard: React.FC = () => {
     return (
         <div className="p-4">
             {/* Header Section */}
-            <div className="mb-4">
-                <h1 style={{
-                    fontSize: '2rem',
-                    fontWeight: '600',
-                    color: '#111827',
+            <div
+                className="mb-4"
+                style={{
+                    display: "flex",
+                    justifyContent: "center",
+                }}
+                >
+                <h1
+                    style={{
+                    fontSize: "2rem",
+                    fontWeight: 600,
+                    color: "#111827",
                     margin: 0,
-                    marginBottom: '0.5rem'
-                }}>
+                    }}
+                >
                     Welcome to the Aerolens Portal
                 </h1>
-            </div>
+                </div>
 
             {/* Statistics Cards Grid */}
             <div

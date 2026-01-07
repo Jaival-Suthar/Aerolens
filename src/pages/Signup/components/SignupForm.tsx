@@ -1,19 +1,31 @@
 import React, { useState, useEffect, useRef } from "react";
+import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Password } from "primereact/password";
 import { Dropdown } from "primereact/dropdown";
 import { Toast } from "primereact/toast";
-import { useNavigate } from "react-router-dom";
-import { SignupFormData, SignupResponse } from "../types/signuptypes";
-import { registerUser, fetchDesignations } from "../services/useSignup";
-import { useAuth } from "../../../shared/auth/AuthContext";
-import { FaUser, FaPhone, FaEnvelope, FaLock, FaBriefcase, FaSpinner } from "react-icons/fa";
 import DialogButton from "../../../shared/DialogAddEditButton";
+import { useAuth } from "../../../shared/auth/AuthContext";
+import { SignupFormData, SignupResponse } from "../types/signuptypes";
+import { registerUser, fetchMemberCreateData  } from "../services/useSignup";
 
-export default function SignupForm() {
-  const navigate = useNavigate();
+const PASSWORD_REGEX =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()[\]{}\-_=+|\\:;"'<>,./]).{8,}$/;
+
+const PASSWORD_ERROR_MESSAGE =
+  "Password must be at least 8 characters and contain uppercase, lowercase, number and special character.";
+
+export default function SignupForm({
+  visible,
+  onHide,
+  onSuccess,
+}: {
+  visible: boolean;
+  onHide: () => void;
+  onSuccess?: () => void
+}) {
   const { accessToken, isAuthenticated } = useAuth();
-  const toast = useRef<Toast>(null); // ✅ Toast ref
+  const toast = useRef<Toast>(null);
 
   const [formData, setFormData] = useState<SignupFormData>({
     fullName: "",
@@ -21,405 +33,298 @@ export default function SignupForm() {
     email: "",
     password: "",
     confirmPassword: "",
-    designation: "",
-    isRecruiter: false,
-    isInterviewer: false
-  });
-
-  const [designations, setDesignations] = useState<{ label: string; value: string }[]>([]);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
-  const [loadingDesignations, setLoadingDesignations] = useState(false);
-  const resetForm = () => {
-  setFormData({
-    fullName: "",
-    contactNumber: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    designation: "",
+    designationId: 0,
     isRecruiter: false,
     isInterviewer: false,
   });
-  setErrors({});
-};
+
+  const [designations, setDesignations] = useState<
+    { label: string; value: number }[]
+  >([]);
+
+  const [vendors, setVendors] = useState<
+    { label: string; value: number }[]
+  >([]);
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const loadDesignations = async () => {
-      if (!accessToken || !isAuthenticated) return;
-      try {
-        setLoadingDesignations(true);
-        const data = await fetchDesignations(accessToken);
-        setDesignations(data.map((d) => ({ label: d, value: d })));
-      } catch (err: any) {
+    if (!visible || !accessToken || !isAuthenticated) return;
+
+    fetchMemberCreateData(accessToken)
+  .then((data) => {
+    setDesignations(
+      data.designations.map((d) => ({
+        label: d.designationName,
+        value: d.designationId,
+      }))
+    );
+
+    setVendors(
+      data.vendors.map((v) => ({
+        label: v.vendorName,
+        value: v.vendorId,
+      }))
+    );
+  })
+      .catch(() =>
         toast.current?.show({
           severity: "error",
           summary: "Error",
-          detail: err?.message || "Failed to load designations",
-          life: 4000,
-        });
-      } finally {
-        setLoadingDesignations(false);
-      }
-    };
-    loadDesignations();
-  }, [accessToken, isAuthenticated]);
+          detail: "Failed to load designations",
+        })
+      );
+  }, [visible, accessToken, isAuthenticated]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => ({ ...prev, [name]: "" }));
+    setFormData((p) => ({ ...p, [name]: value }));
+    setErrors((p) => ({ ...p, [name]: "" }));
   };
 
-  const handleDropdownChange = (e: { value: string }) => {
-    setFormData((prev) => ({ ...prev, designation: e.value || "" }));
-    setErrors((prev) => ({ ...prev, designation: "" }));
+  const validate = () => {
+    const e: Record<string, string> = {};
+
+    if (!formData.fullName.trim()) e.fullName = "Full name is required";
+    if (!formData.contactNumber.trim())
+      e.contactNumber = "Contact number is required";
+    if (!formData.email.trim()) e.email = "Email is required";
+    if (!formData.designationId) {
+      e.designationId = "Designation is required";
+    }
+
+
+    if (!formData.password)
+      e.password = "Please enter a password";
+    else if (!PASSWORD_REGEX.test(formData.password))
+      e.password = PASSWORD_ERROR_MESSAGE;
+
+    if (!formData.confirmPassword)
+      e.confirmPassword = "Please confirm password";
+    else if (formData.password !== formData.confirmPassword)
+      e.confirmPassword = "Passwords do not match";
+
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
-
-  const validateFields = () => {
-  const newErrors: Record<string, string> = {};
-
-  // Full Name
-  if (!formData.fullName?.trim()) {
-    newErrors.fullName = "Please enter your full name";
-  }
-
-  // Contact Number
-  if (!formData.contactNumber?.trim()) {
-    newErrors.contactNumber = "Contact number is required";
-  } else if (!/^\+?[\d\s-]{10,}$/.test(formData.contactNumber)) {
-    newErrors.contactNumber = "Invalid contact number";
-  }
-
-  // Email
-  if (!formData.email?.trim()) {
-    newErrors.email = "Email is required";
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-    newErrors.email = "Invalid email format";
-  }
-
-  // Designation
-  if (!formData.designation) {
-    newErrors.designation = "Please select a designation";
-  }
-
-  // Password
-  if (!formData.password) {
-    newErrors.password = "Please enter a password";
-  }
-
-  // Confirm Password
-  if (!formData.confirmPassword) {
-    newErrors.confirmPassword = "Please confirm your password";
-  } else if (formData.password !== formData.confirmPassword) {
-    newErrors.confirmPassword = "Passwords do not match";
-  }
-
-  setErrors(newErrors);
-  return Object.keys(newErrors).length === 0;
-};
-
-
-  const handleSignupClick = async () => {
-    // ✅ AUTH GUARD — THIS IS THE KEY FIX
-  if (!accessToken) {
-    toast.current?.show({
-      severity: "warn",
-      summary: "Session not ready",
-      detail: "Please wait a moment and try again.",
-      life: 3000,
+  
+  useEffect(() => {
+  if (visible) {
+    setErrors({});
+    setFormData({
+      fullName: "",
+      contactNumber: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      designationId: 0,
+      vendorId: null,
+      isRecruiter: false,
+      isInterviewer: false,
     });
-    return;
   }
-    if (!validateFields()) return;
-    const submitData = {
-      ...formData,
-      isRecruiter: formData.isRecruiter,
-      isInterviewer: formData.isInterviewer,
-    };
+}, [visible]);
+
+
+  const handleSubmit = async () => {
+    if (!validate() || !accessToken) return;
 
     try {
       setLoading(true);
-      const response: SignupResponse = await registerUser(submitData, accessToken);
+      const res: SignupResponse = await registerUser(formData, accessToken);
 
-      // ✅ Always show toast based on backend message
       toast.current?.show({
-        severity: response.success ? "success" : "error",
-        summary: response.success ? "Success" : "Error",
-        detail: response.message || (response.success ? "User created successfully!" : "Signup failed."),
-        life: 4000,
+        severity: res.success ? "success" : "error",
+        summary: res.success ? "Success" : "Error",
+        detail: res.message,
       });
 
-      if (response.success) {
-        setFormData({
-          fullName: "",
-          contactNumber: "",
-          email: "",
-          password: "",
-          confirmPassword: "",
-          designation: "",
-          isRecruiter: false,
-          isInterviewer: false
-        });
+      if (res.success) {
+        onSuccess?.();
+        onHide();
       }
-    } catch (err: any) {
-      console.error("Registration failed:", err);
-      toast.current?.show({
-        severity: "error",
-        summary: "Error",
-        detail: err?.message || "Something went wrong. Please try again.",
-        life: 4000,
-      });
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ textAlign: "center" }}>
-          <i className="pi pi-spin pi-spinner" style={{ fontSize: "2rem" }}></i>
-          <p style={{ marginTop: "1rem", color: "#374151" }}>Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    marginBottom: "4px",
-    fontSize: "13px",
-    fontWeight: "500",
-    color: "#374151",
-  };
-
-  const inputGroupStyle: React.CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    border: "1px solid #d1d5db",
-    borderRadius: "6px",
-    padding: "6px 10px",
-    background: "#fff",
-  };
-
-  const iconStyle: React.CSSProperties = { marginRight: "8px", color: "#374151", fontSize: "14px" };
-  const fieldContainerStyle: React.CSSProperties = { marginBottom: "12px" };
-
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        padding: "5px",
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "center",
-      }}
+    <Dialog
+      header="Create User"
+      visible={visible}
+      onHide={onHide}
+      modal
+      dismissableMask
+      style={{ width: "60vw",  color: "#07253f"  }}
+      breakpoints={{ "960px": "80vw", "640px": "95vw" }}
     >
-      {/* ✅ Toast Component */}
-      <Toast ref={toast} position="top-right" />
+      <Toast ref={toast} />
 
-      <div style={{ maxWidth: "1200px" }}>
-        {/* Header */}
-        <div style={{ marginBottom: "6px" }}>
-          <h1
-            style={{
-              fontSize: "24px",
-              color: "#111827",
-              fontWeight: "600",
-              marginBottom: "2px",
-            }}
-          >
-            Create New User
-          </h1>
-          <p style={{ color: "#4e535cff", fontSize: "16px", fontWeight: "500" }}>
-            Add a new user to the system
-          </p>
+      <div className="p-fluid grid">
+        {/* Full Name */}
+        <div className="field col-12 md:col-6">
+          <label>Full Name *</label>
+          <InputText
+            name="fullName"
+            value={formData.fullName}
+            onChange={handleChange}
+            className={errors.fullName ? "p-invalid" : ""}
+          />
+          <small className="p-error">{errors.fullName}</small>
         </div>
 
-        {/* Main Content */}
-        <div
-          style={{
-            background: "white",
-            padding: "10px",
-            borderRadius: "8px",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-            maxWidth: "900px",
-          }}
-        >
+        {/* Contact */}
+        <div className="field col-12 md:col-6">
+          <label>Contact Number *</label>
+          <InputText
+            name="contactNumber"
+            value={formData.contactNumber}
+            onChange={handleChange}
+            className={errors.contactNumber ? "p-invalid" : ""}
+          />
+          <small className="p-error">{errors.contactNumber}</small>
+        </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            {/* Full Name */}
-            <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Full Name *</label>
-              <div style={inputGroupStyle}>
-                <FaUser style={iconStyle} />
-                <InputText
-                  name="fullName"
-                  placeholder="Enter full name"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  style={{ width: "100%", border: "none", outline: "none", fontSize: "14px" }}
-                />
-              </div>
-              {errors.fullName && <p style={{ color: "#dc2626", marginTop: "3px", fontSize: "12px" }}>{errors.fullName}</p>}
-            </div>
+        {/* Email */}
+        <div className="field col-12 md:col-6">
+          <label>Email *</label>
+          <InputText
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            className={errors.email ? "p-invalid" : ""}
+          />
+          <small className="p-error">{errors.email}</small>
+        </div>
 
-            {/* Contact Number */}
-            <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Contact Number *</label>
-              <div style={inputGroupStyle}>
-                <FaPhone style={iconStyle} />
-                <InputText
-                  name="contactNumber"
-                  placeholder="Enter contact number"
-                  value={formData.contactNumber}
-                  onChange={handleChange}
-                  style={{ width: "100%", border: "none", outline: "none", fontSize: "14px" }}
-                />
-              </div>
-              {errors.contactNumber && <p style={{ color: "#dc2626", marginTop: "3px", fontSize: "12px" }}>{errors.contactNumber}</p>}
-            </div>
+        {/* Designation */}
+        <div className="field col-12 md:col-6">
+          <label>Designation *</label>
+          <Dropdown
+            value={formData.designationId || null}
+            options={designations}
+            placeholder="Select designation"
+            onChange={(e) => {
+              setFormData((p) => ({ ...p, designationId: e.value }));
+              setErrors((prev) => ({ ...prev, designationId: "" }));
+            }}
+            className={errors.designationId ? "p-invalid" : ""}
+          />
+          <small className="p-error">{errors.designationId}</small>
+        </div>
 
-            {/* Email Address */}
-            <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Email Address *</label>
-              <div style={inputGroupStyle}>
-                <FaEnvelope style={iconStyle} />
-                <InputText
-                  name="email"
-                  placeholder="Enter email address"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  style={{ width: "100%", border: "none", outline: "none", fontSize: "14px" }}
-                />
-              </div>
-              {errors.email && <p style={{ color: "#dc2626", marginTop: "3px", fontSize: "12px" }}>{errors.email}</p>}
-            </div>
+        {/* Password */}
+        <div className="field col-12 md:col-6">
+          <label>Password *</label>
+          <Password
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            toggleMask
+            feedback={false}
+            className={errors.password ? "p-invalid w-full" : "w-full"}
+          />
+          <small className="p-error">{errors.password}</small>
+        </div>
 
-            {/* Designation */}
-            <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Designation *</label>
-              <div style={inputGroupStyle}>
-                <FaBriefcase style={iconStyle} />
-                <Dropdown
-                  value={formData.designation}
-                  options={designations}
-                  onChange={handleDropdownChange}
-                  placeholder={loadingDesignations ? "Loading..." : "Select designation"}
-                  disabled={loadingDesignations}
-                  style={{ width: "100%", border: "none", outline: "none", fontSize: "14px" }}
-                />
-              </div>
-              {errors.designation && <p style={{ color: "#dc2626", marginTop: "3px", fontSize: "12px" }}>{errors.designation}</p>}
-            </div>
+        {/* Confirm Password */}
+        <div className="field col-12 md:col-6">
+          <label>Confirm Password *</label>
+          <Password
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            toggleMask
+            feedback={false}
+            className={errors.confirmPassword ? "p-invalid w-full" : "w-full"}
+          />
+          <small className="p-error">{errors.confirmPassword}</small>
+        </div>
+        <div className="field col-12 md:col-6">
+          <label>Vendor</label>
+          <Dropdown
+            value={formData.vendorId ?? null}
+            options={vendors}
+            placeholder="Select vendor"
+            showClear
+            onChange={(e) =>
+              setFormData((p) => ({
+                ...p,
+                vendorId: e.value ?? null,
+              }))
+            }
+          />
+        </div>
+        {/* Roles */}
+        <div className="field col-12">
+          <label>User Role Access</label>
 
-            {/* Password */}
-            <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Password *</label>
-              <div style={inputGroupStyle}>
-                <FaLock style={iconStyle} />
-                <Password
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Enter password"
-                  toggleMask
-                  inputStyle={{ width: "100%", border: "none", outline: "none", fontSize: "14px" }}
-                />
-              </div>
-              {errors.password && <p style={{ color: "#dc2626", marginTop: "3px", fontSize: "12px" }}>{errors.password}</p>}
-            </div>
+          <div className="flex gap-6 mt-3">
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                fontSize: "15px",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={formData.isRecruiter}
+                onChange={(e) =>
+                  setFormData((p) => ({ ...p, isRecruiter: e.target.checked }))
+                }
+                style={{
+                  width: "18px",
+                  height: "18px",
+                  cursor: "pointer",
+                }}
+              />
+              Recruiter
+            </label>
 
-            {/* Confirm Password */}
-            <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Confirm Password *</label>
-              <div style={inputGroupStyle}>
-                <FaLock style={iconStyle} />
-                <Password
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="Re-enter password"
-                  toggleMask
-                  feedback={false}
-                  inputStyle={{ width: "100%", border: "none", outline: "none", fontSize: "14px" }}
-                />
-              </div>
-              {errors.confirmPassword && <p style={{ color: "#dc2626", marginTop: "3px", fontSize: "12px" }}>{errors.confirmPassword}</p>}
-            </div>
-            {/* Recruiter / Interviewer Flags */}
-          <div style={{ gridColumn: "1 / span 2", marginTop: "8px" }}>
-            <label style={{ ...labelStyle, marginBottom: "6px", fontSize:"16px" }}>User Role Access</label>
-
-            <div style={{ display: "flex", gap: "40px", marginTop: "8px" }}>
-              
-              {/* Recruiter */}
-               <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    cursor: "pointer",
-                    fontSize: "15px",
-                  }}
-                >
-                <input
-                  type="checkbox"
-                  style={{ transform: "scale(1.5)" }}
-                  checked={formData.isRecruiter}
-                  onChange={(e) =>
-                    setFormData(prev => ({ ...prev, isRecruiter: e.target.checked }))
-                  }
-                />
-                Recruiter
-              </label>
-
-              {/* Interviewer */}
-              <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    cursor: "pointer",
-                    fontSize: "15px",
-                  }}
-                >
-                <input
-                  type="checkbox"
-                  style={{ transform: "scale(1.5)" }}
-                  checked={formData.isInterviewer}
-                  onChange={(e) =>
-                    setFormData(prev => ({ ...prev, isInterviewer: e.target.checked }))
-                  }
-                />
-                Interviewer
-              </label>
-            </div>
-          </div>
-
-          </div>
-
-          {/* Action Buttons */}
-          <div style={{ display: "flex", gap: "10px", marginTop: "20px", justifyContent: "flex-end" }}>
-            <DialogButton
-              label="Cancel"
-              severity="secondary"
-              onClick={resetForm}
-              disabled={loading}
-            />
-            <DialogButton
-              label={loading ? "Creating User..." : "Create User"}
-              severity="success"
-              icon={loading ? <FaSpinner className="spin mr-2" /> : null}
-              onClick={handleSignupClick}
-              loading={loading}
-              disabled={loading || !accessToken}
-            />
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                fontSize: "15px",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={formData.isInterviewer}
+                onChange={(e) =>
+                  setFormData((p) => ({ ...p, isInterviewer: e.target.checked }))
+                }
+                style={{
+                  width: "18px",
+                  height: "18px",
+                  cursor: "pointer",
+                }}
+              />
+              Interviewer
+            </label>
           </div>
         </div>
       </div>
-    </div>
+
+      <div className="flex justify-content-end gap-2 mt-4">
+        <DialogButton
+          label="Cancel"
+          severity="secondary"
+          onClick={onHide}
+        />
+        <DialogButton
+          label="Create User"
+          severity="success"
+          loading={loading}
+          onClick={handleSubmit}
+        />
+      </div>
+    </Dialog>
   );
 }

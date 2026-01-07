@@ -10,17 +10,19 @@ const ClientDelete: React.FC<ClientDeleteProps> = ({
   client
 }) => {
   const dialogFooter = (
-    <div className="flex justify-content-end gap-2">
-      <DialogDeleteButton
-          onCancel={onHide}
-          onDelete={() => {
-            onDelete(client);
-            onHide();
-          }}
-        // loading={loading} // optional, pass if you have loading state
-      />
-    </div>
-  );
+  <div className="flex justify-content-end gap-2">
+    <DialogDeleteButton
+      onCancel={onHide}
+      onDelete={async () => {
+        try {
+          await onDelete(client);
+          onHide(); // close ONLY on success
+        } catch {
+        }
+      }}
+    />
+  </div>
+);
   return (
     <Dialog
       header="Confirm Delete"

@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef, useState  } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Menubar } from "primereact/menubar";
 import { Button } from "primereact/button";
@@ -13,15 +13,17 @@ import {
   FaCog,
   FaUser,
   FaUserTie,
+  FaBuilding  
 } from "react-icons/fa";
 import { useProfileStore } from "./shared/store/profile";
-import Logo from "./assets/Logo.webp";
+import SmallLogo from "./assets/SmallLogo.svg";
+import SignupForm from "./pages/Signup/components/SignupForm";
 
 const AppNavbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toggleSidebar } = useProfileStore();
-
+  const [showCreateUser, setShowCreateUser] = useState(false);
   const handleNavigation = useCallback(
     (path: string) => {
       navigate(path);
@@ -41,7 +43,7 @@ const AppNavbar: React.FC = () => {
     {
       label: "Create User",
       icon: <FaUser style={{ marginRight: 8, marginLeft: 4 }} />,
-      command: () => handleNavigation("/create-user"),
+      command: () => setShowCreateUser(true),
     },
   ];
 
@@ -80,6 +82,12 @@ const AppNavbar: React.FC = () => {
           icon: <FaDatabase style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/lookup-data"),
           className: isMenuActive("/lookup-data") ? "nav-subitem-active" : "",
+        },
+        {
+          label: "Vendor",
+          icon: <FaBuilding   style={{ marginRight: 8, marginLeft: 4 }} />,
+          command: () => handleNavigation("/vendor"),
+          className: isMenuActive("/vendor") ? "nav-subitem-active" : "",
         },
       ],
     },
@@ -128,24 +136,15 @@ const AppNavbar: React.FC = () => {
         height: "40px",
         paddingLeft: 24,
         paddingRight: 24,
-        color: "#000000",
         fontWeight: 600,
         fontSize: 16,
         gap: 8,
       }}
     >
       <img
-        src={Logo}
+        src={SmallLogo}
         alt="Aerolens Logo"
-        width={96}
         height={24}
-        role="img"
-        decoding="async"
-        style={{
-          height: 24,
-          width: "auto",
-          filter: "brightness(0) saturate(100%) invert(0%)",
-        }}
       />
     </div>
   );
@@ -173,7 +172,7 @@ const AppNavbar: React.FC = () => {
           style={{
             width: 32,
             height: 32,
-            color: "#666666",
+            color: "#07253f",
             fontSize: 15,
           }}
           onClick={(event) => settingsMenu.current?.toggle(event)}
@@ -190,7 +189,7 @@ const AppNavbar: React.FC = () => {
         style={{
           width: 32,
           height: 32,
-          color: "#666666",
+          color: "#07253f",
           fontSize: 15,
         }}
         onClick={toggleSidebar}
@@ -201,6 +200,37 @@ const AppNavbar: React.FC = () => {
   return (
     <>
       <style>{`
+        /* --- Center Menubar Items --- */
+        .p-menubar {
+          display: flex;
+          align-items: center;
+        }
+
+        .p-menubar-start {
+          width: 180px;
+        }
+
+        .p-menubar-root-list {
+          flex: 1 1 auto;
+          display: flex;
+          justify-content: center; /* 👈 center menu items */
+        }
+
+        .p-menubar-end {
+          width: 180px;
+          display: flex;
+          justify-content: flex-end;
+        }
+        /* --- Base Text Color --- */
+        .p-menuitem-link {
+          color: #07253f !important;
+        }
+        /* --- Navbar text color FIX --- */
+        .p-menubar .p-menuitem-text {
+          font-size: 15px;          /* default is ~14px */
+          font-weight: 400;
+          color: #07253f !important;
+        }
         /* --- Base Menubar Customization --- */
         .p-menubar-root-list > li > .p-menuitem-link .p-menuitem-text {
           padding-right: 1.5rem;
@@ -215,35 +245,43 @@ const AppNavbar: React.FC = () => {
         /* --- Active States --- */
         .nav-item-active > .p-menuitem-link {
           font-weight: 600 !important;
-          color: #000 !important;
-          border-bottom: 2px solid #000 !important;
-          background: rgba(0, 0, 0, 0.02) !important;
+          color: #07253f !important;
+          border-bottom: 2px solid #07253f !important;
+          background: rgba(7, 37, 63, 0.04) !important;
         }
+
         .nav-dropdown-active > .p-menuitem-link {
           font-weight: 600 !important;
-          color: #000 !important;
-          background: rgba(0, 0, 0, 0.04) !important;
-          border-bottom: 2px solid #3b82f6 !important;
+          color: #07253f !important;
+          background: rgba(7, 37, 63, 0.06) !important;
+          border-bottom: 2px solid #07253f !important;
         }
+
         .nav-subitem-active > .p-menuitem-link {
           font-weight: 600 !important;
-          color: #3b82f6 !important;
-          background: rgba(59, 130, 246, 0.1) !important;
+          color: #07253f !important;
+          background: rgba(7, 37, 63, 0.1) !important;
+        }
+        /* --- Settings menu (Cog dropdown) text --- */
+        .p-menu .p-menuitem-text {
+          font-size: 14.5px;
+          font-weight: 400;
+          color: #07253f;
         }
 
         /* --- Hover States --- */
         .p-menubar-root-list > li > .p-menuitem-link:hover {
-          background: rgba(0, 0, 0, 0.03) !important;
+          background: rgba(7, 37, 63, 0.05) !important;
         }
         .p-menubar-submenu .p-menuitem-link:hover {
-          background: rgba(59, 130, 246, 0.05) !important;
+          background: rgba(7, 37, 63, 0.05) !important;
         }
         .nav-item-active > .p-menuitem-link:hover,
         .nav-dropdown-active > .p-menuitem-link:hover {
-          background: rgba(0, 0, 0, 0.06) !important;
+          background: rgba(7, 37, 63, 0.05) !important;
         }
         .nav-subitem-active > .p-menuitem-link:hover {
-          background: rgba(59, 130, 246, 0.15) !important;
+          background: rgba(7, 37, 63, 0.05) !important;
         }
 
         /* --- Transition --- */
@@ -289,6 +327,11 @@ const AppNavbar: React.FC = () => {
         />
       </div>
       </nav>
+      {/* Create User Dialog */}
+      <SignupForm
+        visible={showCreateUser}
+        onHide={() => setShowCreateUser(false)}
+      />
     </>
   );
 };

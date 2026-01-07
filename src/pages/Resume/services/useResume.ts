@@ -68,26 +68,17 @@ export interface LookupData {
 /*  CACHED LOOKUP FETCH – /candidate/create-data                             */
 /* ------------------------------------------------------------------------- */
 
-let cachedCandidateCreateData: CandidateCreateData | null = null;
-
 export const fetchCandidateCreateData = async (
   accessToken: string | null,
   forceRefresh = false
 ): Promise<CandidateCreateData> => {
   try {
-    // Return cached copy unless explicitly refreshed
-    if (cachedCandidateCreateData && !forceRefresh) {
-      return cachedCandidateCreateData;
-    }
-
     const endpoint = `/candidate/create-data`;
     const data = await apiFetch<CandidateCreateData>(
       endpoint,
       { method: "GET" },
       accessToken || undefined
     );
-
-    cachedCandidateCreateData = data;
     return data;
   } catch (error) {
     logger.error("Error fetching create-data:", error);
@@ -133,19 +124,23 @@ const buildCandidateFormData = (candidate: AddEditCandidate): FormData => {
   fd.append("candidateName", candidate.candidateName);
   fd.append("recruiterName", candidate.recruiterName ?? "");
   fd.append("jobRole", candidate.jobRole);
-  if (candidate.preferredJobLocation) {
-    fd.append("preferredJobLocation[city]", candidate.preferredJobLocation.city);
-    fd.append("preferredJobLocation[country]", candidate.preferredJobLocation.country);
+  if (candidate.expectedLocation) {
+    fd.append("expectedLocation[city]", candidate.expectedLocation.city);
+    fd.append("expectedLocation[country]", candidate.expectedLocation.country);
+  }
+
+  if (candidate.currentLocation) {
+    fd.append("currentLocation[city]", candidate.currentLocation.city);
+    fd.append("currentLocation[country]", candidate.currentLocation.country);
   }
   fd.append("noticePeriod", String(candidate.noticePeriod));
   fd.append("experienceYears", String(candidate.experienceYears));
-  if (candidate.contactNumber?.trim()) {
-    fd.append("contactNumber", candidate.contactNumber);
-  }
+  const contact = candidate.contactNumber?.trim();
+  if (contact) fd.append("contactNumber", contact);
 
-  if (candidate.email?.trim()) {
-    fd.append("email", candidate.email);
-  }
+  const email = candidate.email?.trim();
+  if (email) fd.append("email", email);
+
     if (typeof candidate.currentCTC === "number") {
     fd.append("currentCTC", String(candidate.currentCTC));
   }
@@ -213,6 +208,27 @@ async function apiFetch<T>(
 /* ========================================================================= */
 /*  EXPORTS – CRUD OPERATIONS                                                */
 /* ========================================================================= */
+
+export const getCandidateById = async (
+  accessToken: string | null,
+  candidateId: number
+): Promise<Candidate> => {
+  try {
+    const endpoint = `/candidate/${candidateId}`;
+
+    const data = await apiFetch<Candidate>(
+      endpoint,
+      { method: "GET" },
+      accessToken || undefined
+    );
+
+    return data;
+  } catch (error) {
+    logger.error("Error fetching candidate by ID:", error);
+    throw error;
+  }
+};
+
 
 // -------------------- CREATE --------------------
 export const createCandidate = async (

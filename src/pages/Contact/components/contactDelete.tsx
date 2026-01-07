@@ -1,6 +1,5 @@
 import React from "react";
 import { Dialog } from "primereact/dialog";
-import { Button } from "primereact/button";
 import type { Contact } from "../types/contactTypes";
 import DialogDeleteButton from "../../../shared/DialogDeleteButton";
 interface ContactDeleteProps {

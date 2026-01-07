@@ -11,9 +11,9 @@ import {
   createCandidate,
   updateCandidate,
   uploadResume,
-  fetchCandidateCreateData,
+  getCandidateById,
 } from "../services/useResume";
-import { ResumeAddEditProps, AddEditCandidate, CandidateCreateData } from "../types/resumeTypes";
+import { ResumeAddEditProps, AddEditCandidate, CandidateCreateData, AddEditCandidateApiPayload } from "../types/resumeTypes";
 import { useAuth } from "../../../shared/auth/AuthContext";
 
 interface DropdownFieldProps {
@@ -42,12 +42,12 @@ const INITIAL_FORM: AddEditCandidate = {
   recruiterId: null,
   recruiterName: null,
   jobRole: "",
-  preferredJobLocation: { city: '', country: '' },
+  expectedLocation: { city: '', country: '' },
+  currentLocation: null,
   currentCTC: undefined,
   expectedCTC: undefined,
   noticePeriod: 0,
   experienceYears: 0,
-  statusName: "",
   linkedinProfileUrl: undefined,
   resumeFile: null,
   notes: undefined,
@@ -71,10 +71,14 @@ const validateField = (field: keyof AddEditCandidate, value: any) => {
       return "";
     case "jobRole":
       return value.trim() ? "" : "Job role is required.";
-    case "preferredJobLocation":
+    case "expectedLocation":
       if (!value || !value.country) return "Country is required.";
       if (!value.city) return "City is required.";
       return "";
+    case "currentLocation":
+    if (!value || !value.country) return "";
+    if (!value.city) return "City is required when country is selected.";
+    return "";
     case "currentCTC":
       if (value === undefined || value === null) return "";
       return value > 0 ? "" : "Current CTC must be greater than 0.";
@@ -85,8 +89,6 @@ const validateField = (field: keyof AddEditCandidate, value: any) => {
       return value >= 0 ? "" : "Notice period is required.";
     case "experienceYears":
       return value >= 0 ? "" : "Experience is required.";
-    case "statusName":
-      return value ? "" : "Status is required.";
     case "linkedinProfileUrl":
       if (!value || value.trim() === "") return "";
       if (!linkedinRegex.test(value)) return "Enter a valid LinkedIn URL.";
@@ -110,6 +112,8 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   onHide,
   selectedResume,
   onSuccess,
+  createData,
+  loadingOptions,
 }) => {
   const { accessToken } = useAuth();
   const isEditMode = Boolean(selectedResume);
@@ -119,9 +123,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   const [submitted, setSubmitted] = useState(false);
   const toast = useRef<Toast>(null);
   
-  const [createData, setCreateData] = useState<CandidateCreateData | null>(null);
-  const [loadingOptions, setLoadingOptions] = useState(false);
-  
   // Prepare dropdown options from create-data
   const recruiterOptions = useMemo(() => {
     if (!createData?.recruiters) return [];
@@ -130,14 +131,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
       value: r.recruiterId 
     }));
   }, [createData?.recruiters]);
-
-  const statusOptions = useMemo(() => {
-    if (!createData?.status) return [];
-    return createData.status.map(s => ({ 
-      label: s.statusName, 
-      value: s.statusId 
-    }));
-  }, [createData?.status]);
 
   // Group locations by country
   const locationsByCountry = useMemo(() => {
@@ -161,78 +154,73 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   }, [locationsByCountry]);
 
   const cityOptions = useMemo(() => {
-    const country = formData.preferredJobLocation?.country;
+    const country = formData.expectedLocation?.country;
     if (!country || !locationsByCountry[country]) return [];
     
     return locationsByCountry[country].map(loc => ({
       label: loc.city,
       value: loc.locationId
     }));
-  }, [formData.preferredJobLocation?.country, locationsByCountry]);
+  }, [formData.expectedLocation?.country, locationsByCountry]);
 
-  // Load create-data on dialog open
-  useEffect(() => {
-    const loadCreateData = async () => {
-      if (!accessToken) return;
-      
-      setLoadingOptions(true);
-      try {
-        const data = await fetchCandidateCreateData(accessToken);
-        setCreateData(data);
-      } catch (error) {
-        console.error("Error loading create data:", error);
-        toast.current?.show({
-          severity: "error",
-          summary: "Error",
-          detail: "Failed to load form options",
-          life: 3000,
-        });
-      } finally {
-        setLoadingOptions(false);
-      }
-    };
+  const currentCityOptions = useMemo(() => {
+  const country = formData.currentLocation?.country;
+  if (!country || !locationsByCountry[country]) return [];
 
-    if (visible) {
-      loadCreateData();
-    }
-  }, [visible, accessToken]);
+  return locationsByCountry[country].map(loc => ({
+    label: loc.city,
+    value: loc.locationId,
+  }));
+}, [formData.currentLocation?.country, locationsByCountry]);
 
   // Initialize / Reset form
   useEffect(() => {
-    if (isEditMode && selectedResume) {
-      // Find the locationId from the selected resume's location
-      let locationId: number | undefined;
-      if (selectedResume.preferredJobLocation && createData?.locations) {
-        const matchingLocation = createData.locations.find(
-          loc => loc.city === selectedResume.preferredJobLocation?.city && 
-                 loc.country === selectedResume.preferredJobLocation?.country
-        );
-        locationId = matchingLocation?.locationId;
-      }
+  const loadCandidateForEdit = async () => {
+    if (!isEditMode || !selectedResume || !accessToken) return;
+
+    try {
+      const freshCandidate = await getCandidateById(
+        accessToken,
+        selectedResume.candidateId
+      );
 
       setFormData({
-        candidateName: selectedResume.candidateName,
-        contactNumber: selectedResume.contactNumber ?? undefined,
-        email: selectedResume.email ?? undefined,
-        recruiterId: selectedResume.recruiterId,
-        recruiterName: selectedResume.recruiterName,
-        jobRole: selectedResume.jobRole,
-        preferredJobLocation: selectedResume.preferredJobLocation || { city: '', country: '' },
-        currentCTC: selectedResume.currentCTC ?? undefined,
-        expectedCTC: selectedResume.expectedCTC ?? undefined,
-        noticePeriod: selectedResume.noticePeriod,
-        experienceYears: selectedResume.experienceYears,
-        statusName: selectedResume.statusName,
-        linkedinProfileUrl: selectedResume.linkedinProfileUrl || undefined,
-        resumeFile: null,
-        notes: selectedResume.notes || undefined,
+        candidateName: freshCandidate.candidateName,
+        contactNumber: freshCandidate.contactNumber ?? undefined,
+        email: freshCandidate.email ?? undefined,
+        recruiterId: freshCandidate.recruiterId,
+        recruiterName: freshCandidate.recruiterName,
+        jobRole: freshCandidate.jobRole,
+        expectedLocation: freshCandidate.expectedLocation,
+        currentLocation: freshCandidate.currentLocation ?? null,
+        currentCTC: freshCandidate.currentCTC ?? undefined,
+        expectedCTC: freshCandidate.expectedCTC ?? undefined,
+        noticePeriod: freshCandidate.noticePeriod,
+        experienceYears: freshCandidate.experienceYears,
+        linkedinProfileUrl: freshCandidate.linkedinProfileUrl ?? undefined,
+        resumeFile: null, // never prefill file
+        notes: freshCandidate.notes ?? undefined,
       });
+    } catch (err) {
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: "Failed to load candidate details",
+      });
+    }
+  };
+
+  if (visible) {
+    if (isEditMode) {
+      loadCandidateForEdit();
     } else {
       setFormData(INITIAL_FORM);
     }
     setErrors({});
     setSubmitted(false);
-  }, [visible, selectedResume, isEditMode, createData]);
+  }
+}, [visible, isEditMode, selectedResume, accessToken]);
+
 
   const handleChange = useCallback(
   (field: keyof AddEditCandidate, value: any) => {
@@ -313,36 +301,51 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
 
     try {
       if (isEditMode && selectedResume) {
-        const updateData = {
-          candidateName: formData.candidateName,
-          recruiterId: formData.recruiterId,
-          recruiterName: formData.recruiterName,
-          jobRole: formData.jobRole,
-          preferredJobLocation: formData.preferredJobLocation,
-          noticePeriod: formData.noticePeriod,
-          experienceYears: formData.experienceYears,
-          statusName: formData.statusName,
-          contactNumber: formData.contactNumber ?? null,
-          email: formData.email ?? null,
-          currentCTC: formData.currentCTC ?? null,
-          expectedCTC: formData.expectedCTC ?? null,
-          linkedinProfileUrl: formData.linkedinProfileUrl ?? null,
-          notes: formData.notes ?? null,
-        };
+  const payload: AddEditCandidateApiPayload = {
+    candidateName: formData.candidateName,
 
-        await updateCandidate(accessToken, selectedResume.candidateId, updateData);
+    contactNumber: formData.contactNumber?.trim() || null,
+    email: formData.email?.trim() || null,
 
-        if (formData.resumeFile) {
-          await uploadResume(accessToken, selectedResume.candidateId, formData.resumeFile);
-        }
+    recruiterId: formData.recruiterId,
+    recruiterName: formData.recruiterName,
 
-        toast.current?.show({
-          severity: "success",
-          summary: "Success",
-          detail: "Candidate updated successfully!",
-          life: 3000,
-        });
-      } else {
+    jobRole: formData.jobRole,
+
+    expectedLocation: formData.expectedLocation,
+    currentLocation: formData.currentLocation ?? null,
+
+    currentCTC: formData.currentCTC ?? null,
+    expectedCTC: formData.expectedCTC ?? null,
+
+    noticePeriod: formData.noticePeriod,
+    experienceYears: formData.experienceYears,
+    linkedinProfileUrl: formData.linkedinProfileUrl?.trim() || null,
+    notes: formData.notes?.trim() || null,
+  };
+
+  await updateCandidate(
+    accessToken,
+    selectedResume.candidateId,
+    payload
+  );
+
+  if (formData.resumeFile) {
+    await uploadResume(
+      accessToken,
+      selectedResume.candidateId,
+      formData.resumeFile
+    );
+  }
+
+  toast.current?.show({
+    severity: "success",
+    summary: "Success",
+    detail: "Candidate updated successfully!",
+    life: 3000,
+  });
+}
+else {
         await createCandidate(accessToken, formData);
         toast.current?.show({
           severity: "success",
@@ -448,6 +451,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             onBlur={() => handleBlur("experienceYears")}
             error={shouldShowError("experienceYears")}
             colSize="col-12 md:col-4"
+            allowDecimal
           />
 
           {/* Column 2 */}
@@ -467,62 +471,147 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             placeholder={loadingOptions ? "Loading..." : "Select Recruiter"}
             colSize="col-12 md:col-4"
           />
+          <div className="col-12">
+            <div className="font-bold mb-2">
+              Current Working Location
+            </div>
+            <div className="formgrid grid">
+              <div className="field col-12 md:col-4">
+                {/* <label className="font-bold">Country</label> */}
+                <Dropdown
+                  value={formData.currentLocation?.country || null}
+                  options={countryOptions}
+                  showClear
+                  onChange={(e) =>
+                    handleChange(
+                      "currentLocation",
+                      e.value ? { country: e.value, city: "" } : null
+                    )
+                  }
+                  placeholder="Select Country"
+                  className={shouldShowError("currentLocation") ? "p-invalid" : ""}
+                />
+              </div>
 
-          {/* Country Dropdown */}
-          <div className="field col-12 md:col-4">
-            <label htmlFor="country" className="font-bold">Country *</label>
-            <Dropdown
-              id="country"
-              value={formData.preferredJobLocation?.country || null}
-              options={countryOptions}
-              onChange={(e: { value: string }) => 
-                handleChange("preferredJobLocation", { 
-                  country: e.value, 
-                  city: '' 
-                })
-              }
-              onBlur={() => handleBlur("preferredJobLocation")}
-              placeholder="Select Country"
-              disabled={loadingOptions}
-              className={shouldShowError("preferredJobLocation") ? "p-invalid" : ""}
-            />
-            {shouldShowError("preferredJobLocation") && (
-              <small className="p-error">{shouldShowError("preferredJobLocation")}</small>
-            )}
+              <div className="field col-12 md:col-4">
+                {/* <label className="font-bold">City</label> */}
+                <Dropdown
+                  value={
+                    formData.currentLocation?.city && createData?.locations
+                      ? createData.locations.find(
+                          loc =>
+                            loc.city === formData.currentLocation?.city &&
+                            loc.country === formData.currentLocation?.country
+                        )?.locationId
+                      : null
+                  }
+                  options={currentCityOptions}
+                  showClear
+                  onChange={(e) => {
+                    if (!e.value) {
+                      handleChange("currentLocation", null);
+                      return;
+                    }
+                    const location = createData?.locations.find(
+                      loc => loc.locationId === e.value
+                    );
+                    if (location) {
+                      handleChange("currentLocation", {
+                        country: location.country,
+                        city: location.city,
+                      });
+                    }
+                  }}
+                  disabled={
+                    !formData.currentLocation?.country ||
+                    currentCityOptions.length === 0
+                  }
+                  placeholder="Select City"
+                  className={shouldShowError("currentLocation") ? "p-invalid" : ""}
+                />
+                {shouldShowError("currentLocation") && (
+                  <small className="p-error">{shouldShowError("currentLocation")}</small>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* City Dropdown */}
-          <div className="field col-12 md:col-4">
-            <label htmlFor="city" className="font-bold">City *</label>
-            <Dropdown
-              id="city"
-              value={
-                formData.preferredJobLocation?.city && createData?.locations 
-                  ? createData.locations.find(
-                      loc => loc.city === formData.preferredJobLocation?.city && 
-                             loc.country === formData.preferredJobLocation?.country
-                    )?.locationId 
-                  : null
-              }
-              options={cityOptions}
-              onChange={(e: { value: number }) => {
-                const location = createData?.locations.find(loc => loc.locationId === e.value);
-                if (location) {
-                  handleChange("preferredJobLocation", { 
-                    country: location.country, 
-                    city: location.city 
-                  });
+          {/* ---------- Expected Working Location ---------- */}
+          <div className="col-12">
+          <div className="font-bold mb-2">
+            Expected Working Location <span className="text-red-500">*</span>
+          </div>
+
+          <div className="formgrid grid">
+            <div className="field col-12 md:col-4">
+              {/* <label className="font-bold">Country</label> */}
+              <Dropdown
+                value={formData.expectedLocation?.country || null}
+                options={countryOptions}
+                showClear
+                onChange={(e) =>
+                  handleChange(
+                    "expectedLocation",
+                    e.value
+                      ? { country: e.value, city: "" }
+                      : { country: "", city: "" }
+                  )
                 }
-              }}
-              onBlur={() => handleBlur("preferredJobLocation")}
-              placeholder="Select City"
-              disabled={!formData.preferredJobLocation?.country || cityOptions.length === 0 || loadingOptions}
-              className={shouldShowError("preferredJobLocation") ? "p-invalid" : ""}
-            />
-            {formData.preferredJobLocation?.country && cityOptions.length === 0 && (
-              <small className="text-muted">No cities available for selected country</small>
-            )}
+                placeholder="Select Country"
+                disabled={loadingOptions}
+                className={shouldShowError("expectedLocation") ? "p-invalid" : ""}
+              />
+            </div>
+
+            <div className="field col-12 md:col-4">
+              {/* <label className="font-bold">City</label> */}
+              <Dropdown
+                value={
+                  formData.expectedLocation?.city && createData?.locations
+                    ? createData.locations.find(
+                        loc =>
+                          loc.city === formData.expectedLocation?.city &&
+                          loc.country === formData.expectedLocation?.country
+                      )?.locationId
+                    : null
+                }
+                options={cityOptions}
+                showClear
+                onChange={(e: { value: number }) => {
+                  const location = createData?.locations.find(
+                    loc => loc.locationId === e.value
+                  );
+                  if (location) {
+                    handleChange("expectedLocation", {
+                      country: location.country,
+                      city: location.city,
+                    });
+                  }
+                }}
+                disabled={
+                  !formData.expectedLocation?.country ||
+                  cityOptions.length === 0 ||
+                  loadingOptions
+                }
+                placeholder="Select City"
+                className={shouldShowError("expectedLocation") ? "p-invalid" : ""}
+              />
+
+              {formData.expectedLocation?.country && cityOptions.length === 0 && (
+                <small className="text-muted">
+                  No cities available for selected country
+                </small>
+              )}
+
+              {shouldShowError("expectedLocation") && (
+                <small className="p-error">
+                  {shouldShowError("expectedLocation")}
+                </small>
+              )}
+            </div>
           </div>
+        </div>
+
 
           <InputNumberField
             id="noticePeriod"
@@ -532,6 +621,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             onBlur={() => handleBlur("noticePeriod")}
             error={shouldShowError("noticePeriod")}
             colSize="col-12 md:col-4"
+            allowDecimal={false}
           />
 
           {/* Column 3 */}
@@ -544,6 +634,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             error={shouldShowError("currentCTC")}
             colSize="col-12 md:col-4"
             required={false}
+            allowDecimal
           />
 
           <InputNumberField
@@ -555,28 +646,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
             error={shouldShowError("expectedCTC")}
             colSize="col-12 md:col-4"
             required={false}
-          />
-
-          <DropdownField
-            id="statusName"
-            label="Status"
-            value={
-              createData?.status.find(
-                s => s.statusName === formData.statusName
-              )?.statusId || null
-            }
-            options={statusOptions}
-            onChange={(e: { value: number }) => {
-              const status = createData?.status.find(
-                s => s.statusId === e.value
-              );
-              handleChange("statusName", status?.statusName || "");
-            }}
-            onBlur={() => handleBlur("statusName")}
-            error={shouldShowError("statusName")}
-            disabled={loadingOptions}
-            placeholder={loadingOptions ? "Loading..." : "Select Status"}
-            colSize="col-12 md:col-4"
+            allowDecimal
           />
 
           <InputField
@@ -793,18 +863,23 @@ interface InputNumberFieldProps {
   error?: string;
   colSize?: string;
   required?: boolean;
+  allowDecimal?: boolean;
 }
 
-const InputNumberField = ({ id, label, value, onChange, onBlur, prefix, error, required=true, colSize = "col-12 md:col-6" }: InputNumberFieldProps) => (
+const InputNumberField = ({ id, label, value, onChange, onBlur, prefix, error, required=true, colSize = "col-12 md:col-6", allowDecimal = true, }: InputNumberFieldProps) => (
   <div className={`field ${colSize}`}>
     <label htmlFor={id} className="font-bold">{label} {required && "*"}</label>
-    <InputNumber 
+    <InputNumber
       id={id}
       value={value ?? null}
-      onValueChange={(e) => onChange(e.value ?? null)} 
-      onBlur={onBlur} 
-      prefix={prefix} 
-      className={error ? "p-invalid" : ""} 
+      onValueChange={(e) => onChange(e.value ?? null)}
+      onBlur={onBlur}
+      mode="decimal"
+      minFractionDigits={allowDecimal ? 1 : 0}
+      maxFractionDigits={allowDecimal ? 2 : 0}
+      useGrouping={false}
+      prefix={prefix}
+      className={error ? "p-invalid" : ""}
     />
     {error && <small className="p-error">{error}</small>}
   </div>
