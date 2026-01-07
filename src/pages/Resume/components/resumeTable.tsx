@@ -201,12 +201,6 @@ const ResumeTable: React.FC = () => {
         console.error("Error loading data:", error);
         setResumes([]);
         
-        toastRef.current?.show({
-          severity: "error",
-          summary: "Error",
-          detail: "Failed to load candidate data",
-          life: 3000
-        });
       } finally {
         setLoading(false);
         setLoadingCreateData(false);
