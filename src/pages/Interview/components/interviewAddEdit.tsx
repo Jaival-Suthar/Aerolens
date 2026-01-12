@@ -6,13 +6,38 @@ import { Calendar } from "primereact/calendar";
 import { Dropdown } from "primereact/dropdown";
 import { InputNumber } from "primereact/inputnumber";
 import { Toast } from "primereact/toast";
-import { FaCheck, FaPencilAlt, FaClock, FaCalendarAlt } from "react-icons/fa";
+import { FaCheck, FaClock, FaCalendarAlt } from "react-icons/fa";
 import { getInterviewFormData, createInterview, updateInterview } from "../services/interviewService";
 import { useAuth } from "../../../shared/auth/AuthContext";
+import { Interview, CreateInterviewRequest, UpdateInterviewRequest } from "../types/interviewTypes";
+import { DateTime } from "luxon";
 
 // ============================================================
 // TIME CONVERSION UTILITIES
 // ============================================================
+const DEFAULT_TIMEZONE =
+  Intl.DateTimeFormat().resolvedOptions().timeZone;
+const TIMEZONE_OPTIONS =
+  typeof Intl.supportedValuesOf === "function"
+    ? Intl.supportedValuesOf("timeZone").map(tz => ({
+        label: tz,
+        value: tz
+      }))
+    : [
+        { label: "Asia/Kolkata", value: "Asia/Kolkata" },
+        { label: "America/New_York", value: "America/New_York" },
+        { label: "America/Los_Angeles", value: "America/Los_Angeles" }
+      ];
+
+const normalizeBackendTime = (time: string): string => {
+  // Handles: "2025-12-20 09:15:00.000000"
+  if (time.includes(' ')) {
+    return time.split(' ')[1].slice(0, 5); // "09:15"
+  }
+
+  // Handles already-correct "09:15"
+  return time.slice(0, 5);
+};
 
 const convert24to12 = (time24: string): { hour12: number; minute: number; period: 'AM' | 'PM' } => {
   if (!time24) return { hour12: 9, minute: 0, period: 'AM' };
@@ -39,22 +64,21 @@ const convert12to24 = (hour12: number, minute: number, period: 'AM' | 'PM'): str
   return `${String(hour24).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 };
 
-// ============================================================
-// TYPES
-// ============================================================
+type InterviewFormState = {
+  interviewDate: Date | null;
 
-interface Interview {
-  interviewId: number;
-  interviewDate: string;
-  fromTime: string;
+  // UI-only
+  hour12: number;
+  minute: number;
+  period: "AM" | "PM";
+
+  // API-aligned
   durationMinutes: number;
-  candidateId: number;
-  candidateName: string;
-  interviewerId: number;
-  interviewerName: string;
-  scheduledById: number;
-  scheduledByName: string;
-}
+  interviewerId: number | null;
+  scheduledById: number | null;
+  eventTimezone: string;
+};
+
 
 interface AddEditInterviewFormProps {
   visible: boolean;
@@ -67,15 +91,7 @@ interface AddEditInterviewFormProps {
   externalToast?: React.RefObject<Toast>;
 }
 
-interface FormData {
-  interviewDate: Date | null;
-  hour12: number;
-  minute: number;
-  period: 'AM' | 'PM';
-  durationMinutes: number;
-  interviewerId: number | null;
-  scheduledById: number | null;
-}
+
 
 interface ValidationErrors {
   interviewDate?: string;
@@ -106,8 +122,8 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
   const [interviewers, setInterviewers] = useState<any[]>([]);
   const [recruiters, setRecruiters] = useState<any[]>([]);
   const { accessToken } = useAuth();
-
-  const [formData, setFormData] = useState<FormData>({
+  const [showTimezoneDropdown, setShowTimezoneDropdown] = useState(false);
+  const [formData, setFormData] = useState<InterviewFormState>({
     interviewDate: null,
     hour12: 9,
     minute: 0,
@@ -115,6 +131,7 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
     durationMinutes: 60,
     interviewerId: null,
     scheduledById: null,
+    eventTimezone: DEFAULT_TIMEZONE,
   });
 
   const [errors, setErrors] = useState<ValidationErrors>({});
@@ -174,7 +191,8 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
 
     if (visible && isEdit && interviewToEdit) {
       // Convert 24-hour backend time to 12-hour format
-      const { hour12, minute, period } = convert24to12(interviewToEdit.fromTime);
+      const normalizedTime = normalizeBackendTime(interviewToEdit.fromTime);
+      const { hour12, minute, period } = convert24to12(normalizedTime);
       
       const [year, month, day] = interviewToEdit.interviewDate.split('-').map(Number);
       setFormData({
@@ -185,6 +203,7 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
         durationMinutes: interviewToEdit.durationMinutes,
         interviewerId: interviewToEdit.interviewerId,
         scheduledById: interviewToEdit.scheduledById,
+        eventTimezone: interviewToEdit.eventTimezone,
       });
     } else if (visible && !isEdit) {
       resetForm();
@@ -213,7 +232,35 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
   return mapped;
 };
 
+  const handleTimezoneChange = (newTz: string) => {
+  if (!formData.interviewDate) {
+    setFormData(prev => ({ ...prev, eventTimezone: newTz }));
+    return;
+  }
 
+  const dateStr = formData.interviewDate.toISOString().split("T")[0];
+  const time24 = convert12to24(
+    formData.hour12,
+    formData.minute,
+    formData.period
+  );
+
+  // Build in OLD timezone
+  const oldDT = DateTime.fromISO(`${dateStr}T${time24}`, {
+    zone: formData.eventTimezone
+  });
+
+  // Convert to NEW timezone
+  const newDT = oldDT.setZone(newTz);
+
+  setFormData(prev => ({
+    ...prev,
+    eventTimezone: newTz,
+    hour12: newDT.hour % 12 || 12,
+    minute: newDT.minute,
+    period: newDT.hour >= 12 ? "PM" : "AM"
+  }));
+};
   // Validation
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
@@ -272,12 +319,15 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
   String(formData.interviewDate!.getMonth() + 1).padStart(2, '0') + '-' + 
   String(formData.interviewDate!.getDate()).padStart(2, '0');
 
-const hasChanges =
-  selectedDate !== interviewToEdit.interviewDate ||
-        currentTime24 !== interviewToEdit.fromTime ||
-        formData.durationMinutes !== interviewToEdit.durationMinutes ||
-        formData.interviewerId !== interviewToEdit.interviewerId ||
-        formData.scheduledById !== interviewToEdit.scheduledById;
+  const originalTime = normalizeBackendTime(interviewToEdit.fromTime);
+
+  const hasChanges =
+    selectedDate !== interviewToEdit.interviewDate ||
+    currentTime24 !== originalTime ||
+    formData.durationMinutes !== interviewToEdit.durationMinutes ||
+    formData.interviewerId !== interviewToEdit.interviewerId ||
+    formData.scheduledById !== interviewToEdit.scheduledById ||
+    formData.eventTimezone !== interviewToEdit.eventTimezone;
 
       if (!hasChanges) {
         toastRef.current?.show({
@@ -302,16 +352,19 @@ const hasChanges =
 
   // Convert 12-hour time to 24-hour format for backend
   const time24 = convert12to24(formData.hour12, formData.minute, formData.period);
+  const formattedDate = formData.interviewDate!
+  .toISOString()
+  .split("T")[0]; // YYYY-MM-DD
 
-  const payload = {
-   interviewDate: formData.interviewDate!.getFullYear() + '-' + 
-    String(formData.interviewDate!.getMonth() + 1).padStart(2, '0') + '-' + 
-    String(formData.interviewDate!.getDate()).padStart(2, '0'),
-    fromTime: time24,
-    durationMinutes: formData.durationMinutes,
-    interviewerId: formData.interviewerId,
-    scheduledById: formData.scheduledById,
-  };
+  const payload: CreateInterviewRequest | UpdateInterviewRequest = {
+  interviewDate: formattedDate,
+  fromTime: time24,
+  durationMinutes: formData.durationMinutes,
+  interviewerId: formData.interviewerId!,
+  scheduledById: formData.scheduledById!,
+  eventTimezone: formData.eventTimezone,
+};
+
 
   try {
     if (isEdit && interviewToEdit) {
@@ -366,6 +419,7 @@ const hasChanges =
       durationMinutes: 60,
       interviewerId: null,
       scheduledById: null,
+      eventTimezone: DEFAULT_TIMEZONE
     });
     setErrors({});
   };
@@ -375,12 +429,17 @@ const hasChanges =
     onHide();
   };
 
-  const handleInputChange = (field: keyof FormData, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const handleInputChange = (
+    field: keyof InterviewFormState,
+    value: any
+  ) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+
     if (errors[field as keyof ValidationErrors]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
+      setErrors(prev => ({ ...prev, [field]: undefined }));
     }
   };
+
 
   // Calculate end time in 12-hour format
   const calculateEndTime = () => {
@@ -459,7 +518,55 @@ const hasChanges =
             className="bg-gray-100"
           />
         </div>
+        {/* Timezone Selector */}
+        <div className="field mb-4">
+          <label className="font-semibold">
+            Timezone <span className="text-red-500">*</span>
+          </label>
 
+          <div className="flex align-items-center gap-2">
+            <span
+              className="px-3 py-2 border-round text-sm"
+              style={{
+                background: "#f1f5f9",
+                border: "1px solid #cbd5e1",
+                fontWeight: 500
+              }}
+            >
+              {formData.eventTimezone}
+            </span>
+
+            <DialogButton
+              label="Change"
+              severity="secondary"
+              icon={<FaClock style={{ fontSize: 16, marginRight: 8 }} />}
+              onClick={() => setShowTimezoneDropdown(true)} 
+              disabled={loading}
+            />
+          </div>
+
+          <small className="text-500">
+            Interview time will be scheduled in this timezone.
+          </small>
+        </div>
+        {showTimezoneDropdown && (
+        <div className="field mb-4">
+          <Dropdown
+            value={formData.eventTimezone}
+            options={TIMEZONE_OPTIONS}
+            onChange={(e) => {
+              handleTimezoneChange(e.value);
+              setShowTimezoneDropdown(false);
+            }}
+            filter
+            placeholder="Select timezone"
+            className="w-full"
+          />
+          <small className="text-500">
+            Changing timezone will reinterpret the selected date & time.
+          </small>
+        </div>
+      )}
           {/* Interview Date */}
           <div className="field mb-4">
             <label htmlFor="interviewDate" className="font-semibold">
