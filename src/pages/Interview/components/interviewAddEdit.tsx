@@ -29,14 +29,12 @@ const TIMEZONE_OPTIONS =
         { label: "America/Los_Angeles", value: "America/Los_Angeles" }
       ];
 
-const normalizeBackendTime = (time: string): string => {
-  // Handles: "2025-12-20 09:15:00.000000"
-  if (time.includes(' ')) {
-    return time.split(' ')[1].slice(0, 5); // "09:15"
+const normalizeBackendDateTime = (dateTime: string): string => {
+  // Handles: "2025-12-20 09:15:00.000000" → "2025-12-20T09:15:00"
+  if (dateTime.includes(' ')) {
+    return dateTime.replace(' ', 'T').split('.')[0];
   }
-
-  // Handles already-correct "09:15"
-  return time.slice(0, 5);
+  return dateTime;
 };
 
 const convert24to12 = (time24: string): { hour12: number; minute: number; period: 'AM' | 'PM' } => {
@@ -86,7 +84,7 @@ interface AddEditInterviewFormProps {
   interviewToEdit?: Interview | null;
   onHide: () => void;
   onSuccess: () => void;
-  candidateId?: number;        // ✅ ADD THIS
+  candidateId?: number;
   candidateName?: string;
   externalToast?: React.RefObject<Toast>;
 }
@@ -112,7 +110,7 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
   interviewToEdit = null,
   onHide,
   onSuccess,
-  candidateId,      // ✅ ADD THIS
+  candidateId,
   candidateName, 
   externalToast,
 }) => {
@@ -135,7 +133,42 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
   });
 
   const [errors, setErrors] = useState<ValidationErrors>({});
-  
+  // Viewer (browser) timezone
+  const browserTimezone =
+    Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  // Calculate viewer-time context (read-only, UI-only)
+  const getViewerTimeContext = () => {
+    if (!formData.interviewDate) return null;
+
+    const dateStr = DateTime
+      .fromJSDate(formData.interviewDate)
+      .toFormat('yyyy-MM-dd');
+
+    const time24 = convert12to24(
+      formData.hour12,
+      formData.minute,
+      formData.period
+    );
+
+    // Build datetime in EVENT timezone (user intent)
+    const eventDT = DateTime.fromISO(`${dateStr}T${time24}`, {
+      zone: formData.eventTimezone
+    });
+
+    // Convert to viewer timezone
+    const viewerDT = eventDT.setZone(browserTimezone);
+
+    return {
+      date: viewerDT.toFormat('dd MMM yyyy'),
+      time: viewerDT.toFormat('hh:mm a'),
+      timezone: viewerDT.offsetNameShort,
+      isDifferentDay: eventDT.day !== viewerDT.day
+    };
+  };
+
+  const viewerContext = getViewerTimeContext();
+
   // Generate hour options (1-12)
   const hourOptions = Array.from({ length: 12 }, (_, i) => ({
     label: String(i + 1).padStart(2, '0'),
@@ -190,13 +223,17 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
     }
 
     if (visible && isEdit && interviewToEdit) {
-      // Convert 24-hour backend time to 12-hour format
-      const normalizedTime = normalizeBackendTime(interviewToEdit.fromTime);
-      const { hour12, minute, period } = convert24to12(normalizedTime);
+      // Parse the backend datetime in the EVENT timezone (not browser timezone)
+      const normalizedDateTime = normalizeBackendDateTime(interviewToEdit.fromTime);
+      const eventDT = DateTime
+      .fromISO(normalizedDateTime, { zone: 'utc' })
+      .setZone(interviewToEdit.eventTimezone); 
       
-      const [year, month, day] = interviewToEdit.interviewDate.split('-').map(Number);
+      // Extract date and time in the ORIGINAL event timezone
+      const { hour12, minute, period } = convert24to12(eventDT.toFormat('HH:mm'));
+      
       setFormData({
-        interviewDate: new Date(year, month - 1, day),
+        interviewDate: eventDT.toJSDate(), // Use Luxon's date object
         hour12,
         minute,
         period,
@@ -238,7 +275,9 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
     return;
   }
 
-  const dateStr = formData.interviewDate.toISOString().split("T")[0];
+  const dateStr = DateTime
+  .fromJSDate(formData.interviewDate)
+  .toFormat('yyyy-MM-dd');
   const time24 = convert12to24(
     formData.hour12,
     formData.minute,
@@ -315,19 +354,25 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
     if (isEdit && interviewToEdit) {
       const currentTime24 = convert12to24(formData.hour12, formData.minute, formData.period);
       
+      // Format selected date consistently
       const selectedDate = formData.interviewDate!.getFullYear() + '-' + 
-  String(formData.interviewDate!.getMonth() + 1).padStart(2, '0') + '-' + 
-  String(formData.interviewDate!.getDate()).padStart(2, '0');
+        String(formData.interviewDate!.getMonth() + 1).padStart(2, '0') + '-' + 
+        String(formData.interviewDate!.getDate()).padStart(2, '0');
 
-  const originalTime = normalizeBackendTime(interviewToEdit.fromTime);
+      // Parse original time in event timezone
+      const normalizedDateTime = normalizeBackendDateTime(interviewToEdit.fromTime);
+      const originalEventDT = DateTime.fromISO(normalizedDateTime, {
+        zone: interviewToEdit.eventTimezone
+      });
+      const originalTime = originalEventDT.toFormat('HH:mm');
 
-  const hasChanges =
-    selectedDate !== interviewToEdit.interviewDate ||
-    currentTime24 !== originalTime ||
-    formData.durationMinutes !== interviewToEdit.durationMinutes ||
-    formData.interviewerId !== interviewToEdit.interviewerId ||
-    formData.scheduledById !== interviewToEdit.scheduledById ||
-    formData.eventTimezone !== interviewToEdit.eventTimezone;
+      const hasChanges =
+        selectedDate !== interviewToEdit.interviewDate ||
+        currentTime24 !== originalTime ||
+        formData.durationMinutes !== interviewToEdit.durationMinutes ||
+        formData.interviewerId !== interviewToEdit.interviewerId ||
+        formData.scheduledById !== interviewToEdit.scheduledById ||
+        formData.eventTimezone !== interviewToEdit.eventTimezone;
 
       if (!hasChanges) {
         toastRef.current?.show({
@@ -352,10 +397,24 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
 
   // Convert 12-hour time to 24-hour format for backend
   const time24 = convert12to24(formData.hour12, formData.minute, formData.period);
-  const formattedDate = formData.interviewDate!
-  .toISOString()
-  .split("T")[0]; // YYYY-MM-DD
+  const formattedDate = DateTime
+    .fromJSDate(formData.interviewDate!)
+    .toFormat('yyyy-MM-dd');
+    const eventDT = DateTime.fromISO(
+    `${formattedDate}T${time24}`,
+    { zone: formData.eventTimezone }
+  );
 
+  if (!eventDT.isValid) {
+    toastRef.current?.show({
+      severity: "error",
+      summary: "Invalid Time Selection",
+      detail: `The selected time does not exist in ${formData.eventTimezone} due to Daylight Saving Time.`,
+      life: 4000,
+    });
+    setLoading(false);
+    return;
+  }
   const payload: CreateInterviewRequest | UpdateInterviewRequest = {
   interviewDate: formattedDate,
   fromTime: time24,
@@ -374,24 +433,23 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
         severity: "success",
         summary: "Success",
         detail: "Interview updated successfully",
-        life: 2000,  // ✅ Changed to 2 seconds
+        life: 2000,
       });
     } else {
       await createInterview(candidateId!, payload, accessToken!);
 
-      // ✅ ONLY show toast if NO external toast (i.e., when used in Interview page)
       if (!externalToast) {
         toastRef.current?.show({
           severity: "success",
           summary: "Success",
           detail: "Interview created successfully",
-          life: 2000,  // ✅ Changed to 2 seconds
+          life: 2000,
         });
       }
     }
 
     resetForm();
-    onSuccess();  // ✅ This will trigger the external toast in InterviewScheduler
+    onSuccess();
     onHide();
   } catch (err: any) {
   const fieldErrors = mapBackendErrors(err);
@@ -626,9 +684,57 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
                 {errors.time} — please adjust the start time.
               </small>
             )}
-            <div className="flex align-items-center gap-2 mt-2">
+            {!formData.interviewDate &&
+              browserTimezone !== formData.eventTimezone && (
+                <small className="text-500 block mt-2">
+                  Select a date to see this time in your timezone ({browserTimezone})
+                </small>
+            )}
+            {/* VIEWER TIMEZONE CONTEXT */}
+            {viewerContext &&
+              browserTimezone !== formData.eventTimezone && (
+                <div
+                  className="mt-2 p-2 border-round"
+                  style={{
+                    background: '#fef3c7',
+                    border: '1px solid #fbbf24'
+                  }}
+                >
+                  <div className="flex align-items-start gap-2">
+                    <FaClock
+                      style={{ color: '#d97706', marginTop: 2 }}
+                    />
+                    <div>
+                      <small className="text-700 font-semibold block">
+                        Your timezone ({browserTimezone}):
+                      </small>
+
+                      <small className="text-700">
+                        {viewerContext.date} at {viewerContext.time}
+                        {viewerContext.isDifferentDay && (
+                          <span
+                            style={{
+                              color: '#d97706',
+                              fontWeight: 600
+                            }}
+                          >
+                            {' '}
+                            (different day)
+                          </span>
+                        )}
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              )}
+            <div className="flex align-items-center gap-2 mt-2 ml-2">
               <FaClock style={{ color: '#6366f1' }} />
-              <small className="text-600">Selected: <strong>{displayTime}</strong></small>
+              <small className="text-600">
+                Scheduled:{" "}
+                <strong>
+                  {displayTime} ({formData.eventTimezone})
+                </strong>
+              </small>
             </div>
           </div>
 

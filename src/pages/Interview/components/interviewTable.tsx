@@ -36,16 +36,16 @@ const formatTimeForTable = (
   if (!normalized) return null;
 
   // 1️⃣ Parse in EVENT timezone (how it was scheduled)
-  const eventTime = DateTime.fromISO(normalized, {
-    zone: eventTimezone
-  });
+  const eventTime = DateTime
+    .fromISO(normalized, { zone: 'utc' }) 
+    .setZone(eventTimezone);                   
 
   // 2️⃣ Convert to VIEWER timezone
   const viewerTime = eventTime.setZone(browserTimezone);
 
   return {
     text: `${viewerTime.toFormat("hh:mm a")} (${viewerTime.offsetNameShort})`,
-    tooltip: `Scheduled in ${eventTimezone} (${eventTime.offsetNameShort})`
+    tooltip: `Scheduled in ${eventTimezone}`
   };
 };
 
