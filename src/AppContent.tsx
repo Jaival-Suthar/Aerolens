@@ -14,6 +14,7 @@ const LoginPage = lazy(() => import('./pages/Login/Login'));
 const Members = lazy(() => import('./pages/Members/page'));
 const ReportPage = lazy(() => import('./pages/Report/page'));
 const Vendor = lazy(() => import('./pages/Vendor/page'));
+const CoverageReportPage = lazy(() => import('./pages/CoverageReport/page'));
 
 const LoadingSpinner = () => (
   <div
@@ -159,6 +160,16 @@ const AppContent: React.FC = () => {
           element={
             <ProtectedRoute>
               <AppLayout><ReportPage /></AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports/coverage"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <CoverageReportPage />
+              </AppLayout>
             </ProtectedRoute>
           }
         />

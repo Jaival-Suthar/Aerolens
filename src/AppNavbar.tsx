@@ -124,6 +124,12 @@ const AppNavbar: React.FC = () => {
           command: () => handleNavigation("/reports"),
           className: isMenuActive("/reports") ? "nav-subitem-active" : "",
         },
+        {
+          label: "Coverage Report",
+          icon: <FaChartBar style={{ marginRight: 8, marginLeft: 4 }} />,
+          command: () => handleNavigation("/reports/coverage"),
+          className: isMenuActive("/reports/coverage") ? "nav-subitem-active" : "",
+        }
       ],
     },
   ];
