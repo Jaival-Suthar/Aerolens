@@ -41,62 +41,75 @@ const DateRangeFilter: React.FC<Props> = ({ onApply, onClear }) => {
       {/* Enhanced styling matching InterviewCalendar theme */}
       <style>{`
         /* Header styling - gradient background */
-        .range-calendar .p-datepicker-header {
+        .range-calendar-panel .p-datepicker-header {
           background: linear-gradient(90deg, #072844, #55c62c) !important;
           border: none !important;
-          padding: 12px !important;
+          padding: 8px !important;
           border-radius: 8px 8px 0 0 !important;
         }
         
-        .range-calendar .p-datepicker-header .p-datepicker-title {
+        .range-calendar-panel .p-datepicker-header .p-datepicker-title {
           color: #ffffff !important;
           font-weight: 600 !important;
-          font-size: 16px !important;
+          font-size: 14px !important;
         }
         
-        .range-calendar .p-datepicker-header .p-datepicker-title select {
+        .range-calendar-panel .p-datepicker-header .p-datepicker-title select {
           color: #ffffff !important;
-          font-weight: 600 !important;
+          font-weight: 700 !important;
         }
         
-        .range-calendar .p-datepicker-header .p-datepicker-prev,
-        .range-calendar .p-datepicker-header .p-datepicker-next {
+        .range-calendar-panel .p-datepicker-header .p-datepicker-prev,
+        .range-calendar-panel .p-datepicker-header .p-datepicker-next {
           color: #ffffff !important;
         }
         
-        .range-calendar .p-datepicker-header .p-datepicker-prev:hover,
-        .range-calendar .p-datepicker-header .p-datepicker-next:hover {
+        .range-calendar-panel .p-datepicker-header .p-datepicker-prev:hover,
+        .range-calendar-panel .p-datepicker-header .p-datepicker-next:hover {
           background: rgba(255, 255, 255, 0.1) !important;
         }
 
         /* Remove default highlights */
-        .range-calendar .p-highlight {
+        .range-calendar-panel .p-highlight {
           background: transparent !important;
         }
 
         /* Cell sizing */
-        .range-calendar .p-datepicker table td > span {
-          width: 40px !important;
-          height: 40px !important;
+        .range-calendar-panel .p-datepicker table td > span {
+          width: 32px !important;
+          height: 32px !important;
           border-radius: 50% !important;
         }
 
-        .range-calendar .p-datepicker table td {
-          padding: 4px !important;
+        .range-calendar-panel .p-datepicker table td {
+          padding: 2px !important;
+        }
+        /* Date number */
+        .range-calendar-panel .p-datepicker table td > span > div {
+          font-size: 14px !important;
+          font-weight: 500;
         }
 
         /* Today indicator - subtle */
-        .range-calendar .p-datepicker table td.p-datepicker-today > span {
+        .range-calendar-panel .p-datepicker table td.p-datepicker-today > span {
           background: transparent !important;
           color: inherit !important;
         }
-
+        .range-calendar-panel .p-datepicker-title .p-datepicker-month,
+        .range-calendar-panel .p-datepicker-title .p-datepicker-year {
+          color: #ffffff !important;
+          font-weight: 700;
+        }
+        .range-calendar-panel .p-datepicker-prev,
+        .range-calendar-panel .p-datepicker-next {
+          color: #ffffff !important;
+        }
         /* Footer styling */
         .range-footer {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 12px;
+          padding: 8px;
           border-top: 1px solid #e5e7eb;
           background: #ffffff;
         }
@@ -164,14 +177,27 @@ const DateRangeFilter: React.FC<Props> = ({ onApply, onClear }) => {
           cursor: not-allowed;
         }
 
-        .calendar-wrapper {
+        .date-filter-container {
+          position: relative;
           display: flex;
           align-items: center;
-          gap: 8px;
+        }
+        .range-calendar-panel .p-datepicker-calendar {
+          table-layout: fixed;
+          width: 100%;
+        }
+
+        .range-calendar-panel .p-datepicker-calendar th,
+        .range-calendar-panel .p-datepicker-calendar td {
+          padding: 2px !important;
+        }
+
+        .range-calendar-panel .p-datepicker-calendar th span {
+          font-size: 14px;
         }
       `}</style>
 
-      <div className="calendar-wrapper">
+      <div className="date-filter-container">
         <Calendar
           ref={calendarRef}
           value={range}
@@ -184,6 +210,7 @@ const DateRangeFilter: React.FC<Props> = ({ onApply, onClear }) => {
           className="range-calendar"
           placeholder="Select date range"
           aria-label="Select date range"
+          panelClassName="range-calendar-panel"
           dateTemplate={(date) => {
             const d = new Date(date.year, date.month, date.day);
             const start = range?.[0];
@@ -196,8 +223,8 @@ const DateRangeFilter: React.FC<Props> = ({ onApply, onClear }) => {
             return (
               <div
                 style={{
-                  width: "40px",
-                  height: "40px",
+                  width: "32px",
+                  height: "32px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -234,7 +261,10 @@ const DateRangeFilter: React.FC<Props> = ({ onApply, onClear }) => {
               </div>
             );
           }}
-          panelStyle={{ paddingBottom: 0 }}
+          panelStyle={{
+            maxWidth: "300px",
+            minWidth: "unset"
+          }}
           footerTemplate={() => (
             <div className="range-footer">
               <button className="range-btn clear-btn" onClick={clear}>
@@ -253,7 +283,7 @@ const DateRangeFilter: React.FC<Props> = ({ onApply, onClear }) => {
         
         {/* External Clear Button */}
         <button
-          className="external-clear-btn"
+          className="external-clear-btn ml-1"
           onClick={clear}
           disabled={!range}
           title="Clear date range"
