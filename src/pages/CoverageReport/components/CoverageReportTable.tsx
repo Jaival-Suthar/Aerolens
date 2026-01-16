@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DataTable, type DataTablePageEvent } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { InterviewerReport } from "../types/interviewerReporttypes";
-import { useSearchParams } from "react-router-dom";
+import { FilterMatchMode } from "primereact/api";
+import { Dropdown } from "primereact/dropdown";
 
 const theme = {
   primary: "#072844",
@@ -44,6 +46,13 @@ const CoverageReportTable: React.FC<Props> = ({ data, loading }) => {
   const [rowsPerPage, setRowsPerPage] = useState(sizeFromUrl);
   const [first, setFirst] = useState((pageFromUrl - 1) * sizeFromUrl);
 
+  const [filters, setFilters] = useState({
+    interviewerName: { value: null, matchMode: FilterMatchMode.EQUALS },
+    round: { value: null, matchMode: FilterMatchMode.EQUALS },
+    result: { value: null, matchMode: FilterMatchMode.EQUALS },
+    recruiterName: { value: null, matchMode: FilterMatchMode.EQUALS },
+  });
+
   const onPageChange = (event: DataTablePageEvent) => {
     const { first, rows } = event;
 
@@ -78,6 +87,42 @@ const CoverageReportTable: React.FC<Props> = ({ data, loading }) => {
       }));
     });
   }, [data]);
+
+  /* 🔥 Unique dropdown values from backend data */
+  const uniqueOptions = useMemo(() => {
+    const unique = <T extends keyof CoverageRow>(key: T) =>
+      Array.from(new Set(rows.map(r => r[key]).filter(Boolean))).map(v => ({
+        label: String(v),
+        value: v,
+      }));
+
+    const sortRounds = (rounds: { label: string; value: string }[]) =>
+      rounds.sort((a, b) => {
+        const getNum = (r: string) => {
+          const match = r.match(/\d+/);
+          return match ? Number(match[0]) : Number.MAX_SAFE_INTEGER;
+        };
+        return getNum(a.value) - getNum(b.value);
+      });
+
+    return {
+      interviewerName: unique("interviewerName"),
+      round: sortRounds(unique("round")),
+      result: unique("result"),
+      recruiterName: unique("recruiterName"),
+    };
+  }, [rows]);
+
+  const dropdownFilterTemplate = (options: any, list: any[]) => (
+    <Dropdown
+      value={options.value}
+      options={list}
+      onChange={(e) => options.filterApplyCallback(e.value)}
+      placeholder="Select"
+      showClear
+      style={{ minWidth: "12rem" }}
+    />
+  );
 
   const headerStyle: React.CSSProperties = {
     background: theme.headerBg,
@@ -124,6 +169,10 @@ const CoverageReportTable: React.FC<Props> = ({ data, loading }) => {
         onPage={onPageChange}
         rowsPerPageOptions={[10, 20, 50]}
 
+        filters={filters}
+        onFilter={(e) => setFilters(e.filters as typeof filters)}
+        filterDisplay="menu"
+
         emptyMessage={loading ? "Loading..." : "No interviews found"}
         paginatorTemplate={paginatorTemplate}
         currentPageReportTemplate={currentPageReportTemplate}
@@ -134,48 +183,80 @@ const CoverageReportTable: React.FC<Props> = ({ data, loading }) => {
         <Column
           field="interviewerName"
           header="Interviewer"
+          sortable
+          filter
+          showFilterMatchModes={false}
+          filterElement={(o) =>
+            dropdownFilterTemplate(o, uniqueOptions.interviewerName)
+          }
           headerStyle={headerStyle}
           bodyStyle={{ ...cellStyle, fontWeight: 500 }}
         />
+
         <Column
           field="candidateName"
           header="Candidate"
+          sortable
           headerStyle={headerStyle}
           bodyStyle={cellStyle}
         />
+
         <Column
           field="role"
           header="Role"
           headerStyle={headerStyle}
           bodyStyle={cellStyle}
         />
+
         <Column
           field="round"
           header="Round"
+          sortable
+          filter
+          showFilterMatchModes={false}
+          filterElement={(o) =>
+            dropdownFilterTemplate(o, uniqueOptions.round)
+          }
           headerStyle={headerStyle}
           bodyStyle={cellStyle}
         />
+
         <Column
           field="date"
           header="Date"
           headerStyle={headerStyle}
           bodyStyle={cellStyle}
         />
+
         <Column
           field="result"
           header="Result"
+          sortable
+          filter
+          showFilterMatchModes={false}
+          filterElement={(o) =>
+            dropdownFilterTemplate(o, uniqueOptions.result)
+          }
           headerStyle={headerStyle}
           bodyStyle={cellStyle}
         />
+
         <Column
           header="Feedback"
           headerStyle={headerStyle}
           bodyStyle={cellStyle}
           body={(row: CoverageRow) => row.feedback || "-"}
         />
+
         <Column
           field="recruiterName"
           header="Recruiter"
+          sortable
+          filter
+          showFilterMatchModes={false}
+          filterElement={(o) =>
+            dropdownFilterTemplate(o, uniqueOptions.recruiterName)
+          }
           headerStyle={headerStyle}
           bodyStyle={cellStyle}
         />

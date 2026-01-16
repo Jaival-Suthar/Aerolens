@@ -3,6 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import { DataTable, type DataTablePageEvent } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { InterviewerReport } from "../types/interviewerReporttypes";
+import { FilterMatchMode } from "primereact/api";
+import { InputText } from "primereact/inputtext";
 
 const theme = {
   primary: "#072844",
@@ -32,6 +34,23 @@ const InterviewerWorkloadTable: React.FC<Props> = ({ data, loading }) => {
   const sizeFromUrl = Number(searchParams.get(SIZE_PARAM)) || 10;
   const [rowsPerPage, setRowsPerPage] = useState(sizeFromUrl);
   const [first, setFirst] = useState((pageFromUrl - 1) * sizeFromUrl);
+  const [filters, setFilters] = useState({
+  interviewerName: {
+    value: null,
+    matchMode: FilterMatchMode.CONTAINS,
+  },
+});
+  const interviewerFilterTemplate = (options: any) => {
+  return (
+    <InputText
+      value={options.value || ""}
+      onChange={(e) => options.filterApplyCallback(e.target.value)}
+      placeholder="Search interviewer"
+      className="p-column-filter"
+      style={{ width: "100%" }}
+    />
+  );
+};
 
   const onPageChange = (event: DataTablePageEvent) => {
     const { first, rows } = event;
@@ -47,6 +66,13 @@ const InterviewerWorkloadTable: React.FC<Props> = ({ data, loading }) => {
       params.set(SIZE_PARAM, rows.toString());
       return params;
     });
+  };
+
+  const onFilterChange = (e: any) => {
+    setFilters(prev => ({
+      ...prev,
+      ...e.filters,
+    }));
   };
 
   const headerStyle: React.CSSProperties = {
@@ -82,6 +108,9 @@ const InterviewerWorkloadTable: React.FC<Props> = ({ data, loading }) => {
       <DataTable
         value={data}
         loading={loading}
+        filters={filters}
+        onFilter={onFilterChange}
+        filterDisplay="menu"
         stripedRows
         rowHover
         scrollable
@@ -104,36 +133,46 @@ const InterviewerWorkloadTable: React.FC<Props> = ({ data, loading }) => {
         <Column
           field="interviewerName"
           header="Interviewer"
+          sortable
+          filter
+          filterField="interviewerName"
+          filterElement={interviewerFilterTemplate}
+          showFilterMatchModes={false}
           headerStyle={headerStyle}
           bodyStyle={{ ...cellStyle, fontWeight: 500 }}
         />
         <Column
           field="statistics.totalInterviews"
           header="Total"
+          sortable
           headerStyle={headerStyle}
           bodyStyle={cellStyle}
         />
         <Column
           field="statistics.pending"
           header="Pending"
+          sortable
           headerStyle={headerStyle}
           bodyStyle={cellStyle}
         />
         <Column
           field="statistics.selected"
           header="Selected"
+          sortable
           headerStyle={headerStyle}
           bodyStyle={cellStyle}
         />
         <Column
           field="statistics.rejected"
           header="Rejected"
+          sortable
           headerStyle={headerStyle}
           bodyStyle={cellStyle}
         />
         <Column
           field="statistics.cancelled"
           header="Cancelled"
+          sortable
           headerStyle={headerStyle}
           bodyStyle={cellStyle}
         />
