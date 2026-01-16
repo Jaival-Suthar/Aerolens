@@ -13,7 +13,8 @@ import {
   FaCog,
   FaUser,
   FaUserTie,
-  FaBuilding  
+  FaBuilding, 
+  FaLayerGroup 
 } from "react-icons/fa";
 import { useProfileStore } from "./shared/store/profile";
 import SmallLogo from "./assets/SmallLogo.svg";
@@ -126,7 +127,7 @@ const AppNavbar: React.FC = () => {
         },
         {
           label: "Coverage Report",
-          icon: <FaChartBar style={{ marginRight: 8, marginLeft: 4 }} />,
+          icon: <FaLayerGroup style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/reports/coverage"),
           className: isMenuActive("/reports/coverage") ? "nav-subitem-active" : "",
         }
