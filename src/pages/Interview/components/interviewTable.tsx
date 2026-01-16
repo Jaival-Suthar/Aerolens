@@ -36,16 +36,16 @@ const formatTimeForTable = (
   if (!normalized) return null;
 
   // 1️⃣ Parse in EVENT timezone (how it was scheduled)
-  const eventTime = DateTime.fromISO(normalized, {
-    zone: eventTimezone
-  });
+  const eventTime = DateTime
+    .fromISO(normalized, { zone: 'utc' }) 
+    .setZone(eventTimezone);                   
 
   // 2️⃣ Convert to VIEWER timezone
   const viewerTime = eventTime.setZone(browserTimezone);
 
   return {
     text: `${viewerTime.toFormat("hh:mm a")} (${viewerTime.offsetNameShort})`,
-    tooltip: `Scheduled in ${eventTimezone} (${eventTime.offsetNameShort})`
+    tooltip: `Scheduled in ${eventTimezone}`
   };
 };
 
@@ -219,9 +219,23 @@ const handleViewAllRounds = () => {
   };
 
   const dateBodyTemplate = (rowData: Interview) => {
-    const date = new Date(rowData.interviewDate);
-    return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-  };
+  if (!rowData.fromTime) return <span>-</span>;
+
+  const normalized = normalizeBackendDateTime(rowData.fromTime);
+  if (!normalized) return <span>-</span>;
+
+  // Parse UTC → convert to browser timezone
+  const localDT = DateTime
+    .fromISO(normalized, { zone: "utc" })
+    .setZone(browserTimezone);
+
+  return (
+    <span>
+      {localDT.toFormat("dd MMM yyyy")}
+    </span>
+  );
+};
+
   
   const timeBodyTemplate = (rowData: Interview) => {
     const result = formatTimeForTable(
