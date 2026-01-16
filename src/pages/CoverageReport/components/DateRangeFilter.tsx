@@ -1,7 +1,12 @@
 import { Calendar } from "primereact/calendar";
 import { useState } from "react";
 import { FiCheck, FiX } from "react-icons/fi";
-
+const formatDateLocal = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 interface Props {
   onApply: (startDate: string, endDate: string) => void;
   onClear: () => void; // 🔥 Add this prop
@@ -16,8 +21,8 @@ const DateRangeFilter: React.FC<Props> = ({ onApply, onClear }) => {
     if (!isCompleteRange) return;
 
     onApply(
-      range[0].toISOString().slice(0, 10),
-      range[1].toISOString().slice(0, 10)
+      formatDateLocal(range[0]),
+      formatDateLocal(range[1])
     );
   };
 

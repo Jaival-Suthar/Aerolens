@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { DataTable, type DataTablePageEvent } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { InterviewerReport } from "../types/interviewerReporttypes";
+import { useSearchParams } from "react-router-dom";
 
 const theme = {
   primary: "#072844",
@@ -34,12 +35,29 @@ const currentPageReportTemplate =
   "Showing {first} to {last} of {totalRecords} entries";
 
 const CoverageReportTable: React.FC<Props> = ({ data, loading }) => {
-  const [first, setFirst] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const PAGE_PARAM = "coveragePage";
+  const SIZE_PARAM = "coverageSize";
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const pageFromUrl = Number(searchParams.get(PAGE_PARAM)) || 1;
+  const sizeFromUrl = Number(searchParams.get(SIZE_PARAM)) || 10;
+  const [rowsPerPage, setRowsPerPage] = useState(sizeFromUrl);
+  const [first, setFirst] = useState((pageFromUrl - 1) * sizeFromUrl);
 
   const onPageChange = (event: DataTablePageEvent) => {
-    setFirst(event.first);
-    setRowsPerPage(event.rows);
+    const { first, rows } = event;
+
+    setFirst(first);
+    setRowsPerPage(rows);
+
+    const newPage = Math.floor(first / rows) + 1;
+
+    setSearchParams(prev => {
+      const params = new URLSearchParams(prev);
+      params.set(PAGE_PARAM, newPage.toString());
+      params.set(SIZE_PARAM, rows.toString());
+      return params;
+    });
   };
 
   const rows: CoverageRow[] = useMemo(() => {
