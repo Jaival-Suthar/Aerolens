@@ -11,7 +11,7 @@ export interface Interview {
 
   scheduledById: number;
   scheduledByName: string;
-
+  eventTimestamp: string;
   /**
    * Display/helper date (YYYY-MM-DD).
    * NOT authoritative for time calculations.

@@ -224,16 +224,24 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
 
     if (visible && isEdit && interviewToEdit) {
       // Parse the backend datetime in the EVENT timezone (not browser timezone)
-      const normalizedDateTime = normalizeBackendDateTime(interviewToEdit.fromTime);
-      const eventDT = DateTime
-      .fromISO(normalizedDateTime, { zone: 'utc' })
-      .setZone(interviewToEdit.eventTimezone); 
+      const eventDT = DateTime.fromISO(
+        interviewToEdit.eventTimestamp,
+        { setZone: true } // 👈 CRITICAL
+      );
       
       // Extract date and time in the ORIGINAL event timezone
       const { hour12, minute, period } = convert24to12(eventDT.toFormat('HH:mm'));
-      
+      const eventDateOnly = DateTime.fromObject(
+        {
+          year: eventDT.year,
+          month: eventDT.month,
+          day: eventDT.day
+        },
+        { zone: interviewToEdit.eventTimezone }
+      );
+
       setFormData({
-        interviewDate: eventDT.toJSDate(), // Use Luxon's date object
+        interviewDate: eventDateOnly.toJSDate(), // safe now
         hour12,
         minute,
         period,
@@ -350,24 +358,29 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
       newErrors.scheduledById = "Scheduler selection is required";
     }
 
-    // For Edit: Check if anything changed
+    // For Edit: Check if anything changed (INTENT-BASED)
     if (isEdit && interviewToEdit) {
-      const currentTime24 = convert12to24(formData.hour12, formData.minute, formData.period);
-      
-      // Format selected date consistently
-      const selectedDate = formData.interviewDate!.getFullYear() + '-' + 
-        String(formData.interviewDate!.getMonth() + 1).padStart(2, '0') + '-' + 
-        String(formData.interviewDate!.getDate()).padStart(2, '0');
+      const currentTime24 = convert12to24(
+        formData.hour12,
+        formData.minute,
+        formData.period
+      );
 
-      // Parse original time in event timezone
-      const normalizedDateTime = normalizeBackendDateTime(interviewToEdit.fromTime);
-      const originalEventDT = DateTime.fromISO(normalizedDateTime, {
-        zone: interviewToEdit.eventTimezone
-      });
+      const selectedDate = DateTime
+        .fromJSDate(formData.interviewDate!)
+        .toFormat('yyyy-MM-dd');
+
+      // ✅ Parse ORIGINAL intent timestamp (DO NOT convert)
+      const originalEventDT = DateTime.fromISO(
+        interviewToEdit.eventTimestamp,
+        { setZone: true }
+      );
+
+      const originalDate = originalEventDT.toFormat('yyyy-MM-dd');
       const originalTime = originalEventDT.toFormat('HH:mm');
 
       const hasChanges =
-        selectedDate !== interviewToEdit.interviewDate ||
+        selectedDate !== originalDate ||
         currentTime24 !== originalTime ||
         formData.durationMinutes !== interviewToEdit.durationMinutes ||
         formData.interviewerId !== interviewToEdit.interviewerId ||
