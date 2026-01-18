@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { Message } from "primereact/message";
@@ -8,14 +8,12 @@ import InterviewerWorkloadTable from "./components/InterviewerWorkloadTable";
 import CoverageReportTable from "./components/CoverageReportTable";
 import { useAuth } from "../../shared/auth/AuthContext";
 import DateRangeFilter from "./components/DateRangeFilter";
+
 const formatDateDMY = (isoDate: string) => {
   const [year, month, day] = isoDate.split("-");
   return `${day}/${month}/${year}`;
 };
 
-/**
- * Theme tokens (inline, reused)
- */
 const theme = {
   gradient: "linear-gradient(90deg, #072844, #55c62c)",
   primary: "#072844",
@@ -32,33 +30,61 @@ const CoverageReportPage: React.FC = () => {
     tabFromUrl === "coverage" ? "COVERAGE" : "WORKLOAD"
   );
   const [dateLabel, setDateLabel] = useState<string>("Past 7 Days Interview Report");
-  const [isCustomRange, setIsCustomRange] = useState(false);
 
   const { accessToken } = useAuth();
   const report = useInterviewerReport(accessToken);
+
+  // Initialize date range from URL on mount
+  useEffect(() => {
+    const filter = searchParams.get("filter");
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+
+    if (filter === "custom" && startDate && endDate) {
+      report.fetchByDateRange(startDate, endDate);
+      setDateLabel(
+        `Interview Report from ${formatDateDMY(startDate)} to ${formatDateDMY(endDate)}`
+      );
+    } else {
+      report.fetchDefault();
+      setDateLabel("Past 7 Days Interview Report");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleDateFilter = useCallback(
     (startDate: string, endDate: string) => {
       report.fetchByDateRange(startDate, endDate);
 
-      setIsCustomRange(true);
+      setSearchParams(prev => {
+        const params = new URLSearchParams(prev);
+        params.set("filter", "custom");
+        params.set("startDate", startDate);
+        params.set("endDate", endDate);
+        return params;
+      });
+
       setDateLabel(
         `Interview Report from ${formatDateDMY(startDate)} to ${formatDateDMY(endDate)}`
       );
     },
-    [report]
+    [report, setSearchParams]
   );
 
   const handleClearFilter = useCallback(() => {
     report.fetchDefault();
 
-    setIsCustomRange(false);
-    setDateLabel("Past 7 Days Interview Report");
-  }, [report]);
+    setSearchParams(prev => {
+      const params = new URLSearchParams(prev);
+      params.delete("filter");
+      params.delete("startDate");
+      params.delete("endDate");
+      return params;
+    });
 
-  /**
-   * Tab change handler (URL-synced)
-   */
+    setDateLabel("Past 7 Days Interview Report");
+  }, [report, setSearchParams]);
+
   const handleTabChange = (tab: "WORKLOAD" | "COVERAGE") => {
     setActiveTab(tab);
 
@@ -77,9 +103,6 @@ const CoverageReportPage: React.FC = () => {
     );
   }
 
-  /**
-   * Tab style factory (inline + stable)
-   */
   const tabStyle = (active: boolean): React.CSSProperties => ({
     background: active ? theme.gradient : "transparent",
     color: active ? "#ffffff" : theme.textMuted,
@@ -137,57 +160,51 @@ const CoverageReportPage: React.FC = () => {
             Coverage Report
           </button>
         </div>
-        <div
-        style={{
-          textAlign: "center",
-          margin: "0",          // remove extra vertical space
-          padding: "0",         // ensure no padding
-          flex: 1, 
-        }}>
-        <h2
-          style={{
-            margin: 0,
-            lineHeight: 1.2,
-            fontWeight: 600,
-            fontSize: "1.75rem",
-            background: "linear-gradient(90deg, #072844, #55c62c)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}
-        >
-          {dateLabel}
-        </h2>
 
+        {/* Centered Title */}
         <div
           style={{
-            width: "64px",
-            height: "3px",
-            margin: "6px auto",
-            background: "linear-gradient(90deg, #072844, #55c62c)",
-            borderRadius: 4,
-          }}
-        />
-
-        {/* <p
-          style={{
-            margin: 0,
-            fontSize: "0.9rem",
-            color: "#374151",
+            textAlign: "center",
+            margin: "0",
+            padding: "0",
+            flex: 1, 
           }}
         >
-          {isCustomRange
-            ? "Filtered interview insights for the selected period"
-            : "A rolling snapshot of interview activity over the last week"}
-        </p> */}
-      </div>
+          <h2
+            style={{
+              margin: 0,
+              lineHeight: 1.2,
+              fontWeight: 600,
+              fontSize: "1.75rem",
+              background: "linear-gradient(90deg, #072844, #55c62c)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}
+          >
+            {dateLabel}
+          </h2>
+
+          <div
+            style={{
+              width: "64px",
+              height: "3px",
+              margin: "6px auto",
+              background: "linear-gradient(90deg, #072844, #55c62c)",
+              borderRadius: 4,
+            }}
+          />
+        </div>
+
+        {/* Date Range Filter */}
         <DateRangeFilter
           onApply={handleDateFilter}
           onClear={handleClearFilter}
+          initialStartDate={searchParams.get("startDate") || undefined}
+          initialEndDate={searchParams.get("endDate") || undefined}
         />
       </div>
-      {/* Centered Context Title */}
-      
+
       {/* Content */}
       <div
         style={{

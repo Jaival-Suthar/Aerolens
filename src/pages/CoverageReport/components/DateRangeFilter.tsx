@@ -9,13 +9,32 @@ const formatDateLocal = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
+const parseDateString = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
+};
+
 interface Props {
   onApply: (startDate: string, endDate: string) => void;
   onClear: () => void;
+  initialStartDate?: string;
+  initialEndDate?: string;
 }
 
-const DateRangeFilter: React.FC<Props> = ({ onApply, onClear }) => {
-  const [range, setRange] = useState<Date[] | null>(null);
+const DateRangeFilter: React.FC<Props> = ({ 
+  onApply, 
+  onClear, 
+  initialStartDate,
+  initialEndDate 
+}) => {
+  // Initialize state directly from props - clean and simple
+  const [range, setRange] = useState<Date[] | null>(() => {
+    if (initialStartDate && initialEndDate) {
+      return [parseDateString(initialStartDate), parseDateString(initialEndDate)];
+    }
+    return null;
+  });
+
   const calendarRef = useRef<Calendar>(null);
 
   const isCompleteRange = range && range.length === 2;
@@ -27,20 +46,18 @@ const DateRangeFilter: React.FC<Props> = ({ onApply, onClear }) => {
       formatDateLocal(range[0]),
       formatDateLocal(range[1])
     );
-    calendarRef.current?.hide(); // 🔥 Close calendar after Apply
+    calendarRef.current?.hide();
   };
 
   const clear = () => {
     setRange(null);
     onClear();
-    calendarRef.current?.hide(); // 🔥 Close calendar after Clear
+    calendarRef.current?.hide();
   };
 
   return (
     <>
-      {/* Enhanced styling matching InterviewCalendar theme */}
       <style>{`
-        /* Header styling - gradient background */
         .range-calendar-panel .p-datepicker-header {
           background: linear-gradient(90deg, #072844, #55c62c) !important;
           border: none !important;
@@ -69,12 +86,10 @@ const DateRangeFilter: React.FC<Props> = ({ onApply, onClear }) => {
           background: rgba(255, 255, 255, 0.1) !important;
         }
 
-        /* Remove default highlights */
         .range-calendar-panel .p-highlight {
           background: transparent !important;
         }
 
-        /* Cell sizing */
         .range-calendar-panel .p-datepicker table td > span {
           width: 32px !important;
           height: 32px !important;
@@ -84,27 +99,28 @@ const DateRangeFilter: React.FC<Props> = ({ onApply, onClear }) => {
         .range-calendar-panel .p-datepicker table td {
           padding: 2px !important;
         }
-        /* Date number */
+
         .range-calendar-panel .p-datepicker table td > span > div {
           font-size: 14px !important;
           font-weight: 500;
         }
 
-        /* Today indicator - subtle */
         .range-calendar-panel .p-datepicker table td.p-datepicker-today > span {
           background: transparent !important;
           color: inherit !important;
         }
+
         .range-calendar-panel .p-datepicker-title .p-datepicker-month,
         .range-calendar-panel .p-datepicker-title .p-datepicker-year {
           color: #ffffff !important;
           font-weight: 700;
         }
+
         .range-calendar-panel .p-datepicker-prev,
         .range-calendar-panel .p-datepicker-next {
           color: #ffffff !important;
         }
-        /* Footer styling */
+
         .range-footer {
           display: flex;
           justify-content: space-between;
@@ -152,7 +168,6 @@ const DateRangeFilter: React.FC<Props> = ({ onApply, onClear }) => {
           background: rgba(7, 40, 68, 0.05);
         }
 
-        /* External Clear Button */
         .external-clear-btn {
           display: flex;
           align-items: center;
@@ -168,7 +183,7 @@ const DateRangeFilter: React.FC<Props> = ({ onApply, onClear }) => {
           flex-shrink: 0;
         }
 
-        .external-clear-btn:hover {
+        .external-clear-btn:hover:not(:disabled) {
           background: rgba(7, 40, 68, 0.05);
         }
 
@@ -181,7 +196,9 @@ const DateRangeFilter: React.FC<Props> = ({ onApply, onClear }) => {
           position: relative;
           display: flex;
           align-items: center;
+          gap: 8px;
         }
+
         .range-calendar-panel .p-datepicker-calendar {
           table-layout: fixed;
           width: 100%;
@@ -233,7 +250,6 @@ const DateRangeFilter: React.FC<Props> = ({ onApply, onClear }) => {
                   fontWeight: isStart || isEnd ? 600 : 500,
                   cursor: "pointer",
                   position: "relative",
-                  // Start/End dates - full gradient with glow
                   ...(isStart || isEnd
                     ? {
                         background: "linear-gradient(90deg, #072844, #55c62c)",
@@ -242,14 +258,12 @@ const DateRangeFilter: React.FC<Props> = ({ onApply, onClear }) => {
                           "0 0 15px rgba(7, 40, 68, 0.4), 0 0 25px rgba(85, 198, 44, 0.3)",
                       }
                     : {}),
-                  // Between dates - subtle gradient background
                   ...(isBetween
                     ? {
                         background: "linear-gradient(90deg, rgba(7, 40, 68, 0.15), rgba(85, 198, 44, 0.15))",
                         color: "#072844",
                       }
                     : {}),
-                  // Regular dates
                   ...(!isStart && !isEnd && !isBetween
                     ? {
                         color: "#475569",
@@ -281,9 +295,8 @@ const DateRangeFilter: React.FC<Props> = ({ onApply, onClear }) => {
           )}
         />
         
-        {/* External Clear Button */}
         <button
-          className="external-clear-btn ml-1"
+          className="external-clear-btn"
           onClick={clear}
           disabled={!range}
           title="Clear date range"
