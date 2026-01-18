@@ -14,7 +14,8 @@ import {
   FaUser,
   FaUserTie,
   FaBuilding, 
-  FaLayerGroup 
+  FaLayerGroup,
+  FaBullseye
 } from "react-icons/fa";
 import { useProfileStore } from "./shared/store/profile";
 import SmallLogo from "./assets/SmallLogo.svg";
@@ -124,6 +125,12 @@ const AppNavbar: React.FC = () => {
           icon: <FaChartBar style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/reports"),
           className: isMenuActive("/reports") ? "nav-subitem-active" : "",
+        },
+        {
+          label: "Interview Tracker",
+          icon: <FaBullseye style={{ marginRight: 8, marginLeft: 4 }} />,
+          command: () => handleNavigation("/reports/interview-tracker"),
+          className: isMenuActive("/reports/interview-tracker") ? "nav-subitem-active" : "",
         },
         {
           label: "Coverage Report",
