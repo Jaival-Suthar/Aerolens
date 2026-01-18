@@ -3,7 +3,61 @@ import { Dialog } from "primereact/dialog";
 import { FaRoute, FaClock, FaUserTie, FaCalendarAlt } from "react-icons/fa";
 import { getInterviewsByCandidate } from "../services/candidateInterviewService";
 import { useAuth } from "../../../shared/auth/AuthContext";
+import { DateTime } from "luxon";
+const browserTimezone =
+  Intl.DateTimeFormat().resolvedOptions().timeZone;
 
+const normalizeBackendDateTime = (value?: string) => {
+  if (!value) return null;
+
+  // "2025-12-20 09:15:00.000000" → "2025-12-20T09:15:00"
+  return value.includes(" ")
+    ? value.replace(" ", "T").split(".")[0]
+    : value;
+};
+
+const parseEventToViewerTime = (
+  backendDateTime?: string,
+  eventTimezone?: string
+) => {
+  const normalized = normalizeBackendDateTime(backendDateTime);
+  if (!normalized || !eventTimezone) return null;
+
+  // 1️⃣ Parse in EVENT timezone (truth)
+  const eventDT = DateTime.fromISO(normalized, {
+    zone: eventTimezone,
+  });
+
+  // 2️⃣ Convert to VIEWER timezone
+  return eventDT.setZone(browserTimezone);
+};
+
+const formatLocalDate = (
+  backendDateTime?: string,
+  eventTimezone?: string
+) => {
+  const dt = parseEventToViewerTime(backendDateTime, eventTimezone);
+  return dt ? dt.toFormat("dd MMM yyyy") : "-";
+};
+
+const formatTimeRange = (
+  fromTime?: string,
+  toTime?: string,
+  eventTimezone?: string
+) => {
+  const start = parseEventToViewerTime(fromTime, eventTimezone);
+  const end = parseEventToViewerTime(toTime, eventTimezone);
+
+  if (!start || !end) {
+    return { text: "-", tooltip: "" };
+  }
+
+  return {
+    // ⬅️ TZ shown ONCE
+    text: `${start.toFormat("hh:mm a")} – ${end.toFormat("hh:mm a")} (${start.offsetNameShort})`,
+    tooltip: `Scheduled in ${eventTimezone}`,
+  };
+};
 interface CandidateRoundsDialogProps {
   visible: boolean;
   candidateId: number | null;
@@ -21,6 +75,7 @@ interface RoundItem {
   durationMinutes: number;
   result?: string;
   interviewerName: string;
+  eventTimezone: string;
 }
 
 const formatDate = (date: string) =>
@@ -267,40 +322,67 @@ const CandidateRoundsDialog: React.FC<CandidateRoundsDialogProps> = ({
                   }}
                 >
                   {/* Date & Time Row */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 16,
-                      fontSize: 13,
-                      color: "#4b5563",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                      <FaCalendarAlt style={{ color: "#9ca3af", fontSize: 11 }} />
-                      <span>{formatDate(round.interviewDate)}</span>
-                    </div>
+<div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 16,
+    fontSize: 13,
+    color: "#4b5563",
+  }}
+>
+  {/* Date (derived from fromTime only) */}
+  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+    <FaCalendarAlt style={{ color: "#9ca3af", fontSize: 11 }} />
+    <span>
+      {formatLocalDate(round.fromTime, round.eventTimezone)}
+    </span>
+  </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                      <FaClock style={{ color: "#9ca3af", fontSize: 11 }} />
-                      <span>
-                        {round.fromTime} – {round.toTime}
-                      </span>
-                    </div>
+  {/* Time range (single TZ label + tooltip parity) */}
+  {(() => {
+    const time = formatTimeRange(
+      round.fromTime,
+      round.toTime,
+      round.eventTimezone
+    );
 
-                    <span
-                      style={{
-                        background: "#f3f4f6",
-                        padding: "2px 8px",
-                        borderRadius: 6,
-                        fontSize: 12,
-                        fontWeight: 500,
-                        color: "#374151",
-                      }}
-                    >
-                      {round.durationMinutes} min
-                    </span>
-                  </div>
+    return (
+      <div
+        title={time.tooltip}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 7,
+          cursor: "default"
+        }}
+      >
+        <FaClock style={{ color: "#9ca3af", fontSize: 11 }} />
+        <span
+          style={{
+            borderBottom: "1px dotted #9ca3af",
+          }}
+        >
+          {time.text}
+        </span>
+      </div>
+    );
+  })()}
+
+  <span
+    style={{
+      background: "#f3f4f6",
+      padding: "2px 8px",
+      borderRadius: 6,
+      fontSize: 12,
+      fontWeight: 500,
+      color: "#374151",
+    }}
+  >
+    {round.durationMinutes} min
+  </span>
+</div>
+
 
                   {/* Interviewer Row */}
                   <div
