@@ -8,7 +8,7 @@ import {
 import {
   CumulativeInterviewSummary,
   InterviewerStats,
-  InterviewDate,
+  InterviewTimestamp,
   DailyInterview,
 } from "../types/reportTypes";
 
@@ -31,7 +31,7 @@ export const useInterviewData = (accessToken: string | null) => {
   const [monthlyInterviewers, setMonthlyInterviewers] =
     useState<InterviewerStats[]>([]);
   const [monthlyInterviewDates, setMonthlyInterviewDates] =
-    useState<InterviewDate[]>([]);
+    useState<InterviewTimestamp[]>([]); 
 
   // 🔹 OVERALL
   const [overallInterviewers, setOverallInterviewers] =
@@ -63,7 +63,7 @@ export const useInterviewData = (accessToken: string | null) => {
 
     setCumulativeSummary(response.data.summary);
     setMonthlyInterviewers(response.data.interviewers ?? []);
-    setMonthlyInterviewDates(response.data.interviewDates ?? []);
+    setMonthlyInterviewDates(response.data.interviewTimeStamp ?? []); // 🔥 FIX THIS LINE
   } catch (error) {
     console.error("❌ Monthly report failed:", error);
   } finally {

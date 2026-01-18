@@ -53,14 +53,15 @@ export interface CumulativeInterviewSummary {
   cancelled: number;
 }
 
-export interface InterviewDate {
-  interviewDate: string; // YYYY-MM-DD
+export interface InterviewTimestamp {
+  interviewTimeStamp: string; // UTC timestamp (YYYY-MM-DD HH:mm:ss.SSSSSS)
 }
+
 
 export interface MonthlyReportData {
   summary: CumulativeInterviewSummary;
   interviewers: InterviewerStats[];
-  interviewDates: InterviewDate[];
+  interviewTimeStamp: InterviewTimestamp[];
 }
 
 export type MonthlyReportResponse =
@@ -72,10 +73,10 @@ export type MonthlyReportResponse =
    ====================================================== */
 
 export type InterviewResult =
-  | "selected"
-  | "rejected"
-  | "pending"
-  | "cancelled";
+  | "Selected"
+  | "Rejected"
+  | "Pending"
+  | "Cancelled";
 
 export interface DailyInterview {
   interviewerId: number;
@@ -84,8 +85,9 @@ export interface DailyInterview {
   candidateId: number;
   candidateName: string;
   interviewDate: string;
-  fromTime: string;
-  toTime: string;
+  fromTime: string; // ISO UTC timestamp
+  toTime: string; // ISO UTC timestamp
+  eventTimezone: string; // e.g. "Asia/Kolkata"
   roundNumber: number;
   totalInterviews: number;
   durationMinutes: number;
