@@ -1,19 +1,41 @@
-import React, { useState, useCallback, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import React, { useCallback, useState, useEffect } from "react";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { Message } from "primereact/message";
 
-import { useInterviewerReport } from "./hooks/useInterviewerReport";
-import InterviewerWorkloadTable from "./components/InterviewerWorkloadTable";
-import CoverageReportTable from "./components/CoverageReportTable";
-import { useAuth } from "../../shared/auth/AuthContext";
+import { useInterviewTrackerReport } from "./hooks/useInterviewTracker";
+import InterviewTrackerTable from "./components/InterviewTrackerTable";
 import DateRangeFilter from "./components/DateRangeFilter";
+import { useAuth } from "../../shared/auth/AuthContext";
+import ColumnSettingsButton from "../../shared/ColumnSettingsButton";
+import {
+  ALL_INTERVIEW_TRACKER_COLUMNS,
+  DEFAULT_INTERVIEW_TRACKER_COLUMNS,
+} from "./components/InterviewTrackerColumns";
+import { useSearchParams } from "react-router-dom";
 
+const STORAGE_KEY = "interview-tracker:visible-columns";
+const loadVisibleColumns = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+
+    const fields: string[] = JSON.parse(raw);
+
+    return ALL_INTERVIEW_TRACKER_COLUMNS.filter(col =>
+      fields.includes(col.field)
+    );
+  } catch {
+    return null;
+  }
+};
 const formatDateDMY = (isoDate: string) => {
   const [year, month, day] = isoDate.split("-");
   return `${day}/${month}/${year}`;
 };
-
+const HEADER_HEIGHT = 62;
+/**
+ * Theme tokens (same as before)
+ */
 const theme = {
   gradient: "linear-gradient(90deg, #072844, #55c62c)",
   primary: "#072844",
@@ -21,20 +43,40 @@ const theme = {
   shadow: "0 4px 12px rgba(7, 40, 68, 0.25)",
 };
 
-const TAB_PARAM = "tab";
+/**
+ * Static tab style (always active)
+ */
+const tabStyle: React.CSSProperties = {
+  background: theme.gradient,
+  color: "#ffffff",
+  fontWeight: 600,
+  padding: "8px 14px",
+  borderRadius: 6,
+  border: "none",
+  cursor: "default",
+  boxShadow: "none",
+};
 
-const CoverageReportPage: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const tabFromUrl = searchParams.get(TAB_PARAM);
-  const [activeTab, setActiveTab] = useState<"WORKLOAD" | "COVERAGE">(
-    tabFromUrl === "coverage" ? "COVERAGE" : "WORKLOAD"
-  );
-  const [dateLabel, setDateLabel] = useState<string>("Past 7 Days Interview Report");
-
+const InterviewTrackerPage: React.FC = () => {
   const { accessToken } = useAuth();
-  const report = useInterviewerReport(accessToken);
+  const report = useInterviewTrackerReport(accessToken);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [dateLabel, setDateLabel] = useState(
+    "Past 7 Days Interview Report"
+  );
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    return (
+      loadVisibleColumns() ??
+      ALL_INTERVIEW_TRACKER_COLUMNS.filter(col =>
+        DEFAULT_INTERVIEW_TRACKER_COLUMNS.includes(col.field)
+      )
+    );
+  });
+    useEffect(() => {
+    const fields = visibleColumns.map(c => c.field);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(fields));
+  }, [visibleColumns]);
 
-  // Initialize date range from URL on mount
   useEffect(() => {
     const filter = searchParams.get("filter");
     const startDate = searchParams.get("startDate");
@@ -71,6 +113,7 @@ const CoverageReportPage: React.FC = () => {
     [report, setSearchParams]
   );
 
+  
   const handleClearFilter = useCallback(() => {
     report.fetchDefault();
 
@@ -85,16 +128,6 @@ const CoverageReportPage: React.FC = () => {
     setDateLabel("Past 7 Days Interview Report");
   }, [report, setSearchParams]);
 
-  const handleTabChange = (tab: "WORKLOAD" | "COVERAGE") => {
-    setActiveTab(tab);
-
-    setSearchParams(prev => {
-      const params = new URLSearchParams(prev);
-      params.set(TAB_PARAM, tab === "WORKLOAD" ? "workload" : "coverage");
-      return params;
-    });
-  };
-
   if (report.error) {
     return (
       <div style={{ padding: 16 }}>
@@ -102,18 +135,6 @@ const CoverageReportPage: React.FC = () => {
       </div>
     );
   }
-
-  const tabStyle = (active: boolean): React.CSSProperties => ({
-    background: active ? theme.gradient : "transparent",
-    color: active ? "#ffffff" : theme.textMuted,
-    fontWeight: 600,
-    padding: "8px 14px",
-    borderRadius: 6,
-    border: "none",
-    cursor: "pointer",
-    boxShadow: "none",
-    transition: "background-color 0.2s ease, color 0.2s ease",
-  });
 
   return (
     <div
@@ -125,12 +146,14 @@ const CoverageReportPage: React.FC = () => {
         overflow: "hidden",
       }}
     >
-      {/* Top Bar: Tabs + Date Filter */}
+      {/* Top Bar: Static Tab + Title + Date Filter */}
       <div
         role="tablist"
-        aria-label="Interview report views"
+        aria-label="Interview tracker view"
         style={{
+          position: "relative",
           display: "flex",
+          height: HEADER_HEIGHT,
           justifyContent: "space-between",
           alignItems: "center",
           marginBottom: 12,
@@ -138,36 +161,26 @@ const CoverageReportPage: React.FC = () => {
           borderBottom: "1px solid #e5e7eb",
         }}
       >
-        {/* Tabs */}
+        {/* Static Tab */}
         <div style={{ display: "flex", gap: 12 }}>
           <button
             role="tab"
-            aria-selected={activeTab === "WORKLOAD"}
-            aria-label="Interviewer workload report"
-            onClick={() => handleTabChange("WORKLOAD")}
-            style={tabStyle(activeTab === "WORKLOAD")}
+            aria-selected="true"
+            style={tabStyle}
           >
-            Interviewer Workload
-          </button>
-
-          <button
-            role="tab"
-            aria-selected={activeTab === "COVERAGE"}
-            aria-label="Interview coverage report"
-            onClick={() => handleTabChange("COVERAGE")}
-            style={tabStyle(activeTab === "COVERAGE")}
-          >
-            Coverage Report
+            Interview Tracker
           </button>
         </div>
 
-        {/* Centered Title */}
+        {/* Center Title */}
         <div
           style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
             textAlign: "center",
-            margin: "0",
-            padding: "0",
-            flex: 1, 
+            pointerEvents: "none",
           }}
         >
           <h2
@@ -176,7 +189,7 @@ const CoverageReportPage: React.FC = () => {
               lineHeight: 1.2,
               fontWeight: 600,
               fontSize: "1.75rem",
-              background: "linear-gradient(90deg, #072844, #55c62c)",
+              background: theme.gradient,
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
@@ -190,19 +203,42 @@ const CoverageReportPage: React.FC = () => {
               width: "64px",
               height: "3px",
               margin: "6px auto",
-              background: "linear-gradient(90deg, #072844, #55c62c)",
+              background: theme.gradient,
               borderRadius: 4,
             }}
           />
         </div>
 
-        {/* Date Range Filter */}
-        <DateRangeFilter
-          onApply={handleDateFilter}
-          onClear={handleClearFilter}
-          initialStartDate={searchParams.get("startDate") || undefined}
-          initialEndDate={searchParams.get("endDate") || undefined}
-        />
+        {/* Date Filter */}
+        <div
+          style={{
+            marginLeft: "2px",
+            marginRight: "2px",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <ColumnSettingsButton
+            value={visibleColumns}
+            options={ALL_INTERVIEW_TRACKER_COLUMNS}
+            optionLabel="header"
+            onChange={setVisibleColumns}
+            onReset={() =>
+              setVisibleColumns(
+                ALL_INTERVIEW_TRACKER_COLUMNS.filter(col =>
+                  DEFAULT_INTERVIEW_TRACKER_COLUMNS.includes(col.field)
+                )
+              )
+            }
+          />
+          <DateRangeFilter
+            onApply={handleDateFilter}
+            onClear={handleClearFilter}
+            initialStartDate={searchParams.get("startDate") || undefined}
+            initialEndDate={searchParams.get("endDate") || undefined}
+          />
+        </div>
       </div>
 
       {/* Content */}
@@ -223,19 +259,15 @@ const CoverageReportPage: React.FC = () => {
               justifyContent: "center",
               alignItems: "center",
             }}
-            aria-label="Loading report data"
+            aria-label="Loading interview tracker data"
           >
             <ProgressSpinner />
           </div>
-        ) : activeTab === "WORKLOAD" ? (
-          <InterviewerWorkloadTable
-            data={report.data}
-            loading={report.loading}
-          />
         ) : (
-          <CoverageReportTable
+          <InterviewTrackerTable
             data={report.data}
             loading={report.loading}
+            visibleColumns={visibleColumns}
           />
         )}
       </div>
@@ -243,4 +275,4 @@ const CoverageReportPage: React.FC = () => {
   );
 };
 
-export default CoverageReportPage;
+export default InterviewTrackerPage;
