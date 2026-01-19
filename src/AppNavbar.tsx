@@ -348,20 +348,20 @@ const AppNavbar: React.FC = () => {
   visible={showCreateUser}
   onHide={() => setShowCreateUser(false)}
   onSuccess={(msg) => {
-    console.log("✅ Success callback received:", msg);
     toast.current?.show({
       severity: "success",
       summary: "Success",
       detail: msg,
+      life: 3000,
     });
     setShowCreateUser(false);
   }}
   onError={(msg) => {
-    console.log("❌ Error callback received:", msg);
     toast.current?.show({
       severity: "error",
       summary: "Error",
       detail: msg,
+      life: 4000,
     });
   }}
 />

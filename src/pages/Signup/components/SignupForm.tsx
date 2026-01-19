@@ -135,22 +135,17 @@ export default function SignupForm({
 
     setLoading(true);
     try {
-      console.log("📤 Submitting form data...");
       const res = await registerUser(formData, accessToken);
-
-      console.log("✅ Registration response received:", res);
       
       // If we reach here, registration was successful
       onSuccess?.(res.message || "User created successfully");
       onHide(); // Close dialog on success
       
     } catch (error: any) {
-      console.error("❌ Component caught error:", error);
       console.log("❌ Error message:", error.message);
       
       // Ensure onError is called
       const errorMsg = error.message || "Registration failed. Please try again.";
-      console.log("📢 Calling onError with:", errorMsg);
       
       if (onError) {
         onError(errorMsg);
@@ -159,7 +154,6 @@ export default function SignupForm({
       }
     } finally {
       setLoading(false);
-      console.log("🏁 Form submission completed");
     }
   };
 

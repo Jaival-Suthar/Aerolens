@@ -89,7 +89,7 @@ const MembersTable: React.FC = () => {
       severity: 'success',
       summary: 'Success',
       detail: message,
-      life: 2000
+      life: 3000
     });
   };
 
@@ -98,7 +98,7 @@ const MembersTable: React.FC = () => {
       severity: 'error',
       summary: 'Error',
       detail: message,
-      life: 2000
+      life: 4000
     });
   };
 
@@ -443,13 +443,11 @@ const MembersTable: React.FC = () => {
         visible={showCreateUser}
         onHide={() => setShowCreateUser(false)}
         onSuccess={(msg) => {
-          console.log("✅ Success callback received:", msg);
           showSuccess(msg);
           setShowCreateUser(false);
           loadMembers();
         }}
         onError={(msg) => {
-          console.log("❌ Error callback received:", msg);
           showError(msg);
         }}
       />
