@@ -1,5 +1,11 @@
 import { InterviewTrackerResponse } from "../types/interviewTrackertypes";
-
+const getBrowserTimezone = (): string => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return "UTC";
+  }
+};
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
 
 // Reuse same header pattern
@@ -45,6 +51,10 @@ export const getInterviewTrackerReport = async (
         query.append(key, String(value));
       }
     });
+
+    // 🕒 AUTO-ADD TIMEZONE (browser-detected, IANA format)
+    const timezone = getBrowserTimezone();
+    query.append("timezone", timezone);
 
     const response = await fetch(
       `${API_BASE_URL}/interview/report/tracker?${query.toString()}`,
