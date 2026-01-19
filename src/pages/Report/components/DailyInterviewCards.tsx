@@ -5,13 +5,18 @@ interface Props {
   date: string;
   interviews: DailyInterview[];
 }
-const formatTime = (time24: string): string => {
-  const [hours, minutes] = time24.split(':');
-  const hour = parseInt(hours);
-  const period = hour >= 12 ? 'PM' : 'AM';
-  const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+const formatTime = (utcIso: string): string => {
+  const date = new Date(utcIso); // UTC → local automatically
+
+  const hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+
+  const period = hours >= 12 ? "PM" : "AM";
+  const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+
   return `${hour12}:${minutes} ${period}`;
 };
+
 
 const formatDate = (dateStr: string): string => {
   const [year, month, day] = dateStr.split('-');

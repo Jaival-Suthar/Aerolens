@@ -8,6 +8,64 @@ interface Props {
   onDateSelect: (date: string) => void;
 }
 
+/**
+ * Convert UTC timestamp to local date string (YYYY-MM-DD)
+ * Handles timezone conversion based on browser's timezone
+ */
+const convertUTCToLocalDateString = (utcTimestamp: string): string => {
+  const [datePart, timePart] = utcTimestamp.split(" ");
+  const [year, month, day] = datePart.split("-").map(Number);
+
+  const [hms] = timePart.split(".");
+  const [hours, minutes, seconds] = hms.split(":").map(Number);
+
+  const utcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
+
+  const localYear = utcDate.getFullYear();
+  const localMonth = String(utcDate.getMonth() + 1).padStart(2, "0");
+  const localDay = String(utcDate.getDate()).padStart(2, "0");
+
+  return `${localYear}-${localMonth}-${localDay}`;
+};
+
+/**
+ * Process UTC timestamps from API into unique local dates
+ */
+export const processInterviewTimestamps = (
+  timestamps: Array<{ interviewTimeStamp?: string }>
+): {
+  selectableDates: string[];
+  calendarMonth: Date | null;
+} => {
+  if (!timestamps || timestamps.length === 0) {
+    return {
+      selectableDates: [],
+      calendarMonth: null,
+    };
+  }
+
+  const dates = timestamps
+    .map(t => t.interviewTimeStamp)
+    .filter((ts): ts is string => typeof ts === "string")
+    .map(convertUTCToLocalDateString)
+    .sort();
+
+  if (dates.length === 0) {
+    return {
+      selectableDates: [],
+      calendarMonth: null,
+    };
+  }
+
+  const uniqueDates = Array.from(new Set(dates));
+  const [year, month] = uniqueDates[0].split("-").map(Number);
+
+  return {
+    selectableDates: uniqueDates,
+    calendarMonth: new Date(year, month - 1, 1),
+  };
+};
+
 const InterviewCalendar: React.FC<Props> = ({
   initialMonth,
   selectableDates,
@@ -16,7 +74,7 @@ const InterviewCalendar: React.FC<Props> = ({
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   
-  // 🔥 Calendar owns its month
+  // Calendar owns its month
   const [currentMonth, setCurrentMonth] = useState<Date>(() => 
     new Date(initialMonth.getFullYear(), initialMonth.getMonth(), 1)
   );
@@ -45,7 +103,7 @@ const InterviewCalendar: React.FC<Props> = ({
 
   const handleMonthChange = (e: CalendarMonthChangeEvent) => {
     const targetYear = e.year;
-    const targetMonth = e.month - 1; // 🔥 SUBTRACT 1
+    const targetMonth = e.month - 1; // Subtract 1 for 0-based month
 
     // Mark this as internal change to prevent sync loop
     isInternalChange.current = true;
@@ -62,13 +120,16 @@ const InterviewCalendar: React.FC<Props> = ({
     if (!(e.value instanceof Date)) return;
     
     const localDate = e.value;
-    const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
+    const localDateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
     
-    if (!selectableDates.includes(dateStr)) {
+    if (!selectableDates.includes(localDateStr)) {
       return;
     }
+    
     setSelectedDate(localDate);
-    onDateSelect(dateStr);
+    
+    // 🔥 Send LOCAL date to API (backend expects local date format)
+    onDateSelect(localDateStr);
   };
 
   return (
@@ -129,7 +190,7 @@ const InterviewCalendar: React.FC<Props> = ({
       <Calendar
         value={selectedDate}
         inline
-        viewDate={currentMonth} // 🔥 INTERNAL state, not parent-controlled
+        viewDate={currentMonth}
         showOtherMonths
         selectOtherMonths={false}
         className="interview-calendar"

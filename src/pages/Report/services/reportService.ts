@@ -1,5 +1,12 @@
 // reportService.ts
-
+const getBrowserTimezone = (): string => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    // Safe fallback (should never happen in modern browsers)
+    return "UTC";
+  }
+};
 import {
   ApiSuccessResponse,
   ApiErrorResponse,
@@ -58,7 +65,13 @@ export const getMonthlyReport = async (
   endDate: string
 ): Promise<MonthlyReportResponse> => {
   try {
-    const query = new URLSearchParams({ startDate, endDate }).toString();
+    const timezone = getBrowserTimezone();
+
+    const query = new URLSearchParams({
+      startDate,
+      endDate,
+      timezone,
+    }).toString();
 
     const response = await fetch(
       `${API_BASE_URL}/interview/report/monthly?${query}`,
@@ -73,6 +86,7 @@ export const getMonthlyReport = async (
         throw new Error("Unauthorized - invalid or expired token");
       throw new Error(`Failed to fetch monthly report: ${response.status}`);
     }
+
     const data = await response.json();
     if (!data.success) {
       throw new Error(data.message || "Failed to fetch monthly report");
@@ -98,7 +112,12 @@ export const getDailyReport = async (
   date: string
 ): Promise<DailyReportResponse> => {
   try {
-    const query = new URLSearchParams({ date }).toString();
+    const timezone = getBrowserTimezone();
+
+    const query = new URLSearchParams({
+      date,
+      timezone,
+    }).toString();
 
     const response = await fetch(
       `${API_BASE_URL}/interview/report/daily?${query}`,
@@ -113,10 +132,12 @@ export const getDailyReport = async (
         throw new Error("Unauthorized - invalid or expired token");
       throw new Error(`Failed to fetch daily report: ${response.status}`);
     }
+
     const data = await response.json();
     if (!data.success) {
       throw new Error(data.message || "Failed to fetch daily report");
     }
+
     return {
       success: true,
       message: data.message,

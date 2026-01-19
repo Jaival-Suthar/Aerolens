@@ -1,5 +1,5 @@
 // pages/interview/InterviewReportsPage.tsx
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { useInterviewData } from "../hooks/useInterviewData";
@@ -7,6 +7,7 @@ import TopSummaryCards from "../components/TopSummaryCards";
 import MonthlyInterviewCards from "../components/MonthlyInterviewCards";
 import InterviewCalendar from "../components/InterviewCalendar";
 import DailyInterviewCards from "../components/DailyInterviewCards";
+import { processInterviewTimestamps } from "../components/InterviewCalendar";
 
 interface Props {
   accessToken: string | null;
@@ -34,8 +35,11 @@ const InterviewReportsPage: React.FC<Props> = ({ accessToken }) => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showAllTime, setShowAllTime] = useState(false);
 
+  // Prevent URL re-sync loops
+  const isMonthSyncedFromData = useRef(false);
+
   /**
-   * 🔥 Derive initial month from URL (or default to current)
+   * 1️⃣ Initial month from URL (fallback only)
    */
   const initialMonth = useMemo(() => {
     let year = Number(searchParams.get("year"));
@@ -55,7 +59,7 @@ const InterviewReportsPage: React.FC<Props> = ({ accessToken }) => {
   }, [searchParams]);
 
   /**
-   * 🔥 Fetch MONTHLY data when month changes
+   * 2️⃣ Fetch monthly data when month changes
    */
   useEffect(() => {
     const startDate = new Date(
@@ -77,11 +81,33 @@ const InterviewReportsPage: React.FC<Props> = ({ accessToken }) => {
 
     setSelectedDate(null);
     setShowAllTime(false);
+    isMonthSyncedFromData.current = false;
   }, [initialMonth]);
 
   /**
-   * 🔥 Fetch DAILY data when date changes
-   * SINGLE SOURCE OF TRUTH
+   * 3️⃣ Derive selectable dates (UTC → local)
+   */
+  const { selectableDates, calendarMonth } = useMemo(() => {
+    return processInterviewTimestamps(monthlyInterviewDates);
+  }, [monthlyInterviewDates]);
+
+  /**
+ * 4️⃣ 🔥 Sync calendar month from data (ONCE per fetch)
+ */
+  useEffect(() => {
+    if (!calendarMonth) return;
+    if (isMonthSyncedFromData.current) return;
+
+    setSearchParams({
+      year: String(calendarMonth.getFullYear()),
+      month: String(calendarMonth.getMonth() + 1),
+    });
+
+    isMonthSyncedFromData.current = true;
+  }, [calendarMonth, setSearchParams]);
+
+  /**
+   * 5️⃣ Fetch daily interviews
    */
   useEffect(() => {
     if (!selectedDate) return;
@@ -89,7 +115,7 @@ const InterviewReportsPage: React.FC<Props> = ({ accessToken }) => {
   }, [selectedDate]);
 
   /**
-   * 🔥 Calendar drives navigation
+   * 6️⃣ Calendar handlers
    */
   const handleMonthChange = (year: number, month: number) => {
     setSearchParams({
@@ -115,10 +141,6 @@ const InterviewReportsPage: React.FC<Props> = ({ accessToken }) => {
     showAllTime && overallInterviewers.length > 0
       ? overallInterviewers
       : monthlyInterviewers;
-
-  const selectableDates = monthlyInterviewDates.map(
-    (d) => d.interviewDate
-  );
 
   return (
     <div className="p-1">
