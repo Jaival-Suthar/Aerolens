@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Password } from "primereact/password";
 import { Dropdown } from "primereact/dropdown";
-import { Toast } from "primereact/toast";
 import DialogButton from "../../../shared/DialogAddEditButton";
 import { useAuth } from "../../../shared/auth/AuthContext";
-import { SignupFormData, SignupResponse } from "../types/signuptypes";
-import { registerUser, fetchMemberCreateData  } from "../services/useSignup";
+import { SignupFormData } from "../types/signuptypes";
+import { registerUser, fetchMemberCreateData } from "../services/useSignup";
 
 const PASSWORD_REGEX =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()[\]{}\-_=+|\\:;"'<>,./]).{8,}$/;
@@ -19,13 +18,14 @@ export default function SignupForm({
   visible,
   onHide,
   onSuccess,
+  onError,
 }: {
   visible: boolean;
   onHide: () => void;
-  onSuccess?: () => void
+  onSuccess?: (message: string) => void;
+  onError?: (message: string) => void;
 }) {
   const { accessToken, isAuthenticated } = useAuth();
-  const toast = useRef<Toast>(null);
 
   const [formData, setFormData] = useState<SignupFormData>({
     fullName: "",
@@ -34,6 +34,7 @@ export default function SignupForm({
     password: "",
     confirmPassword: "",
     designationId: 0,
+    vendorId: null,
     isRecruiter: false,
     isInterviewer: false,
   });
@@ -49,33 +50,36 @@ export default function SignupForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
+  // Fetch designations and vendors when dialog opens
   useEffect(() => {
     if (!visible || !accessToken || !isAuthenticated) return;
 
     fetchMemberCreateData(accessToken)
-  .then((data) => {
-    setDesignations(
-      data.designations.map((d) => ({
-        label: d.designationName,
-        value: d.designationId,
-      }))
-    );
+      .then((data) => {
+        setDesignations(
+          data.designations.map((d) => ({
+            label: d.designationName,
+            value: d.designationId,
+          }))
+        );
 
-    setVendors(
-      data.vendors.map((v) => ({
-        label: v.vendorName,
-        value: v.vendorId,
-      }))
-    );
-  })
-      .catch(() =>
-        toast.current?.show({
-          severity: "error",
-          summary: "Error",
-          detail: "Failed to load designations",
-        })
-      );
-  }, [visible, accessToken, isAuthenticated]);
+        setVendors(
+          data.vendors.map((v) => ({
+            label: v.vendorName,
+            value: v.vendorId,
+          }))
+        );
+      })
+      .catch((err) => {
+        console.error("Failed to fetch member create data:", err);
+        onError?.(err.message || "Failed to load form data");
+      });
+  }, [visible, accessToken, isAuthenticated, onError]);
+  useEffect(() => {
+  if (!formData.isRecruiter && formData.vendorId) {
+    setFormData((p) => ({ ...p, vendorId: null }));
+  }
+}, [formData.isRecruiter]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -94,7 +98,6 @@ export default function SignupForm({
       e.designationId = "Designation is required";
     }
 
-
     if (!formData.password)
       e.password = "Please enter a password";
     else if (!PASSWORD_REGEX.test(formData.password))
@@ -108,44 +111,55 @@ export default function SignupForm({
     setErrors(e);
     return Object.keys(e).length === 0;
   };
-  
-  useEffect(() => {
-  if (visible) {
-    setErrors({});
-    setFormData({
-      fullName: "",
-      contactNumber: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-      designationId: 0,
-      vendorId: null,
-      isRecruiter: false,
-      isInterviewer: false,
-    });
-  }
-}, [visible]);
 
+  // Reset form when dialog opens/closes
+  useEffect(() => {
+    if (visible) {
+      setErrors({});
+      setFormData({
+        fullName: "",
+        contactNumber: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        designationId: 0,
+        vendorId: null,
+        isRecruiter: false,
+        isInterviewer: false,
+      });
+    }
+  }, [visible]);
 
   const handleSubmit = async () => {
     if (!validate() || !accessToken) return;
 
+    setLoading(true);
     try {
-      setLoading(true);
-      const res: SignupResponse = await registerUser(formData, accessToken);
+      console.log("📤 Submitting form data...");
+      const res = await registerUser(formData, accessToken);
 
-      toast.current?.show({
-        severity: res.success ? "success" : "error",
-        summary: res.success ? "Success" : "Error",
-        detail: res.message,
-      });
-
-      if (res.success) {
-        onSuccess?.();
-        onHide();
+      console.log("✅ Registration response received:", res);
+      
+      // If we reach here, registration was successful
+      onSuccess?.(res.message || "User created successfully");
+      onHide(); // Close dialog on success
+      
+    } catch (error: any) {
+      console.error("❌ Component caught error:", error);
+      console.log("❌ Error message:", error.message);
+      
+      // Ensure onError is called
+      const errorMsg = error.message || "Registration failed. Please try again.";
+      console.log("📢 Calling onError with:", errorMsg);
+      
+      if (onError) {
+        onError(errorMsg);
+      } else {
+        console.error("⚠️ onError callback is undefined!");
       }
     } finally {
       setLoading(false);
+      console.log("🏁 Form submission completed");
     }
   };
 
@@ -156,11 +170,9 @@ export default function SignupForm({
       onHide={onHide}
       modal
       dismissableMask
-      style={{ width: "60vw",  color: "#07253f"  }}
+      style={{ width: "60vw", color: "#07253f" }}
       breakpoints={{ "960px": "80vw", "640px": "95vw" }}
     >
-      <Toast ref={toast} />
-
       <div className="p-fluid grid">
         {/* Full Name */}
         <div className="field col-12 md:col-6">
@@ -241,21 +253,7 @@ export default function SignupForm({
           />
           <small className="p-error">{errors.confirmPassword}</small>
         </div>
-        <div className="field col-12 md:col-6">
-          <label>Vendor</label>
-          <Dropdown
-            value={formData.vendorId ?? null}
-            options={vendors}
-            placeholder="Select vendor"
-            showClear
-            onChange={(e) =>
-              setFormData((p) => ({
-                ...p,
-                vendorId: e.value ?? null,
-              }))
-            }
-          />
-        </div>
+
         {/* Roles */}
         <div className="field col-12">
           <label>User Role Access</label>
@@ -274,7 +272,11 @@ export default function SignupForm({
                 type="checkbox"
                 checked={formData.isRecruiter}
                 onChange={(e) =>
-                  setFormData((p) => ({ ...p, isRecruiter: e.target.checked }))
+                  setFormData((p) => ({
+                    ...p,
+                    isRecruiter: e.target.checked,
+                    ...(e.target.checked ? {} : { vendorId: null }),
+                  }))
                 }
                 style={{
                   width: "18px",
@@ -282,6 +284,7 @@ export default function SignupForm({
                   cursor: "pointer",
                 }}
               />
+
               Recruiter
             </label>
 
@@ -310,14 +313,29 @@ export default function SignupForm({
             </label>
           </div>
         </div>
+        {formData.isRecruiter && (
+          <div className="field col-12 md:col-6">
+            <label>Vendor *</label>
+            <Dropdown
+              value={formData.vendorId ?? null}
+              options={vendors}
+              placeholder="Select vendor"
+              showClear
+              className={errors.vendorId ? "p-invalid" : ""}
+              onChange={(e) =>
+                setFormData((p) => ({
+                  ...p,
+                  vendorId: e.value ?? null,
+                }))
+              }
+            />
+            <small className="p-error">{errors.vendorId}</small>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-content-end gap-2 mt-4">
-        <DialogButton
-          label="Cancel"
-          severity="secondary"
-          onClick={onHide}
-        />
+        <DialogButton label="Cancel" severity="secondary" onClick={onHide} />
         <DialogButton
           label="Create User"
           severity="success"

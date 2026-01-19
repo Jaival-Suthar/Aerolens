@@ -32,6 +32,7 @@ export interface CandidateInterviewRound {
   result: string;
   interviewerId: number;
   interviewerName: string;
+  eventTimezone: string;
 }
 
 export interface GetCandidateInterviewsResponse {

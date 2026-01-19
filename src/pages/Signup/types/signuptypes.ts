@@ -1,3 +1,5 @@
+// signuptypes.ts - FIXED TO MATCH BACKEND
+
 export interface SignupFormData {
   fullName: string;
   contactNumber: string;
@@ -10,14 +12,32 @@ export interface SignupFormData {
   isInterviewer: boolean;
 }
 
+// ✅ Updated to match actual backend response
 export interface SignupResponse {
   success: boolean;
   message: string;
+  error?: string;        // Backend sends this on errors (e.g., "EMAIL_EXISTS")
+  stack?: string;        // Backend sends stack trace
+  data?: {
+    member?: {
+      memberId?: number;
+      memberName?: string;
+      memberContact?: string;
+      email?: string;
+      designation?: string;
+      isRecruiter?: number;
+      isActive?: number;
+      lastLogin?: string | null;
+      createdAt?: string;
+      updatedAt?: string;
+    };
+  };
 }
 
 export interface MemberCreateDataResponse {
   success: boolean;
   message: string;
+  error?: string;
   data: {
     designations: {
       designationId: number;
@@ -29,4 +49,3 @@ export interface MemberCreateDataResponse {
     }[];
   };
 }
-

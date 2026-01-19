@@ -442,8 +442,18 @@ const MembersTable: React.FC = () => {
       <SignupForm
         visible={showCreateUser}
         onHide={() => setShowCreateUser(false)}
-        onSuccess={handleCreateSuccess}
+        onSuccess={(msg) => {
+          console.log("✅ Success callback received:", msg);
+          showSuccess(msg);
+          setShowCreateUser(false);
+          loadMembers();
+        }}
+        onError={(msg) => {
+          console.log("❌ Error callback received:", msg);
+          showError(msg);
+        }}
       />
+
       <PremiumDetailsDialog
         visible={!!viewMember}
         title="Member Details"

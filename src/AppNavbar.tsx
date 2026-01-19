@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Menubar } from "primereact/menubar";
 import { Button } from "primereact/button";
 import { Menu } from "primereact/menu";
+import { Toast } from "primereact/toast";
 import {
   FaBriefcase,
   FaUsers,
@@ -32,7 +33,7 @@ const AppNavbar: React.FC = () => {
     },
     [navigate]
   );
-
+  const toast = useRef<Toast>(null);
   const isMenuActive = (path?: string, childrenPaths?: string[]) => {
     if (path && location.pathname === path) return true;
     if (childrenPaths) return childrenPaths.includes(location.pathname);
@@ -213,6 +214,7 @@ const AppNavbar: React.FC = () => {
 
   return (
     <>
+      <Toast ref={toast} position="top-right" />
       <style>{`
         /* --- Center Menubar Items --- */
         .p-menubar {
@@ -343,9 +345,26 @@ const AppNavbar: React.FC = () => {
       </nav>
       {/* Create User Dialog */}
       <SignupForm
-        visible={showCreateUser}
-        onHide={() => setShowCreateUser(false)}
-      />
+  visible={showCreateUser}
+  onHide={() => setShowCreateUser(false)}
+  onSuccess={(msg) => {
+    console.log("✅ Success callback received:", msg);
+    toast.current?.show({
+      severity: "success",
+      summary: "Success",
+      detail: msg,
+    });
+    setShowCreateUser(false);
+  }}
+  onError={(msg) => {
+    console.log("❌ Error callback received:", msg);
+    toast.current?.show({
+      severity: "error",
+      summary: "Error",
+      detail: msg,
+    });
+  }}
+/>
     </>
   );
 };
