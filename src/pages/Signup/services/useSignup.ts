@@ -1,69 +1,93 @@
-import { SignupFormData, SignupResponse, MemberCreateDataResponse } from "../types/signuptypes";
-const API_URL = import.meta.env.VITE_BASE_URL;
-import { normalizeApiError } from "../../../utils/apiErrorHandler";
+// useSignup.ts
+import {
+  SignupFormData,
+  SignupResponse,
+  MemberCreateDataResponse,
+} from "../types/signuptypes";
 import { ApiError } from "../../../types/apiError";
-// Helper to create headers with token if provided
+
+const API_URL = import.meta.env.VITE_BASE_URL;
+
+// -----------------------------
+// Helpers
+// -----------------------------
 const makeHeaders = (accessToken?: string): HeadersInit => {
   const headers: HeadersInit = { "Content-Type": "application/json" };
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
   return headers;
 };
 
-// Register User 
-export const registerUser = async (
-  formData: SignupFormData,
-  accessToken: string 
-): Promise<SignupResponse> => {
+const parseJsonSafely = async (response: Response) => {
   try {
-    const headers = makeHeaders(accessToken);
-
-    const response = await fetch(`${API_URL}/auth/register`, {
-      method: "POST",
-      headers,
-      credentials: "include",
-      body: JSON.stringify({
-        memberName: formData.fullName,
-        memberContact: formData.contactNumber,
-        email: formData.email,
-        password: formData.password,
-        designationId: formData.designationId,
-        vendorId: formData.vendorId ?? null,  
-        isRecruiter: formData.isRecruiter,
-        isInterviewer: formData.isInterviewer,
-      }),
-    });
-
-    // ✅ Use shared error handler
-    if (!response.ok) {
-      const error = await normalizeApiError(response);
-      throw error; // Pass backend error as-is
-    }
-
-    const data = await response.json();
-    return data as SignupResponse;
-    
-  } catch (error: any) {
-    throw error; // Re-throw to preserve error structure
+    return await response.json();
+  } catch {
+    throw {
+      success: false,
+      error: "INVALID_RESPONSE",
+      message: "Invalid server response",
+    } satisfies ApiError;
   }
 };
 
-// Fetch Designations (with verbose logs)
+// -----------------------------
+// Register User
+// -----------------------------
+export const registerUser = async (
+  formData: SignupFormData,
+  accessToken: string
+): Promise<SignupResponse> => {
+  const response = await fetch(`${API_URL}/auth/register`, {
+    method: "POST",
+    headers: makeHeaders(accessToken),
+    credentials: "include",
+    body: JSON.stringify({
+      memberName: formData.fullName,
+      memberContact: formData.contactNumber,
+      email: formData.email,
+      password: formData.password,
+      designationId: formData.designationId,
+      vendorId: formData.vendorId ?? null,
+      isRecruiter: formData.isRecruiter,
+      isInterviewer: formData.isInterviewer,
+    }),
+  });
+
+  const data = await parseJsonSafely(response);
+
+  // ❌ HTTP error OR business error
+  if (!response.ok || data.success === false) {
+    throw {
+      success: false,
+      error: data.error || "REQUEST_FAILED",
+      message: data.message || "Registration failed",
+      details: data.details,
+    } satisfies ApiError;
+  }
+
+  return data as SignupResponse;
+};
+
+// -----------------------------
+// Fetch Member Create Data
+// -----------------------------
 export const fetchMemberCreateData = async (
   accessToken: string
 ): Promise<MemberCreateDataResponse["data"]> => {
-  const headers = makeHeaders(accessToken);
-
   const response = await fetch(`${API_URL}/member/create-data`, {
     method: "GET",
-    headers,
+    headers: makeHeaders(accessToken),
     credentials: "include",
   });
 
-  if (!response.ok) {
-    const error = await normalizeApiError(response);
-    throw error;
+  const data = await parseJsonSafely(response);
+
+  if (!response.ok || data.success === false) {
+    throw {
+      success: false,
+      error: data.error || "REQUEST_FAILED",
+      message: data.message || "Failed to load form data",
+    } satisfies ApiError;
   }
 
-  const result = await response.json();
-  return result.data;
+  return data.data;
 };

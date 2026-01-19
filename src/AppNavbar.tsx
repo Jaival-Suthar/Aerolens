@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Menubar } from "primereact/menubar";
 import { Button } from "primereact/button";
 import { Menu } from "primereact/menu";
+import { Toast } from "primereact/toast";
 import {
   FaBriefcase,
   FaUsers,
@@ -13,7 +14,9 @@ import {
   FaCog,
   FaUser,
   FaUserTie,
-  FaBuilding  
+  FaBuilding, 
+  FaLayerGroup,
+  FaBullseye
 } from "react-icons/fa";
 import { useProfileStore } from "./shared/store/profile";
 import SmallLogo from "./assets/SmallLogo.svg";
@@ -30,7 +33,7 @@ const AppNavbar: React.FC = () => {
     },
     [navigate]
   );
-
+  const toast = useRef<Toast>(null);
   const isMenuActive = (path?: string, childrenPaths?: string[]) => {
     if (path && location.pathname === path) return true;
     if (childrenPaths) return childrenPaths.includes(location.pathname);
@@ -124,6 +127,18 @@ const AppNavbar: React.FC = () => {
           command: () => handleNavigation("/reports"),
           className: isMenuActive("/reports") ? "nav-subitem-active" : "",
         },
+        {
+          label: "Interview Tracker",
+          icon: <FaBullseye style={{ marginRight: 8, marginLeft: 4 }} />,
+          command: () => handleNavigation("/reports/interview-tracker"),
+          className: isMenuActive("/reports/interview-tracker") ? "nav-subitem-active" : "",
+        },
+        {
+          label: "Coverage Report",
+          icon: <FaLayerGroup style={{ marginRight: 8, marginLeft: 4 }} />,
+          command: () => handleNavigation("/reports/coverage"),
+          className: isMenuActive("/reports/coverage") ? "nav-subitem-active" : "",
+        }
       ],
     },
   ];
@@ -199,6 +214,7 @@ const AppNavbar: React.FC = () => {
 
   return (
     <>
+      <Toast ref={toast} position="top-right" />
       <style>{`
         /* --- Center Menubar Items --- */
         .p-menubar {
@@ -329,9 +345,26 @@ const AppNavbar: React.FC = () => {
       </nav>
       {/* Create User Dialog */}
       <SignupForm
-        visible={showCreateUser}
-        onHide={() => setShowCreateUser(false)}
-      />
+  visible={showCreateUser}
+  onHide={() => setShowCreateUser(false)}
+  onSuccess={(msg) => {
+    toast.current?.show({
+      severity: "success",
+      summary: "Success",
+      detail: msg,
+      life: 3000,
+    });
+    setShowCreateUser(false);
+  }}
+  onError={(msg) => {
+    toast.current?.show({
+      severity: "error",
+      summary: "Error",
+      detail: msg,
+      life: 4000,
+    });
+  }}
+/>
     </>
   );
 };

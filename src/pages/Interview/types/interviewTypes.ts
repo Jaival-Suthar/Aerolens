@@ -1,26 +1,54 @@
 // Interview object returned by GET /api/interview
+// Interview object returned by GET /api/interview
 export interface Interview {
   interviewId: number;
+
   candidateId: number;
   candidateName: string;
+
   interviewerId: number;
   interviewerName: string;
+
   scheduledById: number;
   scheduledByName: string;
+  eventTimestamp: string;
+  /**
+   * Display/helper date (YYYY-MM-DD).
+   * NOT authoritative for time calculations.
+   */
   interviewDate: string;
+
+  /**
+   * UTC datetime string returned by backend
+   * Format: "YYYY-MM-DD HH:mm:ss.SSSSSS"
+   */
   fromTime: string;
+
+  /**
+   * UTC datetime string returned by backend
+   * Format: "YYYY-MM-DD HH:mm:ss.SSSSSS"
+   */
   toTime: string;
+
+  /**
+   * IANA timezone in which the interview was scheduled
+   * Example: "Asia/Kolkata", "America/New_York"
+   */
+  eventTimezone: string;
+
   durationMinutes: number;
-  
-  // New fields for rounds management
+
+  // Rounds
   roundNumber: number;
   totalInterviews: number;
-  
-  // Deprecated fields (kept for backward compatibility)
-  result?: string;
+
+  // Status / Notes
+  result?: InterviewResult;
   recruiterNotes?: string;
   interviewerFeedback?: string;
   meetingUrl?: string;
+
+  isActive?: boolean;
 }
   
   // Response from GET /api/interview
@@ -45,6 +73,7 @@ export interface Interview {
     fromTime: string;           // "HH:MM"
     toTime: string;             // "HH:MM"
     durationMinutes: number;    // min 15, max 480
+    eventTimezone: string;
     candidateId: number;
     interviewerId: number;
     scheduledById: number;
@@ -65,6 +94,7 @@ export interface Interview {
     interviewDate?: string;
     fromTime?: string;
     durationMinutes?: number;
+    eventTimezone?: string;
     result?: "Pending" | "Selected" | "Rejected" | "Cancelled";
     recruiterNotes?: string;
     interviewerFeedback?: string;

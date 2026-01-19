@@ -8,6 +8,7 @@ import { Toast } from "primereact/toast";
 import InterviewDelete from "./interviewDelete";
 import InterviewAddEditForm from "./interviewAddEdit";
 import SearchButton from "../../../shared/SearchButton";
+import { DateTime } from "luxon";
 
 import { Interview } from "../types/interviewTypes";
 import { getInterviews } from "../services/interviewService";
@@ -26,14 +27,38 @@ import PremiumDetailsDialog from "../../../shared/PremiumDetailsDialog";
 import DetailsSection from "../../../shared/DetailsSection";
 import DetailsGrid from "../../../shared/DetailsGrid";
 
-const convert24to12Hour = (time24: string): string => {
-  if (!time24) return '';
-  const [hours, minutes] = time24.split(':').map(Number);
-  let hour12 = hours % 12;
-  if (hour12 === 0) hour12 = 12;
-  const period = hours >= 12 ? 'PM' : 'AM';
-  return `${String(hour12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${period}`;
+const formatTimeForTable = (
+  backendDateTime: string,
+  eventTimezone: string,
+  browserTimezone: string
+) => {
+  const normalized = normalizeBackendDateTime(backendDateTime);
+  if (!normalized) return null;
+
+  // 1️⃣ Parse in EVENT timezone (how it was scheduled)
+  const eventTime = DateTime
+    .fromISO(normalized, { zone: 'utc' }) 
+    .setZone(eventTimezone);                   
+
+  // 2️⃣ Convert to VIEWER timezone
+  const viewerTime = eventTime.setZone(browserTimezone);
+
+  return {
+    text: `${viewerTime.toFormat("hh:mm a")} (${viewerTime.offsetNameShort})`,
+    tooltip: `Scheduled in ${eventTimezone}`
+  };
 };
+
+const normalizeBackendDateTime = (value: string) => {
+  if (!value) return null;
+
+  // Convert "2025-12-20 09:15:00.000000" → "2025-12-20T09:15:00"
+  return value.includes(" ")
+    ? value.replace(" ", "T").split(".")[0]
+    : value;
+};
+
+const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const ALL_COLUMNS = [
   { field: "candidateName", header: "Candidate Name", filter: true },
   { field: "interviewerName", header: "Interviewer", filter: true },
@@ -194,12 +219,48 @@ const handleViewAllRounds = () => {
   };
 
   const dateBodyTemplate = (rowData: Interview) => {
-    const date = new Date(rowData.interviewDate);
-    return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-  };
+  if (!rowData.fromTime) return <span>-</span>;
+
+  const normalized = normalizeBackendDateTime(rowData.fromTime);
+  if (!normalized) return <span>-</span>;
+
+  // Parse UTC → convert to browser timezone
+  const localDT = DateTime
+    .fromISO(normalized, { zone: "utc" })
+    .setZone(browserTimezone);
+
+  return (
+    <span>
+      {localDT.toFormat("dd MMM yyyy")}
+    </span>
+  );
+};
+
   
-  const timeBodyTemplate = (rowData: Interview) => convert24to12Hour(rowData.fromTime);
-  const endTimeBodyTemplate = (rowData: Interview) => convert24to12Hour(rowData.toTime);
+  const timeBodyTemplate = (rowData: Interview) => {
+    const result = formatTimeForTable(
+      rowData.fromTime,
+      rowData.eventTimezone,
+      browserTimezone
+    );
+
+    if (!result) return <span>-</span>;
+
+    return <span title={result.tooltip}>{result.text}</span>;
+  };
+
+
+  const endTimeBodyTemplate = (rowData: Interview) => {
+    const result = formatTimeForTable(
+      rowData.toTime,
+      rowData.eventTimezone,
+      browserTimezone
+    );
+
+    if (!result) return <span>-</span>;
+
+    return <span title={result.tooltip}>{result.text}</span>;
+  };
 
   const resultBodyTemplate = (rowData: Interview) => {
   const result = rowData.result || "Pending";
@@ -366,13 +427,25 @@ const handleViewAllRounds = () => {
           value = new Date(interview.interviewDate).toLocaleDateString("en-GB");
           break;
 
-        case "startTime":
-          value = convert24to12Hour(interview.fromTime);
+        case "startTime": {
+          const t = formatTimeForTable(
+            interview.fromTime,
+            interview.eventTimezone,
+            browserTimezone
+          );
+          value = t ? t.text : "-";
           break;
+        }
 
-        case "endTime":
-          value = convert24to12Hour(interview.toTime);
+        case "endTime": {
+          const t = formatTimeForTable(
+            interview.toTime,
+            interview.eventTimezone,
+            browserTimezone
+          );
+          value = t ? t.text : "-";
           break;
+        }
 
         case "result":
           value = interview.result || "Pending";
