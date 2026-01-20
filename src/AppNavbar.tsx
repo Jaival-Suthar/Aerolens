@@ -75,6 +75,12 @@ const AppNavbar: React.FC = () => {
           className: isMenuActive("/job-profile") ? "nav-subitem-active" : "",
         },
         {
+          label: "New Job Profile",
+          icon: <FaBriefcase style={{ marginRight: 8, marginLeft: 4 }} />,
+          command: () => handleNavigation("/job-profile-new"),
+          className: isMenuActive("/job-profile-new") ? "nav-subitem-active" : "",
+        },
+        {
           label: "Members",
           icon: <FaUsers style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/members"),
