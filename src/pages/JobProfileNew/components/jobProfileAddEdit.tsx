@@ -4,7 +4,7 @@ import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
 import { FileUpload } from "primereact/fileupload";
 import { Toast } from "primereact/toast";
-import { Chips } from "primereact/chips";
+import EditableList from "../util/EditableList";
 import { FaCheck, FaTimes } from "react-icons/fa";
 import DialogButton from "../../../shared/DialogAddEditButton";
 import { JobProfileAddEditProps, AddEditJobProfile } from "../types/jobProfileAddEdit.types";
@@ -480,55 +480,34 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
           {/* Key Responsibilities - WITH SCROLLABLE CONTAINER */}
           <div className="field col-12">
             <label className="font-bold">Key Responsibilities</label>
-            <div style={{ maxHeight: "200px", overflow: "auto", border: "1px solid #ced4da", borderRadius: "4px", padding: "0.5rem" }}>
-              <Chips
-                value={responsibilitiesArray}
-                onChange={e => setResponsibilitiesArray(e.value || [])}
-                placeholder="Press Enter to add each responsibility"
-                separator=","
-              />
-            </div>
-            <small className="text-muted">
-              {responsibilitiesArray.length > 0 
-                ? `${responsibilitiesArray.length} responsibilities added` 
-                : "Press Enter after each item"}
-            </small>
+            <EditableList
+              items={responsibilitiesArray}
+              onChange={setResponsibilitiesArray}
+              placeholder="Enter a responsibility and press Enter or click Add"
+              label="Responsibilities"
+            />
           </div>
 
           {/* Required Skills - WITH SCROLLABLE CONTAINER */}
           <div className="field col-12">
             <label className="font-bold">Required Skills & Experience</label>
-            <div style={{ maxHeight: "200px", overflow: "auto", border: "1px solid #ced4da", borderRadius: "4px", padding: "0.5rem" }}>
-              <Chips
-                value={skillsArray}
-                onChange={e => setSkillsArray(e.value || [])}
-                placeholder="Press Enter to add each skill"
-                separator=","
-              />
-            </div>
-            <small className="text-muted">
-              {skillsArray.length > 0 
-                ? `${skillsArray.length} skills added` 
-                : "Press Enter after each item"}
-            </small>
+            <EditableList
+              items={skillsArray}
+              onChange={setSkillsArray}
+              placeholder="Enter a skill/requirement and press Enter or click Add"
+              label="Skills"
+            />
           </div>
 
-          {/* Nice to Have - WITH SCROLLABLE CONTAINER */}
+          {/* Nice to Have */}
           <div className="field col-12">
             <label className="font-bold">Nice to Have</label>
-            <div style={{ maxHeight: "200px", overflow: "auto", border: "1px solid #ced4da", borderRadius: "4px", padding: "0.5rem" }}>
-              <Chips
-                value={niceToHaveArray}
-                onChange={e => setNiceToHaveArray(e.value || [])}
-                placeholder="Press Enter to add each item"
-                separator=","
-              />
-            </div>
-            <small className="text-muted">
-              {niceToHaveArray.length > 0 
-                ? `${niceToHaveArray.length} items added` 
-                : "Press Enter after each item"}
-            </small>
+            <EditableList
+              items={niceToHaveArray}
+              onChange={setNiceToHaveArray}
+              placeholder="Enter a nice-to-have skill and press Enter or click Add"
+              label="Nice-to-have items"
+            />
           </div>
 
           
