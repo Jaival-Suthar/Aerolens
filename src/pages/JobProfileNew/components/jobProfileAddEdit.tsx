@@ -9,37 +9,27 @@ import { FaCheck, FaTimes } from "react-icons/fa";
 import DialogButton from "../../../shared/DialogAddEditButton";
 import { JobProfileAddEditProps, AddEditJobProfile } from "../types/jobProfileAddEdit.types";
 import { extractPdfText, parseJobProfileFromText } from "../util/pdfParser.util";
-import { convertToRichSections } from "../util/richSectionConverter.util";
+import { MultiSelect } from "primereact/multiselect";
+import { getTechSpecifications, getJobProfileById } from "../services/jobProfileService";
+import { useAuth } from "../../../shared/auth/AuthContext";
+import {
+  createJobProfile,
+  updateJobProfile
+} from "../services/jobProfileService";
+
 
 const INITIAL_FORM: AddEditJobProfile = {
   position: "",
   experience: "",
   overview: [],
+  techSpecifications: [],
   responsibilities: undefined,
   requiredSkills: undefined,
   niceToHave: undefined,
   jdFile: null
 };
 
-// Validation
-const validateField = (field: keyof AddEditJobProfile, value: any) => {
-  switch (field) {
-    case "position":
-      return value.trim() ? "" : "Position is required.";
-    case "experience":
-      return value.trim() ? "" : "Experience is required.";
-    case "jdFile":
-      if (!value) return "";
-      const fileName = value.name.toLowerCase();
-      if (!fileName.endsWith(".pdf") && !fileName.endsWith(".docx"))
-        return "Only PDF and DOCX files are allowed.";
-      if (value.size > 5 * 1024 * 1024)
-        return "File must be smaller than 5MB.";
-      return "";
-    default:
-      return "";
-  }
-};
+
 
 const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
   visible,
@@ -53,64 +43,112 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
   const [submitted, setSubmitted] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const toast = useRef<Toast>(null);
+  const { accessToken } = useAuth();
+
+  const [techOptions, setTechOptions] = useState<
+    { id: number; label: string }[]
+  >([]);
+
+  const [selectedTech, setSelectedTech] = useState<number[]>([]);
 
   // Simple string arrays for editable UI
   const [responsibilitiesArray, setResponsibilitiesArray] = useState<string[]>([]);
   const [skillsArray, setSkillsArray] = useState<string[]>([]);
   const [niceToHaveArray, setNiceToHaveArray] = useState<string[]>([]);
   const [overviewText, setOverviewText] = useState("");
+  useEffect(() => {
+  if (!visible || !accessToken) return;
+
+  const loadTechSpecs = async () => {
+    try {
+      const res = await getTechSpecifications(accessToken);
+      setTechOptions(res.data);
+    } catch (err) {
+      console.error("Failed to load tech specs", err);
+    }
+  };
+
+  loadTechSpecs();
+}, [visible, accessToken]);
 
   // Initialize form
-  useEffect(() => {
-    if (visible) {
-      if (isEditMode && selectedJobProfile) {
-        // Edit mode
+ useEffect(() => {
+  if (!visible) return;
+
+  // ---------- EDIT MODE ----------
+  if (isEditMode && selectedJobProfile && accessToken) {
+    (async () => {
+      try {
+        const res = await getJobProfileById(
+          accessToken,
+          selectedJobProfile.id
+        );
+
+        const profile = res.data;
+
+        // Fill form
         setFormData({
-          position: selectedJobProfile.position,
-          experience: selectedJobProfile.experience,
-          overview: selectedJobProfile.overview,
-          responsibilities: selectedJobProfile.responsibilities,
-          requiredSkills: selectedJobProfile.requiredSkills,
-          niceToHave: selectedJobProfile.niceToHave,
+          position: profile.position,
+          experience: profile.experience,
+          overview: profile.overview,
+
+          techSpecifications: profile.techSpecifications.map(t => t.id),
+
+          responsibilities: profile.responsibilities,
+          requiredSkills: profile.requiredSkills,
+          niceToHave: profile.niceToHave,
           jdFile: null
         });
 
-        // Populate editable arrays
+        // Tech selection
+        const techIds = profile.techSpecifications.map(t => t.id);
+        setSelectedTech(techIds);
+
+        // Populate UI fields
         setOverviewText(
-          selectedJobProfile.overview?.[0]?.type === "paragraph"
-            ? selectedJobProfile.overview[0].content[0]?.text || ""
+          profile.overview?.[0]?.type === "paragraph"
+            ? profile.overview[0].content[0]?.text || ""
             : ""
         );
 
         setResponsibilitiesArray(
-          selectedJobProfile.responsibilities?.type === "bullets"
-            ? selectedJobProfile.responsibilities.content.map(b => b.text)
+          profile.responsibilities?.type === "bullets"
+            ? profile.responsibilities.content.map(b => b.text)
             : []
         );
 
         setSkillsArray(
-          selectedJobProfile.requiredSkills?.type === "bullets"
-            ? selectedJobProfile.requiredSkills.content.map(b => b.text)
+          profile.requiredSkills?.type === "bullets"
+            ? profile.requiredSkills.content.map(b => b.text)
             : []
         );
 
         setNiceToHaveArray(
-          selectedJobProfile.niceToHave?.type === "bullets"
-            ? selectedJobProfile.niceToHave.content.map(b => b.text)
+          profile.niceToHave?.type === "bullets"
+            ? profile.niceToHave.content.map(b => b.text)
             : []
         );
-      } else {
-        // Add mode
-        setFormData(INITIAL_FORM);
-        setOverviewText("");
-        setResponsibilitiesArray([]);
-        setSkillsArray([]);
-        setNiceToHaveArray([]);
+      } catch (err) {
+        console.error("Failed to load job profile:", err);
       }
-      setErrors({});
-      setSubmitted(false);
-    }
-  }, [visible, isEditMode, selectedJobProfile]);
+    })();
+
+  // ---------- ADD MODE ----------
+  } else {
+    setFormData(INITIAL_FORM);
+    setSelectedTech([]);
+
+    setOverviewText("");
+    setResponsibilitiesArray([]);
+    setSkillsArray([]);
+    setNiceToHaveArray([]);
+  }
+
+  // Reset validation
+  setErrors({});
+  setSubmitted(false);
+
+}, [visible, isEditMode, selectedJobProfile, accessToken]);
 
   const handleChange = useCallback(
     (field: keyof AddEditJobProfile, value: any) => {
@@ -183,100 +221,143 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
 };
 
   const validateForm = useCallback(() => {
-    const newErrors: Record<string, string> = {};
-    (Object.keys(formData) as (keyof AddEditJobProfile)[]).forEach(key => {
-      const errorMsg = validateField(key, formData[key]);
-      if (errorMsg) newErrors[key] = errorMsg;
-    });
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData]);
+  const newErrors: Record<string, string> = {};
+
+  // Position
+  if (!formData.position.trim()) {
+    newErrors.position = "Position is required.";
+  }
+
+  // Experience
+  if (!formData.experience.trim()) {
+    newErrors.experience = "Experience is required.";
+  }
+
+  // Overview (UI state)
+  if (!overviewText.trim()) {
+    newErrors.overview = "Job overview is required.";
+  }
+
+  // Tech Specs (UI state)
+  if (!selectedTech.length) {
+    newErrors.techSpecifications = "At least one technology is required.";
+  }
+
+  // Required Skills (UI state)
+  if (!skillsArray.length) {
+    newErrors.requiredSkills = "Required skills are required.";
+  }
+
+  // JD (only in Add)
+  if (!isEditMode) {
+    if (!formData.jdFile) {
+      newErrors.jdFile = "Job description is required.";
+    }
+  }
+
+  setErrors(newErrors);
+
+  return Object.keys(newErrors).length === 0;
+}, [
+  formData.position,
+  formData.experience,
+  formData.jdFile,
+  overviewText,
+  selectedTech,
+  skillsArray,
+  isEditMode
+]);
+
 
   const handleSave = useCallback(async () => {
-    setSubmitted(true);
+    
+  setSubmitted(true);
 
-    if (!validateForm()) {
-      return;
+  if (!validateForm()) return;
+
+  try {
+    // ---------- Build FormData ----------
+    const fd = new FormData();
+
+    fd.append("position", formData.position);
+    fd.append("experience", formData.experience);
+    fd.append("overview", overviewText || "");
+
+    if (responsibilitiesArray.length > 0) {
+      fd.append("responsibilities", responsibilitiesArray.join("\n"));
     }
 
-    try {
-      // Convert editable arrays back to RichSection format
-      const finalData = {
-        ...formData,
-        overview: overviewText
-          ? [
-              {
-                type: "paragraph" as const,
-                content: [{ id: `o_${Date.now()}`, text: overviewText }]
-              }
-            ]
-          : [],
-        responsibilities:
-          responsibilitiesArray.length > 0
-            ? {
-                type: "bullets" as const,
-                content: responsibilitiesArray.map((text, idx) => ({
-                  id: `r_${idx}`,
-                  text
-                }))
-              }
-            : undefined,
-        requiredSkills:
-          skillsArray.length > 0
-            ? {
-                type: "bullets" as const,
-                content: skillsArray.map((text, idx) => ({
-                  id: `s_${idx}`,
-                  text
-                }))
-              }
-            : undefined,
-        niceToHave:
-          niceToHaveArray.length > 0
-            ? {
-                type: "bullets" as const,
-                content: niceToHaveArray.map((text, idx) => ({
-                  id: `n_${idx}`,
-                  text
-                }))
-              }
-            : undefined
-      };
+    fd.append(
+      "requiredSkills",
+      skillsArray.join("\n")
+    );
 
-      // ✅ Console log final payload
-      console.log("💾 Final Payload being sent to backend:", JSON.stringify(finalData, null, 2));
-
-      toast.current?.show({
-        severity: "success",
-        summary: "Success",
-        detail: isEditMode
-          ? "Job Profile updated successfully!"
-          : "Job Profile added successfully!",
-        life: 3000
-      });
-
-      onSuccess();
-      onHide();
-    } catch (err: any) {
-      console.error("Error saving job profile:", err);
-      toast.current?.show({
-        severity: "error",
-        summary: "Error",
-        detail: err?.message || "Something went wrong",
-        life: 2000
-      });
+    if (niceToHaveArray.length > 0) {
+      fd.append("niceToHave", niceToHaveArray.join("\n"));
     }
-  }, [
-    formData,
-    overviewText,
-    responsibilitiesArray,
-    skillsArray,
-    niceToHaveArray,
-    isEditMode,
-    onHide,
-    onSuccess,
-    validateForm
-  ]);
+
+    // Tech specs 
+    if (selectedTech.length > 0) {
+      fd.append("techSpecifications", selectedTech.join(","));
+    }
+
+    // JD File
+    if (formData.jdFile) {
+      fd.append("JD", formData.jdFile);
+    }
+        // ---------- API Call ----------
+        let res;
+
+        if (isEditMode && selectedJobProfile) {
+          res = await updateJobProfile(
+            accessToken,
+            selectedJobProfile.id,
+            fd
+          );
+        } else {
+          res = await createJobProfile(accessToken, fd);
+        }
+
+        console.log("✅ API Response:", res);
+
+        // ---------- Success ----------
+        toast.current?.show({
+          severity: "success",
+          summary: "Success",
+          detail: isEditMode
+            ? "Job Profile updated successfully!"
+            : "Job Profile added successfully!",
+          life: 3000
+        });
+
+        onSuccess();
+        onHide();
+
+      } catch (err: any) {
+        console.error("Error saving job profile:", err);
+
+        toast.current?.show({
+          severity: "error",
+          summary: "Error",
+          detail: err?.message || "Something went wrong",
+          life: 2000
+        });
+      }
+    }, [
+      formData,
+      overviewText,
+      responsibilitiesArray,
+      skillsArray,
+      niceToHaveArray,
+      selectedTech,
+      accessToken,
+      selectedJobProfile,
+      isEditMode,
+      onHide,
+      onSuccess,
+      validateForm
+    ]);
+
 
   const shouldShowError = (field: string): string | undefined =>
     submitted ? errors[field] : undefined;
@@ -307,7 +388,10 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
       >
         {/* File Upload */}
           <div className="field col-12">
-            <label className="font-bold">Upload Job Description (PDF / DOCX)</label>
+            <label className="font-bold">
+              Upload Job Description (PDF / DOCX)
+              {!isEditMode && <span className="text-red-500"> *</span>}
+            </label>
 
             <div
               onDragOver={e => {
@@ -464,17 +548,47 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
               <small className="p-error">{shouldShowError("experience")}</small>
             )}
           </div>
+          {/* Tech Specifications */}
+          <div className="field col-12">
+            <label className="font-bold">Tech Specifications <span className="text-red-500">*</span></label>
+
+            <MultiSelect
+              className={`w-full ${
+                shouldShowError("techSpecifications") ? "p-invalid" : ""
+              }`}
+              value={selectedTech}
+              options={techOptions}
+              optionLabel="label"
+              optionValue="id"
+              placeholder="Select technologies"
+              display="chip"
+              filter
+              onChange={e => {
+                setSelectedTech(e.value);
+                handleChange("techSpecifications", e.value);
+              }}
+            />
+            {shouldShowError("techSpecifications") && (
+              <small className="p-error">
+                {shouldShowError("techSpecifications")}
+              </small>
+            )}
+          </div>
 
           {/* Job Overview */}
           <div className="field col-12">
-            <label className="font-bold">Job Overview</label>
+            <label className="font-bold">Job Overview <span className="text-red-500">*</span></label>
             <InputTextarea
+              className={shouldShowError("overview") ? "p-invalid" : ""}
               value={overviewText}
               onChange={e => setOverviewText(e.target.value)}
               rows={3}
               placeholder="Brief description of the role..."
               style={{ maxHeight: "120px", overflow: "auto" }}
             />
+            {shouldShowError("overview") && (
+              <small className="p-error">{shouldShowError("overview")}</small>
+            )}
           </div>
 
           {/* Key Responsibilities - WITH SCROLLABLE CONTAINER */}
@@ -490,13 +604,18 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
 
           {/* Required Skills - WITH SCROLLABLE CONTAINER */}
           <div className="field col-12">
-            <label className="font-bold">Required Skills & Experience</label>
+            <label className="font-bold">Required Skills & Experience <span className="text-red-500">*</span></label>
             <EditableList
               items={skillsArray}
               onChange={setSkillsArray}
               placeholder="Enter a skill/requirement and press Enter or click Add"
               label="Skills"
             />
+            {shouldShowError("requiredSkills") && (
+              <small className="p-error block mt-1">
+                {shouldShowError("requiredSkills")}
+              </small>
+            )}
           </div>
 
           {/* Nice to Have */}

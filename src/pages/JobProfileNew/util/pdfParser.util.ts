@@ -229,7 +229,7 @@ export function parseJobProfileFromText(text: string) {
             type: "paragraph" as const,
             content: [
               {
-                id: `o_0`,
+                id: crypto.randomUUID(),
                 text: overviewText
               }
             ]
@@ -241,7 +241,7 @@ export function parseJobProfileFromText(text: string) {
       ? {
           type: "bullets" as const,
           content: extractBulletPoints(responsibilitiesText).map((t, i) => ({
-            id: `r_${i}`,
+            id: crypto.randomUUID(),
             text: t
           }))
         }
@@ -251,7 +251,7 @@ export function parseJobProfileFromText(text: string) {
       ? {
           type: "bullets" as const,
           content: extractBulletPoints(requiredSkillsText).map((t, i) => ({
-            id: `s_${i}`,
+            id: crypto.randomUUID(),
             text: t
           }))
         }
@@ -261,7 +261,7 @@ export function parseJobProfileFromText(text: string) {
       ? {
           type: "bullets" as const,
           content: extractBulletPoints(niceToHaveText).map((t, i) => ({
-            id: `n_${i}`,
+            id: crypto.randomUUID(),
             text: t
           }))
         }

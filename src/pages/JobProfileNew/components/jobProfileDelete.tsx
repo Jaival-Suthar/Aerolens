@@ -1,37 +1,105 @@
 import React, { useState } from "react";
 import { Dialog } from "primereact/dialog";
 import { Message } from "primereact/message";
+import { Toast } from "primereact/toast";
 import DialogDeleteButton from "../../../shared/DialogDeleteButton";
 import { JobProfile } from "../types/jobProfileTypes";
+import { deleteJobProfile } from "../services/jobProfileService";
+import { useAuth } from "../../../shared/auth/AuthContext";
 
 interface Props {
   visible: boolean;
   onHide: () => void;
-  onDelete: () => void;
+  onSuccess: () => void; // refresh table
   selectedJobProfile: JobProfile | null;
-  loading?: boolean;
 }
 
 const JobProfileDelete: React.FC<Props> = ({
   visible,
   onHide,
-  onDelete,
-  selectedJobProfile,
-  loading = false,
+  onSuccess,
+  selectedJobProfile
 }) => {
+  const { accessToken } = useAuth();
+
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const toast = React.useRef<Toast>(null);
 
   if (!selectedJobProfile) return null;
 
-  const handleDelete = () => {
-    setError(null);
-    onDelete(); // 👈 Just call parent - no API call here
+  /* ========================================
+     DELETE HANDLER
+  ======================================== */
+
+  const handleDelete = async () => {
+    if (!accessToken) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      await deleteJobProfile(
+        accessToken,
+        selectedJobProfile.id
+      );
+
+      toast.current?.show({
+        severity: "success",
+        summary: "Deleted",
+        detail: "Job profile deleted successfully",
+        life: 3000
+      });
+
+      onSuccess(); // refresh table
+      onHide();
+
+    } catch (err: any) {
+      console.error("Delete error:", err);
+
+      setError(
+        err?.message ||
+        "Failed to delete job profile"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleHide = () => {
+    if (loading) return;
     setError(null);
     onHide();
   };
+
+  /* ========================================
+     DATA
+  ======================================== */
+
+  const overviewText =
+    selectedJobProfile.overview?.[0]?.type === "paragraph"
+      ? selectedJobProfile.overview[0].content[0]?.text || "-"
+      : "-";
+
+  const responsibilitiesCount =
+    selectedJobProfile.responsibilities?.type === "bullets"
+      ? selectedJobProfile.responsibilities.content.length
+      : 0;
+
+  const skillsCount =
+    selectedJobProfile.requiredSkills?.type === "bullets"
+      ? selectedJobProfile.requiredSkills.content.length
+      : 0;
+
+  const niceToHaveCount =
+    selectedJobProfile.niceToHave?.type === "bullets"
+      ? selectedJobProfile.niceToHave.content.length
+      : 0;
+
+  /* ========================================
+     FOOTER
+  ======================================== */
 
   const footer = (
     <div className="flex justify-content-end gap-2">
@@ -40,32 +108,19 @@ const JobProfileDelete: React.FC<Props> = ({
         onDelete={handleDelete}
         cancelDisabled={loading}
         deleteDisabled={loading}
+        loading={loading}
       />
     </div>
   );
 
-  // Extract overview text
-  const overviewText = selectedJobProfile.overview?.[0]?.type === "paragraph"
-    ? selectedJobProfile.overview[0].content[0]?.text || "-"
-    : "-";
-
-  // Extract responsibilities count
-  const responsibilitiesCount = selectedJobProfile.responsibilities?.type === "bullets"
-    ? selectedJobProfile.responsibilities.content.length
-    : 0;
-
-  // Extract skills count
-  const skillsCount = selectedJobProfile.requiredSkills?.type === "bullets"
-    ? selectedJobProfile.requiredSkills.content.length
-    : 0;
-
-  // Extract nice-to-have count
-  const niceToHaveCount = selectedJobProfile.niceToHave?.type === "bullets"
-    ? selectedJobProfile.niceToHave.content.length
-    : 0;
+  /* ========================================
+     RENDER
+  ======================================== */
 
   return (
     <>
+      <Toast ref={toast} />
+
       <Dialog
         visible={visible}
         header="Delete Job Profile"
@@ -77,41 +132,43 @@ const JobProfileDelete: React.FC<Props> = ({
         resizable={false}
       >
         {error && (
-          <Message severity="error" text={error} className="mb-3 w-full" />
+          <Message
+            severity="error"
+            text={error}
+            className="mb-3 w-full"
+          />
         )}
 
-        {/* Job Profile Details Card */}
+        {/* Details */}
         <div className="bg-surface-50 p-3 border-round mb-4">
           <div className="grid">
-            <div className="text-center">
+
+            <div className="col-12 text-center">
               <p className="m-0 font-bold text-lg text-color-secondary">
                 Are you sure you want to delete this job profile?
               </p>
             </div>
 
             <div className="col-12 mt-3">
-              <strong className="text-xl">Job Profile Details:</strong>
+              <strong className="text-xl">
+                Job Profile Details:
+              </strong>
             </div>
 
-            <div className="col-6">
-              <span className="text-color-secondary">Position:</span>
-            </div>
+            <div className="col-6">Position:</div>
             <div className="col-6">
               <strong>{selectedJobProfile.position}</strong>
             </div>
 
+            <div className="col-6">Experience:</div>
             <div className="col-6">
-              <span className="text-color-secondary">Experience:</span>
+              {selectedJobProfile.experience}
             </div>
-            <div className="col-6">{selectedJobProfile.experience}</div>
 
-            <div className="col-6">
-              <span className="text-color-secondary">Job Overview:</span>
-            </div>
+            <div className="col-6">Overview:</div>
             <div className="col-6">
               <div
                 style={{
-                  maxWidth: "100%",
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis"
@@ -122,32 +179,21 @@ const JobProfileDelete: React.FC<Props> = ({
               </div>
             </div>
 
+            <div className="col-6">Responsibilities:</div>
             <div className="col-6">
-              <span className="text-color-secondary">Key Responsibilities:</span>
-            </div>
-            <div className="col-6">
-              {responsibilitiesCount > 0 
-                ? `${responsibilitiesCount} item${responsibilitiesCount !== 1 ? 's' : ''}`
-                : "-"}
+              {responsibilitiesCount || "-"}
             </div>
 
+            <div className="col-6">Skills:</div>
             <div className="col-6">
-              <span className="text-color-secondary">Required Skills:</span>
-            </div>
-            <div className="col-6">
-              {skillsCount > 0 
-                ? `${skillsCount} skill${skillsCount !== 1 ? 's' : ''}`
-                : "-"}
+              {skillsCount || "-"}
             </div>
 
+            <div className="col-6">Nice to Have:</div>
             <div className="col-6">
-              <span className="text-color-secondary">Nice to Have:</span>
+              {niceToHaveCount || "-"}
             </div>
-            <div className="col-6">
-              {niceToHaveCount > 0 
-                ? `${niceToHaveCount} item${niceToHaveCount !== 1 ? 's' : ''}`
-                : "-"}
-            </div>
+
           </div>
         </div>
 
