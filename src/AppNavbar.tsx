@@ -5,7 +5,7 @@ import { Button } from "primereact/button";
 import { Menu } from "primereact/menu";
 import { Toast } from "primereact/toast";
 import {
-  FaBriefcase,
+  FaClipboardList,
   FaUsers,
   FaDatabase,
   FaFile,
@@ -16,6 +16,7 @@ import {
   FaUserTie,
   FaBuilding, 
   FaLayerGroup,
+  FaRegCalendarAlt,
   FaBullseye
 } from "react-icons/fa";
 import { useProfileStore } from "./shared/store/profile";
@@ -70,15 +71,15 @@ const AppNavbar: React.FC = () => {
         },
         {
           label: "Job Profile",
-          icon: <FaBriefcase style={{ marginRight: 8, marginLeft: 4 }} />,
+          icon: <FaUserTie style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => handleNavigation("/job-profile"),
           className: isMenuActive("/job-profile") ? "nav-subitem-active" : "",
         },
         {
-          label: "New Job Profile",
-          icon: <FaBriefcase style={{ marginRight: 8, marginLeft: 4 }} />,
-          command: () => handleNavigation("/job-profile-new"),
-          className: isMenuActive("/job-profile-new") ? "nav-subitem-active" : "",
+          label: "Job Profile Requirements",
+          icon: <FaClipboardList  style={{ marginRight: 8, marginLeft: 4 }} />,
+          command: () => handleNavigation("/job-profile-requirements"),
+          className: isMenuActive("/job-profile-requirements") ? "nav-subitem-active" : "",
         },
         {
           label: "Members",
@@ -114,7 +115,7 @@ const AppNavbar: React.FC = () => {
         },
         {
           label: "Interview", // ✅ New top-level heading
-          icon: <FaUserTie style={{ marginRight: 8, marginLeft: 4 }} />,
+          icon: <FaRegCalendarAlt  style={{ marginRight: 8, marginLeft: 4 }} />,
           command: () => navigate("/interview"),
           className: isMenuActive("/interview") ? "nav-subitem-active" : "",
         },

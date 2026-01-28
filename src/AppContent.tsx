@@ -6,7 +6,7 @@ import ProtectedRoute from './shared/ProtectedRoute';
 const AppNavbar = lazy(() => import('./AppNavbar'));
 const Client = lazy(() => import('./pages/ClientPage/page'));
 const Home = lazy(() => import('./pages/Dashboard/page'));
-const JobProfile = lazy(() => import('./pages/JobProfile/page'));
+const JobProfileRequirements = lazy(() => import('./pages/JobProfileRequirements/page'));
 const JobProfileNew = lazy(() => import('./pages/JobProfileNew/page'));
 const Resume = lazy(() => import('./pages/Resume/page'));
 const Interview = lazy(() => import('./pages/Interview/page')); // ⭐️ NEW LAZY IMPORT
@@ -113,16 +113,16 @@ const AppContent: React.FC = () => {
         />
 
         <Route
-          path="/job-profile"
+          path="/job-profile-requirements"
           element={
             <ProtectedRoute>
-              <AppLayout><JobProfile /></AppLayout>
+              <AppLayout><JobProfileRequirements /></AppLayout>
             </ProtectedRoute>
           }
         />
 
         <Route
-          path="/job-profile-new"
+          path="/job-profile"
           element={
             <ProtectedRoute>
               <AppLayout><JobProfileNew /></AppLayout>

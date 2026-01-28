@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { DataTable, type DataTablePageEvent } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -19,13 +19,19 @@ import JobProfileDelete from "./jobProfileDelete";
 import { useAuth } from "../../../shared/auth/AuthContext"; 
 import { useTechSpecifications } from "../hooks/useTechSpecifications";
 import { Button } from "primereact/button";
-import { FaDownload, FaEye } from "react-icons/fa";
+import { FaDownload, FaEye, FaPlus } from "react-icons/fa";
 import { Toast } from "primereact/toast";
 import { Tooltip } from "primereact/tooltip";
+import CogButton from "../../../shared/CogButton";
+import JobProfileRequirementsAddEdit 
+  from "../../JobProfileRequirements/components/jobProfileRequirementsAddEdit";
+import {
+  createJobProfileRequirements
+} from "../../JobProfileRequirements/services/jobProfileRequirementsService";
 
 /* -------------------- Columns -------------------- */
 const ALL_COLUMNS = [
-  { field: "position", header: "Position", type: "text" },
+  { field: "position", header: "Job Role", type: "text" },
   { field: "experience", header: "Experience", type: "text" },
   { field: "overview", header: "Job Overview", type: "rich" },
   { field: "techSpecifications", header: "Tech Stack", type: "tech" },
@@ -51,6 +57,9 @@ const JobProfileTable: React.FC = () => {
   const [showAddEdit, setShowAddEdit] = useState(false);
   const [editProfile, setEditProfile] = useState<JobProfile | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showRequirementDialog, setShowRequirementDialog] = useState(false);
+  const [selectedJobProfileForReq, setSelectedJobProfileForReq] =
+    useState<JobProfile | null>(null);
   const toast = useRef<Toast>(null);
 
   /* -------------------- Column visibility -------------------- */
@@ -69,7 +78,7 @@ const JobProfileTable: React.FC = () => {
 
   const [rows, setRows] = useState(sizeFromUrl);
   const [first, setFirst] = useState((pageFromUrl - 1) * sizeFromUrl);
-
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const onPageChange = (event: DataTablePageEvent) => {
     const { first, rows } = event;
 
@@ -85,6 +94,30 @@ const JobProfileTable: React.FC = () => {
       return params;
     });
   };
+
+  const settingsItems = [
+  {
+    label: "Create Job Profile Requirements",
+    icon: <FaPlus style={{ marginRight: 8, marginLeft: 4 }} />,
+    action: () => {
+      if (!selected) {
+        toast.current?.show({
+          severity: "warn",
+          summary: "No Selection",
+          detail: "Please select a Job Profile first",
+          life: 3000
+        });
+        return;
+      }
+
+      setShowSettingsMenu(false);
+
+      // Pass selected job profile
+      setSelectedJobProfileForReq(selected);
+      setShowRequirementDialog(true);
+    }
+  }
+];
 
   /* -------------------- Cell Renderer -------------------- */
   const renderCell = (row: JobProfile, col: any) => {
@@ -280,6 +313,9 @@ const previewJD = async (jobProfileId: number) => {
       </div>
     );
   };
+  const createRequirement = async (payload: any) => {
+  return createJobProfileRequirements(accessToken, payload);
+};
 
   /* -------------------- Render -------------------- */
   return (
@@ -311,6 +347,72 @@ const previewJD = async (jobProfileId: number) => {
             tooltip="View Job Profile Details"
             onClick={() => setViewProfile(selected)}
           />
+          <div style={{ position: "relative" }}>
+          <CogButton
+            onClick={() => setShowSettingsMenu(prev => !prev)}
+            disabled={!selected}
+            tooltip="More Actions"
+          />
+
+          {showSettingsMenu && (
+            <div
+              className="card shadow-3"
+              style={{
+                position: "absolute",
+                right: 0,
+                top: 45,
+                zIndex: 1000,
+                minWidth: 220,
+                backgroundColor: "white",
+                border: "1px solid #e5e7eb",
+                borderRadius: "8px",
+                padding: "0.5rem",
+                boxShadow:
+                  "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)"
+              }}
+            >
+              {settingsItems.map((item, idx) => (
+                <div
+                  key={idx}
+                  onClick={item.action}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "0.5rem",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    marginBottom:
+                      idx < settingsItems.length - 1 ? "4px" : "0",
+                    transition: "background-color 0.15s ease"
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = "#f3f4f6";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  {/* Icon */}
+                  <span style={{ fontSize: 16, color: "#374151" }}>
+                    {item.icon}
+                  </span>
+
+                  {/* Label */}
+                  <span
+                    style={{
+                      marginLeft: 12,
+                      fontSize: 14,
+                      fontWeight: 500,
+                      color: "#374151"
+                    }}
+                  >
+                    {item.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         </div>
       </div>
 
@@ -353,9 +455,12 @@ const previewJD = async (jobProfileId: number) => {
             />
           ))}
           <Column
+            field="__jd"
             header="JD"
             body={jdBodyTemplate}
-            style={{ width: "8rem", textAlign: "center" }}
+            frozen
+            alignFrozen="right"
+            style={{ width: "8rem" }}
             bodyStyle={{ textAlign: "center" }}
             headerStyle={{ textAlign: "center" }}
           />
@@ -369,9 +474,9 @@ const previewJD = async (jobProfileId: number) => {
         >
           {viewProfile && (
             <>
-              <DetailsSection title="Position & Experience">
+              <DetailsSection title="Job Role & Experience">
                 <p>
-                  <strong>Position:</strong> {viewProfile.position}
+                  <strong>Job Role:</strong> {viewProfile.position}
                 </p>
                 <p>
                   <strong>Experience:</strong> {viewProfile.experience}
@@ -427,6 +532,20 @@ const previewJD = async (jobProfileId: number) => {
           onSuccess={refetch}
           selectedJobProfile={selected}
         />
+
+        {selectedJobProfileForReq && (
+          <JobProfileRequirementsAddEdit
+            visible={showRequirementDialog}
+            onHide={() => {
+              setShowRequirementDialog(false);
+              setSelectedJobProfileForReq(null);
+            }}
+            jobProfileId={selectedJobProfileForReq.id}
+            onSave={createRequirement}
+          />
+        )}
+
+
       </section>
     </>
   );
