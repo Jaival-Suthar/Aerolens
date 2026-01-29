@@ -13,7 +13,6 @@ import DeleteButton from "../../../shared/DeleteButton";
 
 import { useJobProfiles } from "../hooks/useJobProfiles";
 import { JobProfile } from "../types/jobProfileTypes";
-import { RichSectionRenderer } from "./RichSectionRenderer";
 import JobProfileAddEdit from "../components/jobProfileAddEdit";
 import JobProfileDelete from "./jobProfileDelete";
 import { useAuth } from "../../../shared/auth/AuthContext"; 
@@ -28,16 +27,24 @@ import JobProfileRequirementsAddEdit
 import {
   createJobProfileRequirements
 } from "../../JobProfileRequirements/services/jobProfileRequirementsService";
+const cleanBullet = (text: string) =>
+  text
+    // remove hidden/private unicode chars
+    .replace(/[\uE000-\uF8FF]/g, "")
+    // remove common bullet symbols
+    .replace(/^[\s•▪–—\-*➤►●◦∙■□▪▫]+/g, "")
+    .trim();
+
 
 /* -------------------- Columns -------------------- */
 const ALL_COLUMNS = [
   { field: "position", header: "Job Role", type: "text" },
   { field: "experience", header: "Experience", type: "text" },
-  { field: "overview", header: "Job Overview", type: "rich" },
+  { field: "overview", header: "Job Overview", type: "text" },
   { field: "techSpecifications", header: "Tech Stack", type: "tech" },
-  { field: "responsibilities", header: "Key Responsibilities", type: "rich" },
-  { field: "requiredSkills", header: "Required Skills", type: "rich" },
-  { field: "niceToHave", header: "Nice to Have", type: "rich" }
+  { field: "responsibilities", header: "Key Responsibilities", type: "list" },
+  { field: "requiredSkills", header: "Required Skills", type: "list" },
+  { field: "niceToHave", header: "Nice to Have", type: "list" }
 ];
 
 const DEFAULT_COLUMNS = ["position", "experience"];
@@ -120,42 +127,58 @@ const JobProfileTable: React.FC = () => {
 ];
 
   /* -------------------- Cell Renderer -------------------- */
-  const renderCell = (row: JobProfile, col: any) => {
-    if (col.type === "text") {
-      return (row as any)[col.field] ?? "-";
+const renderCell = (row: JobProfile, col: any) => {
+  if (col.type === "text") {
+    const value = (row as any)[col.field] ?? "-";
+    
+    // Special handling for overview to show only first line
+    if (col.field === "overview" && value !== "-") {
+      return (
+        <div
+          style={{
+            maxWidth: 360,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis"
+          }}
+          title={value}
+        >
+          {value}
+        </div>
+      );
     }
-    if (col.type === "tech") {
-    if (!row.techSpecifications?.length) return "-";
-
-    return row.techSpecifications
-      .map(t => t.label)
-      .join(", ");
+    
+    return value;
   }
-    const section =
-      col.field === "overview"
-        ? row.overview?.[0]
-        : (row as any)[col.field];
 
-    const preview =
-      section?.type === "paragraph"
-        ? section.content[0]?.text
-        : section?.content?.[0]?.text;
+  if (col.type === "tech") {
+    return row.techSpecifications?.length
+      ? row.techSpecifications.map(t => t.label).join(", ")
+      : "-";
+  }
 
-    return (
-      <div
-        style={{
-          maxWidth: 360,
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          color: "#374151"
-        }}
-        title={preview}
-      >
-        {preview || "-"}
-      </div>
-    );
-  };
+  const list = (row as any)[col.field] as string[];
+
+  if (!Array.isArray(list) || !list.length) return "-";
+
+  const preview = list[0];
+
+  return (
+    <div
+      style={{
+        maxWidth: 360,
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis"
+      }}
+      title={list.join("\n")}
+    >
+      {preview}
+    </div>
+  );
+};
+
+
 
   /* -------------------- Handlers -------------------- */
   const handleAddNew = () => {
@@ -473,48 +496,75 @@ const previewJD = async (jobProfileId: number) => {
           onHide={() => setViewProfile(null)}
         >
           {viewProfile && (
-            <>
-              <DetailsSection title="Job Role & Experience">
-                <p>
-                  <strong>Job Role:</strong> {viewProfile.position}
-                </p>
-                <p>
-                  <strong>Experience:</strong> {viewProfile.experience}
-                </p>
-              </DetailsSection>
-              {/* Tech Specifications */}
-              {viewProfile.techSpecifications?.length > 0 && (
-                <DetailsSection title="Tech Specifications">
-                  <p style={{ lineHeight: 1.6 }}>
-                    {viewProfile.techSpecifications
-                      .map(t => t.label)
-                      .join(", ")}
-                  </p>
-                </DetailsSection>
-              )}
-              <DetailsSection title="Job Overview">
-                <RichSectionRenderer sections={viewProfile.overview} />
-              </DetailsSection>
+  <>
+    <DetailsSection title="Job Role & Experience">
+      <p>
+        <strong>Job Role:</strong> {viewProfile.position}
+      </p>
+      <p>
+        <strong>Experience:</strong> {viewProfile.experience}
+      </p>
+    </DetailsSection>
 
-              {viewProfile.responsibilities && (
-                <DetailsSection title="Key Responsibilities">
-                  <RichSectionRenderer sections={[viewProfile.responsibilities]} />
-                </DetailsSection>
-              )}
+    {/* Tech */}
+    {viewProfile.techSpecifications?.length > 0 && (
+      <DetailsSection title="Tech Specifications">
+        <p style={{ lineHeight: 1.6 }}>
+          {viewProfile.techSpecifications.map(t => t.label).join(", ")}
+        </p>
+      </DetailsSection>
+    )}
 
-              {viewProfile.requiredSkills && (
-                <DetailsSection title="Required Skills & Experience">
-                  <RichSectionRenderer sections={[viewProfile.requiredSkills]} />
-                </DetailsSection>
-              )}
+    {/* Overview */}
+    {viewProfile.overview && (
+      <DetailsSection title="Job Overview">
+        <p style={{ whiteSpace: "pre-line", lineHeight: 1.6 }}>
+          {viewProfile.overview}
+        </p>
+      </DetailsSection>
+    )}
 
-              {viewProfile.niceToHave && (
-                <DetailsSection title="Nice to Have">
-                  <RichSectionRenderer sections={[viewProfile.niceToHave]} />
-                </DetailsSection>
-              )}
-            </>
-          )}
+    {/* Responsibilities */}
+    {viewProfile.responsibilities?.length > 0 && (
+      <DetailsSection title="Key Responsibilities">
+        <ul style={{ paddingLeft: "1.25rem", margin: 0 }}>
+          {viewProfile.responsibilities.map((r, i) => (
+            <li key={i} style={{ marginBottom: "0.25rem" }}>
+              {cleanBullet(r)}
+            </li>
+          ))}
+        </ul>
+      </DetailsSection>
+    )}
+
+    {/* Skills */}
+    {viewProfile.requiredSkills?.length > 0 && (
+      <DetailsSection title="Required Skills & Experience">
+        <ul style={{ paddingLeft: "1.25rem", margin: 0 }}>
+          {viewProfile.requiredSkills.map((s, i) => (
+            <li key={i} style={{ marginBottom: "0.25rem" }}>
+              {cleanBullet(s)}
+            </li>
+          ))}
+        </ul>
+      </DetailsSection>
+    )}
+
+    {/* Nice to have */}
+    {viewProfile.niceToHave?.length > 0 && (
+      <DetailsSection title="Nice to Have">
+        <ul style={{ paddingLeft: "1.25rem", margin: 0 }}>
+          {viewProfile.niceToHave.map((n, i) => (
+            <li key={i} style={{ marginBottom: "0.25rem" }}>
+              {cleanBullet(n)}
+            </li>
+          ))}
+        </ul>
+      </DetailsSection>
+    )}
+  </>
+)}
+
         </PremiumDetailsDialog>
 
         {/* ✏️ Add/Edit Dialog */}

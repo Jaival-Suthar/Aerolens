@@ -18,14 +18,14 @@ import {
 } from "../services/jobProfileService";
 
 
-const INITIAL_FORM: AddEditJobProfile = {
+const INITIAL_FORM = {
   position: "",
   experience: "",
-  overview: [],
+  overview: "",
   techSpecifications: [],
-  responsibilities: undefined,
-  requiredSkills: undefined,
-  niceToHave: undefined,
+  responsibilities: [] as string[],
+  requiredSkills: [] as string[],
+  niceToHave: [] as string[],
   jdFile: null
 };
 
@@ -49,13 +49,8 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
     { id: number; label: string }[]
   >([]);
 
-  const [selectedTech, setSelectedTech] = useState<number[]>([]);
+  
 
-  // Simple string arrays for editable UI
-  const [responsibilitiesArray, setResponsibilitiesArray] = useState<string[]>([]);
-  const [skillsArray, setSkillsArray] = useState<string[]>([]);
-  const [niceToHaveArray, setNiceToHaveArray] = useState<string[]>([]);
-  const [overviewText, setOverviewText] = useState("");
   useEffect(() => {
   if (!visible || !accessToken) return;
 
@@ -90,44 +85,20 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
         setFormData({
           position: profile.position,
           experience: profile.experience,
-          overview: profile.overview,
+
+          overview: profile.overview || "",
+
+          responsibilities: profile.responsibilities || [],
+
+          requiredSkills: profile.requiredSkills || [],
+
+          niceToHave: profile.niceToHave || [],
 
           techSpecifications: profile.techSpecifications.map(t => t.id),
 
-          responsibilities: profile.responsibilities,
-          requiredSkills: profile.requiredSkills,
-          niceToHave: profile.niceToHave,
           jdFile: null
         });
 
-        // Tech selection
-        const techIds = profile.techSpecifications.map(t => t.id);
-        setSelectedTech(techIds);
-
-        // Populate UI fields
-        setOverviewText(
-          profile.overview?.[0]?.type === "paragraph"
-            ? profile.overview[0].content[0]?.text || ""
-            : ""
-        );
-
-        setResponsibilitiesArray(
-          profile.responsibilities?.type === "bullets"
-            ? profile.responsibilities.content.map(b => b.text)
-            : []
-        );
-
-        setSkillsArray(
-          profile.requiredSkills?.type === "bullets"
-            ? profile.requiredSkills.content.map(b => b.text)
-            : []
-        );
-
-        setNiceToHaveArray(
-          profile.niceToHave?.type === "bullets"
-            ? profile.niceToHave.content.map(b => b.text)
-            : []
-        );
       } catch (err) {
         console.error("Failed to load job profile:", err);
       }
@@ -136,12 +107,6 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
   // ---------- ADD MODE ----------
   } else {
     setFormData(INITIAL_FORM);
-    setSelectedTech([]);
-
-    setOverviewText("");
-    setResponsibilitiesArray([]);
-    setSkillsArray([]);
-    setNiceToHaveArray([]);
   }
 
   // Reset validation
@@ -168,38 +133,24 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
     const rawText = await extractPdfText(file);
     const parsed = parseJobProfileFromText(rawText);
 
-    // ✅ Update formData with parsed rich sections
-    handleChange("position", parsed.position);
-    handleChange("experience", parsed.experience);
-    handleChange("overview", parsed.overview);
-    handleChange("responsibilities", parsed.responsibilities);
-    handleChange("requiredSkills", parsed.requiredSkills);
-    handleChange("niceToHave", parsed.niceToHave);
+    setFormData(prev => ({
+  ...prev,
 
-    // ✅ Update UI state arrays for editing
-    setOverviewText(
-      parsed.overview?.[0]?.type === "paragraph"
-        ? parsed.overview[0].content[0]?.text || ""
-        : ""
-    );
+  position: parsed.position,
+  experience: parsed.experience,
 
-    setResponsibilitiesArray(
-      parsed.responsibilities?.type === "bullets"
-        ? parsed.responsibilities.content.map(b => b.text)
-        : []
-    );
+  overview:
+    parsed.overview?.[0]?.content?.[0]?.text || "",
 
-    setSkillsArray(
-      parsed.requiredSkills?.type === "bullets"
-        ? parsed.requiredSkills.content.map(b => b.text)
-        : []
-    );
+  responsibilities:
+    parsed.responsibilities?.content?.map(b => b.text) || [],
 
-    setNiceToHaveArray(
-      parsed.niceToHave?.type === "bullets"
-        ? parsed.niceToHave.content.map(b => b.text)
-        : []
-    );
+  requiredSkills:
+    parsed.requiredSkills?.content?.map(b => b.text) || [],
+
+  niceToHave:
+    parsed.niceToHave?.content?.map(b => b.text) || []
+}));
 
     toast.current?.show({
       severity: "success",
@@ -234,17 +185,19 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
   }
 
   // Overview (UI state)
-  if (!overviewText.trim()) {
+  if (!formData.overview.trim())
+  {
     newErrors.overview = "Job overview is required.";
   }
 
   // Tech Specs (UI state)
-  if (!selectedTech.length) {
+  if (!formData.techSpecifications.length) {
     newErrors.techSpecifications = "At least one technology is required.";
   }
 
   // Required Skills (UI state)
-  if (!skillsArray.length) {
+  if (!formData.requiredSkills.length)
+ {
     newErrors.requiredSkills = "Required skills are required.";
   }
 
@@ -259,12 +212,7 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
 
   return Object.keys(newErrors).length === 0;
 }, [
-  formData.position,
-  formData.experience,
-  formData.jdFile,
-  overviewText,
-  selectedTech,
-  skillsArray,
+  formData,
   isEditMode
 ]);
 
@@ -279,32 +227,43 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
     // ---------- Build FormData ----------
     const fd = new FormData();
 
-    fd.append("position", formData.position);
-    fd.append("experience", formData.experience);
-    fd.append("overview", overviewText || "");
+fd.append("position", formData.position);
+fd.append("experience", formData.experience);
 
-    if (responsibilitiesArray.length > 0) {
-      fd.append("responsibilities", responsibilitiesArray.join("\n"));
-    }
+fd.append("overview", formData.overview);
 
-    fd.append(
-      "requiredSkills",
-      skillsArray.join("\n")
-    );
+if (formData.responsibilities.length) {
+  fd.append(
+    "responsibilities",
+    formData.responsibilities.join("\n")
+  );
+}
 
-    if (niceToHaveArray.length > 0) {
-      fd.append("niceToHave", niceToHaveArray.join("\n"));
-    }
+if (formData.requiredSkills.length) {
+  fd.append(
+    "requiredSkills",
+    formData.requiredSkills.join("\n")
+  );
+}
 
-    // Tech specs 
-    if (selectedTech.length > 0) {
-      fd.append("techSpecifications", selectedTech.join(","));
-    }
+if (formData.niceToHave.length) {
+  fd.append(
+    "niceToHave",
+    formData.niceToHave.join("\n")
+  );
+}
 
-    // JD File
-    if (formData.jdFile) {
-      fd.append("JD", formData.jdFile);
-    }
+if (formData.techSpecifications.length) {
+  fd.append(
+    "techSpecifications",
+    formData.techSpecifications.join(",")
+  );
+}
+
+if (formData.jdFile) {
+  fd.append("JD", formData.jdFile);
+}
+
         // ---------- API Call ----------
         let res;
 
@@ -345,11 +304,6 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
       }
     }, [
       formData,
-      overviewText,
-      responsibilitiesArray,
-      skillsArray,
-      niceToHaveArray,
-      selectedTech,
       accessToken,
       selectedJobProfile,
       isEditMode,
@@ -556,17 +510,16 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
               className={`w-full ${
                 shouldShowError("techSpecifications") ? "p-invalid" : ""
               }`}
-              value={selectedTech}
+              value={formData.techSpecifications}
               options={techOptions}
               optionLabel="label"
               optionValue="id"
               placeholder="Select technologies"
               display="chip"
               filter
-              onChange={e => {
-                setSelectedTech(e.value);
-                handleChange("techSpecifications", e.value);
-              }}
+              onChange={e =>
+                handleChange("techSpecifications", e.value)
+              }
             />
             {shouldShowError("techSpecifications") && (
               <small className="p-error">
@@ -580,11 +533,13 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
             <label className="font-bold">Job Overview <span className="text-red-500">*</span></label>
             <InputTextarea
               className={shouldShowError("overview") ? "p-invalid" : ""}
-              value={overviewText}
-              onChange={e => setOverviewText(e.target.value)}
-              rows={3}
+              value={formData.overview}
+              onChange={e =>
+                handleChange("overview", e.target.value)
+              }
+              rows={5}
               placeholder="Brief description of the role..."
-              style={{ maxHeight: "120px", overflow: "auto" }}
+              style={{ maxHeight: "180px", overflow: "auto" }}
             />
             {shouldShowError("overview") && (
               <small className="p-error">{shouldShowError("overview")}</small>
@@ -595,8 +550,8 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
           <div className="field col-12">
             <label className="font-bold">Key Responsibilities</label>
             <EditableList
-              items={responsibilitiesArray}
-              onChange={setResponsibilitiesArray}
+              items={formData.responsibilities}
+              onChange={v => handleChange("responsibilities", v)}
               placeholder="Enter a responsibility and press Enter or click Add"
               label="Responsibilities"
             />
@@ -606,8 +561,8 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
           <div className="field col-12">
             <label className="font-bold">Required Skills & Experience <span className="text-red-500">*</span></label>
             <EditableList
-              items={skillsArray}
-              onChange={setSkillsArray}
+              items={formData.requiredSkills}
+              onChange={v => handleChange("requiredSkills", v)}
               placeholder="Enter a skill/requirement and press Enter or click Add"
               label="Skills"
             />
@@ -622,8 +577,8 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
           <div className="field col-12">
             <label className="font-bold">Nice to Have</label>
             <EditableList
-              items={niceToHaveArray}
-              onChange={setNiceToHaveArray}
+              items={formData.niceToHave}
+              onChange={v => handleChange("niceToHave", v)}
               placeholder="Enter a nice-to-have skill and press Enter or click Add"
               label="Nice-to-have items"
             />

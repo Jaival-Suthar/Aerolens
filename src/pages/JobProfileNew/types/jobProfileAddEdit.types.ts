@@ -1,13 +1,9 @@
-// jobProfileAddEdit.types.ts
-
-import { JobProfile, RichSection } from "./jobProfileTypes";
-
-/* -------------------- Props -------------------- */
+// types/jobProfileAddEdit.types.ts
 
 export interface JobProfileAddEditProps {
   visible: boolean;
   onHide: () => void;
-  selectedJobProfile: JobProfile | null;
+  selectedJobProfile: import("./jobProfileTypes").JobProfile | null;
   onSuccess: () => void;
   techOptions: {
     id: number;
@@ -15,24 +11,7 @@ export interface JobProfileAddEditProps {
   }[];
 }
 
-/* -------------------- Form State -------------------- */
-
 export interface AddEditJobProfile {
-  position: string;
-  experience: string;
-
-  overview: RichSection[];
-  techSpecifications: number[];
-  responsibilities?: RichSection;
-  requiredSkills?: RichSection;
-  niceToHave?: RichSection;
-
-  jdFile: File | null;
-}
-
-/* -------------------- Parsed API Data -------------------- */
-
-export interface ParsedJobProfileData {
   position: string;
   experience: string;
 
@@ -41,4 +20,8 @@ export interface ParsedJobProfileData {
   responsibilities: string[];
   requiredSkills: string[];
   niceToHave: string[];
+
+  techSpecifications: number[];
+
+  jdFile: File | null;
 }

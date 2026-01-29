@@ -9,16 +9,17 @@ import {
 } from "../util/jobProfileMapper";
 
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
+
+/* -------------------- Helpers -------------------- */
+
 const isSuccessResponse = (data: any): boolean => {
   return data?.success === true || data?.status === "success";
 };
 
-/* -------------------- Helpers -------------------- */
 
-const makeHeaders = (accessToken?: string) => {
-  const headers: HeadersInit = {
-    "Content-Type": "application/json"
-  };
+
+const makeAuthHeaders = (accessToken?: string) => {
+  const headers: HeadersInit = {};
 
   if (accessToken) {
     headers["Authorization"] = `Bearer ${accessToken}`;
@@ -32,78 +33,68 @@ const makeHeaders = (accessToken?: string) => {
 export const getTechSpecifications = async (
   accessToken: string | null
 ): Promise<ApiResponse<{ id: number; label: string }[]>> => {
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/lookup?page=1&limit=100`,
-      {
-        method: "GET",
-        credentials: "include",
-        headers: makeHeaders(accessToken || undefined)
-      }
-    );
 
-    const data = await response.json();
+  const response = await fetch(
+    `${API_BASE_URL}/lookup?page=1&limit=100`,
+    {
+      method: "GET",
+      credentials: "include",
+      headers: makeAuthHeaders(accessToken || undefined)
 
-    if (!response.ok || !isSuccessResponse(data)) {
-      throw data;
     }
+  );
 
-    // Filter only techSpecification
-    const techSpecs = Array.isArray(data.data)
-      ? data.data
-          .filter((item: any) => item.tag === "techSpecification")
-          .map((item: any) => ({
-            id: item.lookupKey,
-            label: item.value
-          }))
-      : [];
+  const data = await response.json();
 
-    return {
-      success: true,
-      message: data.message,
-      data: techSpecs
-    };
-
-  } catch (error) {
-    console.error("getTechSpecifications error:", error);
-    throw error;
+  if (!response.ok || !isSuccessResponse(data)) {
+    throw data;
   }
+
+  const techSpecs = Array.isArray(data.data)
+    ? data.data
+        .filter((i: any) => i.tag === "techSpecification")
+        .map((i: any) => ({
+          id: i.lookupKey,
+          label: i.value
+        }))
+    : [];
+
+  return {
+    success: true,
+    message: data.message,
+    data: techSpecs
+  };
 };
+
 /* -------------------- Get All Job Profiles -------------------- */
 
 export const getAllJobProfilesWithJD = async (
   accessToken: string | null
 ): Promise<ApiResponse<JobProfile[]>> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/jobProfile`, {
-      method: "GET",
-      credentials: "include",
-      headers: makeHeaders(accessToken || undefined)
-    });
 
-    const data = await response.json();
+  const response = await fetch(`${API_BASE_URL}/jobProfile`, {
+    method: "GET",
+    credentials: "include",
+    headers: makeAuthHeaders(accessToken || undefined)
+  });
 
-    // Backend controlled errors
-    if (!response.ok || !isSuccessResponse(data)) {
+  const data = await response.json();
+
+  if (!response.ok || !isSuccessResponse(data)) {
     throw data;
-    }
-
-    const rawProfiles: ApiJobProfile[] = Array.isArray(data.data)
-      ? data.data
-      : [];
-
-    const mappedProfiles = rawProfiles.map(mapApiToJobProfile);
-
-    return {
-      success: true,
-      message: data.message,
-      data: mappedProfiles
-    };
-
-  } catch (error) {
-    console.error("getAllJobProfilesWithJD error:", error);
-    throw error;
   }
+
+  const raw: ApiJobProfile[] = Array.isArray(data.data)
+    ? data.data
+    : [];
+
+  const mapped = raw.map(mapApiToJobProfile);
+
+  return {
+    success: true,
+    message: data.message,
+    data: mapped
+  };
 };
 
 /* -------------------- Create Job Profile -------------------- */
@@ -112,34 +103,25 @@ export const createJobProfile = async (
   accessToken: string | null,
   payload: FormData
 ): Promise<ApiResponse<JobProfile>> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/jobProfile`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        Authorization: accessToken
-          ? `Bearer ${accessToken}`
-          : ""
-      },
-      body: payload
-    });
 
-    const data = await response.json();
+  const response = await fetch(`${API_BASE_URL}/jobProfile`, {
+    method: "POST",
+    credentials: "include",
+    headers: makeAuthHeaders(accessToken || undefined),
+    body: payload
+  });
 
-    if (!response.ok || !isSuccessResponse(data)) {
-      throw data;
-    }
+  const data = await response.json();
 
-    return {
-      success: true,
-      message: data.message,
-      data: mapApiToJobProfile(data.data)
-    };
-
-  } catch (error) {
-    console.error("createJobProfile error:", error);
-    throw error;
+  if (!response.ok || !isSuccessResponse(data)) {
+    throw data;
   }
+
+  return {
+    success: true,
+    message: data.message,
+    data: mapApiToJobProfile(data.data)
+  };
 };
 
 /* -------------------- Update Job Profile -------------------- */
@@ -149,36 +131,26 @@ export const updateJobProfile = async (
   id: number,
   payload: FormData
 ): Promise<ApiResponse<JobProfile>> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/jobProfile/${id}`, {
-      method: "PATCH",
-      credentials: "include",
-      headers: {
-        Authorization: accessToken
-          ? `Bearer ${accessToken}`
-          : ""
-      },
-      body: payload
-    });
 
-    const data = await response.json();
+  const response = await fetch(`${API_BASE_URL}/jobProfile/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: makeAuthHeaders(accessToken || undefined),
+    body: payload
+  });
 
-    if (!response.ok || !isSuccessResponse(data)) {
-      throw data;
-    }
+  const data = await response.json();
 
-    return {
-      success: true,
-      message: data.message,
-      data: mapApiToJobProfile(data.data)
-    };
-
-  } catch (error) {
-    console.error("updateJobProfile error:", error);
-    throw error;
+  if (!response.ok || !isSuccessResponse(data)) {
+    throw data;
   }
-};
 
+  return {
+    success: true,
+    message: data.message,
+    data: mapApiToJobProfile(data.data)
+  };
+};
 
 /* -------------------- Delete Job Profile -------------------- */
 
@@ -186,36 +158,28 @@ export const deleteJobProfile = async (
   accessToken: string | null,
   id: number
 ): Promise<ApiResponse<null>> => {
-  try {
-    if (!id) {
-      throw {
-        message: "Invalid job profile id"
-      };
-    }
 
-    const response = await fetch(`${API_BASE_URL}/jobProfile/${id}`, {
-      method: "DELETE",
-      credentials: "include",
-      headers: makeHeaders(accessToken || undefined)
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !isSuccessResponse(data)) {
-
-      throw data;
-    }
-
-    return {
-      success: true,
-      message: data.message,
-      data: null
-    };
-
-  } catch (error) {
-    console.error("deleteJobProfile error:", error);
-    throw error;
+  if (!id) {
+    throw new Error("Invalid job profile id");
   }
+
+  const response = await fetch(`${API_BASE_URL}/jobProfile/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+    headers: makeAuthHeaders(accessToken || undefined)
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || !isSuccessResponse(data)) {
+    throw data;
+  }
+
+  return {
+    success: true,
+    message: data.message,
+    data: null
+  };
 };
 
 /* -------------------- Get Single Job Profile -------------------- */
@@ -224,28 +188,22 @@ export const getJobProfileById = async (
   accessToken: string | null,
   id: number
 ): Promise<ApiResponse<JobProfile>> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/jobProfile/${id}`, {
-      method: "GET",
-      credentials: "include",
-      headers: makeHeaders(accessToken || undefined)
-    });
 
-    const data = await response.json();
+  const response = await fetch(`${API_BASE_URL}/jobProfile/${id}`, {
+    method: "GET",
+    credentials: "include",
+    headers: makeAuthHeaders(accessToken || undefined)
+  });
 
-    if (!response.ok || !isSuccessResponse(data)) {
+  const data = await response.json();
 
-      throw data;
-    }
-
-    return {
-      success: true,
-      message: data.message,
-      data: mapApiToJobProfile(data.data)
-    };
-
-  } catch (error) {
-    console.error("getJobProfileById error:", error);
-    throw error;
+  if (!response.ok || !isSuccessResponse(data)) {
+    throw data;
   }
+
+  return {
+    success: true,
+    message: data.message,
+    data: mapApiToJobProfile(data.data)
+  };
 };
