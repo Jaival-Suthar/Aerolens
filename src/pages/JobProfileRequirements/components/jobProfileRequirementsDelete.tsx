@@ -2,18 +2,18 @@ import React, { useState } from 'react';
 import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
 import { Message } from 'primereact/message';
-import type { JobProfile, ClientOption } from '../types/jobProfileTypes';
+import type { JobProfileRequirements, ClientOption } from '../types/jobProfileRequirementsTypes';
 import DialogDeleteButton from '../../../shared/DialogDeleteButton';
 interface Props {
   visible: boolean;
   onHide: () => void;
   onDelete: () => void;
-  jobProfile: JobProfile | null;
+  jobProfile: JobProfileRequirements | null;
   clients: ClientOption[];
   loading?: boolean;
 }
 
-const JobProfileDelete: React.FC<Props> = ({
+const JobProfileRequirementsDelete: React.FC<Props> = ({
   visible,
   onHide,
   onDelete,
@@ -53,7 +53,7 @@ const JobProfileDelete: React.FC<Props> = ({
   return (
     <Dialog
       visible={visible}
-      header="Delete Job Profile"
+      header="Delete Job Profile Requirement"
       style={{ width: '30rem' }}
       modal
       onHide={handleHide}
@@ -69,13 +69,13 @@ const JobProfileDelete: React.FC<Props> = ({
       <div className="bg-surface-50 p-3 border-round mb-4">
         <div className="grid">
           <div className="col-12">
-            <strong>Job Profile Details:</strong>
+            <strong>Job Profile Requirement Details:</strong>
           </div>
           <div className="col-6">
             <span className="text-color-secondary">Job Profile ID:</span>
           </div>
           <div className="col-6">
-            {jobProfile.jobProfileId}
+            {jobProfile.jobProfileRequirementId}
           </div>
           <div className="col-6">
             <span className="text-color-secondary">Client:</span>
@@ -90,7 +90,7 @@ const JobProfileDelete: React.FC<Props> = ({
             {departmentName}
           </div>
           <div className="col-6">
-            <span className="text-color-secondary">Role:</span>
+            <span className="text-color-secondary">Job Role:</span>
           </div>
           <div className="col-6">
             {jobProfile.jobRole}
@@ -111,26 +111,26 @@ const JobProfileDelete: React.FC<Props> = ({
             <span className="text-color-secondary">Status:</span>
           </div>
           <div className="col-6">
-            <span className={`
+            {/* <span className={`
               inline-flex align-items-center px-2 py-1 border-round text-sm
               ${jobProfile.status === 'In Progress' ? 'bg-blue-100 text-blue-800' : ''}
               ${jobProfile.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : ''}
               ${jobProfile.status === 'Closed' ? 'bg-green-100 text-green-800' : ''}
               ${jobProfile.status === 'Cancelled' ? 'bg-red-100 text-red-800' : ''}
-            `}>
+            `}> */}
               {jobProfile.status}
-            </span>
+            {/* </span> */}
           </div>
         </div>
       </div>
 
       <div className="text-center">
         <p className="m-0 text-color-secondary">
-          Are you sure you want to delete this job profile?
+          Are you sure you want to delete this job profile requirement?
         </p>
       </div>
     </Dialog>
   );
 };
 
-export default JobProfileDelete;
+export default JobProfileRequirementsDelete;

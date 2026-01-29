@@ -165,6 +165,15 @@ const ResumeTable: React.FC = () => {
   notes: { value: null, matchMode: FilterMatchMode.CONTAINS }
 });
 
+  const jobProfileOptions = React.useMemo(() => {
+  if (!createData?.jobProfiles) return [];
+
+  return createData.jobProfiles.map((jp) => ({
+    label: `${jp.jobRole} | ${jp.clientName} | ${jp.departmentName} | ${jp.city}, ${jp.country} | ${jp.experienceText ?? "-"}`,
+    value: jp.jobProfileRequirementId
+  }));
+}, [createData]);
+
   /** ------------------- Data Loading ------------------- */
   // const loadResumes = useCallback(async () => {
   //   if (!accessToken) return;

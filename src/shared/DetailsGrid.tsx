@@ -32,17 +32,45 @@ const DetailsGrid: React.FC<Props> = ({ items }) => {
           </div>
 
           <div
-            style={{
-              fontSize: "var(--value-size)",
-              fontWeight: 500,
-              color: "#111827",
-              lineHeight: 1.3,
-              wordBreak: "break-word",
-              whiteSpace: "pre-line",
-            }}
-          >
-            {Array.isArray(value) ? value.join(", ") : String(value)}
-          </div>
+  style={{
+    fontSize: "var(--value-size)",
+    fontWeight: 500,
+    color: "#111827",
+    lineHeight: 1.5,
+    wordBreak: "break-word",
+  }}
+>
+  {Array.isArray(value) ? (
+  <ul
+    style={{
+      margin: "0.25rem 0 0",
+      paddingLeft: "1.25rem",
+    }}
+  >
+    {value.map((item, idx) => {
+      const cleanItem = item
+        .replace(/^[\s•▪–—\-*➤►]+\s*/, "")
+        .trim();
+
+      return (
+        <li
+          key={idx}
+          style={{
+            marginBottom: "0.25rem",
+          }}
+        >
+          {cleanItem}
+        </li>
+      );
+    })}
+  </ul>
+) : (
+  <span style={{ whiteSpace: "pre-line" }}>
+    {String(value)}
+  </span>
+)}
+</div>
+
         </div>
       ))}
     </div>

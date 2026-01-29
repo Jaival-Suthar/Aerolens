@@ -17,26 +17,27 @@ export interface Location {
   country: string;
 }
 
-export interface JDInfo {
-  hasJD: boolean;
-  originalName: string | null;
-  uploadDate: string | null;
-  s3Key: string | null;
-  fileExtension?: string;
-  mimeType?: string;
-  supportsPreview?: boolean;
-}
+// export interface JDInfo {
+//   hasJD: boolean;
+//   originalName: string | null;
+//   uploadDate: string | null;
+//   s3Key: string | null;
+//   fileExtension?: string;
+//   mimeType?: string;
+//   supportsPreview?: boolean;
+// }
 
 
-export interface JobProfile {
+export interface JobProfileRequirements {
+  jobProfileRequirementId: number;
   jobProfileId: number;
   clientId?: number;
   departmentId?: number;
   clientName: string; // Add this - comes from API
   departmentName: string; // Add this - comes from API
-  jobProfileDescription: string;
+  // jobProfileDescription: string;
   jobRole: string;
-  techSpecification: string;
+  // techSpecification: string;
   positions: number;
   receivedOn?: string;
   estimatedCloseDate: string;
@@ -45,24 +46,25 @@ export interface JobProfile {
   location: Location;
   status: JobStatus;
   statusName?: string; // API returns statusName
-  jdFileName?: string;
-  jdOriginalName?: string;
-  jdUploadDate?: string;
+  // jdFileName?: string;
+  // jdOriginalName?: string;
+  // jdUploadDate?: string;
 }
 
 // Payload type for create/update JobProfile API
-export interface JobProfilePayload {
+export interface JobProfileRequirementsPayload {
+  jobProfileId: number;
   clientId: number;
   departmentId: number;
-  jobProfileDescription: string;
-  jobRole: string;
-  techSpecification: string;
+  // jobProfileDescription: string;
+  // jobRole: string;
+  // techSpecification: string;
   positions: number;
   estimatedCloseDate: string;
   workArrangement: 'onsite' | 'hybrid' | 'remote';
   location: Location; 
   status?: JobStatus;
-  JD?: File;
+  // JD?: File;
 }
 
 // Type for dropdown options used in UI
@@ -84,16 +86,17 @@ export interface ApiResponse<T> {
   data: T;
 }
 
-export interface JobProfileFormErrors {
+export interface JobProfileRequirementsFormErrors {
+  jobProfileId?: string;
   clientId?: string;
   departmentId?: string;
-  jobProfileDescription?: string;
-  jobRole?: string;
-  techSpecification?: string;
+  // jobProfileDescription?: string;
+  // jobRole?: string;
+  // techSpecification?: string;
   positions?: string;
   estimatedCloseDate?: string;
   workArrangement?: string;
   location?: string;
   status?: string;
-  JD?: string;
+  // JD?: string;
 }

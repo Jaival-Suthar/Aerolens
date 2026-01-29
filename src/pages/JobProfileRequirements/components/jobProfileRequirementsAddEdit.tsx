@@ -9,43 +9,50 @@ import { Calendar } from 'primereact/calendar';
 import { classNames } from 'primereact/utils';
 import { Toast } from 'primereact/toast'; // 👈 Import Toast
 import DialogButton from '../../../shared/DialogAddEditButton';
-import { validateJobProfileRequest } from '../services/jobProfileService';
-import { FileUpload } from 'primereact/fileupload';
+import { validateJobProfileRequirementsRequest } from '../services/jobProfileRequirementsService';
+import {
+  getClients,
+  fetchJobProfileRequirementsLookupData
+} from '../services/jobProfileRequirementsService';
+
+import { useAuth } from '../../../shared/auth/AuthContext';
+
 import type {
-  JobProfile,
-  JobProfilePayload,
-  JobProfileFormErrors,
+  JobProfileRequirements,
+  JobProfileRequirementsPayload,
+  JobProfileRequirementsFormErrors,
   ClientOption,
   DepartmentOption,
   Location,
   ApiResponse
-} from '../types/jobProfileTypes';
+} from '../types/jobProfileRequirementsTypes';
 import { FaCheck, FaTimes } from 'react-icons/fa';
 
 interface Props {
   visible: boolean;
   onHide: () => void;
-  onSave: (jobProfile: JobProfilePayload) => Promise<ApiResponse<any>>;
-  jobProfile?: JobProfile | null;
-  clients: ClientOption[];
-  locations: Location[];
+  onSave: (jobProfile: JobProfileRequirementsPayload) => Promise<ApiResponse<any>>;
+
+  jobProfile?: JobProfileRequirements | null; // selected profile
+  jobProfileId: number;
+
+  clients?: ClientOption[];
+  locations?: Location[];
+
   loading?: boolean;
-  statusOptions: string[];
+  statusOptions?: string[];
 }
 
 const workArrangementOptions = [
-  { label: 'On-Site', value: 'Onsite' as const },
-  { label: 'Remote', value: 'Remote' as const },
-  { label: 'Hybrid', value: 'Hybrid' as const },  
+  { label: 'On-Site', value: 'onsite' as const },
+  { label: 'Remote', value: 'remote' as const },
+  { label: 'Hybrid', value: 'hybrid' as const },  
 ];
 
 
-const emptyForm: Partial<JobProfilePayload> = {
+const emptyForm: Partial<JobProfileRequirementsPayload> = {
   clientId: undefined,
   departmentId: undefined,
-  jobProfileDescription: '',
-  jobRole: '',
-  techSpecification: '',
   positions: 1,
   estimatedCloseDate: '',
   location: { city: '', country: '' }, // Update this
@@ -55,23 +62,30 @@ const emptyForm: Partial<JobProfilePayload> = {
 
 // ⚠️ Define a type guard for required fields to ensure we don't try to submit partial data
 type RequiredJobProfilePayload = {
-    [K in keyof JobProfilePayload]-?: JobProfilePayload[K];
+    [K in keyof JobProfileRequirementsPayload]-?: JobProfileRequirementsPayload[K];
 };
 
-const JobProfileAddEdit: React.FC<Props> = ({
+const JobProfileRequirementsAddEdit: React.FC<Props> = ({
   visible,
   onHide,
   onSave,
   jobProfile,
+  jobProfileId,
   clients,
   locations,
   loading = false,
   statusOptions
 }) => {
-  const [form, setForm] = useState<Partial<JobProfilePayload>>(emptyForm);
-  const [errors, setErrors] = useState<JobProfileFormErrors>({});
+  const [form, setForm] = useState<Partial<JobProfileRequirementsPayload>>(emptyForm);
+  const [errors, setErrors] = useState<JobProfileRequirementsFormErrors>({});
   const [submitting, setSubmitting] = useState(false);
-  const [jdFile, setJdFile] = useState<File | null>(null);
+  const { accessToken } = useAuth();
+
+  const [localClients, setLocalClients] = useState<ClientOption[]>([]);
+  const [localLocations, setLocalLocations] = useState<Location[]>([]);
+  const [localStatusOptions, setLocalStatusOptions] = useState<string[]>([]);
+  const [loadingLookups, setLoadingLookups] = useState(false);
+
   const toast = useRef<Toast>(null); 
   const toLocalDateString = (date: Date): string =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -100,10 +114,9 @@ const JobProfileAddEdit: React.FC<Props> = ({
 // Load existing data if editing
 useEffect(() => {
   if (visible) {
-    setJdFile(null);
     if (jobProfile) {
       // Find the departmentId from departmentName
-      const selectedClient = clients.find(c => c.clientId === jobProfile.clientId);
+      const selectedClient = (clients ?? []).find(c => c.clientId === jobProfile.clientId);
       const selectedDept = selectedClient?.departments.find(
         d => d.departmentName === jobProfile.departmentName
       );
@@ -126,16 +139,10 @@ useEffect(() => {
       setForm({
         clientId: jobProfile.clientId,
         departmentId: departmentId, 
-        jobProfileDescription: jobProfile.jobProfileDescription,
-        jobRole: jobProfile.jobRole,
-        techSpecification: jobProfile.techSpecification,
         positions: jobProfile.positions,
         estimatedCloseDate: normalizeDateOnly(jobProfile.estimatedCloseDate),
         location: jobProfile.location || { city: '', country: '' },
-        workArrangement: jobProfile.workArrangement 
-          ? (jobProfile.workArrangement.charAt(0).toUpperCase() + 
-             jobProfile.workArrangement.slice(1).toLowerCase()) as 'onsite' | 'hybrid' | 'remote'
-          : undefined,
+        workArrangement: jobProfile.workArrangement,
         status: jobProfile ? jobProfile.status : 'pending',
 
       });
@@ -148,13 +155,66 @@ useEffect(() => {
   }
 }, [visible, jobProfile, clients, onHide, toast]);
 
+useEffect(() => {
+  // Only load for ADD mode
+  if (visible && !jobProfile) {
+    const loadLookups = async () => {
+      try {
+        setLoadingLookups(true);
+
+        const [{ clients, locations }, { profileStatuses }] =
+          await Promise.all([
+            getClients(accessToken),
+            fetchJobProfileRequirementsLookupData(accessToken)
+          ]);
+
+        setLocalClients(clients);
+        setLocalLocations(locations);
+        setLocalStatusOptions(profileStatuses);
+
+      } catch (err) {
+        console.error('Failed to load dropdown data', err);
+
+        toast.current?.show({
+          severity: 'error',
+          summary: 'Load Error',
+          detail: 'Failed to load form data'
+        });
+      } finally {
+        setLoadingLookups(false);
+      }
+    };
+
+    loadLookups();
+  }
+}, [visible, jobProfile, accessToken]);
+
+  // ✅ Use local data for ADD, props for EDIT
+const effectiveClients = jobProfile
+  ? clients ?? []
+  : localClients;
+
+const effectiveLocations = jobProfile
+  ? locations ?? []
+  : localLocations;
+
+const effectiveStatusOptions = jobProfile
+  ? statusOptions ?? []
+  : localStatusOptions;
+
+
+
   // Get departments for the selected client using useMemo for optimization
   const availableDepartments = useMemo((): DepartmentOption[] => {
-    if (!form.clientId) return [];
+  if (!form.clientId) return [];
 
-    const selectedClient = clients.find(client => client.clientId === form.clientId);
-    return selectedClient ? selectedClient.departments : [];
-  }, [form.clientId, clients]);
+  const selectedClient = effectiveClients.find(
+    client => client.clientId === form.clientId
+  );
+
+  return selectedClient ? selectedClient.departments : [];
+}, [form.clientId, effectiveClients]);
+
 
   // Check if the currently selected department is still valid for the selected client
   const isDepartmentValidForClient = useMemo((): boolean => {
@@ -164,20 +224,22 @@ useEffect(() => {
 
   // Get unique countries from locations
 const availableCountries = useMemo((): string[] => {
-  const countries = locations.map(loc => loc.country);
+  const countries = effectiveLocations.map(loc => loc.country);
   return Array.from(new Set(countries)).sort();
-}, [locations]);
+}, [effectiveLocations]);
+
 
 // Get cities for the selected country
 const availableCities = useMemo((): string[] => {
   if (!form.location?.country) return [];
-  
-  const cities = locations
+
+  const cities = effectiveLocations
     .filter(loc => loc.country === form.location?.country)
     .map(loc => loc.city);
-  
+
   return Array.from(new Set(cities)).sort();
-}, [form.location?.country, locations]);
+}, [form.location?.country, effectiveLocations]);
+
 
 // Check if the currently selected city is valid for the selected country
 const isCityValidForCountry = useMemo((): boolean => {
@@ -187,12 +249,13 @@ const isCityValidForCountry = useMemo((): boolean => {
 }, [form.location?.country, form.location?.city, availableCities]);
 
   // Prepare client options for dropdown
-  const clientOptions = useMemo(() =>
-    clients.map(client => ({
-      label: client.clientName,
-      value: client.clientId
-    }))
-  , [clients]);
+ const clientOptions = useMemo(() =>
+  effectiveClients.map(client => ({
+    label: client.clientName,
+    value: client.clientId
+  }))
+, [effectiveClients]);
+
 
   // Prepare department options for dropdown
   const departmentOptions = useMemo(() =>
@@ -205,11 +268,12 @@ const isCityValidForCountry = useMemo((): boolean => {
   // Prepare status options for dropdown from lookup data
     // Prepare status options for dropdown from lookup data
 const mappedStatusOptions = useMemo(() => 
-  statusOptions.map(status => ({
+  effectiveStatusOptions.map(status => ({
     label: status,
-    value: status // ✅ Now just string, not 'as JobStatus'
+    value: status
   }))
-, [statusOptions]);
+, [effectiveStatusOptions]);
+
 
   // Helper to check if a field is empty
   const isFieldEmpty = (value: any): boolean => {
@@ -221,10 +285,10 @@ const mappedStatusOptions = useMemo(() =>
 
   // Generic change handler
   const updateField = <
-    K extends keyof JobProfilePayload & keyof JobProfileFormErrors
+    K extends keyof JobProfileRequirementsPayload & keyof JobProfileRequirementsFormErrors
   >(
     field: K,
-    value: JobProfilePayload[K]
+    value: JobProfileRequirementsPayload[K]
   ) => {
     setForm(prev => {
       const newForm = { ...prev, [field]: value };
@@ -238,7 +302,7 @@ const mappedStatusOptions = useMemo(() =>
         const currentCity = prev.location?.city;
         
         if (currentCity && value.country) {
-          const isCityValid = locations
+          const isCityValid = effectiveLocations
             .filter(loc => loc.country === value.country)
             .some(loc => loc.city === currentCity);
           
@@ -261,16 +325,13 @@ const mappedStatusOptions = useMemo(() =>
    * This is a quick check before the heavier service validation.
    */
   const preValidateForm = (): boolean => {
-  const newErrors: JobProfileFormErrors = {};
+  const newErrors: JobProfileRequirementsFormErrors = {};
   let isValid = true;
 
   // List of required fields for a quick check
-  const requiredFields: (keyof JobProfilePayload)[] = [
+  const requiredFields: (keyof JobProfileRequirementsPayload)[] = [
     'clientId', 
-    'departmentId', 
-    'jobProfileDescription', 
-    'jobRole', 
-    'techSpecification', 
+    'departmentId',
     'positions', 
     'estimatedCloseDate', 
   ];
@@ -355,32 +416,25 @@ const handleSubmit = async () => {
   }
   
   // ✅ SIMPLE: Everything comes from form state (which was populated in useEffect)
-  const payload: JobProfilePayload = {
+  const payload: JobProfileRequirementsPayload = {
+  jobProfileId,
   clientId: form.clientId!,
   departmentId: form.departmentId!,
-  jobProfileDescription: form.jobProfileDescription!.trim(),
-  jobRole: form.jobRole!.trim(),
-  techSpecification: form.techSpecification!.trim(),
   positions: form.positions!,
   estimatedCloseDate: closeDate,
   location: form.location!,
   workArrangement: form.workArrangement!,
   ...(form.status ? { status: form.status } : {}),
 };
-  if (jdFile) {
-  payload.JD = jdFile;
-}
+ 
 
   // Run the service-level validation
-  const validationErrors = validateJobProfileRequest(payload as RequiredJobProfilePayload);
+  const validationErrors = validateJobProfileRequirementsRequest(payload as RequiredJobProfilePayload);
   if (validationErrors.length > 0) {
-    const errorObj: JobProfileFormErrors = {};
+    const errorObj: JobProfileRequirementsFormErrors = {};
     validationErrors.forEach(err => {
       if (err.includes('Client')) errorObj.clientId = err;
       else if (err.includes('Department')) errorObj.departmentId = err;
-      else if (err.includes('Description')) errorObj.jobProfileDescription = err;
-      else if (err.includes('Job Role')) errorObj.jobRole = err;
-      else if (err.includes('Tech Specification')) errorObj.techSpecification = err;
       else if (err.includes('Positions')) errorObj.positions = err;
       else if (err.includes('Close Date')) errorObj.estimatedCloseDate = err;
       else if (err.includes('Location')) errorObj.location = err;
@@ -500,44 +554,6 @@ const handleSubmit = async () => {
           {errors.departmentId && <small className="p-error">{errors.departmentId}</small>}
         </div>
 
-          <div className="field col-12">
-            <label>Job Profile Description <span className="p-error">*</span></label>
-            <InputTextarea
-              value={form.jobProfileDescription || ''}
-              onChange={e => updateField('jobProfileDescription', e.target.value)}
-              rows={3}
-              maxLength={500}
-              className={classNames({ 'p-invalid': errors.jobProfileDescription })}
-              placeholder="Minimum 10 characters, maximum 500 characters"
-            />
-            <small className="text-muted">{form.jobProfileDescription?.length ?? 0}/500 characters</small>
-            {errors.jobProfileDescription && <small className="p-error">{errors.jobProfileDescription}</small>}
-          </div>
-
-          <div className="field col-6">
-            <label>Job Role <span className="p-error">*</span></label>
-            <InputText
-              value={form.jobRole || ''}
-              onChange={e => updateField('jobRole', e.target.value)}
-              maxLength={100}
-              className={classNames({ 'p-invalid': errors.jobRole })}
-              placeholder="e.g., Backend Engineer"
-            />
-            <small className="text-muted">{form.jobRole?.length ?? 0}/100 characters</small>
-            {errors.jobRole && <small className="p-error">{errors.jobRole}</small>}
-          </div>
-
-          <div className="field col-6">
-            <label>Tech Specification <span className="p-error">*</span></label>
-            <InputText
-              value={form.techSpecification || ''}
-              onChange={e => updateField('techSpecification', e.target.value)}
-              className={classNames({ 'p-invalid': errors.techSpecification })}
-              placeholder="e.g., Java, React, Spring Boot"
-            />
-            {errors.techSpecification && <small className="p-error">{errors.techSpecification}</small>}
-          </div>
-
           <div className="field col-4">
             <label>Positions <span className="p-error">*</span></label>
             <InputNumber
@@ -633,115 +649,7 @@ const handleSubmit = async () => {
             )}
             {errors.location && <small className="p-error">{errors.location}</small>}
           </div>
-          <div className="field col-12">
-            <label className="font">
-              Job Description File (JD)
-            </label>
-            <div
-              className="jd-dropzone"
-              onDragOver={(e) => {
-                if (jdFile) return;
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onDrop={(e) => {
-                if (jdFile) return;
-                e.preventDefault();
-                e.stopPropagation();
-
-                const file = e.dataTransfer.files?.[0];
-                if (file) {
-                  setJdFile(file);
-                }
-              }}
-              style={{
-                border: "2px dashed #cbd5e1",
-                borderRadius: "8px",
-                padding: "1rem",
-                textAlign: "center",
-                background: "#f8fafc",
-                opacity: jdFile ? 0.95 : 1
-              }}
-            >
-
-
-            {/* CASE A: No file selected */}
-            {!jdFile && (
-              <>
-                <p style={{ marginBottom: "0.75rem", color: "#475569", fontSize: "0.875rem" }}>
-                  Drag & Drop JD Here or Browse Files
-                </p>
-
-                <FileUpload
-                  mode="basic"
-                  name="JD"
-                  accept=".pdf,.doc,.docx"
-                  maxFileSize={5 * 1024 * 1024}
-                  auto={false}
-                  customUpload
-                  uploadHandler={() => {}}
-                  chooseLabel="Browse Files"
-                  chooseOptions={{
-                    label: "Browse Files",
-                    className: "p-button-secondary p-button-sm",
-                  }}
-                  onSelect={(e) => {
-                    const selectedFile = e.files?.[0];
-                    if (selectedFile) {
-                      setJdFile(selectedFile);
-                    }
-                  }}
-                />
-              </>
-            )}
-
-            {/* CASE B: File selected */}
-            {jdFile && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "1rem",
-                  background: "#f0fdf4",
-                  border: "1px solid #86efac",
-                  borderRadius: "6px",
-                  padding: "0.75rem 1rem"
-                }}
-              >
-                <div style={{ textAlign: "left" }}>
-                  <strong style={{ color: "#0f172a" }}>{jdFile.name}</strong>
-                  <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
-                    {(jdFile.size / 1024 / 1024).toFixed(2)} MB
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setJdFile(null)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background: "#fee2e2",       // light red
-                    border: "1px solid #fecaca",
-                    borderRadius: "999px",
-                    width: "36px",
-                    height: "36px",
-                    cursor: "pointer"
-                  }}
-                  title="Remove file"
-                >
-                  <FaTimes style={{ color: "#b91c1c", fontSize: "16px" }} />
-                </button>
-              </div>
-            )}
-            </div>
-
-            <small className="text-muted block mt-1">
-              Supported formats: PDF, DOC, DOCX (max 5MB)
-            </small>
-          </div>
+          
 
           {jobProfile && (
             <div className="field col-12">
@@ -765,4 +673,4 @@ const handleSubmit = async () => {
   );
 };
 
-export default JobProfileAddEdit;
+export default JobProfileRequirementsAddEdit;
