@@ -491,52 +491,16 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfileRequirements | nu
       >
         {viewJobProfile && (
           <>
-            {/* 🔹 Core Information */}
-            {/* <DetailsSection title="Job Overview">
+            {/* 🔹 Job Profile Overview */}
+            <DetailsSection title="Job Profile Overview">
               <DetailsGrid
-                items={buildJobProfileDetails(viewJobProfile).filter(
-                  i => !["techSpecification"].includes(i.field)
-                )}
+                items={buildJobProfileDetails(viewJobProfile)}
               />
-            </DetailsSection> */}
-
-            {/* 🔹 Tech Stack
-            {viewJobProfile.techSpecification && (
-              <DetailsSection title="Tech Stack">
-                <div
-                  style={{
-                    fontSize: "var(--value-size)",
-                    lineHeight: 1.6,
-                    color: "#111827",
-                    whiteSpace: "pre-line",
-                  }}
-                >
-                  {viewJobProfile.techSpecification}
-                </div>
-              </DetailsSection>
-            )} */}
-
-            {/* 🔹 Job Description (500+ chars safe) */}
-            {/* {viewJobProfile.jobProfileDescription && (
-              <DetailsSection title="Job Description">
-                <div
-                  style={{
-                    fontSize: "var(--value-size)",
-                    lineHeight: 1.65,
-                    color: "#111827",
-                    whiteSpace: "pre-line",
-                    maxHeight: "260px",
-                    overflowY: "auto",
-                    paddingRight: "6px",
-                  }}
-                >
-                  {viewJobProfile.jobProfileDescription}
-                </div>
-              </DetailsSection>
-            )} */}
+            </DetailsSection>
           </>
         )}
       </PremiumDetailsDialog>
+
     </div>
   );
 };
