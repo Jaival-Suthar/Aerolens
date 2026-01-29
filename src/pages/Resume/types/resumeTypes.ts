@@ -10,7 +10,7 @@ export interface Candidate {
   recruiterContact: string | null;   // Read-only from backend
   recruiterEmail: string | null;     // Read-only from backend
 
-  jobRole: string;
+  jobProfileRequirementId: number; // Read-only from backend
 
   expectedLocation: {
     city: string;
@@ -47,7 +47,7 @@ export interface CandidateUpdatePayload {
   recruiterId?: number | null;
   recruiterName?: string | null;
 
-  jobRole?: string;
+  jobProfileRequirementId?: number;
 
   expectedLocation?: {
     city: string;
@@ -96,7 +96,7 @@ export interface AddEditCandidate {
   recruiterId: number | null;
   recruiterName: string | null;
 
-  jobRole: string;
+  jobProfileRequirementId: number;
 
   expectedLocation?: {
     city: string;
@@ -126,7 +126,7 @@ export interface AddEditCandidateApiPayload {
   recruiterId: number | null;
   recruiterName: string | null;
 
-  jobRole: string;
+  jobProfileRequirementId: number;
 
   expectedLocation?: {
     city: string;
@@ -174,7 +174,23 @@ export interface LocationItem {
   state: string;
 }
 
+export interface JobProfileRequirementItem {
+  jobProfileRequirementId: number;
+
+  jobRole: string;
+  clientName: string;
+  departmentName: string;
+
+  city: string;
+  state: string;
+  country: string;
+
+  experienceText: string | null;
+}
+
+
 export interface CandidateCreateData {
   recruiters: RecruiterItem[];
   locations: LocationItem[];
+  jobProfiles: JobProfileRequirementItem[];
 }
