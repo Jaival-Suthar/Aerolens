@@ -83,21 +83,27 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
 
         // Fill form
         setFormData({
-          position: profile.position,
-          experience: profile.experience,
-
+          position: profile.position || "",
+          experience: profile.experience || "",
           overview: profile.overview || "",
 
-          responsibilities: profile.responsibilities || [],
+          responsibilities: Array.isArray(profile.responsibilities)
+            ? profile.responsibilities
+            : [],
 
-          requiredSkills: profile.requiredSkills || [],
+          requiredSkills: Array.isArray(profile.requiredSkills)
+            ? profile.requiredSkills
+            : [],
 
-          niceToHave: profile.niceToHave || [],
+          niceToHave: Array.isArray(profile.niceToHave)
+            ? profile.niceToHave
+            : [],
 
           techSpecifications: profile.techSpecifications.map(t => t.id),
 
           jdFile: null
         });
+
 
       } catch (err) {
         console.error("Failed to load job profile:", err);
@@ -171,50 +177,43 @@ const JobProfileAddEdit: React.FC<JobProfileAddEditProps> = ({
   }
 };
 
-  const validateForm = useCallback(() => {
+ const validateForm = useCallback(() => {
   const newErrors: Record<string, string> = {};
 
   // Position
-  if (!formData.position.trim()) {
+  if (!(formData.position || "").trim()) {
     newErrors.position = "Position is required.";
   }
 
   // Experience
-  if (!formData.experience.trim()) {
+  if (!(formData.experience || "").trim()) {
     newErrors.experience = "Experience is required.";
   }
 
-  // Overview (UI state)
-  if (!formData.overview.trim())
-  {
+  // Overview
+  if (!(formData.overview || "").trim()) {
     newErrors.overview = "Job overview is required.";
   }
 
-  // Tech Specs (UI state)
-  if (!formData.techSpecifications.length) {
+  // Tech Specs
+  if (!Array.isArray(formData.techSpecifications) || !formData.techSpecifications.length) {
     newErrors.techSpecifications = "At least one technology is required.";
   }
 
-  // Required Skills (UI state)
-  if (!formData.requiredSkills.length)
- {
+  // Required Skills
+  if (!Array.isArray(formData.requiredSkills) || !formData.requiredSkills.length) {
     newErrors.requiredSkills = "Required skills are required.";
   }
 
-  // JD (only in Add)
-  if (!isEditMode) {
-    if (!formData.jdFile) {
-      newErrors.jdFile = "Job description is required.";
-    }
+  // JD (only in Add mode)
+  if (!isEditMode && !formData.jdFile) {
+    newErrors.jdFile = "Job description is required.";
   }
 
   setErrors(newErrors);
 
   return Object.keys(newErrors).length === 0;
-}, [
-  formData,
-  isEditMode
-]);
+}, [formData, isEditMode]);
 
 
   const handleSave = useCallback(async () => {

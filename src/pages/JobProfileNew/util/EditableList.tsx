@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { InputTextarea } from "primereact/inputtextarea";
 
 interface EditableListProps {
@@ -16,19 +16,40 @@ const EditableList: React.FC<EditableListProps> = ({
   label = "Items",
   height = 200
 }) => {
+  const [text, setText] = useState("");
+
+  // Sync external items → textarea
+  useEffect(() => {
+    setText(items.join("\n"));
+  }, [items]);
+
   const cleanBullet = (text: string) =>
     text
-      // remove hidden/private unicode chars
       .replace(/[\uE000-\uF8FF]/g, "")
-      // remove common bullet symbols and various punctuation
-      .replace(/^[\s•▪–—\-*➤►●◦∙■□▪▫○◘◙‣⁃⦾⦿⁌⁍∘∙⋅⚫⚪🔸🔹▸▹►▻⮞⮟↦⇒→➔➜➙➛➝➞➟➠➡➢➣➤➥➦➧➨➩➪➫➬➭➮➯➱➲➳➴➵➶➷➸➹➺➻➼➽➾]+/g, "")
-      // remove numbered list patterns (1. 2) etc.)
+      .replace(
+        /^[\s•▪–—\-*➤►●◦∙■□▪▫○◘◙‣⁃⦾⦿⁌⁍∘∙⋅⚫⚪🔸🔹▸▹►▻⮞⮟↦⇒→➔➜➙➛➝➞➟➠➡➢➣➤➥➦➧➨➩➪➫➬➭➮➯➱➲➳➴➵➶➷➸➹➺➻➼➽➾]+/g,
+        ""
+      )
       .replace(/^\d+[\.\)]\s*/g, "")
       .trim();
 
+  // User typing (NO cleaning here)
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setText(e.target.value);
+  };
+
+  // Clean when leaving field
+  const handleBlur = () => {
+    const cleaned = text
+      .split(/\r?\n/)
+      .map((l) => cleanBullet(l))
+      .filter((l) => l.length > 0);
+
+    onChange(cleaned);
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-      {/* Label */}
       <label
         style={{
           fontWeight: 600,
@@ -40,17 +61,10 @@ const EditableList: React.FC<EditableListProps> = ({
         {label}
       </label>
 
-      {/* Editable Text Area */}
       <InputTextarea
-        value={items.join("\n")}
-        onChange={(e) =>
-          onChange(
-            e.target.value
-              .split(/\r?\n/)
-              .map((l) => cleanBullet(l))
-              .filter(Boolean)
-          )
-        }
+        value={text}
+        onChange={handleChange}
+        onBlur={handleBlur}
         placeholder={placeholder}
         style={{
           width: "100%",
@@ -62,12 +76,9 @@ const EditableList: React.FC<EditableListProps> = ({
           lineHeight: "1.6",
           resize: "vertical",
           fontFamily: "inherit",
-          backgroundColor: "#ffffff",
-          transition: "border-color 0.2s ease"
+          backgroundColor: "#ffffff"
         }}
         autoResize={false}
-        onFocus={(e) => (e.target.style.borderColor = "#86b7fe")}
-        onBlur={(e) => (e.target.style.borderColor = "#dee2e6")}
       />
     </div>
   );
