@@ -4,28 +4,30 @@ import { Column } from 'primereact/column';
 import { Toast } from 'primereact/toast';
 import { Tag } from 'primereact/tag';
 
-import JobProfileAddEdit from '../components/jobProfileAddEdit';
-import JobProfileDelete from '../components/jobProfileDelete';
+import JobProfileRequirementsAddEdit from '../components/jobProfileRequirementsAddEdit';
+import JobProfileRequirementsDelete from '../components/jobProfileRequirementsDelete';
 import AddButton from '../../../shared/AddButton';
 import EditButton from '../../../shared/EditButton';
 import DeleteButton from '../../../shared/DeleteButton';
 import ExportExcelButton from '../../../shared/ExportExcelButton';
 import { Button } from 'primereact/button';
 import { useSearchParams } from "react-router-dom";
-import { 
-  getJobProfiles, 
-  createJobProfile, 
-  updateJobProfile,
-  deleteJobProfile,
-  getJobProfileById,
-  fetchJobProfileLookupData
-} from '../services/jobProfileService';
-import type { 
-  JobProfile, 
-  ClientOption, 
-  JobProfilePayload,
+import {
+  getJobProfileRequirements,
+  getJobProfileRequirementsById,
+  createJobProfileRequirements,
+  updateJobProfileRequirements,
+  deleteJobProfileRequirements,
+  fetchJobProfileRequirementsLookupData
+} from '../services/jobProfileRequirementsService';
+
+import type {
+  JobProfileRequirements,
+  JobProfileRequirementsPayload,
+  ClientOption,
   Location
-} from '../types/jobProfileTypes';
+} from '../types/jobProfileRequirementsTypes';
+
 import { useAuth } from '../../../shared/auth/AuthContext'; 
 import { FilterMatchMode } from 'primereact/api';
 import type { DataTableFilterMeta } from 'primereact/datatable';
@@ -42,8 +44,8 @@ import SearchButton from '../../../shared/SearchButton';
 const ALL_JOBPROFILE_COLUMNS = [
   { field: "clientName", header: "Client", sortable: true, filter: true },
   { field: "departmentName", header: "Department", sortable: true, filter: true },
-  { field: "jobRole", header: "Role", sortable: true, filter: true },
-  { field: "techSpecification", header: "Tech Stack", filter: true },
+  { field: "jobRole", header: "Job Role", sortable: true, filter: true },
+  // { field: "techSpecification", header: "Tech Stack", filter: true },
   { field: "positions", header: "Positions", sortable: true, filter: true },
   { field: "workArrangement", header: "Work Arrangement", sortable: true, filter: true },
   { field: "location", header: "Location", sortable: true, filter: true },
@@ -61,15 +63,15 @@ const DEFAULT_JOBPROFILE_COLUMNS = [
   "status"
 ];
 
-const JobProfileMain: React.FC = () => {
+const JobProfileRequirementsTable: React.FC = () => {
   const toast = useRef<Toast>(null);
   const dt = useRef<DataTable<any>>(null);
   const { accessToken } = useAuth(); // Get access token from auth context
   
-  const [jobProfiles, setJobProfiles] = useState<JobProfile[]>([]);
+  const [jobProfiles, setJobProfiles] = useState<JobProfileRequirements[]>([]);
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedJobProfile, setSelectedJobProfile] = useState<JobProfile | null>(null);
+  const [selectedJobProfile, setSelectedJobProfile] = useState<JobProfileRequirements | null>(null);
   const [addEditVisible, setAddEditVisible] = useState(false);
   const [deleteVisible, setDeleteVisible] = useState(false);
   // ----- Pagination with URL Sync -----
@@ -84,8 +86,8 @@ const JobProfileMain: React.FC = () => {
   clientName: { value: null, matchMode: FilterMatchMode.CONTAINS },
   departmentName: { value: null, matchMode: FilterMatchMode.CONTAINS },
   jobRole: { value: null, matchMode: FilterMatchMode.CONTAINS },
-  jobProfileDescription: { value: null, matchMode: FilterMatchMode.CONTAINS },
-  techSpecification: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  // jobProfileDescription: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  // techSpecification: { value: null, matchMode: FilterMatchMode.CONTAINS },
   positions: { value: null, matchMode: FilterMatchMode.EQUALS },
   workArrangement: { value: null, matchMode: FilterMatchMode.CONTAINS },
   "location.city": { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -100,14 +102,14 @@ const [visibleColumns, setVisibleColumns] = useState(
   )
 );
 const [statusOptions, setStatusOptions] = useState<string[]>([]);
-const [viewJobProfile, setViewJobProfile] = useState<JobProfile | null>(null);
+const [viewJobProfile, setViewJobProfile] = useState<JobProfileRequirements | null>(null);
   useEffect(() => {
     loadData();
   }, []);
   useEffect(() => {
   const loadLookupData = async () => {
     try {
-      const { profileStatuses } = await fetchJobProfileLookupData(accessToken);
+      const { profileStatuses } = await fetchJobProfileRequirementsLookupData(accessToken);
       setStatusOptions(profileStatuses);
     } catch (error) {
       console.error('Failed to load status options:', error);
@@ -141,14 +143,14 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfile | null>(null);
   const loadData = async () => {
   setLoading(true);
   try {
-    const { jobProfiles: jobProfilesResponse, clients: clientsData, locations: locationsData } = await getJobProfiles(accessToken);
+    const { JobProfileRequirements: jobProfilesResponse, clients: clientsData, locations: locationsData } = await getJobProfileRequirements(accessToken);
     
     if (!jobProfilesResponse.success) {
       throw new Error(jobProfilesResponse.message || 'Failed to load job profiles');
     }
     
     setJobProfiles(
-  jobProfilesResponse.data.map((jp: JobProfile) => ({
+  jobProfilesResponse.data.map((jp: JobProfileRequirements) => ({
     ...jp,
 
     locationString: jp.location
@@ -188,10 +190,14 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfile | null>(null);
     setAddEditVisible(true);
   };
 
-  const handleEdit = async (jobProfile: JobProfile) => {
+  const handleEdit = async (jobProfile: JobProfileRequirements) => {
     setLoading(true);
     try {
-      const response = await getJobProfileById(accessToken, jobProfile.jobProfileId);
+      const response = await getJobProfileRequirementsById(
+        accessToken,
+        jobProfile.jobProfileRequirementId
+      );
+
       
       if (!response.success) {
         throw new Error(response.message || 'Failed to fetch job profile');
@@ -211,17 +217,22 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfile | null>(null);
     }
   };
 
-  const handleDelete = (jobProfile: JobProfile) => {
+  const handleDelete = (jobProfile: JobProfileRequirements) => {
     setSelectedJobProfile(jobProfile);
     setDeleteVisible(true);
   };
 
-  const handleSave = async (jobProfileData: JobProfilePayload) => {
+  const handleSave = async (jobProfileData: JobProfileRequirementsPayload) => {
     try {
       // Simplified: single flow with ternary
-      const response = selectedJobProfile?.jobProfileId
-        ? await updateJobProfile(accessToken, selectedJobProfile.jobProfileId, jobProfileData)
-        : await createJobProfile(accessToken, jobProfileData);
+      const response = selectedJobProfile?.jobProfileRequirementId
+      ? await updateJobProfileRequirements(
+          accessToken,
+          selectedJobProfile.jobProfileRequirementId,
+          jobProfileData
+        )
+      : await createJobProfileRequirements(accessToken, jobProfileData);
+
 
       if (!response.success) {
         throw new Error(response.message || 'Failed to save job profile');
@@ -246,7 +257,11 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfile | null>(null);
     if (!selectedJobProfile) return;
 
     try {
-      const response = await deleteJobProfile(accessToken, selectedJobProfile.jobProfileId);
+      const response = await deleteJobProfileRequirements(
+        accessToken,
+        selectedJobProfile.jobProfileRequirementId
+      );
+
       
       if (!response.success) {
         throw new Error(response.message || 'Failed to delete job profile');
@@ -297,7 +312,7 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfile | null>(null);
     'Cancelled': 'danger'
   };
 
-  const statusBodyTemplate = (rowData: JobProfile) => (
+  const statusBodyTemplate = (rowData: JobProfileRequirements) => (
     <Tag 
       value={rowData.status} 
       severity={STATUS_SEVERITY_MAP[rowData.status] || 'info'} 
@@ -305,7 +320,7 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfile | null>(null);
   );
 
 
-  const locationBodyTemplate = (rowData: JobProfile) => {
+  const locationBodyTemplate = (rowData: JobProfileRequirements) => {
   if (!rowData.location) return '-';
   return `${rowData.location.city}, ${rowData.location.country}`;
   };
@@ -315,127 +330,17 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfile | null>(null);
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   };
 
-  const workArrangementBodyTemplate = (rowData: JobProfile) => {
+  const workArrangementBodyTemplate = (rowData: JobProfileRequirements) => {
     return rowData.workArrangement ? capitalizeFirstLetter(rowData.workArrangement) : '-';
   };
 
-  const downloadJD = async (jobProfileId: number) => {
-  try {
-    const response = await fetch(
-      `${import.meta.env.VITE_BASE_URL}/jobProfile/${jobProfileId}/get-JD`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    );
-
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.message);
-    }
-
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-  } catch (err: any) {
-    toast.current?.show({
-      severity: 'error',
-      summary: 'Error',
-      detail: err.message, // ✅ backend message only
-    });
-  }
-};
-
-
-const previewJD = async (jobProfileId: number) => {
-  try {
-    if (!accessToken) throw new Error('Authentication token required');
-
-    const previewUrl = `${import.meta.env.VITE_BASE_URL}/jobProfile/${jobProfileId}/get-JD/preview`;
-    const response = await fetch(previewUrl, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-  
-
-    const contentType = response.headers.get('content-type');
-
-    // ❌ Backend returned JSON error
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.message || 'JD preview failed');
-    }
-
-    // ❌ Not a PDF (safety check)
-    if (!contentType?.includes('application/pdf')) {
-      throw new Error('Preview is only supported for PDF files. Please download the file instead.');
-    }
-
-    // ✅ PDF preview
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
-
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  } catch (error: any) {
-    console.error('JD preview failed:', error);
-    toast.current?.show({
-      severity: 'error',
-      summary: 'Preview Error',
-      detail: error.message,
-    });
-  }
-};
-
-
-
-
-const jdBodyTemplate = (rowData: any) => {
-  if (!rowData.jdFileName) {
-    return <span className="text-muted">—</span>;
-  }
-
-  const isPdf = rowData.jdOriginalName?.toLowerCase().endsWith('.pdf');
-
-  return (
-    <div className="flex gap-2 align-items-center">
-      <Button
-        className="p-button-text p-button-sm"
-        tooltip="Download JD"
-        onClick={() => downloadJD(rowData.jobProfileId)}
-      >
-        <FaDownload />
-      </Button>
-
-      {isPdf && (
-        <Button
-          type="button"
-          className="p-button-text p-button-sm"
-          onClick={() => {
-            previewJD(rowData.jobProfileId);
-          }}
-        >
-          <FaEye />
-        </Button>
-      )}
-    </div>
-  );
-};
 
   const getNestedValue = (obj: any, path: string) =>
   path.split(".").reduce((acc, key) => acc?.[key], obj);
 
   const getJobProfileDisplayValue = (
     col: any,
-    jp: JobProfile
+    jp: JobProfileRequirements
   ) => {
     switch (col.field) {
       case "location":
@@ -456,7 +361,7 @@ const jdBodyTemplate = (rowData: any) => {
     }
   };
 
-  const buildJobProfileDetails = (jp: JobProfile) => {
+  const buildJobProfileDetails = (jp: JobProfileRequirements) => {
   return ALL_JOBPROFILE_COLUMNS.map(col => ({
     label: col.header,
     value: getJobProfileDisplayValue(col, jp),
@@ -490,7 +395,7 @@ const jdBodyTemplate = (rowData: any) => {
             }
           />
           <ExportExcelButton dtRef={dt} />
-          <AddButton onClick={handleAddNew} />
+          {/* <AddButton onClick={handleAddNew} /> */}
           <EditButton 
             onClick={() => selectedJobProfile && handleEdit(selectedJobProfile)} 
             disabled={!selectedJobProfile} 
@@ -515,10 +420,10 @@ const jdBodyTemplate = (rowData: any) => {
         selection={selectedJobProfile}
         scrollable
         scrollHeight="flex"
-        onSelectionChange={(e) => setSelectedJobProfile(e.value as JobProfile | null)}
+        onSelectionChange={(e) => setSelectedJobProfile(e.value as JobProfileRequirements | null)}
         filterDisplay="menu"
         onFilter={(e) => setFilters(e.filters)}
-        dataKey="jobProfileId"
+        dataKey="jobProfileRequirementId"
         responsiveLayout="scroll"
         emptyMessage="No job profiles found"
         paginator
@@ -557,27 +462,21 @@ const jdBodyTemplate = (rowData: any) => {
           );
         })}
 
-        {/* JD column ALWAYS visible */}
-        <Column
-          header="JD"
-          body={jdBodyTemplate}
-          style={{ width: '8rem', textAlign: 'center' }}
-        />
-
       </DataTable>
       </div>
-      <JobProfileAddEdit
+      <JobProfileRequirementsAddEdit
         visible={addEditVisible}
         onHide={closeDialog}
         onSave={handleSave}
         jobProfile={selectedJobProfile}
+        jobProfileId={selectedJobProfile?.jobProfileId ?? 0}
         clients={clients}
         locations={locations}
         loading={loading}
         statusOptions={statusOptions}
       />
 
-      <JobProfileDelete
+      <JobProfileRequirementsDelete
         visible={deleteVisible}
         onHide={closeDeleteDialog}
         onDelete={handleDeleteConfirm}
@@ -592,54 +491,18 @@ const jdBodyTemplate = (rowData: any) => {
       >
         {viewJobProfile && (
           <>
-            {/* 🔹 Core Information */}
-            <DetailsSection title="Job Overview">
+            {/* 🔹 Job Profile Overview */}
+            <DetailsSection title="Job Profile Overview">
               <DetailsGrid
-                items={buildJobProfileDetails(viewJobProfile).filter(
-                  i => !["techSpecification"].includes(i.field)
-                )}
+                items={buildJobProfileDetails(viewJobProfile)}
               />
             </DetailsSection>
-
-            {/* 🔹 Tech Stack */}
-            {viewJobProfile.techSpecification && (
-              <DetailsSection title="Tech Stack">
-                <div
-                  style={{
-                    fontSize: "var(--value-size)",
-                    lineHeight: 1.6,
-                    color: "#111827",
-                    whiteSpace: "pre-line",
-                  }}
-                >
-                  {viewJobProfile.techSpecification}
-                </div>
-              </DetailsSection>
-            )}
-
-            {/* 🔹 Job Description (500+ chars safe) */}
-            {viewJobProfile.jobProfileDescription && (
-              <DetailsSection title="Job Description">
-                <div
-                  style={{
-                    fontSize: "var(--value-size)",
-                    lineHeight: 1.65,
-                    color: "#111827",
-                    whiteSpace: "pre-line",
-                    maxHeight: "260px",
-                    overflowY: "auto",
-                    paddingRight: "6px",
-                  }}
-                >
-                  {viewJobProfile.jobProfileDescription}
-                </div>
-              </DetailsSection>
-            )}
           </>
         )}
       </PremiumDetailsDialog>
+
     </div>
   );
 };
 
-export default JobProfileMain;
+export default JobProfileRequirementsTable;

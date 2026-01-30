@@ -28,6 +28,7 @@ interface DropdownFieldProps {
   disabled?: boolean;
   colSize?: string;
   required?: boolean;
+  itemTemplate?: (option: any) => React.ReactNode;
 }
 
 // ---------- HELPERS ----------
@@ -41,7 +42,7 @@ const INITIAL_FORM: AddEditCandidate = {
   email: undefined,
   recruiterId: null,
   recruiterName: null,
-  jobRole: "",
+  jobProfileRequirementId: null as any,
   expectedLocation: { city: '', country: '' },
   currentLocation: null,
   currentCTC: undefined,
@@ -69,8 +70,8 @@ const validateField = (field: keyof AddEditCandidate, value: any) => {
       if (!value) return ""; // OPTIONAL
       if (!emailRegex.test(value)) return "Enter a valid email.";
       return "";
-    case "jobRole":
-      return value.trim() ? "" : "Job role is required.";
+    case "jobProfileRequirementId":
+      return value ? "" : "Job profile is required.";
     case "expectedLocation":
       if (!value || !value.country) return "Country is required.";
       if (!value.city) return "City is required.";
@@ -131,6 +132,14 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
       value: r.recruiterId 
     }));
   }, [createData?.recruiters]);
+  const jobProfileOptions = useMemo(() => {
+  if (!createData?.jobProfiles) return [];
+
+  return createData.jobProfiles.map(jp => ({
+    label: `${jp.jobRole} | ${jp.clientName} | ${jp.departmentName} | ${jp.city}, ${jp.country} | ${jp.experienceText ?? "-"}`,
+    value: jp.jobProfileRequirementId,
+  }));
+}, [createData?.jobProfiles]);
 
   // Group locations by country
   const locationsByCountry = useMemo(() => {
@@ -190,7 +199,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
         email: freshCandidate.email ?? undefined,
         recruiterId: freshCandidate.recruiterId,
         recruiterName: freshCandidate.recruiterName,
-        jobRole: freshCandidate.jobRole,
+        jobProfileRequirementId: freshCandidate.jobProfileRequirementId,
         expectedLocation: freshCandidate.expectedLocation,
         currentLocation: freshCandidate.currentLocation ?? null,
         currentCTC: freshCandidate.currentCTC ?? undefined,
@@ -310,7 +319,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     recruiterId: formData.recruiterId,
     recruiterName: formData.recruiterName,
 
-    jobRole: formData.jobRole,
+    jobProfileRequirementId: formData.jobProfileRequirementId,
 
     expectedLocation: formData.expectedLocation,
     currentLocation: formData.currentLocation ?? null,
@@ -385,6 +394,42 @@ else {
       />
     </div>
   );
+  const jobProfileOptionTemplate = (option: any) => {
+  if (!option) return null;
+
+  const parts = option.label.split(" | ");
+
+  const role = parts[0] || "";
+  const client = parts[1] || "";
+  const department = parts[2] || "";
+  const location = parts[3] || "";
+  const experience = parts[4] || "";
+
+  return (
+    <div className="flex flex-column gap-1 py-1">
+      {/* Primary Line: Role + Client */}
+      <div className="flex align-items-center gap-2">
+        <span className="font-semibold text-900">
+          {role}
+        </span>
+
+        {client && (
+          <span className="text-sm text-600">
+            @ {client}
+          </span>
+        )}
+      </div>
+
+      {/* Secondary Line: Meta Info */}
+      <div className="flex flex-wrap gap-3 text-xs text-500">
+        {department && <span>Dept: {department}</span>}
+        {location && <span>Loc: {location}</span>}
+        {experience && <span>Exp: {experience}</span>}
+      </div>
+    </div>
+  );
+};
+
 
   return (
     <>
@@ -433,15 +478,22 @@ else {
             required={false}
           />
 
-          <InputField
-            id="jobRole"
-            label="Job Role"
-            value={formData.jobRole}
-            onChange={(e) => handleChange("jobRole", e.target.value)}
-            onBlur={() => handleBlur("jobRole")}
-            error={shouldShowError("jobRole")}
-            colSize="col-12 md:col-4"
+          <DropdownField
+            id="jobProfileRequirementId"
+            label="Job Profile"
+            value={formData.jobProfileRequirementId}
+            options={jobProfileOptions}
+            onChange={(e: { value: number }) =>
+              handleChange("jobProfileRequirementId", e.value)
+            }
+            onBlur={() => handleBlur("jobProfileRequirementId")}
+            error={shouldShowError("jobProfileRequirementId")}
+            disabled={loadingOptions}
+            placeholder="Select Job Profile"
+            colSize="col-12 md:col-6"
+            itemTemplate={jobProfileOptionTemplate}   // ✅ ADD
           />
+
 
           <InputNumberField
             id="experienceYears"
@@ -835,7 +887,8 @@ const DropdownField = ({
   error,
   disabled = false,
   required = true,
-  colSize = "col-12 md:col-6"
+  colSize = "col-12 md:col-6",
+  itemTemplate
 }: DropdownFieldProps) => (
   <div className={`field ${colSize}`}>
     <label htmlFor={id} className="font-bold">{label} {required && "*"}</label>
@@ -847,6 +900,7 @@ const DropdownField = ({
       onBlur={onBlur} 
       placeholder={placeholder}
       disabled={disabled}
+      itemTemplate={itemTemplate}
       className={error ? "p-invalid" : ""} 
     />
     {error && <small className="p-error">{error}</small>}

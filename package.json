@@ -14,6 +14,7 @@
   "dependencies": {
     "ky": "^1.10.0",
     "luxon": "^3.7.2",
+    "pdfjs-dist": "^5.4.530",
     "primeflex": "^4.0.0",
     "primereact": "^10.9.7",
     "react": "^18.3.1",

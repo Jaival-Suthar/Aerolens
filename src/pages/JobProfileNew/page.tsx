@@ -1,12 +1,12 @@
 import React from 'react';
-import JobProfileMain from './components/jobProfileTable';
+import  JobProfileTable from './components/jobProfileNewTable';
 
-const JobProfile: React.FC = () => {
+const JobProfileNew: React.FC = () => {
   return (
     <div className="p-2" style={{display: "flex", flexDirection: "column", flex: 1, overflow: "hidden"}}>
-      <JobProfileMain />
+      <JobProfileTable />
     </div>
   );
 };
 
-export default JobProfile;
+export default JobProfileNew;
