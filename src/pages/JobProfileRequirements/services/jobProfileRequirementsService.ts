@@ -15,7 +15,20 @@ const makeHeaders = (accessToken?: string) => {
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
   return headers;
 };
+const normalizeApiError = (data: any) => {
+  const error: any = new Error(data?.message || 'Request failed');
 
+  error.success = false;
+  error.error = data?.error;
+  error.details = data?.details;
+
+  if (data?.error === 'VALIDATION_ERROR') {
+    error.isValidationError = true;
+    error.validationErrors = data?.details?.validationErrors || [];
+  }
+
+  return error;
+};
 const makeMultipartHeaders = (accessToken?: string) => {
   const headers: HeadersInit = {};
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
@@ -159,12 +172,13 @@ export const getJobProfileRequirements = async (
     
     if (!JobProfileRequirementsResponse.ok) {
       const err = await JobProfileRequirementsResponse.json();
-      throw err;
+      throw normalizeApiError(err);
     }
+
     
     const JobProfileRequirementsData = await JobProfileRequirementsResponse.json();
     if (!JobProfileRequirementsData.success) {
-      throw JobProfileRequirementsData;
+      throw normalizeApiError(JobProfileRequirementsData);
     }
     const rawProfiles = Array.isArray(JobProfileRequirementsData.data) ? JobProfileRequirementsData.data : [];
 
@@ -201,10 +215,7 @@ export const getJobProfileRequirementsById = async (
     
     const data = await response.json();
     if (!response.ok || !data?.success) {
-      throw data || {
-        success: false,
-        message: 'Failed to fetch job profile'
-      };
+      throw normalizeApiError(data);
     }
 
     const mappedData = mapApiJobProfileRequirements(data.data);
@@ -240,7 +251,7 @@ export const createJobProfileRequirements = async (
     const data = await response.json().catch(() => null);
 
     if (!response.ok || !data?.success) {
-      throw data;
+      throw normalizeApiError(data);
     }
 
     return {
@@ -277,7 +288,7 @@ export const updateJobProfileRequirements = async (
     const result = await response.json();
 
     if (!response.ok || !result.success) {
-      throw result;
+      throw normalizeApiError(result);
     }
 
     return {
@@ -329,10 +340,7 @@ export const deleteJobProfileRequirements = async (
     
     const data = await response.json();
     if (!response.ok || !data?.success) {
-      throw data || {
-        success: false,
-        message: 'Failed to delete job profile'
-      };
+       throw normalizeApiError(data);
     }
 
     return {

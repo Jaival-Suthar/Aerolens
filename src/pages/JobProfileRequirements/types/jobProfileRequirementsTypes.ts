@@ -84,6 +84,13 @@ export interface ApiResponse<T> {
   success: boolean;
   message: string;
   data: T;
+  details?: {
+    validationErrors?: Array<{
+      field: string;
+      message: string;
+    }>;
+  };
+  error?: string;
 }
 
 export interface JobProfileRequirementsFormErrors {

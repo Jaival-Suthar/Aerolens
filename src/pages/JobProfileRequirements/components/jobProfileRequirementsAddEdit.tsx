@@ -129,7 +129,7 @@ useEffect(() => {
         toast.current?.show({
           severity: 'error',
           summary: 'Data Error',
-          detail: 'Cannot load job profile - department information is missing',
+          detail: 'Cannot load job profile requirement- department information is missing',
           life: 5000
         });
         onHide();
@@ -389,12 +389,28 @@ const mappedStatusOptions = useMemo(() =>
     toast.current?.show({ 
       severity: 'error', 
       summary: 'Validation Error', 
-      detail: 'Please completethe all required fields and correct the errors.',  
+      detail: 'Please complete all required fields and correct the errors.',  
     });
   }
 
   return isValid;
 };
+
+  // Map backend field names to form field names
+  const mapBackendFieldToFormField = (backendField: string): keyof JobProfileRequirementsFormErrors | null => {
+    const fieldMapping: Record<string, keyof JobProfileRequirementsFormErrors> = {
+      'clientId': 'clientId',
+      'departmentId': 'departmentId',
+      'positions': 'positions',
+      'estimatedCloseDate': 'estimatedCloseDate',
+      'workArrangement': 'workArrangement',
+      'location': 'location',
+      'status': 'status',
+      'jobProfileId': 'jobProfileId'
+    };
+    
+    return fieldMapping[backendField] || null;
+  };
 
   // Submit handler
 const handleSubmit = async () => {
@@ -453,12 +469,42 @@ const handleSubmit = async () => {
 
   setSubmitting(true);
   try {
+    // Pass the onSave function which will call the API
     await onSave(payload);
     onHide();
   } catch (err: any) {
-  console.error('Save failed', err);
-  throw err;
-} finally {
+    console.error('Save failed', err);
+    
+    // Check if error has validation errors from backend
+    if (err.validationErrors && Array.isArray(err.validationErrors)) {
+      const backendErrors: JobProfileRequirementsFormErrors = {};
+      
+      err.validationErrors.forEach((validationError: { field: string; message: string }) => {
+        const formField = mapBackendFieldToFormField(validationError.field);
+        if (formField) {
+          backendErrors[formField] = validationError.message;
+        }
+      });
+      
+      setErrors(backendErrors);
+      
+      // Show toast with backend validation errors
+      toast.current?.show({ 
+        severity: 'error', 
+        summary: 'Validation Error', 
+        detail: 'Please correct the highlighted fields.', 
+        life: 4000 
+      });
+    } else {
+      // For non-validation errors, show generic error toast
+      toast.current?.show({ 
+        severity: 'error', 
+        summary: 'Error', 
+        detail: err?.message || 'Failed to save job profile requirement', 
+        life: 4000 
+      });
+    }
+  } finally {
     setSubmitting(false);
   }
 };
@@ -471,7 +517,7 @@ const handleSubmit = async () => {
         severity="secondary"
       />
       <DialogButton
-        label={jobProfile ? 'Update Job Profile' : 'Add Job Profile'}
+        label={jobProfile ? 'Update Job Profile Requirement' : 'Add Job Profile Requirement'}
         severity="success"
         icon={<FaCheck style={{ fontSize: 16, marginRight: 8, marginLeft: 4 }}/>}
         onClick={handleSubmit}
@@ -487,7 +533,7 @@ const handleSubmit = async () => {
       <Toast ref={toast} /> {/* 👈 Render the Toast component */}
       <Dialog
         visible={visible}
-        header={jobProfile ? 'Edit Job Profile' : 'Add Job Profile'}
+        header={jobProfile ? 'Edit Job Profile Requirement' : 'Add Job Profile Requirement'}
         style={{ width: '50rem' }}
         modal
         onHide={onHide}
