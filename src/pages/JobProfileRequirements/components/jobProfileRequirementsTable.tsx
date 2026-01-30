@@ -235,7 +235,17 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfileRequirements | nu
 
 
       if (!response.success) {
-        throw new Error(response.message || 'Failed to save job profile');
+        // Check if there are validation errors to pass back to the form
+        if (response.details?.validationErrors && Array.isArray(response.details.validationErrors)) {
+          // Create an error object with validation details
+          const validationError: any = new Error(response.message || 'Validation failed');
+          validationError.validationErrors = response.details.validationErrors;
+          throw validationError;
+        }
+        
+        // For non-validation errors, show toast and throw
+        const errorMessage = response.message || 'Failed to save job profile';
+        throw new Error(errorMessage);
       }
 
       showSuccess(response.message);
@@ -244,6 +254,12 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfileRequirements | nu
       loadData();
       return response;
     } catch (error: any) {
+      // If it has validation errors, re-throw to let dialog handle it
+      if (error.validationErrors) {
+        throw error;
+      }
+      
+      // Otherwise show toast for general errors
       const message =
         error?.message ||
         error?.error ||
@@ -374,7 +390,7 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfileRequirements | nu
       <Toast ref={toast} />
       
       <div className="flex justify-content-between align-items-center mb-2">
-        <h2 style={{ color: "#07253f" }}>Job Profiles Requirements</h2>
+        <h2 style={{ color: "#07253f" }}>Job Profile Requirements</h2>
         <div className='flex gap-2 align-items-center'>
           <SearchButton
             value={globalFilterValue}
