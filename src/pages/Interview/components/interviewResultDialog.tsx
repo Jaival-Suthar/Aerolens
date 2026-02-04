@@ -285,6 +285,25 @@ const InterviewResultDialog: React.FC<InterviewResultDialogProps> = ({
         </div>
 
         <div className="field mb-3">
+          <label htmlFor="interviewerFeedback" className="font-semibold mb-2">
+            Interviewer Feedback
+            <span className="text-sm ml-2" style={{ color: "#6c757d" }}>
+              ({interviewerFeedback.length}/2000)
+            </span>
+          </label>
+          <InputTextarea
+            id="interviewerFeedback"
+            value={interviewerFeedback}
+            onChange={(e) => setInterviewerFeedback(e.target.value)}
+            rows={5}
+            maxLength={2000}
+            placeholder="Enter interviewer feedback (optional)"
+            disabled={loading}
+            className="w-full"
+          />
+        </div>
+        
+        <div className="field mb-3">
           <label htmlFor="meetingUrl" className="font-semibold mb-2">
             Interview Recording URL
             <span className="text-sm ml-2" style={{ color: "#6c757d" }}>
@@ -315,25 +334,6 @@ const InterviewResultDialog: React.FC<InterviewResultDialogProps> = ({
             rows={4}
             maxLength={1000}
             placeholder="Enter recruiter notes (optional)"
-            disabled={loading}
-            className="w-full"
-          />
-        </div>
-
-        <div className="field mb-3">
-          <label htmlFor="interviewerFeedback" className="font-semibold mb-2">
-            Interviewer Feedback
-            <span className="text-sm ml-2" style={{ color: "#6c757d" }}>
-              ({interviewerFeedback.length}/2000)
-            </span>
-          </label>
-          <InputTextarea
-            id="interviewerFeedback"
-            value={interviewerFeedback}
-            onChange={(e) => setInterviewerFeedback(e.target.value)}
-            rows={5}
-            maxLength={2000}
-            placeholder="Enter interviewer feedback (optional)"
             disabled={loading}
             className="w-full"
           />
