@@ -4,7 +4,7 @@ import { Column } from "primereact/column";
 import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
-import ExportExcelButton from "../../../shared/ExportExcelButton";
+// import ExportExcelButton from "../../../shared/ExportExcelButton";
 import SearchButton from "../../../shared/SearchButton";
 import SignupForm from "../../Signup/components/SignupForm";
 import { useSearchParams } from "react-router-dom";
@@ -326,7 +326,7 @@ const MembersTable: React.FC = () => {
               )
             }
           />
-          <ExportExcelButton dtRef={dt} />
+          {/* <ExportExcelButton dtRef={dt} /> */}
           <AddButton onClick={handleAddNew} />
           <EditButton onClick={handleEdit} disabled={!selectedMember} />
           <DeleteButton onClick={handleDelete} disabled={!selectedMember} />

@@ -9,7 +9,7 @@ import ResumeDelete from "./resumeDelete";
 import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
-import ExportExcelButton from "../../../shared/ExportExcelButton";
+// import ExportExcelButton from "../../../shared/ExportExcelButton";
 import { useSearchParams } from "react-router-dom";
 
 import { Candidate, CandidateCreateData } from "../types/resumeTypes";
@@ -506,7 +506,8 @@ const settingsItems = [
             onChange={setVisibleColumns}
             onReset={resetToDefaultColumns}
           />
-          <ExportExcelButton dtRef={dt} />
+
+          {/* <ExportExcelButton dtRef={dt} /> */}
           <AddButton onClick={handleAdd} />
           <EditButton onClick={handleEdit} disabled={!selectedResume} />
           <DeleteButton onClick={handleDelete} disabled={!selectedResume} />
