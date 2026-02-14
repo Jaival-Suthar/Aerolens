@@ -3,7 +3,7 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { FaDownload, FaEye, FaRoute } from "react-icons/fa";
-
+import BulkExcelUploadButton from "../../../shared/BulkExcepUploadButton";
 import ResumeAddEdit from "../components/resumeAddEdit";
 import ResumeDelete from "./resumeDelete";
 import AddButton from "../../../shared/AddButton";
@@ -506,7 +506,12 @@ const settingsItems = [
             onChange={setVisibleColumns}
             onReset={resetToDefaultColumns}
           />
-
+          {/* This is meant to upload csv file to allow multiple entries at once. */}
+          <BulkExcelUploadButton
+            onFileSelect={(file) => {
+              console.log("Selected file:", file);
+            }}
+          />
           {/* <ExportExcelButton dtRef={dt} /> */}
           <AddButton onClick={handleAdd} />
           <EditButton onClick={handleEdit} disabled={!selectedResume} />
