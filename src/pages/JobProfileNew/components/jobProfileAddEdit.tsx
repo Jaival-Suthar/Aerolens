@@ -342,7 +342,7 @@ if (formData.jdFile) {
         {/* File Upload */}
           <div className="field col-12">
             <label className="font-bold">
-              Upload Job Description (PDF / DOCX)
+              Upload Job Description (PDF)
               {!isEditMode && <span className="text-red-500"> *</span>}
             </label>
 
@@ -387,7 +387,7 @@ if (formData.jdFile) {
                   <FileUpload
                     mode="basic"
                     name="jdFile"
-                    accept=".pdf,.docx"
+                    accept=".pdf"
                     maxFileSize={5 * 1024 * 1024}
                     auto={false}
                     customUpload
@@ -463,7 +463,7 @@ if (formData.jdFile) {
             </div>
 
             <small className="text-muted block mt-1">
-              Supported formats: PDF, DOCX (max 5MB). Upload will auto-fill the form.
+              Supported formats: PDF (max 5MB). Upload will auto-fill the form.
             </small>
 
             {shouldShowError("jdFile") && (
