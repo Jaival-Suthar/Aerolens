@@ -12,6 +12,7 @@ import DeleteButton from '../../../shared/DeleteButton';
 import ExportExcelButton from '../../../shared/ExportExcelButton';
 import { Button } from 'primereact/button';
 import { useSearchParams } from "react-router-dom";
+import { Dropdown } from 'primereact/dropdown';
 import {
   getJobProfileRequirements,
   getJobProfileRequirementsById,
@@ -62,6 +63,23 @@ const DEFAULT_JOBPROFILE_COLUMNS = [
   "location",
   "status"
 ];
+/* -------------------- Column Persistence -------------------- */
+const STORAGE_KEY = "job-profile-requirements:visible-columns";
+
+const loadVisibleColumns = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+
+    const fields: string[] = JSON.parse(raw);
+
+    return ALL_JOBPROFILE_COLUMNS.filter(col =>
+      fields.includes(col.field)
+    );
+  } catch {
+    return null;
+  }
+};
 
 const JobProfileRequirementsTable: React.FC = () => {
   const toast = useRef<Toast>(null);
@@ -96,16 +114,27 @@ const JobProfileRequirementsTable: React.FC = () => {
   status: { value: null, matchMode: FilterMatchMode.CONTAINS }
 });
 
-const [visibleColumns, setVisibleColumns] = useState(
+const [visibleColumns, setVisibleColumns] = useState(() =>
+  loadVisibleColumns() ??
   ALL_JOBPROFILE_COLUMNS.filter(col =>
     DEFAULT_JOBPROFILE_COLUMNS.includes(col.field)
   )
 );
+
 const [statusOptions, setStatusOptions] = useState<string[]>([]);
 const [viewJobProfile, setViewJobProfile] = useState<JobProfileRequirements | null>(null);
   useEffect(() => {
     loadData();
   }, []);
+  useEffect(() => {
+  const fields = visibleColumns.map(c => c.field);
+
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(fields)
+  );
+}, [visibleColumns]);
+
   useEffect(() => {
   const loadLookupData = async () => {
     try {
@@ -385,6 +414,59 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfileRequirements | nu
   }));
 };
 
+  const uniqueValues = <T,>(arr: (T | null |undefined)[]) =>
+  Array.from(new Set(arr.filter(Boolean)));
+
+  const toOptions = (values: (string | null | undefined)[]) =>
+    uniqueValues(values).map(v => ({
+      label: String(v),
+      value: v
+    }));
+
+    const clientFilterTemplate = (options: any) => (
+      <Dropdown
+        value={options.value}
+        options={toOptions(jobProfiles.map(j => j.clientName))}
+        onChange={(e) => options.filterCallback(e.value)}
+        placeholder="Select Client"
+        showClear
+        style={{ minWidth: "12rem" }}
+      />
+    );
+
+    const departmentFilterTemplate = (options: any) => (
+      <Dropdown
+        value={options.value}
+        options={toOptions(jobProfiles.map(j => j.departmentName))}
+        onChange={(e) => options.filterCallback(e.value)}
+        placeholder="Select Department"
+        showClear
+        style={{ minWidth: "12rem" }}
+      />
+    );
+
+    const jobRoleFilterTemplate = (options: any) => (
+      <Dropdown
+        value={options.value}
+        options={toOptions(jobProfiles.map(j => j.jobRole))}
+        onChange={(e) => options.filterCallback(e.value)}
+        placeholder="Select Job Role"
+        showClear
+        style={{ minWidth: "12rem" }}
+      />
+    );
+
+    const statusFilterTemplate = (options: any) => (
+      <Dropdown
+        value={options.value}
+        options={toOptions(jobProfiles.map(j => j.status))}
+        onChange={(e) => options.filterCallback(e.value)}
+        placeholder="Select Status"
+        showClear
+        style={{ minWidth: "12rem" }}
+      />
+    );
+
   return (
     <div className="card" style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden"}}>
       <Toast ref={toast} />
@@ -464,6 +546,20 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfileRequirements | nu
           if (col.field === "workArrangement") body = workArrangementBodyTemplate;
           if (col.field === "status") body = statusBodyTemplate;
 
+          let filterElement;
+
+          if (col.field === "clientName")
+            filterElement = clientFilterTemplate;
+
+          if (col.field === "departmentName")
+            filterElement = departmentFilterTemplate;
+
+          if (col.field === "jobRole")
+            filterElement = jobRoleFilterTemplate;
+
+          if (col.field === "status")
+            filterElement = statusFilterTemplate;
+
           return (
             <Column
               key={col.field}
@@ -472,6 +568,7 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfileRequirements | nu
               body={body}
               sortable={col.sortable}
               filter={col.filter}
+              filterElement={filterElement}
               filterField={col.field === "location" ? "location.city" : col.field}
               showFilterMatchModes={false}
             />

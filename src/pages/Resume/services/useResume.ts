@@ -126,6 +126,13 @@ const buildCandidateFormData = (candidate: AddEditCandidate): FormData => {
   if (candidate.recruiterId !== null && candidate.recruiterId !== undefined) {
     fd.append("recruiterId", String(candidate.recruiterId));
   }
+  if (candidate.vendorId !== null && candidate.vendorId !== undefined) {
+    fd.append("vendorId", String(candidate.vendorId));
+  }
+
+  if (candidate.referredBy && candidate.referredBy.trim()) {
+    fd.append("referredBy", candidate.referredBy.trim());
+  }
    fd.append(
     "jobProfileRequirementId",
     String(candidate.jobProfileRequirementId)
