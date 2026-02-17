@@ -29,6 +29,7 @@ interface DropdownFieldProps {
   colSize?: string;
   required?: boolean;
   itemTemplate?: (option: any) => React.ReactNode;
+  showClear?: boolean;
 }
 
 // ---------- HELPERS ----------
@@ -516,6 +517,7 @@ else {
             label="Vendor"
             value={formData.vendorId}
             options={vendorOptions}
+            showClear
             onChange={(e: { value: number }) =>
               handleChange("vendorId", e.value)
             }
@@ -934,7 +936,8 @@ const DropdownField = ({
   disabled = false,
   required = true,
   colSize = "col-12 md:col-6",
-  itemTemplate
+  itemTemplate,
+  showClear = false
 }: DropdownFieldProps) => (
   <div className={`field ${colSize}`}>
     <label htmlFor={id} className="font-bold">{label} {required && "*"}</label>
@@ -947,6 +950,7 @@ const DropdownField = ({
       placeholder={placeholder}
       disabled={disabled}
       itemTemplate={itemTemplate}
+      showClear={showClear}
       className={error ? "p-invalid" : ""} 
     />
     {error && <small className="p-error">{error}</small>}
