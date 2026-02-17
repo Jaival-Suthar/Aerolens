@@ -27,6 +27,7 @@ import DetailsSection from "../../../shared/DetailsSection";
 import PremiumDetailsDialog from "../../../shared/PremiumDetailsDialog";
 import ColumnSettingsButton from "../../../shared/ColumnSettingsButton";
 import CandidateRoundsDialog from "../../Interview/components/CandidateRoundsDialog";
+import { Dropdown } from "primereact/dropdown";
 
 const ALL_COLUMNS = [
   {
@@ -109,7 +110,19 @@ const ALL_COLUMNS = [
     header: "Recruiter",
     sortable: true,
     filter: true
-  }
+  },
+  {
+  field: "vendorName",
+  header: "Vendor",
+  sortable: true,
+  filter: true
+},
+{
+  field: "referredBy",
+  header: "Referred By",
+  sortable: true,
+  filter: true
+}
 ];
 
 const DEFAULT_COLUMN_FIELDS = [
@@ -151,6 +164,8 @@ const ResumeTable: React.FC = () => {
   global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   candidateName: { value: null, matchMode: FilterMatchMode.CONTAINS },
   recruiterName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  vendorName: { value: null, matchMode: FilterMatchMode.EQUALS },
+  referredBy: { value: null, matchMode: FilterMatchMode.CONTAINS },
   recruiterContact: { value: null, matchMode: FilterMatchMode.CONTAINS },
   "expectedLocation.city": { value: null, matchMode: FilterMatchMode.CONTAINS },
   "currentLocation.city": { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -418,6 +433,29 @@ const candidateContactTemplate = (row: Candidate) => {
   );
 };
 
+const uniqueValues = (arr: (string | null | undefined)[]) =>
+  Array.from(new Set(arr.filter(Boolean)));
+
+const vendorFilterTemplate = (options: any) => {
+  const vendors = uniqueValues(resumes.map(r => r.vendorName));
+
+  const vendorOptions = vendors.map(v => ({
+    label: v,
+    value: v
+  }));
+
+  return (
+    <Dropdown
+      value={options.value}
+      options={vendorOptions}
+      onChange={(e) => options.filterCallback(e.value)}
+      placeholder="Select Vendor"
+      showClear
+      style={{ minWidth: "12rem" }}
+    />
+  );
+};
+
 const recruiterContactTemplate = (row: Candidate) => {
   const phone = row.recruiterContact;
   const email = row.recruiterEmail;
@@ -609,7 +647,9 @@ const settingsItems = [
           'expectedCTC',
           'noticePeriod',
           'experienceYears',
-          'notes'
+          'notes',
+          'vendorName',
+          'referredBy'
         ]}
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Candidates"
@@ -623,6 +663,9 @@ const settingsItems = [
           if (col.body === "formatLocation") bodyTemplate = formatLocation;
           if (col.body === "linkedInTemplate") bodyTemplate = linkedInTemplate;
           if (col.body === "formatCurrentLocation") bodyTemplate = formatCurrentLocation;
+          let filterElement;
+          if (col.field === "vendorName")
+            filterElement = vendorFilterTemplate;
 
           return (
             <Column
@@ -633,6 +676,7 @@ const settingsItems = [
               sortable={col.sortable}
               filter={col.filter}
               filterField={col.filterField || col.field}
+              filterElement={filterElement}
               showFilterMatchModes={false}
             />
           );

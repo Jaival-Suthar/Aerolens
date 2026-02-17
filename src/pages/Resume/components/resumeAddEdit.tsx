@@ -42,6 +42,8 @@ const INITIAL_FORM: AddEditCandidate = {
   email: undefined,
   recruiterId: null,
   recruiterName: null,
+  vendorId: null,
+  referredBy: undefined,
   jobProfileRequirementId: null as any,
   expectedLocation: { city: '', country: '' },
   currentLocation: null,
@@ -141,6 +143,16 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   }));
 }, [createData?.jobProfiles]);
 
+  const vendorOptions = useMemo(() => {
+  if (!createData?.vendors) return [];
+
+  return createData.vendors.map(v => ({
+    label: v.vendorName,
+    value: v.vendorId
+  }));
+}, [createData?.vendors]);
+
+
   // Group locations by country
   const locationsByCountry = useMemo(() => {
     if (!createData?.locations) return {};
@@ -199,6 +211,8 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
         email: freshCandidate.email ?? undefined,
         recruiterId: freshCandidate.recruiterId,
         recruiterName: freshCandidate.recruiterName,
+        vendorId: freshCandidate.vendorId ?? null,
+        referredBy: freshCandidate.referredBy ?? undefined,
         jobProfileRequirementId: freshCandidate.jobProfileRequirementId,
         expectedLocation: freshCandidate.expectedLocation,
         currentLocation: freshCandidate.currentLocation ?? null,
@@ -318,6 +332,9 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
 
     recruiterId: formData.recruiterId,
     recruiterName: formData.recruiterName,
+
+    vendorId: formData.vendorId ?? null,
+    referredBy: formData.referredBy?.trim() || null,
 
     jobProfileRequirementId: formData.jobProfileRequirementId,
 
@@ -490,8 +507,37 @@ else {
             error={shouldShowError("jobProfileRequirementId")}
             disabled={loadingOptions}
             placeholder="Select Job Profile"
-            colSize="col-12 md:col-6"
+            colSize="col-12 md:col-4"
             itemTemplate={jobProfileOptionTemplate}   // ✅ ADD
+          />
+
+          <DropdownField
+            id="vendorId"
+            label="Vendor"
+            value={formData.vendorId}
+            options={vendorOptions}
+            onChange={(e: { value: number }) =>
+              handleChange("vendorId", e.value)
+            }
+            onBlur={() => handleBlur("vendorId")}
+            error={shouldShowError("vendorId")}
+            disabled={loadingOptions}
+            placeholder="Select Vendor"
+            colSize="col-12 md:col-4"
+            required={false}
+          />
+
+          <InputField
+            id="referredBy"
+            label="Referred By"
+            value={formData.referredBy}
+            onChange={(e) =>
+              handleChange("referredBy", e.target.value)
+            }
+            onBlur={() => handleBlur("referredBy")}
+            error={shouldShowError("referredBy")}
+            colSize="col-12 md:col-4"
+            required={false}
           />
 
 
