@@ -21,6 +21,7 @@ import ViewButton from "../../../shared/ViewButton";
 import PremiumDetailsDialog from "../../../shared/PremiumDetailsDialog";
 import DetailsGrid from "../../../shared/DetailsGrid";
 import DetailsSection from "../../../shared/DetailsSection";
+import { Dropdown } from 'primereact/dropdown';
 
 const ALL_MEMBER_COLUMNS = [
   { field: "memberName", header: "Member", sortable: true, filter: false },
@@ -30,8 +31,8 @@ const ALL_MEMBER_COLUMNS = [
   { field: "isRecruiter", header: "Recruiter", sortable: true, filter: false },
   { field: "isInterviewer", header: "Interviewer", sortable: true, filter: false },
   { field: "location", header: "Location", sortable: true, filter: false },
-  { field: "vendorName", header: "Vendor", sortable: true, filter: false },
-  { field: "clientName", header: "Client", sortable: true, filter: false },
+  { field: "vendorName", header: "Vendor", sortable: true, filter: true },
+  { field: "clientName", header: "Client", sortable: true, filter: true },
   { field: "organisation", header: "Organisation", sortable: true, filter: false },
 ];
 const DEFAULT_MEMBER_COLUMNS = [
@@ -42,6 +43,24 @@ const DEFAULT_MEMBER_COLUMNS = [
   "isRecruiter",
   "isInterviewer",
 ];
+
+/* -------------------- Column Persistence -------------------- */
+const STORAGE_KEY = "member-management:visible-columns";
+
+const loadVisibleColumns = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+
+    const fields: string[] = JSON.parse(raw);
+
+    return ALL_MEMBER_COLUMNS.filter(col =>
+      fields.includes(col.field)
+    );
+  } catch {
+    return null;
+  }
+};
 
 const MembersTable: React.FC = () => {
   const toast = useRef<Toast>(null);
@@ -60,18 +79,25 @@ const MembersTable: React.FC = () => {
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [filters, setFilters] = useState<any>({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+
+    vendorName: { value: null, matchMode: FilterMatchMode.EQUALS },
+
+    clientName: { value: null, matchMode: FilterMatchMode.EQUALS },
   });
+
   const [searchParams, setSearchParams] = useSearchParams();
   const pageFromUrl = Number(searchParams.get("page")) || 1;
   const [rows, setRows] = useState(10);
   const [first, setFirst] = useState((pageFromUrl - 1) * 10);
   const tooltipRef = useRef<Tooltip>(null);
   const [formData, setFormData] = useState<MemberFormData | null>(null);
-  const [visibleColumns, setVisibleColumns] = useState(
-  ALL_MEMBER_COLUMNS.filter(col =>
-    DEFAULT_MEMBER_COLUMNS.includes(col.field)
-  )
-);
+  const [visibleColumns, setVisibleColumns] = useState(() =>
+    loadVisibleColumns() ??
+    ALL_MEMBER_COLUMNS.filter(col =>
+      DEFAULT_MEMBER_COLUMNS.includes(col.field)
+    )
+  );
+
 
   useEffect(() => {
     if (!accessToken) return;
@@ -83,6 +109,15 @@ const MembersTable: React.FC = () => {
         showError("Failed to load form data");
       });
   }, [accessToken]);
+
+  useEffect(() => {
+    const fields = visibleColumns.map(c => c.field);
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(fields)
+    );
+  }, [visibleColumns]);
 
   const showSuccess = (message: string) => {
     toast.current?.show({
@@ -298,6 +333,37 @@ const MembersTable: React.FC = () => {
   ];
 };
 
+  const uniqueValues = <T,>(arr: (T | null | undefined)[]) =>
+  Array.from(new Set(arr.filter(Boolean)));
+
+  const toOptions = (values: (string | null | undefined)[]) =>
+    uniqueValues(values).map(v => ({
+      label: String(v),
+      value: v
+    }));
+
+  const vendorFilterTemplate = (options: any) => (
+      <Dropdown
+        value={options.value}
+        options={toOptions(members.map(m => m.vendorName))}
+        onChange={(e) => options.filterCallback(e.value)}
+        placeholder="Select Vendor"
+        showClear
+        style={{ minWidth: "12rem" }}
+      />
+    );
+  
+  const clientFilterTemplate = (options: any) => (
+    <Dropdown
+      value={options.value}
+      options={toOptions(members.map(m => m.clientName))}
+      onChange={(e) => options.filterCallback(e.value)}
+      placeholder="Select Client"
+      showClear
+      style={{ minWidth: "12rem" }}
+    />
+  );
+
 
   return (
     <>
@@ -406,6 +472,14 @@ const MembersTable: React.FC = () => {
               body = (row: Member) => formatValue((row as any)[col.field]);
           }
 
+          let filterElement;
+
+          if (col.field === "vendorName")
+            filterElement = vendorFilterTemplate;
+
+          if (col.field === "clientName")
+            filterElement = clientFilterTemplate;
+
           return (
             <Column
               key={col.field}
@@ -414,6 +488,7 @@ const MembersTable: React.FC = () => {
               body={body}
               sortable={col.sortable}
               filter={col.filter}
+              filterElement={filterElement}
               showFilterMatchModes={false}
             />
           );

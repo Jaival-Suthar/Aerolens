@@ -26,6 +26,9 @@ export interface Candidate {
   noticePeriod: number;
   experienceYears: number;
   statusName: string;
+  vendorId?: number | null;
+  vendorName?: string | null;
+  referredBy?: string | null;
 
   linkedinProfileUrl?: string | null;
 
@@ -46,6 +49,8 @@ export interface CandidateUpdatePayload {
 
   recruiterId?: number | null;
   recruiterName?: string | null;
+  vendorId?: number | null;
+  referredBy?: string | null;
 
   jobProfileRequirementId?: number;
 
@@ -95,6 +100,8 @@ export interface AddEditCandidate {
 
   recruiterId: number | null;
   recruiterName: string | null;
+  vendorId?: number | null;
+  referredBy?: string;
 
   jobProfileRequirementId: number;
 
@@ -125,6 +132,8 @@ export interface AddEditCandidateApiPayload {
 
   recruiterId: number | null;
   recruiterName: string | null;
+  vendorId?: number | null;
+  referredBy?: string | null;
 
   jobProfileRequirementId: number;
 
@@ -162,6 +171,11 @@ export interface RecruiterItem {
   recruiterName: string;
 }
 
+export interface VendorItem {
+  vendorId: number;
+  vendorName: string;
+}
+
 export interface StatusItem {
   statusId: number;
   statusName: string;
@@ -191,6 +205,7 @@ export interface JobProfileRequirementItem {
 
 export interface CandidateCreateData {
   recruiters: RecruiterItem[];
+  vendors: VendorItem[];
   locations: LocationItem[];
   jobProfiles: JobProfileRequirementItem[];
 }
