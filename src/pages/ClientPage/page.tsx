@@ -11,7 +11,7 @@ import DepartmentTable from "../Department/components/departmentTable";
 import AddButton from "../../shared/AddButton";
 import EditButton from "../../shared/EditButton";
 import DeleteButton from "../../shared/DeleteButton";
-import ExportExcelButton from "../../shared/ExportExcelButton";
+// import ExportExcelButton from "../../shared/ExportExcelButton";
 import { createClient, updateClient, deleteClient, getClients } from "./services/clientService";
 import { VIEW_MODES, getMenuItems } from "../Contact/constants/contactConstants";
 import { ClientType, ClientAddType } from "./types/clientTypes";
@@ -256,7 +256,7 @@ const Client: React.FC = () => {
               onChange={onGlobalFilterChange}
               placeholder="Search clients..."
             />
-            <ExportExcelButton dtRef={dt} />
+            {/* <ExportExcelButton dtRef={dt} /> */}
             <AddButton onClick={openAddDialog} disabled={loading} data-testid="AddBtn" />
             <EditButton onClick={handleEditSelected} disabled={!selectedClient || loading} data-testid="EditBtn" />
             <DeleteButton onClick={openDeleteDialog} disabled={!selectedClient || loading} data-testid="DeleteBtn" />
