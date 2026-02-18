@@ -585,39 +585,89 @@ const settingsItems = [
           />
           {/* This is meant to upload csv file to allow multiple entries at once. */}
           <BulkExcelUploadButton
-  onFileSelect={async (file) => {
-    if (!accessToken) return;
+            onFileSelect={async (file) => {
+              if (!accessToken) return;
 
-    try {
-      setLoading(true);
+              try {
+                setLoading(true);
 
-      const response = await bulkUploadCandidates(accessToken, file);
+                const response = await bulkUploadCandidates(accessToken, file);
 
-      // Optional: show backend message
-      toastRef.current?.show({
-        severity: response.success ? "success" : "warn",
-        summary: "Bulk Upload",
-        detail: response.message,
-        life: 4000,
-      });
+                const summary = response.data?.summary;
 
-      // Refresh table after upload
-      loadAllData();
+                const detailContent = (
+                  <div style={{ lineHeight: "1.6", fontSize: "14px" }}>
+                    {/* Main message */}
+                    <div style={{ fontWeight: 500 }}>
+                      {response.message}
+                    </div>
 
-    } catch (error: any) {
-      console.error("Bulk upload failed:", error);
+                    {/* Summary section */}
+                    {summary && (
+                      <div style={{ marginTop: "8px" }}>
+                        <div style={{ fontWeight: 600, marginBottom: "2px" }}>
+                          Summary:
+                        </div>
 
-      toastRef.current?.show({
-        severity: "error",
-        summary: "Upload Failed",
-        detail: error.message || "Something went wrong",
-        life: 4000,
-      });
-    } finally {
-      setLoading(false);
-    }
-  }}
-/>
+                        <div>
+                          Total: <span style={{ fontWeight: 600 }}>{summary.totalRows}</span>
+                        </div>
+
+                        <div>
+                          Inserted:{" "}
+                          <span style={{ color: "#22c55e", fontWeight: 600 }}>
+                            {summary.inserted}
+                          </span>
+                        </div>
+
+                        <div>
+                          Failed:{" "}
+                          <span style={{ color: "#ef4444", fontWeight: 600 }}>
+                            {summary.failed}
+                          </span>
+                        </div>
+
+                        <div>
+                          Skipped:{" "}
+                          <span style={{ color: "#f59e0b", fontWeight: 600 }}>
+                            {summary.skipped}
+                          </span>
+                        </div>
+
+                        <div>
+                          Time:{" "}
+                          <span style={{ color: "#3b82f6", fontWeight: 600 }}>
+                            {summary.processingTime}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+
+                toastRef.current?.show({
+                  severity: response.success ? "success" : "warn",
+                  summary: "Bulk Upload",
+                  detail: detailContent,
+                  life: 6000,
+                });
+
+                loadAllData();
+
+              } catch (error: any) {
+                console.error("Bulk upload failed:", error);
+
+                toastRef.current?.show({
+                  severity: "error",
+                  summary: "Upload Failed",
+                  detail: error.message || "Something went wrong",
+                  life: 6000,
+                });
+              } finally {
+                setLoading(false);
+              }
+            }}
+          />
 
           {/* <ExportExcelButton dtRef={dt} /> */}
           <AddButton onClick={handleAdd} />
