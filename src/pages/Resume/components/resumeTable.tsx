@@ -27,6 +27,7 @@ import DetailsSection from "../../../shared/DetailsSection";
 import PremiumDetailsDialog from "../../../shared/PremiumDetailsDialog";
 import ColumnSettingsButton from "../../../shared/ColumnSettingsButton";
 import CandidateRoundsDialog from "../../Interview/components/CandidateRoundsDialog";
+import { Dropdown } from "primereact/dropdown";
 
 const ALL_COLUMNS = [
   {
@@ -109,7 +110,19 @@ const ALL_COLUMNS = [
     header: "Recruiter",
     sortable: true,
     filter: true
-  }
+  },
+  {
+  field: "vendorName",
+  header: "Vendor",
+  sortable: true,
+  filter: true
+},
+{
+  field: "referredBy",
+  header: "Referred By",
+  sortable: true,
+  filter: true
+}
 ];
 
 const DEFAULT_COLUMN_FIELDS = [
@@ -120,6 +133,9 @@ const DEFAULT_COLUMN_FIELDS = [
   "experienceYears",
   "statusName"
 ];
+
+const COLUMN_STORAGE_KEY = "candidateTable.visibleColumns";
+
 
 const ResumeTable: React.FC = () => {
   const { accessToken } = useAuth(); // ✅ from AuthContext
@@ -138,11 +154,20 @@ const ResumeTable: React.FC = () => {
   const [first, setFirst] = useState((pageFromUrl - 1) * 10); 
   const [showRoundsDialog, setShowRoundsDialog] = useState(false);
   const dt = useRef<DataTable<any>>(null);
-  const [visibleColumns, setVisibleColumns] = useState(
-  ALL_COLUMNS.filter(col =>
-    DEFAULT_COLUMN_FIELDS.includes(col.field)
-  )
-);
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    const saved = localStorage.getItem(COLUMN_STORAGE_KEY);
+    if (saved) {
+      const savedFields = JSON.parse(saved);
+      return ALL_COLUMNS.filter(col => savedFields.includes(col.field));
+    }
+    return ALL_COLUMNS.filter(col =>
+      DEFAULT_COLUMN_FIELDS.includes(col.field)
+    );
+  });
+  useEffect(() => {
+    const fields = visibleColumns.map(col => col.field);
+    localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(fields));
+  }, [visibleColumns]);
   const [viewCandidate, setViewCandidate] = useState<Candidate | null>(null);
   const [globalFilterValue, setGlobalFilterValue] = useState('');
   const [createData, setCreateData] = useState<CandidateCreateData | null>(null);
@@ -151,6 +176,8 @@ const ResumeTable: React.FC = () => {
   global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   candidateName: { value: null, matchMode: FilterMatchMode.CONTAINS },
   recruiterName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  vendorName: { value: null, matchMode: FilterMatchMode.EQUALS },
+  referredBy: { value: null, matchMode: FilterMatchMode.CONTAINS },
   recruiterContact: { value: null, matchMode: FilterMatchMode.CONTAINS },
   "expectedLocation.city": { value: null, matchMode: FilterMatchMode.CONTAINS },
   "currentLocation.city": { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -418,6 +445,56 @@ const candidateContactTemplate = (row: Candidate) => {
   );
 };
 
+const uniqueValues = (arr: (string | null | undefined)[]) =>
+  Array.from(new Set(arr.filter(Boolean)));
+
+const createDropdownFilterTemplate = (field: string, header: string) => (options: any) => {
+  const values = uniqueValues(resumes.map(r => getNestedValue(r, field) as string));
+
+  const dropdownOptions = values.map(v => ({
+    label: v,
+    value: v
+  }));
+
+  return (
+    <Dropdown
+      value={options.value}
+      options={dropdownOptions}
+      onChange={(e) => options.filterCallback(e.value)}
+      placeholder={`Select ${header}`}
+      showClear
+      style={{ minWidth: "12rem" }}
+    />
+  );
+};
+
+const vendorFilterTemplate = (options: any) => {
+  const vendors = uniqueValues(resumes.map(r => r.vendorName));
+
+  const vendorOptions = vendors.map(v => ({
+    label: v,
+    value: v
+  }));
+
+  return (
+    <Dropdown
+      value={options.value}
+      options={vendorOptions}
+      onChange={(e) => options.filterCallback(e.value)}
+      placeholder="Select Vendor"
+      showClear
+      style={{ minWidth: "12rem" }}
+    />
+  );
+};
+
+const recruiterFilterTemplate = createDropdownFilterTemplate("recruiterName", "Recruiter");
+
+const statusFilterTemplate = createDropdownFilterTemplate("statusName", "Status");
+
+const roleFilterTemplate = createDropdownFilterTemplate("jobRole", "Job Role");
+
+
 const recruiterContactTemplate = (row: Candidate) => {
   const phone = row.recruiterContact;
   const email = row.recruiterEmail;
@@ -645,7 +722,9 @@ const settingsItems = [
           'expectedCTC',
           'noticePeriod',
           'experienceYears',
-          'notes'
+          'notes',
+          'vendorName',
+          'referredBy'
         ]}
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Candidates"
@@ -659,6 +738,20 @@ const settingsItems = [
           if (col.body === "formatLocation") bodyTemplate = formatLocation;
           if (col.body === "linkedInTemplate") bodyTemplate = linkedInTemplate;
           if (col.body === "formatCurrentLocation") bodyTemplate = formatCurrentLocation;
+          let filterElement;
+
+          if (col.field === "vendorName")
+            filterElement = vendorFilterTemplate;
+
+          if (col.field === "recruiterName")
+            filterElement = recruiterFilterTemplate;
+
+          if (col.field === "statusName")
+            filterElement = statusFilterTemplate;
+
+          if (col.field === "jobRole")
+            filterElement = roleFilterTemplate;
+
 
           return (
             <Column
@@ -669,6 +762,7 @@ const settingsItems = [
               sortable={col.sortable}
               filter={col.filter}
               filterField={col.filterField || col.field}
+              filterElement={filterElement}
               showFilterMatchModes={false}
             />
           );

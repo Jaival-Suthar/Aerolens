@@ -48,6 +48,23 @@ const ALL_COLUMNS = [
 ];
 
 const DEFAULT_COLUMNS = ["position", "experience"];
+/* -------------------- Column Persistence -------------------- */
+const STORAGE_KEY = "job-profile:visible-columns";
+
+const loadVisibleColumns = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+
+    const fields: string[] = JSON.parse(raw);
+
+    return ALL_COLUMNS.filter(col =>
+      fields.includes(col.field)
+    );
+  } catch {
+    return null;
+  }
+};
 
 /* -------------------- Component -------------------- */
 const JobProfileTable: React.FC = () => {
@@ -70,9 +87,22 @@ const JobProfileTable: React.FC = () => {
   const toast = useRef<Toast>(null);
 
   /* -------------------- Column visibility -------------------- */
-  const [visibleColumns, setVisibleColumns] = useState(
-    ALL_COLUMNS.filter(col => DEFAULT_COLUMNS.includes(col.field))
+  const [visibleColumns, setVisibleColumns] = useState(() =>
+    loadVisibleColumns() ??
+    ALL_COLUMNS.filter(col =>
+      DEFAULT_COLUMNS.includes(col.field)
+    )
   );
+
+  useEffect(() => {
+    const fields = visibleColumns.map(c => c.field);
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(fields)
+    );
+  }, [visibleColumns]);
+
 
   /* -------------------- URL-synced Pagination -------------------- */
   const PAGE_PARAM = "jobProfilePage";

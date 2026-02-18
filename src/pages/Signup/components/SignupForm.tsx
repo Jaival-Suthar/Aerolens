@@ -309,7 +309,7 @@ export default function SignupForm({
         </div>
         {formData.isRecruiter && (
           <div className="field col-12 md:col-6">
-            <label>Vendor *</label>
+            <label>Vendor</label>
             <Dropdown
               value={formData.vendorId ?? null}
               options={vendors}
