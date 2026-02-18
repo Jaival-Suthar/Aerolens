@@ -134,6 +134,9 @@ const DEFAULT_COLUMN_FIELDS = [
   "statusName"
 ];
 
+const COLUMN_STORAGE_KEY = "candidateTable.visibleColumns";
+
+
 const ResumeTable: React.FC = () => {
   const { accessToken } = useAuth(); // ✅ from AuthContext
   const [resumes, setResumes] = useState<Candidate[]>([]);
@@ -151,11 +154,20 @@ const ResumeTable: React.FC = () => {
   const [first, setFirst] = useState((pageFromUrl - 1) * 10); 
   const [showRoundsDialog, setShowRoundsDialog] = useState(false);
   const dt = useRef<DataTable<any>>(null);
-  const [visibleColumns, setVisibleColumns] = useState(
-  ALL_COLUMNS.filter(col =>
-    DEFAULT_COLUMN_FIELDS.includes(col.field)
-  )
-);
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    const saved = localStorage.getItem(COLUMN_STORAGE_KEY);
+    if (saved) {
+      const savedFields = JSON.parse(saved);
+      return ALL_COLUMNS.filter(col => savedFields.includes(col.field));
+    }
+    return ALL_COLUMNS.filter(col =>
+      DEFAULT_COLUMN_FIELDS.includes(col.field)
+    );
+  });
+  useEffect(() => {
+    const fields = visibleColumns.map(col => col.field);
+    localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(fields));
+  }, [visibleColumns]);
   const [viewCandidate, setViewCandidate] = useState<Candidate | null>(null);
   const [globalFilterValue, setGlobalFilterValue] = useState('');
   const [createData, setCreateData] = useState<CandidateCreateData | null>(null);
@@ -436,6 +448,26 @@ const candidateContactTemplate = (row: Candidate) => {
 const uniqueValues = (arr: (string | null | undefined)[]) =>
   Array.from(new Set(arr.filter(Boolean)));
 
+const createDropdownFilterTemplate = (field: string, header: string) => (options: any) => {
+  const values = uniqueValues(resumes.map(r => getNestedValue(r, field) as string));
+
+  const dropdownOptions = values.map(v => ({
+    label: v,
+    value: v
+  }));
+
+  return (
+    <Dropdown
+      value={options.value}
+      options={dropdownOptions}
+      onChange={(e) => options.filterCallback(e.value)}
+      placeholder={`Select ${header}`}
+      showClear
+      style={{ minWidth: "12rem" }}
+    />
+  );
+};
+
 const vendorFilterTemplate = (options: any) => {
   const vendors = uniqueValues(resumes.map(r => r.vendorName));
 
@@ -455,6 +487,13 @@ const vendorFilterTemplate = (options: any) => {
     />
   );
 };
+
+const recruiterFilterTemplate = createDropdownFilterTemplate("recruiterName", "Recruiter");
+
+const statusFilterTemplate = createDropdownFilterTemplate("statusName", "Status");
+
+const roleFilterTemplate = createDropdownFilterTemplate("jobRole", "Job Role");
+
 
 const recruiterContactTemplate = (row: Candidate) => {
   const phone = row.recruiterContact;
@@ -664,8 +703,19 @@ const settingsItems = [
           if (col.body === "linkedInTemplate") bodyTemplate = linkedInTemplate;
           if (col.body === "formatCurrentLocation") bodyTemplate = formatCurrentLocation;
           let filterElement;
+
           if (col.field === "vendorName")
             filterElement = vendorFilterTemplate;
+
+          if (col.field === "recruiterName")
+            filterElement = recruiterFilterTemplate;
+
+          if (col.field === "statusName")
+            filterElement = statusFilterTemplate;
+
+          if (col.field === "jobRole")
+            filterElement = roleFilterTemplate;
+
 
           return (
             <Column
