@@ -13,7 +13,7 @@ import DeleteButton from "../../../shared/DeleteButton";
 import { useSearchParams } from "react-router-dom";
 
 import { Candidate, CandidateCreateData } from "../types/resumeTypes";
-import { getCandidates, downloadResume, fetchCandidateCreateData } from "../services/useResume";
+import { getCandidates, downloadResume, fetchCandidateCreateData,bulkUploadCandidates } from "../services/useResume";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import SearchButton from "../../../shared/SearchButton";
 import { FilterMatchMode } from 'primereact/api';
@@ -508,10 +508,40 @@ const settingsItems = [
           />
           {/* This is meant to upload csv file to allow multiple entries at once. */}
           <BulkExcelUploadButton
-            onFileSelect={(file) => {
-              console.log("Selected file:", file);
-            }}
-          />
+  onFileSelect={async (file) => {
+    if (!accessToken) return;
+
+    try {
+      setLoading(true);
+
+      const response = await bulkUploadCandidates(accessToken, file);
+
+      // Optional: show backend message
+      toastRef.current?.show({
+        severity: response.success ? "success" : "warn",
+        summary: "Bulk Upload",
+        detail: response.message,
+        life: 4000,
+      });
+
+      // Refresh table after upload
+      loadAllData();
+
+    } catch (error: any) {
+      console.error("Bulk upload failed:", error);
+
+      toastRef.current?.show({
+        severity: "error",
+        summary: "Upload Failed",
+        detail: error.message || "Something went wrong",
+        life: 4000,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }}
+/>
+
           {/* <ExportExcelButton dtRef={dt} /> */}
           <AddButton onClick={handleAdd} />
           <EditButton onClick={handleEdit} disabled={!selectedResume} />

@@ -7,6 +7,7 @@ import type {
   AddEditCandidate,
   CandidateUpdatePayload,
   CandidateCreateData,
+  BulkUploadResponse
 } from "../types/resumeTypes";
 
 /* ------------------------------------------------------------------------- */
@@ -93,6 +94,8 @@ const ROUTES = {
   BASE: "/candidate",
   BY_ID: (id: number) => `/candidate/${id}`,
   RESUME: (id: number) => `/candidate/${id}/resume`,
+  BULK_UPLOAD: "/candidate/bulk-upload",   // 👈 ADD THIS
+
 };
 
 /* ------------------------------------------------------------------------- */
@@ -389,6 +392,49 @@ export const downloadResume = async (
     throw error;
   }
 };
+// -------------------- BULK UPLOAD --------------------
+export const bulkUploadCandidates = async (
+  accessToken: string | null,
+  file: File
+): Promise<BulkUploadResponse> => {
+  if (!file) {
+    throw new Error("File is required for bulk upload");
+  }
+
+  const fd = new FormData();
+  fd.append("file", file);
+
+  const response = await fetch(`${API_URL}${ROUTES.BULK_UPLOAD}`, {
+    method: "POST",
+    headers: accessToken
+      ? { Authorization: `Bearer ${accessToken}` }
+      : undefined,
+    body: fd,
+    credentials: "include",
+  });
+
+  let responseBody: any;
+
+  try {
+    responseBody = await response.json();
+  } catch {
+    throw {
+      success: false,
+      message: "Invalid server response",
+    };
+  }
+
+  // 🔥 Important: Handle both success and failure explicitly
+
+  if (!response.ok) {
+    // 400 errors will come here
+    throw responseBody;
+  }
+
+  // 201 or 207 will both come here as success
+  return responseBody as BulkUploadResponse;
+};
+
 
 // -------------------- DIRECT DOWNLOAD LINK (optional) --------------------
 export const getResumeDownloadUrl = (candidateId: number): string =>

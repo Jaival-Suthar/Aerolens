@@ -194,3 +194,28 @@ export interface CandidateCreateData {
   locations: LocationItem[];
   jobProfiles: JobProfileRequirementItem[];
 }
+export interface BulkUploadFailedRow {
+  row: number;
+  error: string;
+}
+
+export interface BulkUploadSummary {
+  totalRows: number;
+  inserted: number;
+  failed: number;
+  skipped: number;
+  processingTime: string;
+}
+
+export interface BulkUploadData {
+  summary: BulkUploadSummary;
+  failedRows: BulkUploadFailedRow[];
+  hasMoreErrors: boolean;
+}
+
+export interface BulkUploadResponse {
+  success: boolean;
+  message: string;
+  data: BulkUploadData;
+}
+

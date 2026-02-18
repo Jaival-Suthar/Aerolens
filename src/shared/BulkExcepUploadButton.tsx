@@ -18,11 +18,29 @@ const BulkExcelUploadButton: React.FC<BulkExcelUploadButtonProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (file: File) => {
-    if (file) {
-      onFileSelect(file);
-      setVisible(false);
+    const allowedTypes = [
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
+      "application/vnd.ms-excel" // .xls
+    ];
+  
+    if (!allowedTypes.includes(file.type)) {
+      alert("Invalid file type. Please upload a valid Excel file (.xlsx or .xls)");
+      return;
     }
+    const maxSize = 10 * 1024 * 1024; // 10MB
+
+if (file.size > maxSize) {
+  alert("File size exceeds 10MB limit");
+  return;
+}
+
+    onFileSelect(file);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    setVisible(false);
   };
+  
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
