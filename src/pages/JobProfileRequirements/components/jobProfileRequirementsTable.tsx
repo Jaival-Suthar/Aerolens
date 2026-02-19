@@ -6,10 +6,10 @@ import { Tag } from 'primereact/tag';
 
 import JobProfileRequirementsAddEdit from '../components/jobProfileRequirementsAddEdit';
 import JobProfileRequirementsDelete from '../components/jobProfileRequirementsDelete';
-import AddButton from '../../../shared/AddButton';
+// import AddButton from '../../../shared/AddButton';
 import EditButton from '../../../shared/EditButton';
 import DeleteButton from '../../../shared/DeleteButton';
-import ExportExcelButton from '../../../shared/ExportExcelButton';
+// import ExportExcelButton from '../../../shared/ExportExcelButton';
 import { Button } from 'primereact/button';
 import { useSearchParams } from "react-router-dom";
 import { Dropdown } from 'primereact/dropdown';
@@ -492,7 +492,7 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfileRequirements | nu
               )
             }
           />
-          <ExportExcelButton dtRef={dt} />
+          {/* <ExportExcelButton dtRef={dt} /> */}
           {/* <AddButton onClick={handleAddNew} /> */}
           <EditButton 
             onClick={() => selectedJobProfile && handleEdit(selectedJobProfile)} 
