@@ -47,16 +47,20 @@ const formatDateTimeFromUTC = (utcIso: string) => {
 
   const d = new Date(utcIso);
 
+  const day = d.getDate().toString().padStart(2, "0");
+
+  const month = d.toLocaleString("en-US", {
+    month: "short",
+  });
+
+  const year = d.getFullYear();
+
+  const hours = d.getHours().toString().padStart(2, "0");
+  const minutes = d.getMinutes().toString().padStart(2, "0");
+
   return {
-    date: d.toLocaleDateString(undefined, {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }),
-    time: d.toLocaleTimeString(undefined, {
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
+    date: `${day}-${month}-${year}`,   // ✅ 19-Feb-2026
+    time: `${hours}:${minutes}`,       // ✅ 14:30
   };
 };
 

@@ -5,7 +5,21 @@ import { Column } from "primereact/column";
 import { InterviewerReport } from "../types/interviewerReporttypes";
 import { FilterMatchMode } from "primereact/api";
 import { Dropdown } from "primereact/dropdown";
+const formatDate = (dateString: string) => {
+  if (!dateString) return "-";
 
+  const date = new Date(dateString);
+
+  const day = date.getDate().toString().padStart(2, "0");
+
+  const month = date.toLocaleString("en-US", {
+    month: "short",
+  });
+
+  const year = date.getFullYear();
+
+  return `${day}-${month}-${year}`;
+};
 const theme = {
   primary: "#072844",
   accent: "#55c62c",
@@ -48,6 +62,7 @@ const CoverageReportTable: React.FC<Props> = ({ data, loading }) => {
 
   const [filters, setFilters] = useState({
     interviewerName: { value: null, matchMode: FilterMatchMode.EQUALS },
+    role: { value: null, matchMode: FilterMatchMode.EQUALS },
     round: { value: null, matchMode: FilterMatchMode.EQUALS },
     result: { value: null, matchMode: FilterMatchMode.EQUALS },
     recruiterName: { value: null, matchMode: FilterMatchMode.EQUALS },
@@ -109,6 +124,7 @@ const CoverageReportTable: React.FC<Props> = ({ data, loading }) => {
       interviewerName: unique("interviewerName"),
       round: sortRounds(unique("round")),
       result: unique("result"),
+      role: unique("role"),
       recruiterName: unique("recruiterName"),
     };
   }, [rows]);
@@ -204,6 +220,12 @@ const CoverageReportTable: React.FC<Props> = ({ data, loading }) => {
         <Column
           field="role"
           header="Role"
+          sortable
+          filter
+          showFilterMatchModes={false}
+          filterElement={(o) =>
+            dropdownFilterTemplate(o, uniqueOptions.role)
+          }
           headerStyle={headerStyle}
           bodyStyle={cellStyle}
         />
@@ -221,11 +243,13 @@ const CoverageReportTable: React.FC<Props> = ({ data, loading }) => {
           bodyStyle={cellStyle}
         />
 
-        <Column
+       <Column
           field="date"
           header="Date"
           headerStyle={headerStyle}
           bodyStyle={cellStyle}
+          body={(row: CoverageRow) => formatDate(row.date)}
+          sortable
         />
 
         <Column
