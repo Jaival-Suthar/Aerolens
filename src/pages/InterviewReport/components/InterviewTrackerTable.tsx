@@ -4,7 +4,7 @@ import { DataTable, type DataTablePageEvent } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Dropdown } from "primereact/dropdown";
 import { FilterMatchMode } from "primereact/api";
-
+import { Calendar } from "primereact/calendar";
 import { InterviewTrackerItem } from "../types/interviewTrackertypes";
 
 /* -------------------- Theme -------------------- */
@@ -32,7 +32,6 @@ interface Props {
 const NON_SORTABLE_FIELDS = new Set([
   "contactInfo",
   "location",
-  "clientName",
   "interviewerFeedback",
 ]);
 
@@ -112,26 +111,39 @@ const InterviewTrackerTable: React.FC<Props> = ({
   };
 
   /* -------------------- Filters -------------------- */
-  const [filters, setFilters] = useState<{
-    interviewerName: { value: null; matchMode: FilterMatchMode };
-    recruiterName: { value: null; matchMode: FilterMatchMode };
-  }>({
+  const [filters, setFilters] = useState({
     interviewerName: { value: null, matchMode: FilterMatchMode.EQUALS },
     recruiterName: { value: null, matchMode: FilterMatchMode.EQUALS },
+    jobRole: { value: null, matchMode: FilterMatchMode.EQUALS },
+
+    interviewDateObj: {
+      value: null,
+      matchMode: FilterMatchMode.DATE_IS,
+    },
   });
 
   const uniqueOptions = useMemo(() => {
-    const unique = (key: keyof InterviewTrackerItem) =>
-      Array.from(new Set(data.map(d => d[key]).filter(Boolean))).map(v => ({
-        label: String(v),
-        value: v,
-      }));
+  const unique = (key: keyof InterviewTrackerItem) =>
+    Array.from(new Set(data.map(d => d[key]).filter(Boolean))).map(v => ({
+      label: String(v),
+      value: v,
+    }));
 
-    return {
-      interviewerName: unique("interviewerName"),
-      recruiterName: unique("recruiterName"),
-    };
-  }, [data]);
+  return {
+    interviewerName: unique("interviewerName"),
+    recruiterName: unique("recruiterName"),
+    jobRole: unique("jobRole"),
+  };
+}, [data]);
+
+  const transformedData = useMemo(() => {
+  return data.map(item => ({
+    ...item,
+    interviewDateObj: item.interviewDate
+      ? new Date(item.interviewDate)
+      : null,
+  }));
+}, [data]);
 
   const dropdownFilterTemplate = (options: any, list: any[]) => (
     <Dropdown
@@ -140,6 +152,18 @@ const InterviewTrackerTable: React.FC<Props> = ({
       onChange={(e) => options.filterApplyCallback(e.value)}
       placeholder="Select"
       showClear
+      style={{ minWidth: "12rem" }}
+    />
+  );
+
+  const dateFilterTemplate = (options: any) => (
+    <Calendar
+      value={options.value}
+      onChange={(e) => options.filterApplyCallback(e.value)}
+      dateFormat="dd M yy"
+      placeholder="Select date"
+      showIcon
+      showButtonBar
       style={{ minWidth: "12rem" }}
     />
   );
@@ -188,7 +212,7 @@ const InterviewTrackerTable: React.FC<Props> = ({
       }}
     >
       <DataTable
-        value={data}
+        value={transformedData}
         loading={loading}
         stripedRows
         rowHover
@@ -264,6 +288,23 @@ const InterviewTrackerTable: React.FC<Props> = ({
                   bodyStyle={cellStyle}
                 />
               );
+
+              case "jobRole":
+                return (
+                  <Column
+                    key={col.field}
+                    field="jobRole"
+                    header={col.header}
+                    sortable
+                    filter
+                    showFilterMatchModes={false}
+                    filterElement={(o) =>
+                      dropdownFilterTemplate(o, uniqueOptions.jobRole)
+                    }
+                    headerStyle={headerStyle}
+                    bodyStyle={cellStyle}
+                  />
+                );
           }
 
           return (

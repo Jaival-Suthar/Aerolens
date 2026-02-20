@@ -13,7 +13,6 @@ export const ALL_INTERVIEW_TRACKER_COLUMNS: InterviewTrackerColumn[] = [
   { field: "experienceYears", header: "Experience (Yrs)" },
   { field: "jobRole", header: "Role" },
   { field: "interviewerName", header: "Interviewer" },
-  { field: "clientName", header: "Client" },
   { field: "recruiterName", header: "Recruiter" },
   { field: "interviewerFeedback", header: "Feedback" },
 ];
