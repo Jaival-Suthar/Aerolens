@@ -6,7 +6,7 @@ import { Dropdown } from "primereact/dropdown";
 import { FilterMatchMode } from "primereact/api";
 import { Calendar } from "primereact/calendar";
 import { InterviewTrackerItem } from "../types/interviewTrackertypes";
-
+import DateRangeFilter from "./DateRangeFilter";
 /* -------------------- Theme -------------------- */
 const theme = {
   primary: "#072844",
@@ -92,7 +92,10 @@ const InterviewTrackerTable: React.FC<Props> = ({
 
   const [rowsPerPage, setRowsPerPage] = useState(sizeFromUrl);
   const [first, setFirst] = useState((pageFromUrl - 1) * sizeFromUrl);
-
+  const [dateRange, setDateRange] = useState<{
+    startDate?: string;
+    endDate?: string;
+  }>({});
   /* -------------------- Pagination -------------------- */
   const onPageChange = (event: DataTablePageEvent) => {
     const { first, rows } = event;
@@ -123,27 +126,55 @@ const InterviewTrackerTable: React.FC<Props> = ({
   });
 
   const uniqueOptions = useMemo(() => {
-  const unique = (key: keyof InterviewTrackerItem) =>
-    Array.from(new Set(data.map(d => d[key]).filter(Boolean))).map(v => ({
-      label: String(v),
-      value: v,
-    }));
+  const build = (key: keyof InterviewTrackerItem) => {
+    const map = new Map();
+
+    data.forEach(item => {
+      const value = item[key];
+      if (value && !map.has(value)) {
+        map.set(value, {
+          label: String(value),
+          value
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  };
 
   return {
-    interviewerName: unique("interviewerName"),
-    recruiterName: unique("recruiterName"),
-    jobRole: unique("jobRole"),
+    interviewerName: build("interviewerName"),
+    recruiterName: build("recruiterName"),
+    jobRole: build("jobRole"),
   };
 }, [data]);
 
-  const transformedData = useMemo(() => {
-  return data.map(item => ({
+ const transformedData = useMemo(() => {
+  let result = data.map(item => ({
     ...item,
-    interviewDateObj: item.interviewDate
-      ? new Date(item.interviewDate)
+    interviewDateObj: item.interviewFromTime
+      ? new Date(item.interviewFromTime)
       : null,
   }));
-}, [data]);
+
+  if (dateRange.startDate && dateRange.endDate) {
+    const start = new Date(dateRange.startDate);
+    const end = new Date(dateRange.endDate);
+
+    start.setHours(0,0,0,0);
+    end.setHours(23,59,59,999);
+
+    result = result.filter(item => {
+      if (!item.interviewDateObj) return false;
+      return (
+        item.interviewDateObj >= start &&
+        item.interviewDateObj <= end
+      );
+    });
+  }
+
+  return result;
+}, [data, dateRange]);
 
   const dropdownFilterTemplate = (options: any, list: any[]) => (
     <Dropdown
@@ -152,18 +183,6 @@ const InterviewTrackerTable: React.FC<Props> = ({
       onChange={(e) => options.filterApplyCallback(e.value)}
       placeholder="Select"
       showClear
-      style={{ minWidth: "12rem" }}
-    />
-  );
-
-  const dateFilterTemplate = (options: any) => (
-    <Calendar
-      value={options.value}
-      onChange={(e) => options.filterApplyCallback(e.value)}
-      dateFormat="dd M yy"
-      placeholder="Select date"
-      showIcon
-      showButtonBar
       style={{ minWidth: "12rem" }}
     />
   );
@@ -236,10 +255,33 @@ const InterviewTrackerTable: React.FC<Props> = ({
 
           switch (col.field) {
             case "date":
-              body = (row: InterviewTrackerItem) =>
-                formatDateTimeFromUTC(row.interviewFromTime).date;
-              sortField = "interviewFromTime";
-              break;
+              return (
+                <Column
+                  key="date"
+                  field="interviewDateObj"
+                  header={
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <span>{col.header}</span>
+
+                      <DateRangeFilter
+                        initialStartDate={dateRange.startDate}
+                        initialEndDate={dateRange.endDate}
+                        onApply={(startDate, endDate) => {
+                          setDateRange({ startDate, endDate });
+                        }}
+                        onClear={() => {
+                          setDateRange({});
+                        }}
+                      />
+                    </div>
+                  }
+                  body={(row: InterviewTrackerItem) =>
+                    formatDateTimeFromUTC(row.interviewFromTime).date
+                  }
+                  headerStyle={headerStyle}
+                  bodyStyle={cellStyle}
+                />
+              );
 
             case "time":
               body = (row: InterviewTrackerItem) =>
