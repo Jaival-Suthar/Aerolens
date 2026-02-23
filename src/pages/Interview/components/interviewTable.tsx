@@ -446,11 +446,35 @@ const handleViewAllRounds = () => {
           value = t ? t.text : "-";
           break;
         }
-
+         
         case "result":
           value = interview.result || "Pending";
           break;
-
+          case "recording":   // 👈 THIS WAS MISSING
+          if (!interview.meetingUrl) {
+            value = "-";
+          } else {
+            const url = interview.meetingUrl.startsWith("http")
+              ? interview.meetingUrl
+              : `https://${interview.meetingUrl}`;
+      
+            value = (
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: "#2563eb",
+                  textDecoration: "underline",
+                  fontWeight: 500,
+                  wordBreak: "break-all",
+                }}
+              >
+                {url}
+              </a>
+            );
+          }
+          break;
         default:
           value = (interview as any)[col.field];
       }
