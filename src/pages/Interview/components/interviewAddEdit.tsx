@@ -655,7 +655,22 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
               disabled={loading}
             />
           </div>
-
+          {/* Interviewer Dropdown */}
+          <div className="field mb-4">
+                <label htmlFor="interviewer" className="font-semibold">
+                  Interviewer <span className="text-red-500">*</span>
+                </label>
+                <Dropdown
+                  id="interviewer"
+                  value={formData.interviewerId}
+                  options={interviewers}
+                  onChange={(e) => handleInputChange("interviewerId", e.value)}
+                  placeholder="Select interviewer"
+                  filter
+                  className={errors.interviewerId ? "p-invalid" : ""}
+                  disabled={loading}
+                />
+          </div>
           {/* Time Selection Row - 12 Hour Format */}
           <div className="field mb-4">
             <label className="font-semibold">
@@ -782,7 +797,7 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
             </div>
           )}
 
-          {/* Interviewer Dropdown */}
+          {/* Interviewer Dropdown
           <div className="field mb-4">
             <label htmlFor="interviewer" className="font-semibold">
               Interviewer <span className="text-red-500">*</span>
@@ -797,7 +812,7 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
               className={errors.interviewerId ? "p-invalid" : ""}
               disabled={loading}
             />
-          </div>
+          </div> */}
 
           {/* Scheduled By Dropdown */}
           <div className="field">

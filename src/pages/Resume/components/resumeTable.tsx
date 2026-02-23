@@ -302,8 +302,31 @@ const ResumeTable: React.FC = () => {
       const country = candidate.expectedLocation?.country;
       return city || country ? `${city}, ${country}` : "-";
 
-    case "linkedInTemplate":
-      return candidate.linkedinProfileUrl || "-";
+      case "linkedInTemplate":
+        if (!candidate.linkedinProfileUrl) return "-";
+      
+        const url = candidate.linkedinProfileUrl.startsWith("http")
+          ? candidate.linkedinProfileUrl
+          : `https://${candidate.linkedinProfileUrl}`;
+      
+        return (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: "#2563eb",
+              textDecoration: "underline",
+              fontWeight: 500,
+              wordBreak: "break-all",
+            }}
+          >
+            {url}
+          </a>
+        );
+
+    // case "linkedInTemplate":
+    //   return candidate.linkedinProfileUrl || "-";
 
     default:
       return getNestedValue(candidate, col.field);
