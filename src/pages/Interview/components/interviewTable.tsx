@@ -9,7 +9,7 @@ import InterviewDelete from "./interviewDelete";
 import InterviewAddEditForm from "./interviewAddEdit";
 import SearchButton from "../../../shared/SearchButton";
 import { DateTime } from "luxon";
-
+import DateRangeFilter from "../../InterviewReport/components/DateRangeFilter";
 import { Interview } from "../types/interviewTypes";
 import { getInterviews } from "../services/interviewService";
 import { useAuth } from "../../../shared/auth/AuthContext";
@@ -120,6 +120,10 @@ const InterviewTable: React.FC = () => {
     toTime: { value: null, matchMode: FilterMatchMode.CONTAINS },
     durationMinutes: { value: null, matchMode: FilterMatchMode.EQUALS }
   });
+  const [dateRange, setDateRange] = useState<{
+    startDate?: string;
+    endDate?: string;
+  }>({});
   const [visibleColumns, setVisibleColumns] = useState(
   ALL_COLUMNS.filter(col =>
     DEFAULT_COLUMN_FIELDS.includes(col.field)
@@ -622,7 +626,38 @@ const resultFilterTemplate = (options: any) => (
           let filterElement;
           if (col.body === "roundProgress") bodyTemplate = roundProgressBodyTemplate;
           if (col.body === "result") bodyTemplate = resultBodyTemplate;
-          if (col.body === "date") bodyTemplate = dateBodyTemplate;
+
+          // if (col.body === "date") bodyTemplate = dateBodyTemplate;
+
+          if (col.body === "date") {
+            return (
+              <Column
+                key={col.field}
+                field={col.field}
+                header={
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span>{col.header}</span>
+          
+                    <DateRangeFilter
+                      initialStartDate={dateRange.startDate}
+                      initialEndDate={dateRange.endDate}
+                      onApply={(startDate, endDate) => {
+                        setDateRange({ startDate, endDate });
+                        setFirst(0);
+                      }}
+                      onClear={() => {
+                        setDateRange({});
+                        setFirst(0);
+                      }}
+                    />
+                  </div>
+                }
+                body={dateBodyTemplate}
+                sortable
+              />
+            );
+          }
+
           if (col.body === "recording") bodyTemplate = meetingUrlBodyTemplate;
           if (col.body === "startTime") bodyTemplate = timeBodyTemplate;
           if (col.body === "endTime") bodyTemplate = endTimeBodyTemplate;
