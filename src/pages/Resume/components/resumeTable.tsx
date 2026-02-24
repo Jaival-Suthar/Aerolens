@@ -10,7 +10,7 @@ import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
 import { useSearchParams } from "react-router-dom";
-
+import DateRangeFilter from "../../InterviewReport/components/DateRangeFilter";
 import { Candidate, CandidateCreateData } from "../types/resumeTypes";
 import { getCandidates, downloadResume, fetchCandidateCreateData, bulkUploadCandidates } from "../services/useResume";
 import { useAuth } from "../../../shared/auth/AuthContext";
@@ -106,16 +106,23 @@ const ResumeTable: React.FC = () => {
     dateOfEntry: { value: null, matchMode: FilterMatchMode.DATE_IS }
   });
 
-  /** ✅ Helper to Format Date to Local String */
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return "-";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric"
-    });
-  };
+ /** ✅ Helper to Format UTC to Local Timezone */
+ const formatDate = (dateString: string | null | undefined) => {
+  if (!dateString) return "-";
+  
+  // Create date object (JS assumes UTC if format is ISO)
+  const date = new Date(dateString);
+  
+  // Returns local date and time based on browser settings
+  return date.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true
+  });
+};
 
   const loadAllData = useCallback(async () => {
     if (!accessToken) return;
