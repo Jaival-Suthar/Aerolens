@@ -66,7 +66,7 @@ const DetailsGrid: React.FC<Props> = ({ items }) => {
   </ul>
 ) : (
   <span style={{ whiteSpace: "pre-line" }}>
-    {String(value)}
+    {value}
   </span>
 )}
 </div>
