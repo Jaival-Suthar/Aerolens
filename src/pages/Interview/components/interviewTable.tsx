@@ -522,6 +522,26 @@ const resultFilterTemplate = (options: any) => (
     showClear
   />
 );
+const filteredInterviews = interviews.filter((interview) => {
+  if (!dateRange.startDate && !dateRange.endDate) return true;
+  if (!interview.fromTime) return false;
+
+  const normalized = normalizeBackendDateTime(interview.fromTime);
+  if (!normalized) return false;
+
+  const interviewDate = DateTime
+    .fromISO(normalized, { zone: "utc" })
+    .setZone(browserTimezone)
+    .toFormat("yyyy-MM-dd");
+
+  if (dateRange.startDate && interviewDate < dateRange.startDate)
+    return false;
+
+  if (dateRange.endDate && interviewDate > dateRange.endDate)
+    return false;
+
+  return true;
+});
 
   return (
     <>
@@ -586,7 +606,7 @@ const resultFilterTemplate = (options: any) => (
 
       <div style={{ flex: 1, overflow: "auto" }}>
       <DataTable
-        value={interviews}
+        value={filteredInterviews}
         loading={loading}
         selectionMode="single"
         selection={selectedInterview}
@@ -605,7 +625,7 @@ const resultFilterTemplate = (options: any) => (
         rowsPerPageOptions={[10, 20, 50]}
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Members"
-        totalRecords={interviews.length}
+        totalRecords={filteredInterviews.length}
         // globalFilter={searchText}
         // globalFilterFields={[
         //   "candidateName",
@@ -653,7 +673,6 @@ const resultFilterTemplate = (options: any) => (
                   </div>
                 }
                 body={dateBodyTemplate}
-                sortable
               />
             );
           }
