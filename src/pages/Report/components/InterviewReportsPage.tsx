@@ -95,16 +95,25 @@ const InterviewReportsPage: React.FC<Props> = ({ accessToken }) => {
  * 4️⃣ 🔥 Sync calendar month from data (ONCE per fetch)
  */
   useEffect(() => {
-    if (!calendarMonth) return;
-    if (isMonthSyncedFromData.current) return;
+  if (!calendarMonth) return;
+  if (isMonthSyncedFromData.current) return;
 
+  const currentYear = Number(searchParams.get("year"));
+  const currentMonth = Number(searchParams.get("month"));
+
+  const newYear = calendarMonth.getFullYear();
+  const newMonth = calendarMonth.getMonth() + 1;
+
+  // Only update URL if different
+  if (currentYear !== newYear || currentMonth !== newMonth) {
     setSearchParams({
-      year: String(calendarMonth.getFullYear()),
-      month: String(calendarMonth.getMonth() + 1),
+      year: String(newYear),
+      month: String(newMonth),
     });
+  }
 
-    isMonthSyncedFromData.current = true;
-  }, [calendarMonth, setSearchParams]);
+  isMonthSyncedFromData.current = true;
+}, [calendarMonth]);
 
   /**
    * 5️⃣ Fetch daily interviews

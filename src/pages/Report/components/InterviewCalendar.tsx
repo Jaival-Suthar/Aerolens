@@ -74,47 +74,12 @@ const InterviewCalendar: React.FC<Props> = ({
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   
-  // Calendar owns its month
-  const [currentMonth, setCurrentMonth] = useState<Date>(() => 
-    new Date(initialMonth.getFullYear(), initialMonth.getMonth(), 1)
-  );
-  
-  // Track if change came from internal navigation
-  const isInternalChange = useRef(false);
-
-  // Sync ONLY when URL changes externally (not from our own navigation)
-  useEffect(() => {
-    // If this change came from our handleMonthChange, ignore it
-    if (isInternalChange.current) {
-      isInternalChange.current = false;
-      return;
-    }
-    
-    const urlYear = initialMonth.getFullYear();
-    const urlMonth = initialMonth.getMonth();
-    
-    const currentYear = currentMonth.getFullYear();
-    const currentMonthIdx = currentMonth.getMonth();
-    
-    if (urlYear !== currentYear || urlMonth !== currentMonthIdx) {
-      setCurrentMonth(new Date(urlYear, urlMonth, 1));
-    }
-  }, [initialMonth]);
 
   const handleMonthChange = (e: CalendarMonthChangeEvent) => {
-    const targetYear = e.year;
-    const targetMonth = e.month - 1; // Subtract 1 for 0-based month
-
-    // Mark this as internal change to prevent sync loop
-    isInternalChange.current = true;
-    
-    const newMonth = new Date(targetYear, targetMonth, 1);
-    setCurrentMonth(newMonth);
-    setSelectedDate(null);
-
-    // Notify parent (1-based month)
-    onMonthChange(targetYear, targetMonth + 1);
-  };
+  // PrimeReact gives month as 1-based already
+  onMonthChange(e.year, e.month);
+  setSelectedDate(null);
+};
 
   const handleDateSelect = (e: any) => {
     if (!(e.value instanceof Date)) return;
@@ -174,9 +139,17 @@ const InterviewCalendar: React.FC<Props> = ({
         
         .interview-calendar .p-datepicker-header .p-datepicker-prev,
         .interview-calendar .p-datepicker-header .p-datepicker-next {
-          display: none !important;
+          color: #ffffff !important;
+          font-weight: 600;
+          border-radius: 50%;
+          transition: background 0.2s ease;
         }
-        
+
+        .interview-calendar .p-datepicker-header .p-datepicker-prev:hover,
+        .interview-calendar .p-datepicker-header .p-datepicker-next:hover {
+          background: rgba(255, 255, 255, 0.15) !important;
+        }
+
         .interview-calendar .p-datepicker-header .p-datepicker-month,
         .interview-calendar .p-datepicker-header .p-datepicker-year {
           color: #ffffff !important;
@@ -190,7 +163,7 @@ const InterviewCalendar: React.FC<Props> = ({
       <Calendar
         value={selectedDate}
         inline
-        viewDate={currentMonth}
+        viewDate={initialMonth}
         showOtherMonths
         selectOtherMonths={false}
         className="interview-calendar"
