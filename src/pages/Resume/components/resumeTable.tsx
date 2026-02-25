@@ -44,7 +44,7 @@ const ALL_COLUMNS = [
   { field: "recruiterName", header: "Recruiter", sortable: true, filter: true },
   { field: "vendorName", header: "Vendor", sortable: true, filter: true },
   { field: "referredBy", header: "Referred By", sortable: true, filter: true },
-  { field: "dateOfEntry", header: "Date Of Entry", sortable: true, filter: true, body: "dateTemplate" }, // ✅ Added dateTemplate body
+  { field: "dateOfEntry", header: "Date Of Entry", sortable: true, body: "dateTemplate" },
 ];
 
 const DEFAULT_COLUMN_FIELDS = ["candidateName", "contact", "expectedLocation.city", "jobRole", "experienceYears", "statusName"];
@@ -66,6 +66,7 @@ const ResumeTable: React.FC = () => {
   const pageFromUrl = Number(searchParams.get("page")) || 1;
   const [first, setFirst] = useState((pageFromUrl - 1) * 10);
   const [showRoundsDialog, setShowRoundsDialog] = useState(false);
+  const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
   const dt = useRef<DataTable<any>>(null);
   const [visibleColumns, setVisibleColumns] = useState(() => {
     const saved = localStorage.getItem(COLUMN_STORAGE_KEY);
@@ -103,26 +104,21 @@ const ResumeTable: React.FC = () => {
     noticePeriod: { value: null, matchMode: FilterMatchMode.EQUALS },
     experienceYears: { value: null, matchMode: FilterMatchMode.EQUALS },
     notes: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    dateOfEntry: { value: null, matchMode: FilterMatchMode.DATE_IS }
+    // dateOfEntry: { value: null, matchMode: FilterMatchMode.CUSTOM }
   });
 
- /** ✅ Helper to Format UTC to Local Timezone */
- const formatDate = (dateString: string | null | undefined) => {
-  if (!dateString) return "-";
-  
-  // Create date object (JS assumes UTC if format is ISO)
-  const date = new Date(dateString);
-  
-  // Returns local date and time based on browser settings
-  return date.toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true
-  });
-};
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    return date.toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true
+    });
+  };
 
   const loadAllData = useCallback(async () => {
     if (!accessToken) return;
@@ -165,7 +161,7 @@ const ResumeTable: React.FC = () => {
 
   const getColumnDisplayValue = (col: any, candidate: Candidate) => {
     switch (col.body) {
-      case "dateTemplate": // ✅ Formats date in View Details dialog
+      case "dateTemplate":
         return formatDate(candidate.dateOfEntry);
       case "candidateContactTemplate":
         return `${candidate.contactNumber || "-"} | ${candidate.email || "-"}`;
@@ -238,6 +234,36 @@ const ResumeTable: React.FC = () => {
     } catch (error) { console.error("Resume preview failed:", error); }
   };
 
+  // ✅ DateRangeFilter Template
+  // const dateFilterTemplate = (options: any) => (
+  //   <DateRangeFilter
+  //     onApply={(start, end) => {
+  //       setDateRange({ start, end });
+  //       options.filterApplyCallback([start, end]);
+  //     }}
+  //     onClear={() => {
+  //       setDateRange(null);
+  //       options.filterApplyCallback(null);
+  //     }}
+  //     initialStartDate={dateRange?.start}
+  //     initialEndDate={dateRange?.end}
+  //   />
+  // );
+
+  // // ✅ DateRangeFilter Function
+  // const dateRangeFilterFunction = (value: any, filter: any) => {
+  //   if (!filter || !Array.isArray(filter)) return true;
+    
+  //   const [start, end] = filter;
+  //   if (!start || !end) return true;
+    
+  //   const rowDate = new Date(value);
+  //   const startDate = new Date(start);
+  //   const endDate = new Date(end);
+    
+  //   return rowDate >= startDate && rowDate <= endDate;
+  // };
+
   /** ------------------- Templates ------------------- */
   const resumeActionTemplate = (candidate: Candidate) => {
     if (!candidate.resumeFilename) return <span className="text-400">No Resume</span>;
@@ -300,7 +326,23 @@ const ResumeTable: React.FC = () => {
       }
     }
   ];
-
+  const filteredResumes = resumes.filter((candidate) => {
+    if (!dateRange?.start && !dateRange?.end) return true;
+    if (!candidate.dateOfEntry) return false;
+  
+    const rowDate = new Date(candidate.dateOfEntry);
+    const startDate = dateRange?.start ? new Date(dateRange.start) : null;
+    const endDate = dateRange?.end ? new Date(dateRange.end) : null;
+  
+    if (startDate && rowDate < startDate) return false;
+  
+    if (endDate) {
+      endDate.setHours(23, 59, 59, 999);
+      if (rowDate > endDate) return false;
+    }
+  
+    return true;
+  });
   const resetToDefaultColumns = () => setVisibleColumns(ALL_COLUMNS.filter(col => DEFAULT_COLUMN_FIELDS.includes(col.field)));
 
   return (
@@ -360,7 +402,7 @@ const ResumeTable: React.FC = () => {
 
       <div style={{ flex: 1, overflow: "auto" }}>
         <DataTable
-          ref={dt} value={resumes} paginator rows={rows} first={first} filterDisplay="menu" scrollable scrollHeight="flex"
+          ref={dt} value={filteredResumes} paginator rows={rows} first={first} filterDisplay="menu" scrollable scrollHeight="flex"
           onFilter={(e) => setFilters(e.filters)} onPage={onPageChange} rowsPerPageOptions={[10, 20, 50]}
           selectionMode="single" selection={selectedResume} dataKey="candidateId" onSelectionChange={(e) => setSelectedResume(e.value)}
           tableStyle={{ minWidth: "80rem" }} loading={loading} emptyMessage="No candidates found." filters={filters}
@@ -371,19 +413,68 @@ const ResumeTable: React.FC = () => {
           <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
           {visibleColumns.map((col) => {
             let bodyTemplate;
+            let filterElement;
+            let filterFunction;
+            
             if (col.body === "candidateContactTemplate") bodyTemplate = candidateContactTemplate;
             if (col.body === "formatLocation") bodyTemplate = formatLocation;
             if (col.body === "linkedInTemplate") bodyTemplate = linkedInTemplate;
             if (col.body === "formatCurrentLocation") bodyTemplate = formatCurrentLocation;
-            if (col.body === "dateTemplate") bodyTemplate = (row: Candidate) => formatDate(row.dateOfEntry); // ✅ Added column template
+            // if (col.body === "dateTemplate") {
+            //   bodyTemplate = (row: Candidate) => formatDate(row.dateOfEntry);
+            //   filterElement = dateFilterTemplate;
+            //   filterFunction = dateRangeFilterFunction;
+            // }
+            if (col.field === "dateOfEntry") {
+              return (
+                <Column
+                  key="dateOfEntry"
+                  field="dateOfEntry"
+                  style={{ minWidth: "280px" }}   // 🔥 THIS FIXES IT
 
-            let filterElement;
+                  header={
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <span>Date Of Entry</span>
+            
+                      <DateRangeFilter
+                        initialStartDate={dateRange?.start}
+                        initialEndDate={dateRange?.end}
+                        onApply={(start, end) => {
+                          setDateRange({ start, end });
+                          setFirst(0);
+                        }}
+                        onClear={() => {
+                          setDateRange(null);
+                          setFirst(0);
+                        }}
+                      />
+                    </div>
+                  }
+                  body={(row: Candidate) => formatDate(row.dateOfEntry)}
+                />
+              );
+            }
+
+
             if (col.field === "vendorName") filterElement = vendorFilterTemplate;
             if (col.field === "recruiterName") filterElement = recruiterFilterTemplate;
             if (col.field === "statusName") filterElement = statusFilterTemplate;
             if (col.field === "jobRole") filterElement = roleFilterTemplate;
 
-            return <Column key={col.field} field={col.field} header={col.header} body={bodyTemplate} sortable={col.sortable} filter={col.filter} filterField={col.filterField || col.field} filterElement={filterElement} showFilterMatchModes={false} />;
+            return (
+              <Column 
+                key={col.field} 
+                field={col.field} 
+                header={col.header} 
+                body={bodyTemplate} 
+                sortable={col.sortable} 
+                filter={col.filter} 
+                filterField={col.filterField || col.field} 
+                filterElement={filterElement} 
+                filterFunction={filterFunction}
+                showFilterMatchModes={false} 
+              />
+            );
           })}
           <Column header="Resume" body={resumeActionTemplate} style={{ width: "8rem" }} />
         </DataTable>
