@@ -7,9 +7,9 @@ import { Dropdown } from "primereact/dropdown";
 import { InputNumber } from "primereact/inputnumber";
 import { Toast } from "primereact/toast";
 import { FaCheck, FaClock, FaCalendarAlt } from "react-icons/fa";
-import { getInterviewFormData, createInterview, updateInterview } from "../services/interviewService";
+import { getInterviewFormData, createInterview, updateInterview, getInterviewerDailyCapacity } from "../services/interviewService";
 import { useAuth } from "../../../shared/auth/AuthContext";
-import { Interview, CreateInterviewRequest, UpdateInterviewRequest } from "../types/interviewTypes";
+import { Interview, CreateInterviewRequest, UpdateInterviewRequest, InterviewerDailyCapacity } from "../types/interviewTypes";
 import { DateTime } from "luxon";
 
 // ============================================================
@@ -131,7 +131,8 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
     scheduledById: null,
     eventTimezone: DEFAULT_TIMEZONE,
   });
-
+  const [capacityData, setCapacityData] = useState<InterviewerDailyCapacity | null>(null);
+  const [capacityLoading, setCapacityLoading] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
   // Viewer (browser) timezone
   const browserTimezone =
@@ -187,6 +188,34 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
     { label: 'AM', value: 'AM' },
     { label: 'PM', value: 'PM' }
   ];
+  
+  const loadInterviewerCapacity = async (
+    interviewerId: number,
+    date: Date,
+    timezone: string
+  ) => {
+    try {
+      setCapacityLoading(true);
+
+      const formattedDate = DateTime
+        .fromJSDate(date)
+        .toFormat("yyyy-MM-dd");
+
+      const res = await getInterviewerDailyCapacity(
+        accessToken!,
+        interviewerId,
+        formattedDate,
+        timezone
+      );
+
+      setCapacityData(res.data);
+    } catch (err) {
+      console.error("Capacity fetch error", err);
+      setCapacityData(null);
+    } finally {
+      setCapacityLoading(false);
+    }
+  };
 
   const loadFormData = async () => {
     try {
@@ -216,6 +245,24 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (
+      formData.interviewerId &&
+      formData.interviewDate
+    ) {
+      loadInterviewerCapacity(
+        formData.interviewerId,
+        formData.interviewDate,
+        formData.eventTimezone
+      );
+    } else {
+      setCapacityData(null);
+    }
+  }, [
+    formData.interviewerId,
+    formData.interviewDate,
+    formData.eventTimezone
+  ]);
   // Effect to set form data
   useEffect(() => {
     if (visible) {
@@ -254,6 +301,20 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
       resetForm();
     }
   }, [visible, isEdit, interviewToEdit]);
+
+  const getLocalScheduledTimes = () => {
+    if (!capacityData?.scheduledTimesUTC) return [];
+
+    const browserTz =
+      Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    return capacityData.scheduledTimesUTC.map((utcTime) =>
+      DateTime
+        .fromISO(utcTime, { zone: "utc" })
+        .setZone(browserTz)
+        .toFormat("hh:mm a")
+    );
+  };
 
   const mapBackendErrors = (apiError: any): ValidationErrors => {
   const mapped: ValidationErrors = {};
@@ -671,6 +732,78 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
                   disabled={loading}
                 />
           </div>
+         {capacityData && (
+          <div
+            className="mt-2 px-3 py-2 border-round-xl"
+            style={{
+              background: capacityData.isFull ? "#fef9c3" : "#ecfdf5",
+              border: `1px solid ${
+                capacityData.isFull ? "#facc15" : "#34d399"
+              }`,
+              borderRadius: "12px",
+              fontSize: "0.85rem"
+            }}
+          >
+            {capacityLoading ? (
+              <small className="text-600">
+                Checking interviewer availability...
+              </small>
+            ) : (
+              <>
+                {/* Top Row */}
+                <div className="flex justify-content-between align-items-center">
+                  <div className="flex align-items-center gap-2">
+                    <FaClock
+                      style={{
+                        color: capacityData.isFull ? "#d97706" : "#059669",
+                        fontSize: 14
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontWeight: 600,
+                        color: capacityData.isFull ? "#92400e" : "#065f46"
+                      }}
+                    >
+                      {capacityData.isFull
+                        ? "Capacity Reached"
+                        : "Interview Capacity Per Day"}
+                    </span>
+                  </div>
+
+                  <span
+                    style={{
+                      fontWeight: 600,
+                      color: capacityData.isFull ? "#92400e" : "#065f46"
+                    }}
+                  >
+                    {capacityData.scheduledCount} / {capacityData.capacity}
+                  </span>
+                </div>
+
+                {/* Scheduled Times */}
+                {capacityData.scheduledTimesUTC.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {getLocalScheduledTimes().map((time, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-1 text-xs"
+                        style={{
+                          background: "#ffffff",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "999px",
+                          fontWeight: 500
+                        }}
+                      >
+                        {time}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
           {/* Time Selection Row - 12 Hour Format */}
           <div className="field mb-4">
             <label className="font-semibold">

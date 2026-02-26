@@ -139,6 +139,15 @@ export interface FinalizeInterviewResponse {
   };
   statusCode: number;
 }
+
+export interface InterviewerDailyCapacity {
+  interviewerId: number;
+  capacity: number;
+  scheduledCount: number;
+  scheduledTimesUTC: string[];
+  isFull: boolean;
+}
+
 export interface ApiError {
   success: false;
   message: string;
