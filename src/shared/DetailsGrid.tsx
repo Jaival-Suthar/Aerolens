@@ -1,6 +1,7 @@
 interface GridItem {
   label: string;
   value: any;
+  fullWidth?: boolean; // Optional flag to indicate if the item should span full width
 }
 
 interface Props {
@@ -17,8 +18,12 @@ const DetailsGrid: React.FC<Props> = ({ items }) => {
         columnGap: "2rem",
       }}
     >
-      {items.map(({ label, value }) => (
-        <div key={label}>
+      {items.map(({ label, value,fullWidth }) => (
+        <div key={label}
+        style={{
+          gridColumn: fullWidth ? "1 / -1" : "auto",
+        }}
+        >
           <div
             style={{
               fontSize: "var(--label-size)",
@@ -38,6 +43,8 @@ const DetailsGrid: React.FC<Props> = ({ items }) => {
     color: "#111827",
     lineHeight: 1.5,
     wordBreak: "break-word",
+    whiteSpace: "pre-wrap", // 👈 important for feedback text
+
   }}
 >
   {Array.isArray(value) ? (

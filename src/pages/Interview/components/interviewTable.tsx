@@ -417,78 +417,92 @@ const handleViewAllRounds = () => {
     </div>
   );
 };
-  const buildInterviewDetailsData = (interview: Interview) => {
-  return ALL_COLUMNS
-    .map(col => {
-      let value: any = null;
+const buildInterviewDetailsData = (interview: Interview) => {
+  const mapped = ALL_COLUMNS.map(col => {
+    let value: any = null;
 
-      switch (col.body) {
-        case "roundProgress":
-          value = `Round ${interview.roundNumber} / ${interview.totalInterviews}`;
-          break;
+    switch (col.body) {
+      case "roundProgress":
+        value = `Round ${interview.roundNumber} / ${interview.totalInterviews}`;
+        break;
 
-        case "date":
-          value = new Date(interview.interviewDate).toLocaleDateString("en-GB");
-          break;
+      case "date":
+        value = new Date(interview.interviewDate).toLocaleDateString("en-GB");
+        break;
 
-        case "startTime": {
-          const t = formatTimeForTable(
-            interview.fromTime,
-            interview.eventTimezone,
-            browserTimezone
-          );
-          value = t ? t.text : "-";
-          break;
-        }
-
-        case "endTime": {
-          const t = formatTimeForTable(
-            interview.toTime,
-            interview.eventTimezone,
-            browserTimezone
-          );
-          value = t ? t.text : "-";
-          break;
-        }
-         
-        case "result":
-          value = interview.result || "Pending";
-          break;
-          case "recording":   // 👈 THIS WAS MISSING
-          if (!interview.meetingUrl) {
-            value = "-";
-          } else {
-            const url = interview.meetingUrl.startsWith("http")
-              ? interview.meetingUrl
-              : `https://${interview.meetingUrl}`;
-      
-            value = (
-              <a
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  color: "#2563eb",
-                  textDecoration: "underline",
-                  fontWeight: 500,
-                  wordBreak: "break-all",
-                }}
-              >
-                {url}
-              </a>
-            );
-          }
-          break;
-        default:
-          value = (interview as any)[col.field];
+      case "startTime": {
+        const t = formatTimeForTable(
+          interview.fromTime,
+          interview.eventTimezone,
+          browserTimezone
+        );
+        value = t ? t.text : "-";
+        break;
       }
 
-      return {
-        label: col.header,
-        value: value ?? "-"
-      };
-    })
-    .filter(item => item.value !== "-" && item.value !== null);
+      case "endTime": {
+        const t = formatTimeForTable(
+          interview.toTime,
+          interview.eventTimezone,
+          browserTimezone
+        );
+        value = t ? t.text : "-";
+        break;
+      }
+
+      case "result":
+        value = interview.result || "Pending";
+        break;
+
+      case "recording":
+        if (!interview.meetingUrl) {
+          value = "-";
+        } else {
+          const url = interview.meetingUrl.startsWith("http")
+            ? interview.meetingUrl
+            : `https://${interview.meetingUrl}`;
+
+          value = (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {url}
+            </a>
+          );
+        }
+        break;
+
+      default:
+        value = (interview as any)[col.field];
+    }
+
+    return {
+      label: col.header,
+      value: value ?? "-"
+    };
+  });
+
+  // ✅ NOW return everything together
+  return [
+    ...mapped,
+    {
+      label: "Timezone",
+      value: interview.eventTimezone ?? "-"
+    },
+    {
+      label: "Interviewer Feedback",
+      value: interview.interviewerFeedback ?? "-",
+      fullWidth: true   // 👈 add this
+
+    },
+    {
+      label: "Recruiter Notes",
+      value: interview.recruiterNotes ?? "-",
+      fullWidth: true   // 👈 add this
+    }
+  ];
 };
   const uniqueValues = <T,>(arr: (T | null | undefined)[]) =>
   Array.from(new Set(arr.filter(Boolean)));
