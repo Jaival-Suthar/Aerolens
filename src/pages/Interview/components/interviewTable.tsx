@@ -425,10 +425,16 @@ const buildInterviewDetailsData = (interview: Interview) => {
       case "roundProgress":
         value = `Round ${interview.roundNumber} / ${interview.totalInterviews}`;
         break;
-
-      case "date":
-        value = new Date(interview.interviewDate).toLocaleDateString("en-GB");
-        break;
+        case "date":
+          value = new Date(interview.interviewDate).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          });
+          break;
+      // case "date":
+      //   value = new Date(interview.interviewDate).toLocaleDateString("en-GB");
+      //   break;
 
       case "startTime": {
         const t = formatTimeForTable(
