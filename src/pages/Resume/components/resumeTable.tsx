@@ -109,14 +109,11 @@ const ResumeTable: React.FC = () => {
 
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "-";
-    const date = new Date(dateString);
-    return date.toLocaleString("en-GB", {
+    // const date = new Date(dateString);
+    return new Date(dateString).toLocaleDateString("en-GB", {
       day: "2-digit",
-      month: "2-digit",
+      month: "short",
       year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true
     });
   };
 
