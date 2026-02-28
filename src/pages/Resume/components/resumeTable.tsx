@@ -40,11 +40,18 @@ const ALL_COLUMNS = [
   { field: "expectedCTC", header: "Expected CTC", sortable: true, filter: true },
   { field: "noticePeriod", header: "Notice Period", sortable: true, filter: true },
   { field: "linkedinProfileUrl", header: "LinkedIn Profile", body: "linkedInTemplate" },
-  { field: "notes", header: "Notes", sortable: true, filter: true },
   { field: "recruiterName", header: "Recruiter", sortable: true, filter: true },
   { field: "vendorName", header: "Vendor", sortable: true, filter: true },
   { field: "referredBy", header: "Referred By", sortable: true, filter: true },
   { field: "dateOfEntry", header: "Date Of Entry", sortable: true, body: "dateTemplate" },
+  { field: "email", header: "Email", sortable: true, filter: true },
+  { field: "contactNumber", header: "Contact Number", sortable: true, filter: true },
+  { field: "jobProfileName", header: "Job Profile", sortable: true, filter: true },
+  { field: "clientName", header: "Client Name", sortable: true, filter: true },
+  { field: "departmentName", header: "Department", sortable: true, filter: true },
+  { field: "notes", header: "Notes", sortable: true, filter: true },
+
+
 ];
 
 const DEFAULT_COLUMN_FIELDS = ["candidateName", "contact", "expectedLocation.city", "jobRole", "experienceYears", "statusName"];
