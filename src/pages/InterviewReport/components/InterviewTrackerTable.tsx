@@ -54,13 +54,18 @@ const formatDateTimeFromUTC = (utcIso: string) => {
   });
 
   const year = d.getFullYear();
-
-  const hours = d.getHours().toString().padStart(2, "0");
-  const minutes = d.getMinutes().toString().padStart(2, "0");
+  const time = d.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+  
+  // const hours = d.getHours().toString().padStart(2, "0");
+  // const minutes = d.getMinutes().toString().padStart(2, "0");
 
   return {
     date: `${day}-${month}-${year}`,   // ✅ 19-Feb-2026
-    time: `${hours}:${minutes}`,       // ✅ 14:30
+    time,      // ✅ 14:30
   };
 };
 

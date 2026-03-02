@@ -5,6 +5,7 @@ import { Column } from "primereact/column";
 import { InterviewerReport } from "../types/interviewerReporttypes";
 import { FilterMatchMode } from "primereact/api";
 import { Dropdown } from "primereact/dropdown";
+import DateRangeFilter from "./DateRangeFilter";
 const formatDate = (dateString: string) => {
   if (!dateString) return "-";
 
@@ -59,13 +60,15 @@ const CoverageReportTable: React.FC<Props> = ({ data, loading }) => {
   const sizeFromUrl = Number(searchParams.get(SIZE_PARAM)) || 10;
   const [rowsPerPage, setRowsPerPage] = useState(sizeFromUrl);
   const [first, setFirst] = useState((pageFromUrl - 1) * sizeFromUrl);
-
+  const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
   const [filters, setFilters] = useState({
     interviewerName: { value: null, matchMode: FilterMatchMode.EQUALS },
     role: { value: null, matchMode: FilterMatchMode.EQUALS },
     round: { value: null, matchMode: FilterMatchMode.EQUALS },
     result: { value: null, matchMode: FilterMatchMode.EQUALS },
     recruiterName: { value: null, matchMode: FilterMatchMode.EQUALS },
+    // date: { value: null, matchMode: FilterMatchMode.CUSTOM }, // 👈 ADD THIS LINE
+
   });
 
   const onPageChange = (event: DataTablePageEvent) => {
@@ -155,6 +158,28 @@ const CoverageReportTable: React.FC<Props> = ({ data, loading }) => {
     fontSize: 14,
     textAlign: "left",
   };
+  const filterCoverageByDate = (
+    rows: CoverageRow[],
+    dateRange: { start?: string; end?: string } | null
+  ) => {
+    return rows.filter((row) => {
+      if (!dateRange?.start && !dateRange?.end) return true;
+      if (!row.date) return false;
+  
+      const rowDate = new Date(row.date);
+      const startDate = dateRange?.start ? new Date(dateRange.start) : null;
+      const endDate = dateRange?.end ? new Date(dateRange.end) : null;
+  
+      if (startDate && rowDate < startDate) return false;
+  
+      if (endDate) {
+        endDate.setHours(23, 59, 59, 999);
+        if (rowDate > endDate) return false;
+      }
+  
+      return true;
+    });
+  };
 
   return (
     <section
@@ -171,7 +196,7 @@ const CoverageReportTable: React.FC<Props> = ({ data, loading }) => {
       }}
     >
       <DataTable
-        value={rows}
+        value={filterCoverageByDate(rows, dateRange)}
         loading={loading}
         stripedRows
         rowHover
@@ -242,16 +267,31 @@ const CoverageReportTable: React.FC<Props> = ({ data, loading }) => {
           headerStyle={headerStyle}
           bodyStyle={cellStyle}
         />
+<Column
+  field="date"
+  style={{ minWidth: "280px" }}
+  header={
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <span>Date</span>
 
-       <Column
-          field="date"
-          header="Date"
-          headerStyle={headerStyle}
-          bodyStyle={cellStyle}
-          body={(row: CoverageRow) => formatDate(row.date)}
-          sortable
-        />
-
+      <DateRangeFilter
+        initialStartDate={dateRange?.start}
+        initialEndDate={dateRange?.end}
+        onApply={(start, end) => {
+          setDateRange({ start, end });
+          setFirst(0); // reset pagination
+        }}
+        onClear={() => {
+          setDateRange(null);
+          setFirst(0); // reset pagination
+        }}
+      />
+    </div>
+  }
+  body={(row: CoverageRow) => formatDate(row.date)}
+  // sortable
+/>
+  
         <Column
           field="result"
           header="Result"

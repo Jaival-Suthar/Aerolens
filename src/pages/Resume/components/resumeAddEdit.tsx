@@ -727,7 +727,7 @@ else {
           {/* Column 3 */}
           <InputNumberField
             id="currentCTC"
-            label="Current CTC"
+            label="Current CTC (LPA)"
             value={formData.currentCTC}
             onChange={(val: number | null) => handleChange("currentCTC", val)}
             onBlur={() => handleBlur("currentCTC")}
@@ -739,7 +739,7 @@ else {
 
           <InputNumberField
             id="expectedCTC"
-            label="Expected CTC"
+            label="Expected CTC (LPA)"
             value={formData.expectedCTC}
             onChange={(val: number | null) => handleChange("expectedCTC", val)}
             onBlur={() => handleBlur("expectedCTC")}

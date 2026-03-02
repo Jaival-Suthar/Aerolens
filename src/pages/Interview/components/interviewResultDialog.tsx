@@ -247,7 +247,7 @@ const InterviewResultDialog: React.FC<InterviewResultDialogProps> = ({
       <Dialog
         visible={visible}
         style={{ width: "550px" }}
-        header="Finalize Interview Result"
+        header="Interview Result"
         modal
         className="p-fluid"
         footer={dialogFooter}
