@@ -45,6 +45,32 @@ export const getInterviewFormData = async (token: string) => {
   }
 };
 
+export const getInterviewerDailyCapacity = async (
+  token: string,
+  interviewerId: number,
+  date: string,
+  timezone: string
+) => {
+  const queryParams = new URLSearchParams({
+    date,
+    timezone,
+  });
+
+  const url = `${BASE_URL}/interview/capacity/interviewer-daily/${interviewerId}?${queryParams.toString()}`;
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: makeHeaders(token),
+    });
+
+    return await checkStatus(res);
+  } catch (err) {
+    console.error("[getInterviewerDailyCapacity] ERROR:", err);
+    throw err;
+  }
+};
+
 // ---------------------- INTERVIEW SERVICE WITH DEBUG ----------------------
 
 export const getInterviews = async (token: string) => {
