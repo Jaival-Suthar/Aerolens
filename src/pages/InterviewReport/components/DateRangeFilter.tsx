@@ -294,7 +294,6 @@ const DateRangeFilter: React.FC<Props> = ({
             </div>
           )}
         />
-        
         <button
           className="external-clear-btn"
           onClick={clear}

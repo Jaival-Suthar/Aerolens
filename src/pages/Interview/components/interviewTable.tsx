@@ -9,7 +9,7 @@ import InterviewDelete from "./interviewDelete";
 import InterviewAddEditForm from "./interviewAddEdit";
 import SearchButton from "../../../shared/SearchButton";
 import { DateTime } from "luxon";
-
+import DateRangeFilter from "../../InterviewReport/components/DateRangeFilter";
 import { Interview } from "../types/interviewTypes";
 import { getInterviews } from "../services/interviewService";
 import { useAuth } from "../../../shared/auth/AuthContext";
@@ -120,6 +120,10 @@ const InterviewTable: React.FC = () => {
     toTime: { value: null, matchMode: FilterMatchMode.CONTAINS },
     durationMinutes: { value: null, matchMode: FilterMatchMode.EQUALS }
   });
+  const [dateRange, setDateRange] = useState<{
+    startDate?: string;
+    endDate?: string;
+  }>({});
   const [visibleColumns, setVisibleColumns] = useState(
   ALL_COLUMNS.filter(col =>
     DEFAULT_COLUMN_FIELDS.includes(col.field)
@@ -413,78 +417,98 @@ const handleViewAllRounds = () => {
     </div>
   );
 };
-  const buildInterviewDetailsData = (interview: Interview) => {
-  return ALL_COLUMNS
-    .map(col => {
-      let value: any = null;
+const buildInterviewDetailsData = (interview: Interview) => {
+  const mapped = ALL_COLUMNS.map(col => {
+    let value: any = null;
 
-      switch (col.body) {
-        case "roundProgress":
-          value = `Round ${interview.roundNumber} / ${interview.totalInterviews}`;
-          break;
-
+    switch (col.body) {
+      case "roundProgress":
+        value = `Round ${interview.roundNumber} / ${interview.totalInterviews}`;
+        break;
         case "date":
-          value = new Date(interview.interviewDate).toLocaleDateString("en-GB");
+          value = new Date(interview.interviewDate).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          });
           break;
+      // case "date":
+      //   value = new Date(interview.interviewDate).toLocaleDateString("en-GB");
+      //   break;
 
-        case "startTime": {
-          const t = formatTimeForTable(
-            interview.fromTime,
-            interview.eventTimezone,
-            browserTimezone
-          );
-          value = t ? t.text : "-";
-          break;
-        }
-
-        case "endTime": {
-          const t = formatTimeForTable(
-            interview.toTime,
-            interview.eventTimezone,
-            browserTimezone
-          );
-          value = t ? t.text : "-";
-          break;
-        }
-         
-        case "result":
-          value = interview.result || "Pending";
-          break;
-          case "recording":   // 👈 THIS WAS MISSING
-          if (!interview.meetingUrl) {
-            value = "-";
-          } else {
-            const url = interview.meetingUrl.startsWith("http")
-              ? interview.meetingUrl
-              : `https://${interview.meetingUrl}`;
-      
-            value = (
-              <a
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  color: "#2563eb",
-                  textDecoration: "underline",
-                  fontWeight: 500,
-                  wordBreak: "break-all",
-                }}
-              >
-                {url}
-              </a>
-            );
-          }
-          break;
-        default:
-          value = (interview as any)[col.field];
+      case "startTime": {
+        const t = formatTimeForTable(
+          interview.fromTime,
+          interview.eventTimezone,
+          browserTimezone
+        );
+        value = t ? t.text : "-";
+        break;
       }
 
-      return {
-        label: col.header,
-        value: value ?? "-"
-      };
-    })
-    .filter(item => item.value !== "-" && item.value !== null);
+      case "endTime": {
+        const t = formatTimeForTable(
+          interview.toTime,
+          interview.eventTimezone,
+          browserTimezone
+        );
+        value = t ? t.text : "-";
+        break;
+      }
+
+      case "result":
+        value = interview.result || "Pending";
+        break;
+
+      case "recording":
+        if (!interview.meetingUrl) {
+          value = "-";
+        } else {
+          const url = interview.meetingUrl.startsWith("http")
+            ? interview.meetingUrl
+            : `https://${interview.meetingUrl}`;
+
+          value = (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {url}
+            </a>
+          );
+        }
+        break;
+
+      default:
+        value = (interview as any)[col.field];
+    }
+
+    return {
+      label: col.header,
+      value: value ?? "-"
+    };
+  });
+
+  // ✅ NOW return everything together
+  return [
+    ...mapped,
+    {
+      label: "Timezone",
+      value: interview.eventTimezone ?? "-"
+    },
+    {
+      label: "Interviewer Feedback",
+      value: interview.interviewerFeedback ?? "-",
+      fullWidth: true   // 👈 add this
+
+    },
+    {
+      label: "Recruiter Notes",
+      value: interview.recruiterNotes ?? "-",
+      fullWidth: true   // 👈 add this
+    }
+  ];
 };
   const uniqueValues = <T,>(arr: (T | null | undefined)[]) =>
   Array.from(new Set(arr.filter(Boolean)));
@@ -518,6 +542,26 @@ const resultFilterTemplate = (options: any) => (
     showClear
   />
 );
+const filteredInterviews = interviews.filter((interview) => {
+  if (!dateRange.startDate && !dateRange.endDate) return true;
+  if (!interview.fromTime) return false;
+
+  const normalized = normalizeBackendDateTime(interview.fromTime);
+  if (!normalized) return false;
+
+  const interviewDate = DateTime
+    .fromISO(normalized, { zone: "utc" })
+    .setZone(browserTimezone)
+    .toFormat("yyyy-MM-dd");
+
+  if (dateRange.startDate && interviewDate < dateRange.startDate)
+    return false;
+
+  if (dateRange.endDate && interviewDate > dateRange.endDate)
+    return false;
+
+  return true;
+});
 
   return (
     <>
@@ -582,7 +626,7 @@ const resultFilterTemplate = (options: any) => (
 
       <div style={{ flex: 1, overflow: "auto" }}>
       <DataTable
-        value={interviews}
+        value={filteredInterviews}
         loading={loading}
         selectionMode="single"
         selection={selectedInterview}
@@ -601,7 +645,7 @@ const resultFilterTemplate = (options: any) => (
         rowsPerPageOptions={[10, 20, 50]}
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Members"
-        totalRecords={interviews.length}
+        totalRecords={filteredInterviews.length}
         // globalFilter={searchText}
         // globalFilterFields={[
         //   "candidateName",
@@ -622,7 +666,37 @@ const resultFilterTemplate = (options: any) => (
           let filterElement;
           if (col.body === "roundProgress") bodyTemplate = roundProgressBodyTemplate;
           if (col.body === "result") bodyTemplate = resultBodyTemplate;
-          if (col.body === "date") bodyTemplate = dateBodyTemplate;
+
+          // if (col.body === "date") bodyTemplate = dateBodyTemplate;
+
+          if (col.body === "date") {
+            return (
+              <Column
+                key={col.field}
+                field={col.field}
+                header={
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span>{col.header}</span>
+          
+                    <DateRangeFilter
+                      initialStartDate={dateRange.startDate}
+                      initialEndDate={dateRange.endDate}
+                      onApply={(startDate, endDate) => {
+                        setDateRange({ startDate, endDate });
+                        setFirst(0);
+                      }}
+                      onClear={() => {
+                        setDateRange({});
+                        setFirst(0);
+                      }}
+                    />
+                  </div>
+                }
+                body={dateBodyTemplate}
+              />
+            );
+          }
+
           if (col.body === "recording") bodyTemplate = meetingUrlBodyTemplate;
           if (col.body === "startTime") bodyTemplate = timeBodyTemplate;
           if (col.body === "endTime") bodyTemplate = endTimeBodyTemplate;

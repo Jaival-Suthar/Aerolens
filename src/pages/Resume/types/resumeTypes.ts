@@ -4,6 +4,7 @@ export interface Candidate {
   candidateName: string;
   contactNumber: string;
   email: string;
+  dateOfEntry?: string | null;
 
   recruiterId: number | null;        // Editable
   recruiterName: string | null;      // Editable
