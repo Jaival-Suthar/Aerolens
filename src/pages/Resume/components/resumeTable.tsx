@@ -484,7 +484,8 @@ const ResumeTable: React.FC = () => {
         </DataTable>
       </div>
 
-      <ResumeAddEdit visible={showAddEditDialog} onHide={() => setShowAddEditDialog(false)} selectedResume={editingResume} onSuccess={handleAddEditSuccess} createData={createData} loadingOptions={loadingCreateData} />
+      <ResumeAddEdit visible={showAddEditDialog} onHide={() => setShowAddEditDialog(false)} selectedResume={editingResume} onSuccess={handleAddEditSuccess} createData={createData} loadingOptions={loadingCreateData}   existingCandidates={resumes}   // ✅ ADD THIS
+ />
       <ResumeDelete visible={showDeleteDialog} onHide={() => setShowDeleteDialog(false)} selectedResume={selectedResume} onSuccess={handleDeleteSuccess} onClearSelection={() => setSelectedResume(null)} />
       <InterviewScheduler visible={showInterviewDialog} onHide={() => setShowInterviewDialog(false)} candidateId={selectedResume?.candidateId || null} candidateName={selectedResume?.candidateName || null} toast={toastRef} />
       <PremiumDetailsDialog visible={!!viewCandidate} title="Candidate Details" onHide={() => setViewCandidate(null)}>

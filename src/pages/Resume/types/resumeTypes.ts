@@ -91,6 +91,7 @@ export interface ResumeAddEditProps {
   onSuccess: () => void;
   createData: CandidateCreateData | null;
   loadingOptions: boolean;
+  existingCandidates: Candidate[]; // ✅ ADD THIS
 }
 
 /* ------------------ ADD/EDIT PAYLOAD ------------------ */
