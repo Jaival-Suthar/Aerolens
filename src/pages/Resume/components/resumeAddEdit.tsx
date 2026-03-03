@@ -125,8 +125,21 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   const [formData, setFormData] = useState<AddEditCandidate>(INITIAL_FORM);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [resumePasteText, setResumePasteText] = useState("");
   const toast = useRef<Toast>(null);
   
+  const resetForm = () => {
+    setFormData(INITIAL_FORM);
+    setErrors({});
+    setSubmitted(false);
+    setResumePasteText("");
+  };
+  useEffect(() => {
+    if (!visible) {
+      resetForm();
+    }
+  }, [visible]);
+
   // Prepare dropdown options from create-data
   const recruiterOptions = useMemo(() => {
     if (!createData?.recruiters) return [];
@@ -257,6 +270,111 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   [errors]
 );
 
+const parseAndAutofill = (text: string) => {
+  if (!text.trim()) return;
+
+  const updatedData: Partial<AddEditCandidate> = {};
+
+  // Full Name
+  const nameMatch = text.match(/full\s*name[:\-]?\s*(.+)/i);
+  if (nameMatch) updatedData.candidateName = nameMatch[1].trim();
+
+  // Contact Number
+  const phoneMatch = text.match(/contact\s*number[:\-]?\s*(.+)/i);
+  if (phoneMatch) updatedData.contactNumber = phoneMatch[1].trim();
+
+  // Email
+  const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  if (emailMatch) updatedData.email = emailMatch[0];
+
+  // LinkedIn
+  const linkedinMatch = text.match(/https?:\/\/(www\.)?linkedin\.com\/[^\s]+/i);
+  if (linkedinMatch) updatedData.linkedinProfileUrl = linkedinMatch[0];
+
+  // Experience
+  const expMatch = text.match(/experience[:\-]?\s*(\d+(\.\d+)?)/i);
+  if (expMatch) updatedData.experienceYears = parseFloat(expMatch[1]);
+
+  // Current CTC
+  const currentCTCMatch = text.match(/current\s*ctc[:\-]?\s*(\d+(\.\d+)?)/i);
+  if (currentCTCMatch) updatedData.currentCTC = parseFloat(currentCTCMatch[1]);
+
+  // Expected CTC
+  const expectedCTCMatch = text.match(/expected\s*ctc[:\-]?\s*(\d+(\.\d+)?)/i);
+  if (expectedCTCMatch) updatedData.expectedCTC = parseFloat(expectedCTCMatch[1]);
+
+  // Notice Period
+  const noticeMatch = text.match(/notice\s*period[:\-]?\s*(\d+)/i);
+  if (noticeMatch) updatedData.noticePeriod = parseInt(noticeMatch[1]);
+
+  // Current Location
+  // const currentLocMatch = text.match(/current\s*location[:\-]?\s*(.+),\s*(.+)/i);
+  // if (currentLocMatch) {
+  //   updatedData.currentLocation = {
+  //     city: currentLocMatch[1].trim(),
+  //     country: currentLocMatch[2].trim(),
+  //   };
+  // }
+  // Current Location
+  const currentLocMatch = text.match(/current\s*location[:\-]?\s*(.+),\s*(.+)/i);
+    if (currentLocMatch && createData?.locations) {
+      const city = currentLocMatch[1].trim();
+      const country = currentLocMatch[2].trim();
+
+      const matchedLocation = createData.locations.find(
+        loc =>
+          loc.city.toLowerCase() === city.toLowerCase() &&
+          loc.country.toLowerCase() === country.toLowerCase()
+      );
+
+      if (matchedLocation) {
+        updatedData.currentLocation = {
+          city: matchedLocation.city,
+          country: matchedLocation.country,
+        };
+    }
+  }
+
+  // Preferred Location
+  const preferredLocMatch = text.match(/preferred\s*location[:\-]?\s*(.+),\s*(.+)/i);
+
+  if (preferredLocMatch && createData?.locations) {
+    const city = preferredLocMatch[1].trim();
+    const country = preferredLocMatch[2].trim();
+
+    const matchedLocation = createData.locations.find(
+      loc =>
+        loc.city.toLowerCase() === city.toLowerCase() &&
+        loc.country.toLowerCase() === country.toLowerCase()
+    );
+
+    if (matchedLocation) {
+      updatedData.expectedLocation = {
+        city: matchedLocation.city,
+        country: matchedLocation.country,
+      };
+    }
+  }
+    // const preferredLocMatch = text.match(/preferred\s*location[:\-]?\s*(.+),\s*(.+)/i);
+    // if (preferredLocMatch) {
+    //   updatedData.expectedLocation = {
+    //     city: preferredLocMatch[1].trim(),
+    //     country: preferredLocMatch[2].trim(),
+    //   };
+    // }
+
+    setFormData(prev => ({
+      ...prev,
+      ...updatedData
+    }));
+
+    toast.current?.show({
+      severity: "success",
+      summary: "Auto-filled",
+      detail: "Fields detected from pasted text",
+      life: 1500,
+    });
+};
 
   const handleBlur = useCallback(
     (field: keyof AddEditCandidate) => {
@@ -461,6 +579,30 @@ else {
         modal
         className="p-fluid"
       >
+      <div className="field col-12 mb-4">
+          <label className="font-bold">
+            Candidate Details for Auto-fill Form (Optional)
+          </label>
+
+          <textarea
+            value={resumePasteText}
+            onChange={(e) => setResumePasteText(e.target.value)}
+            onPaste={(e) => {
+              const pastedText = e.clipboardData.getData("text");
+              setResumePasteText(pastedText);
+              parseAndAutofill(pastedText);
+            }}
+            placeholder="Paste resume text here..."
+            style={{
+              width: "100%",
+              minHeight: "120px",
+              padding: "0.75rem",
+              borderRadius: "6px",
+              border: "1px solid #cbd5e1"
+            }}
+          />
+        </div>
+
         <div className="formgrid grid">
           {/* Column 1 */}
           <InputField
