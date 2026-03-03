@@ -118,9 +118,11 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   onSuccess,
   createData,
   loadingOptions,
+  existingCandidates
 }) => {
   const { accessToken } = useAuth();
   const isEditMode = Boolean(selectedResume);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<AddEditCandidate>(INITIAL_FORM);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
@@ -140,7 +142,58 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     }
   }, [visible]);
 
-  // Prepare dropdown options from create-data
+  useEffect(() => {
+    if (!existingCandidates?.length || isEditMode) {
+      setDuplicateError(null);
+      return;
+    }
+  
+    const normalizedName = formData.candidateName?.toLowerCase().trim();
+    const normalizedEmail = formData.email?.toLowerCase().trim();
+    const normalizedPhone = formData.contactNumber?.trim();
+  
+    const errors: string[] = [];
+  
+    for (const c of existingCandidates) {
+      const nameMatch =
+        normalizedName &&
+        c.candidateName?.toLowerCase().trim() === normalizedName;
+  
+      const emailMatch =
+        normalizedEmail &&
+        c.email?.toLowerCase().trim() === normalizedEmail;
+  
+      const phoneMatch =
+        normalizedPhone &&
+        c.contactNumber?.trim() === normalizedPhone;
+  
+      if (nameMatch && !errors.includes("Candidate name already exists.")) {
+        errors.push("Candidate name already exists.");
+      }
+
+      if (phoneMatch && !errors.includes("Phone number already exists.")) {
+        errors.push("Phone number already exists.");
+      }
+  
+      if (emailMatch && !errors.includes("Email already exists.")) {
+        errors.push("Email already exists.");
+      }
+  
+    }
+  
+    if (errors.length > 0) {
+      setDuplicateError(errors.join(" "));
+    } else {
+      setDuplicateError(null);
+    }
+  }, [
+    formData.candidateName,
+    formData.email,
+    formData.contactNumber,
+    existingCandidates,
+    isEditMode,
+  ]);
+
   const recruiterOptions = useMemo(() => {
     if (!createData?.recruiters) return [];
     return createData.recruiters.map(r => ({ 
@@ -434,7 +487,13 @@ const parseAndAutofill = (text: string) => {
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
+ 
   const handleSave = useCallback(async () => {
+  
+    if (duplicateError) {
+      return;
+    }
+   
     setSubmitted(true);
     
     if (!validateForm()) {
@@ -602,7 +661,22 @@ else {
             }}
           />
         </div>
-
+        {duplicateError && (
+        <div
+        style={{
+        backgroundColor: "#fff3cd",
+        border: "1px solid #ffeeba",
+        padding: "10px",
+        marginBottom: "15px",
+        borderRadius: "4px",
+        color: "#856404",
+        fontWeight: 500,
+        display: "inline-block",
+    }}
+  >
+    ⚠ {duplicateError}
+  </div>
+)}
         <div className="formgrid grid">
           {/* Column 1 */}
           <InputField
