@@ -68,7 +68,7 @@ const ResumeTable: React.FC = () => {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showInterviewDialog, setShowInterviewDialog] = useState(false);
   const toastRef = useRef<Toast>(null);
-  const [rows, setRows] = useState(10);
+  const [rows, setRows] = useState(20);
   const [searchParams, setSearchParams] = useSearchParams();
   const pageFromUrl = Number(searchParams.get("page")) || 1;
   const [first, setFirst] = useState((pageFromUrl - 1) * 10);
@@ -407,7 +407,7 @@ const ResumeTable: React.FC = () => {
       <div style={{ flex: 1, overflow: "auto" }}>
         <DataTable
           ref={dt} value={filteredResumes} paginator rows={rows} first={first} filterDisplay="menu" scrollable scrollHeight="flex"
-          onFilter={(e) => setFilters(e.filters)} onPage={onPageChange} rowsPerPageOptions={[10, 20, 50]}
+          onFilter={(e) => setFilters(e.filters)} onPage={onPageChange} rowsPerPageOptions={[20, 50, 100]}
           selectionMode="single" selection={selectedResume} dataKey="candidateId" onSelectionChange={(e) => setSelectedResume(e.value)}
           tableStyle={{ minWidth: "80rem" }} loading={loading} emptyMessage="No candidates found." filters={filters}
           globalFilterFields={['candidateName', 'contactNumber', 'email', 'recruiterName', 'jobRole', 'statusName', 'vendorName']}

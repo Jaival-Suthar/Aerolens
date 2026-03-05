@@ -32,7 +32,7 @@ const ClientContactsView: React.FC<ClientContactsViewProps> = ({ selectedClient,
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
 
   // Pagination state - using in-memory state instead of localStorage
-  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(20);
   const [first, setFirst] = useState<number>(0);
 
   const toast = useRef<Toast>(null);
@@ -260,7 +260,7 @@ const ClientContactsView: React.FC<ClientContactsViewProps> = ({ selectedClient,
           dataKey="clientContactId"
           showGridlines
           metaKeySelection={false}
-          rowsPerPageOptions={[10, 20, 50]}
+          rowsPerPageOptions={[20, 50, 100]}
           tableStyle={{ minWidth: "50rem" }}
         >
           <Column

@@ -111,7 +111,7 @@ const JobProfileTable: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const pageFromUrl = Number(searchParams.get(PAGE_PARAM)) || 1;
-  const sizeFromUrl = Number(searchParams.get(SIZE_PARAM)) || 10;
+  const sizeFromUrl = Number(searchParams.get(SIZE_PARAM)) || 20;
 
   const [rows, setRows] = useState(sizeFromUrl);
   const [first, setFirst] = useState((pageFromUrl - 1) * sizeFromUrl);
@@ -493,7 +493,7 @@ const previewJD = async (jobProfileId: number) => {
           first={first}
           rows={rows}
           onPage={onPageChange}
-          rowsPerPageOptions={[10, 20, 50]}
+          rowsPerPageOptions={[20, 50, 100]}
           emptyMessage="No job profiles found"
           paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
           currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Job Profiles"

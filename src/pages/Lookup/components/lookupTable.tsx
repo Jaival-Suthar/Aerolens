@@ -118,8 +118,8 @@ const LookupTable: React.FC<LookupTableProps> = ({
         value={data}
         loading={loading}
         paginator 
-        rows={10}  
-        rowsPerPageOptions={[5, 10, 25, 50]}
+        rows={20}  
+        rowsPerPageOptions={[20,50,100]}
         scrollable
         scrollHeight="flex"
         responsiveLayout="scroll"

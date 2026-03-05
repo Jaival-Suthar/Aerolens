@@ -23,7 +23,7 @@ const VendorTable: React.FC = () => {
 
   // --- URL-aware pagination ---
   const initialFirst = Number(searchParams.get("first")) || 0;
-  const initialRows = Number(searchParams.get("rows")) || 10;
+  const initialRows = Number(searchParams.get("rows")) || 20;
 
   const [rows, setRows] = useState(initialRows);
   const [first, setFirst] = useState(initialFirst);
@@ -161,7 +161,7 @@ const VendorTable: React.FC = () => {
           rows={rows}
           first={first}
           onPage={onPageChange}
-          rowsPerPageOptions={[10, 20, 50]}
+          rowsPerPageOptions={[20, 50, 100]}
           paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport"
           currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Vendors"
         >

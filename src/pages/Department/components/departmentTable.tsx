@@ -28,7 +28,7 @@ const DepartmentTable: React.FC<DepartmentTableProps> = ({
   
   // ✅ LocalStorage Pagination (isolated for Department table)
   const savedPage = Number(localStorage.getItem("departmentTablePage") || 0);
-  const savedRows = Number(localStorage.getItem("departmentTableRows") || 10);
+  const savedRows = Number(localStorage.getItem("departmentTableRows") || 20);
   const [error, setError] = useState<ApiError | null>(null);
   const [first, setFirst] = useState(savedPage * savedRows);
   const [rows, setRows] = useState(savedRows);
@@ -178,7 +178,7 @@ const DepartmentTable: React.FC<DepartmentTableProps> = ({
           scrollable
           scrollHeight="flex"
           onPage={onPageChange}
-          rowsPerPageOptions={[10, 20, 50]}
+          rowsPerPageOptions={[20, 50, 100]}
           dataKey="departmentId"
           selectionMode="single"
           selection={selectedDepartment}

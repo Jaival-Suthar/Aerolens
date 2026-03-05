@@ -87,7 +87,7 @@ const MembersTable: React.FC = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const pageFromUrl = Number(searchParams.get("page")) || 1;
-  const [rows, setRows] = useState(10);
+  const [rows, setRows] = useState(20);
   const [first, setFirst] = useState((pageFromUrl - 1) * 10);
   const tooltipRef = useRef<Tooltip>(null);
   const [formData, setFormData] = useState<MemberFormData | null>(null);
@@ -414,7 +414,7 @@ const MembersTable: React.FC = () => {
           onPage={onPageChange}
           scrollable
           scrollHeight="flex"
-          rowsPerPageOptions={[10, 20, 50]}
+          rowsPerPageOptions={[20, 50, 100]}
           paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
           currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Members"
           selectionMode="single"

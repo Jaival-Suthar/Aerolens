@@ -97,7 +97,7 @@ const InterviewTrackerTable: React.FC<Props> = ({
   const [searchParams, setSearchParams] = useSearchParams();
 
   const pageFromUrl = Number(searchParams.get(PAGE_PARAM)) || 1;
-  const sizeFromUrl = Number(searchParams.get(SIZE_PARAM)) || 10;
+  const sizeFromUrl = Number(searchParams.get(SIZE_PARAM)) || 20;
 
   const [rowsPerPage, setRowsPerPage] = useState(sizeFromUrl);
   const [first, setFirst] = useState((pageFromUrl - 1) * sizeFromUrl);
@@ -250,7 +250,7 @@ const InterviewTrackerTable: React.FC<Props> = ({
         first={first}
         rows={rowsPerPage}
         onPage={onPageChange}
-        rowsPerPageOptions={[10, 20, 50]}
+        rowsPerPageOptions={[20, 50, 100]}
         emptyMessage={loading ? "Loading..." : "No interview data found"}
         paginatorTemplate={paginatorTemplate}
         currentPageReportTemplate={currentPageReportTemplate}

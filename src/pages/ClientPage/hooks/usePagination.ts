@@ -14,7 +14,7 @@ export const usePagination = () => {
 
     return {
       currentPage: urlPage || saved.currentPage || 1,
-      limit: urlLimit || saved.limit || 10,
+      limit: urlLimit || saved.limit || 20,
       totalPages: 1,
       totalRecords: 0,
     };
