@@ -29,6 +29,7 @@ import CandidateRoundsDialog from "../../Interview/components/CandidateRoundsDia
 import { Dropdown } from "primereact/dropdown";
 
 const ALL_COLUMNS = [
+  { field: "dateOfEntry", header: "Date Of Entry", sortable: true, body: "dateTemplate" },
   { field: "candidateName", header: "Candidate Name", sortable: true, filter: true },
   { field: "contact", header: "Candidate Contact", body: "candidateContactTemplate", sortable: true, filter: true, filterField: "contactNumber" },
   { field: "jobRole", header: "Role", sortable: true, filter: true },
@@ -43,7 +44,6 @@ const ALL_COLUMNS = [
   { field: "recruiterName", header: "Recruiter", sortable: true, filter: true },
   { field: "vendorName", header: "Vendor", sortable: true, filter: true },
   { field: "referredBy", header: "Referred By", sortable: true, filter: true },
-  { field: "dateOfEntry", header: "Date Of Entry", sortable: true, body: "dateTemplate" },
   { field: "email", header: "Email", sortable: true, filter: true },
   { field: "contactNumber", header: "Contact Number", sortable: true, filter: true },
   { field: "jobProfileName", header: "Job Profile", sortable: true, filter: true },
@@ -54,7 +54,7 @@ const ALL_COLUMNS = [
 
 ];
 
-const DEFAULT_COLUMN_FIELDS = ["candidateName", "contact", "expectedLocation.city", "jobRole", "experienceYears", "statusName"];
+const DEFAULT_COLUMN_FIELDS = ["dateOfEntry","candidateName", "contact", "expectedLocation.city", "jobRole", "experienceYears", "statusName",];
 const COLUMN_STORAGE_KEY = "candidateTable.visibleColumns";
 
 const ResumeTable: React.FC = () => {
@@ -438,7 +438,7 @@ const ResumeTable: React.FC = () => {
 
                   header={
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      <span>Date Of Entry</span>
+                      <span>Sourced On </span>
             
                       <DateRangeFilter
                         initialStartDate={dateRange?.start}
