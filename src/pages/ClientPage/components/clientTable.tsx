@@ -38,7 +38,7 @@ const ClientTable: React.FC<ClientTableProps> = ({
     clientName: { value: null, matchMode: FilterMatchMode.CONTAINS },
     address: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
-const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+const [rowsPerPage, setRowsPerPage] = useState<number>(20);
 const [first, setFirst] = useState<number>(0);
 
   useEffect(() => {
@@ -151,7 +151,7 @@ useEffect(() => {
           scrollable
           scrollHeight="flex"
           onPage={onPageChange}
-          rowsPerPageOptions={[10, 20, 50]}
+          rowsPerPageOptions={[20, 50, 100]}
           emptyMessage={loading ? "Loading..." : "No clients found."}
           selectionMode="single"
           selection={selectedClient}
