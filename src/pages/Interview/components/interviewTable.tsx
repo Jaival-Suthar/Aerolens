@@ -104,7 +104,7 @@ const InterviewTable: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const pageFromUrl = Number(searchParams.get("page")) || 1;
   const [viewInterview, setViewInterview] = useState<Interview | null>(null);
-  const [rows, setRows] = useState(10);
+  const [rows, setRows] = useState(20);
   const [first, setFirst] = useState((pageFromUrl - 1) * rows);
   const [showRoundsDialog, setShowRoundsDialog] = useState(false);
   const [filters, setFilters] = useState<DataTableFilterMeta>({
@@ -642,7 +642,7 @@ const filteredInterviews = interviews.filter((interview) => {
         filterDisplay="menu"
         filters={filters}
         onFilter={(e) => setFilters(e.filters)}
-        rowsPerPageOptions={[10, 20, 50]}
+        rowsPerPageOptions={[20 ,50, 100]}
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Members"
         totalRecords={filteredInterviews.length}

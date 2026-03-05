@@ -96,7 +96,7 @@ const JobProfileRequirementsTable: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const pageFromUrl = Number(searchParams.get("page")) || 1;
   const [first, setFirst] = useState((pageFromUrl - 1) * 10);
-  const [rows, setRows] = useState(10);
+  const [rows, setRows] = useState(20);
   const [globalFilterValue, setGlobalFilterValue] = useState('');
   const [locations, setLocations] = useState<Location[]>([]);
   const [filters, setFilters] = useState<DataTableFilterMeta>({
@@ -528,7 +528,7 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfileRequirements | nu
         rows={rows}
         first={first}
         onPage={onPageChange}
-        rowsPerPageOptions={[5, 10, 20, 50]}
+        rowsPerPageOptions={[20, 50,100]}
         // globalFilterFields={['clientName', 'departmentName', 'jobRole', 'jobProfileDescription', 'techSpecification','workArrangement', 'positions','location', 'status']}
         filters={filters}
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"

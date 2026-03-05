@@ -29,13 +29,14 @@ import CandidateRoundsDialog from "../../Interview/components/CandidateRoundsDia
 import { Dropdown } from "primereact/dropdown";
 
 const ALL_COLUMNS = [
+  { field: "dateOfEntry", header: "Date Of Entry", sortable: true, body: "dateTemplate" },
   { field: "candidateName", header: "Candidate Name", sortable: true, filter: true },
   { field: "contact", header: "Candidate Contact", body: "candidateContactTemplate", sortable: true, filter: true, filterField: "contactNumber" },
   { field: "jobRole", header: "Role", sortable: true, filter: true },
   { field: "currentLocation.city", header: "Current Working Location", body: "formatCurrentLocation", sortable: true, filter: true },
   { field: "expectedLocation.city", header: "Expected Working Location", body: "formatLocation", sortable: true, filter: true },
   { field: "experienceYears", header: "YOE", sortable: true, filter: true },
-  { field: "statusName", header: "Interview Status", sortable: true, filter: true },
+  { field: "statusName", header: "Interview Result", sortable: true, filter: true },
   { field: "currentCTC", header: "Current CTC", sortable: true, filter: true },
   { field: "expectedCTC", header: "Expected CTC", sortable: true, filter: true },
   { field: "noticePeriod", header: "Notice Period", sortable: true, filter: true },
@@ -43,7 +44,6 @@ const ALL_COLUMNS = [
   { field: "recruiterName", header: "Recruiter", sortable: true, filter: true },
   { field: "vendorName", header: "Vendor", sortable: true, filter: true },
   { field: "referredBy", header: "Referred By", sortable: true, filter: true },
-  { field: "dateOfEntry", header: "Date Of Entry", sortable: true, body: "dateTemplate" },
   { field: "email", header: "Email", sortable: true, filter: true },
   { field: "contactNumber", header: "Contact Number", sortable: true, filter: true },
   { field: "jobProfileName", header: "Job Profile", sortable: true, filter: true },
@@ -54,7 +54,7 @@ const ALL_COLUMNS = [
 
 ];
 
-const DEFAULT_COLUMN_FIELDS = ["candidateName", "contact", "expectedLocation.city", "jobRole", "experienceYears", "statusName"];
+const DEFAULT_COLUMN_FIELDS = ["dateOfEntry","candidateName", "contact", "expectedLocation.city", "jobRole", "experienceYears", "statusName",];
 const COLUMN_STORAGE_KEY = "candidateTable.visibleColumns";
 
 const ResumeTable: React.FC = () => {
@@ -68,7 +68,7 @@ const ResumeTable: React.FC = () => {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showInterviewDialog, setShowInterviewDialog] = useState(false);
   const toastRef = useRef<Toast>(null);
-  const [rows, setRows] = useState(10);
+  const [rows, setRows] = useState(20);
   const [searchParams, setSearchParams] = useSearchParams();
   const pageFromUrl = Number(searchParams.get("page")) || 1;
   const [first, setFirst] = useState((pageFromUrl - 1) * 10);
@@ -407,7 +407,7 @@ const ResumeTable: React.FC = () => {
       <div style={{ flex: 1, overflow: "auto" }}>
         <DataTable
           ref={dt} value={filteredResumes} paginator rows={rows} first={first} filterDisplay="menu" scrollable scrollHeight="flex"
-          onFilter={(e) => setFilters(e.filters)} onPage={onPageChange} rowsPerPageOptions={[10, 20, 50]}
+          onFilter={(e) => setFilters(e.filters)} onPage={onPageChange} rowsPerPageOptions={[20, 50, 100]}
           selectionMode="single" selection={selectedResume} dataKey="candidateId" onSelectionChange={(e) => setSelectedResume(e.value)}
           tableStyle={{ minWidth: "80rem" }} loading={loading} emptyMessage="No candidates found." filters={filters}
           globalFilterFields={['candidateName', 'contactNumber', 'email', 'recruiterName', 'jobRole', 'statusName', 'vendorName']}
@@ -438,7 +438,7 @@ const ResumeTable: React.FC = () => {
 
                   header={
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      <span>Date Of Entry</span>
+                      <span>Sourced On </span>
             
                       <DateRangeFilter
                         initialStartDate={dateRange?.start}
