@@ -162,7 +162,7 @@ const VendorTable: React.FC = () => {
           first={first}
           onPage={onPageChange}
           rowsPerPageOptions={[20, 50, 100]}
-          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport"
+          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
           currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Vendors"
         >
           <Column selectionMode="single" bodyStyle={{ textAlign: "center" }} />
