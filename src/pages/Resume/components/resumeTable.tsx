@@ -35,7 +35,7 @@ const ALL_COLUMNS = [
   { field: "currentLocation.city", header: "Current Working Location", body: "formatCurrentLocation", sortable: true, filter: true },
   { field: "expectedLocation.city", header: "Expected Working Location", body: "formatLocation", sortable: true, filter: true },
   { field: "experienceYears", header: "YOE", sortable: true, filter: true },
-  { field: "statusName", header: "Interview Status", sortable: true, filter: true },
+  { field: "statusName", header: "Interview Result", sortable: true, filter: true },
   { field: "currentCTC", header: "Current CTC", sortable: true, filter: true },
   { field: "expectedCTC", header: "Expected CTC", sortable: true, filter: true },
   { field: "noticePeriod", header: "Notice Period", sortable: true, filter: true },
