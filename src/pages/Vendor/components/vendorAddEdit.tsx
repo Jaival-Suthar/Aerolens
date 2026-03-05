@@ -13,6 +13,7 @@ type VendorFormData = {
   vendorName: string;
   vendorPhone: string;
   vendorEmail: string;
+  contactPersonName?: string;
 };
 
 type VendorAddEditProps = {
@@ -39,6 +40,7 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
     vendorName: "",
     vendorPhone: "",
     vendorEmail: "",
+    contactPersonName: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -50,6 +52,8 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
         vendorName: vendorToEdit.vendorName,
         vendorPhone: vendorToEdit.vendorPhone || "",
         vendorEmail: vendorToEdit.vendorEmail || "",
+        contactPersonName: vendorToEdit.contactPersonName || "",
+        
       });
     } else {
       setFormData({ vendorName: "", vendorPhone: "", vendorEmail: "" });
@@ -162,6 +166,7 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
           </div>
         }
       >
+        
         <div className="p-field">
           <label className="font-bold mb-2 block">Organization Name*</label>
           <InputText
@@ -176,8 +181,17 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
           )}
         </div>
 
-        <br />
 
+        <br />
+        <div className="p-field">
+  <label className="font-bold mb-2 block">Contact Person</label>
+  <InputText
+    value={formData.contactPersonName || ""}
+    onChange={(e) =>
+      setFormData((prev) => ({ ...prev, personOfContact: e.target.value }))
+    }
+  />
+</div>
         <div className="p-field">
           <label className="font-bold mb-2 block">Phone</label>
           <InputText

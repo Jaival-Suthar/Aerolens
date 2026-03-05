@@ -7,6 +7,7 @@ export type VendorType = {
   vendorName: string;
   vendorPhone: string | null;
   vendorEmail: string | null;
+  contactPersonName?: string | null; // Optional field for contact person
 };
 
 /* =======================
@@ -17,6 +18,7 @@ export type CreateVendorPayload = {
   vendorName: string;
   vendorPhone?: string | null;
   vendorEmail?: string | null;
+  contactPersonName?: string | null; // Optional field for contact person
 };
 
 /* =======================

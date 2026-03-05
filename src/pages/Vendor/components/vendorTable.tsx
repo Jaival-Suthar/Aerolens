@@ -184,12 +184,22 @@ const VendorTable: React.FC = () => {
             )}
           />
           <Column
+          field="personOfContact"
+          header="Contact Person"
+          sortable
+          filter
+          filterPlaceholder="Search contact person"
+/>
+          <Column
             field="vendorPhone"
             header="Phone"
             sortable
             filter
             filterPlaceholder="Search by phone"
           />
+
+
+
           <Column
             field="vendorEmail"
             header="Email"
