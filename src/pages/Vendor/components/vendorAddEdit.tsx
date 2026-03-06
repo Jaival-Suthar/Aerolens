@@ -185,16 +185,19 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
 
 
         <br />
+
         <div className="p-field">
         <label className="font-bold mb-2 block">Person of Contact</label>
         <InputText
-        value={formData.contactPersonName || ""}
-        onChange={(e) =>
-        setFormData((prev) => ({ ...prev, contactPersonName: e.target.value }))
-    }
-      />
-      </div>
-      <br/>
+          value={formData.contactPersonName || ""}
+          onChange={(e) =>
+          setFormData((prev) => ({ ...prev, contactPersonName: e.target.value }))
+          }
+        />
+        </div>
+
+        <br/>
+
         <div className="p-field">
           <label className="font-bold mb-2 block">Phone</label>
           <InputText
