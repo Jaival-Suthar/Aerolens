@@ -56,7 +56,7 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
         
       });
     } else {
-      setFormData({ vendorName: "", vendorPhone: "", vendorEmail: "" });
+      setFormData({ vendorName: "", vendorPhone: "", vendorEmail: "", contactPersonName: "" });
     }
 
     setErrors({});
