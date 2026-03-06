@@ -35,6 +35,7 @@ const VendorTable: React.FC = () => {
     vendorName: { value: null, matchMode: FilterMatchMode.EQUALS },
     vendorPhone: { value: null, matchMode: FilterMatchMode.CONTAINS },
     vendorEmail: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    contactPersonName: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
   const [showAddEdit, setShowAddEdit] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
@@ -152,7 +153,7 @@ const VendorTable: React.FC = () => {
           filters={filters}
           filterDisplay="menu"
           onFilter={(e) => setFilters(e.filters)}
-          globalFilterFields={["vendorName", "vendorPhone", "vendorEmail"]}
+          globalFilterFields={["vendorName", "vendorPhone", "vendorEmail", "contactPersonName"]}
           scrollable
           scrollHeight="flex"
           tableStyle={{ minWidth: "80rem" }}
@@ -184,8 +185,8 @@ const VendorTable: React.FC = () => {
             )}
           />
           <Column
-          field="personOfContact"
-          header="Contact Person"
+          field="contactPersonName"
+          header="Person of Contact"
           sortable
           filter
           filterPlaceholder="Search contact person"

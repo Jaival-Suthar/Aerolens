@@ -81,6 +81,8 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
   vendorName: data.vendorName.trim(),
   vendorPhone: data.vendorPhone.trim() || null,
   vendorEmail: data.vendorEmail.trim() || null,
+  contactPersonName: data.contactPersonName?.trim() || null,
+
 });
   const handleSave = async () => {
     setSubmitted(true);
@@ -188,7 +190,7 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
   <InputText
     value={formData.contactPersonName || ""}
     onChange={(e) =>
-      setFormData((prev) => ({ ...prev, personOfContact: e.target.value }))
+      setFormData((prev) => ({ ...prev, contactPersonName: e.target.value }))
     }
   />
 </div>
