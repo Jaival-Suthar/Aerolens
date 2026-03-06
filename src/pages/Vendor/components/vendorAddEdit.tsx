@@ -186,7 +186,7 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
 
         <br />
         <div className="p-field">
-  <label className="font-bold mb-2 block">Contact Person</label>
+  <label className="font-bold mb-2 block">Person of Contact</label>
   <InputText
     value={formData.contactPersonName || ""}
     onChange={(e) =>
