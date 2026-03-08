@@ -48,13 +48,20 @@ const INITIAL_FORM: AddEditCandidate = {
   jobProfileRequirementId: null as any,
   expectedLocation: { city: '', country: '' },
   currentLocation: null,
-  currentCTC: undefined,
-  expectedCTC: undefined,
+  // currentCTC: undefined,
+  // expectedCTC: undefined,
   noticePeriod: 0,
   experienceYears: 0,
   linkedinProfileUrl: undefined,
   resumeFile: null,
   notes: undefined,
+  // NEW FIELDS
+  currentCTCAmount: null,
+  currentCTCCurrencyId: null,
+  currentCTCTypeId: null,
+  expectedCTCAmount: null,
+  expectedCTCCurrencyId: null,
+  expectedCTCTypeId: null,
 };
 
 // ---------- VALIDATION ----------
@@ -83,10 +90,16 @@ const validateField = (field: keyof AddEditCandidate, value: any) => {
     if (!value || !value.country) return "";
     if (!value.city) return "City is required when country is selected.";
     return "";
-    case "currentCTC":
+    // case "currentCTC":
+    //   if (value === undefined || value === null) return "";
+    //   return value > 0 ? "" : "Current CTC must be greater than 0.";
+    // case "expectedCTC":
+    //   if (value === undefined || value === null) return "";
+    //   return value > 0 ? "" : "Expected CTC must be greater than 0.";
+    case "currentCTCAmount":
       if (value === undefined || value === null) return "";
       return value > 0 ? "" : "Current CTC must be greater than 0.";
-    case "expectedCTC":
+    case "expectedCTCAmount":
       if (value === undefined || value === null) return "";
       return value > 0 ? "" : "Expected CTC must be greater than 0.";
     case "noticePeriod":
@@ -261,6 +274,21 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   }));
 }, [formData.currentLocation?.country, locationsByCountry]);
 
+const currencyOptions = useMemo(() => {
+  if (!createData?.currencies) return [];
+  return createData.currencies.map(c => ({
+    label: c.currencyName,
+    value: c.currencyId,
+  }));
+}, [createData?.currencies]);
+
+const ctcTypeOptions = useMemo(() => {
+  if (!createData?.compensationTypes) return [];
+  return createData.compensationTypes.map((t) => ({
+    label: t.compensationTypeName,
+    value: t.compensationTypeId,
+  }));
+}, [createData?.compensationTypes]);
   // Initialize / Reset form
   useEffect(() => {
   const loadCandidateForEdit = async () => {
@@ -283,8 +311,14 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
         jobProfileRequirementId: freshCandidate.jobProfileRequirementId,
         expectedLocation: freshCandidate.expectedLocation,
         currentLocation: freshCandidate.currentLocation ?? null,
-        currentCTC: freshCandidate.currentCTC ?? undefined,
-        expectedCTC: freshCandidate.expectedCTC ?? undefined,
+        //   currentCTC: freshCandidate.currentCTC ?? undefined,
+        // expectedCTC: freshCandidate.expectedCTC ?? undefined,
+        currentCTCAmount: freshCandidate.currentCTCAmount ?? null,
+        currentCTCCurrencyId: freshCandidate.currentCTCCurrencyId ?? null,
+        currentCTCTypeId: freshCandidate.currentCTCTypeId ?? null,
+        expectedCTCAmount: freshCandidate.expectedCTCAmount ?? null,
+        expectedCTCCurrencyId: freshCandidate.expectedCTCCurrencyId ?? null,
+        expectedCTCTypeId: freshCandidate.expectedCTCTypeId ?? null,
         noticePeriod: freshCandidate.noticePeriod,
         experienceYears: freshCandidate.experienceYears,
         linkedinProfileUrl: freshCandidate.linkedinProfileUrl ?? undefined,
@@ -504,30 +538,29 @@ const parseAndAutofill = (text: string) => {
       if (isEditMode && selectedResume) {
   const payload: AddEditCandidateApiPayload = {
     candidateName: formData.candidateName,
-
     contactNumber: formData.contactNumber?.trim() || null,
     email: formData.email?.trim() || null,
-
     recruiterId: formData.recruiterId,
     recruiterName: formData.recruiterName,
-
     vendorId: formData.vendorId ?? null,
     referredBy: formData.referredBy?.trim() || null,
-
     jobProfileRequirementId: formData.jobProfileRequirementId,
-
     expectedLocation: formData.expectedLocation,
     currentLocation: formData.currentLocation ?? null,
-
-    currentCTC: formData.currentCTC ?? null,
-    expectedCTC: formData.expectedCTC ?? null,
-
+    // currentCTC: formData.currentCTC ?? null,
+    // expectedCTC: formData.expectedCTC ?? null,
+    currentCTCAmount: formData.currentCTCAmount ?? null,
+    currentCTCCurrencyId: formData.currentCTCCurrencyId ?? null,
+    currentCTCTypeId: formData.currentCTCTypeId ?? null,
+    expectedCTCAmount: formData.expectedCTCAmount ?? null,
+    expectedCTCCurrencyId: formData.expectedCTCCurrencyId ?? null,
+    expectedCTCTypeId: formData.expectedCTCTypeId ?? null,
     noticePeriod: formData.noticePeriod,
     experienceYears: formData.experienceYears,
     linkedinProfileUrl: formData.linkedinProfileUrl?.trim() || null,
     notes: formData.notes?.trim() || null,
   };
-
+  console.log("Payload to create:", payload);
   await updateCandidate(
     accessToken,
     selectedResume.candidateId,
@@ -939,32 +972,85 @@ else {
             colSize="col-12 md:col-4"
             allowDecimal={false}
           />
-
-          {/* Column 3 */}
+          <div className="col-12">
+          <div className="formgrid grid">
           <InputNumberField
-            id="currentCTC"
-            label="Current CTC (LPA)"
-            value={formData.currentCTC}
-            onChange={(val: number | null) => handleChange("currentCTC", val)}
-            onBlur={() => handleBlur("currentCTC")}
-            error={shouldShowError("currentCTC")}
+          id="currentCTCAmount"
+          label="Current CTC Amount"
+          value={formData.currentCTCAmount}
+          onChange={(val: number | null) => handleChange("currentCTCAmount", val)}
+          onBlur={() => handleBlur("currentCTCAmount")}
+          error={shouldShowError("currentCTCAmount")}
+          colSize="col-12 md:col-4"
+          required={false}
+          allowDecimal
+          />
+
+          <DropdownField
+          id="currentCTCCurrencyId"
+          label=" Current Currency"
+          value={formData.currentCTCCurrencyId}
+          options={currencyOptions}
+          onChange={(e) => handleChange("currentCTCCurrencyId", e.value)}
+          onBlur={() => handleBlur("currentCTCCurrencyId")}
+          placeholder="Select Currency"
+          error={shouldShowError("currentCTCCurrencyId")}
+          required={false}
+          colSize="col-12 md:col-4"
+          />
+
+          <DropdownField
+            id="currentCTCTypeId"
+            label=" Current CTC Type"
+            value={formData.currentCTCTypeId}
+            options={ctcTypeOptions}
+            onChange={(e) => handleChange("currentCTCTypeId", e.value)}
+            onBlur={() => handleBlur("currentCTCTypeId")}
+            placeholder="Select CTC Type"
+            error={shouldShowError("currentCTCTypeId")}
+            required={false}
+            colSize="col-12 md:col-4"
+          />
+           {/* Column 3 - Expected CTC */}        
+          <InputNumberField
+            id="expectedCTCAmount"
+            label="Expected CTC Amount"
+            value={formData.expectedCTCAmount}
+            onChange={(val: number | null) => handleChange("expectedCTCAmount", val)}
+            onBlur={() => handleBlur("expectedCTCAmount")}
+            error={shouldShowError("expectedCTCAmount")}
             colSize="col-12 md:col-4"
             required={false}
             allowDecimal
           />
 
-          <InputNumberField
-            id="expectedCTC"
-            label="Expected CTC (LPA)"
-            value={formData.expectedCTC}
-            onChange={(val: number | null) => handleChange("expectedCTC", val)}
-            onBlur={() => handleBlur("expectedCTC")}
-            error={shouldShowError("expectedCTC")}
-            colSize="col-12 md:col-4"
-            required={false}
-            allowDecimal
+          <DropdownField
+          id="expectedCTCCurrencyId"
+          label=" Expected Currency"
+          value={formData.expectedCTCCurrencyId}
+          options={currencyOptions}  // same options as current CTC
+          onChange={(e) => handleChange("expectedCTCCurrencyId", e.value)}
+          onBlur={() => handleBlur("expectedCTCCurrencyId")}
+          placeholder="Select Currency"
+          error={shouldShowError("expectedCTCCurrencyId")}
+          required={false}
+          colSize="col-12 md:col-4"
           />
 
+        <DropdownField
+        id="expectedCTCTypeId"
+        label=" Expected CTC Type"
+        value={formData.expectedCTCTypeId}
+        options={ctcTypeOptions}  // same options as current CTC type
+        onChange={(e) => handleChange("expectedCTCTypeId", e.value)}
+        onBlur={() => handleBlur("expectedCTCTypeId")}
+        placeholder="Select CTC Type"
+        error={shouldShowError("expectedCTCTypeId")}
+        required={false}
+        colSize="col-12 md:col-4"
+        />
+        </div>
+        </div>
           <InputField
             id="linkedinProfileUrl"
             label="LinkedIn URL"

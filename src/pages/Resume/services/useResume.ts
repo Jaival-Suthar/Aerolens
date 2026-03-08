@@ -149,6 +149,29 @@ const buildCandidateFormData = (candidate: AddEditCandidate): FormData => {
     fd.append("currentLocation[city]", candidate.currentLocation.city);
     fd.append("currentLocation[country]", candidate.currentLocation.country);
   }
+   // ✅ New CTC fields
+   if (candidate.currentCTCAmount !== null && candidate.currentCTCAmount !== undefined) {
+    fd.append("currentCTCAmount", String(candidate.currentCTCAmount));
+  }
+  console.log("FORM DATA VALUES");
+for (const pair of fd.entries()) {
+  console.log(pair[0], pair[1]);
+}
+  if (candidate.currentCTCCurrencyId !== null && candidate.currentCTCCurrencyId !== undefined) {
+    fd.append("currentCTCCurrencyId", String(candidate.currentCTCCurrencyId));
+  }
+  if (candidate.currentCTCTypeId !== null && candidate.currentCTCTypeId !== undefined) {
+    fd.append("currentCTCTypeId", String(candidate.currentCTCTypeId));
+  }
+  if (candidate.expectedCTCAmount !== null && candidate.expectedCTCAmount !== undefined) {
+    fd.append("expectedCTCAmount", String(candidate.expectedCTCAmount));
+  }
+  if (candidate.expectedCTCCurrencyId !== null && candidate.expectedCTCCurrencyId !== undefined) {
+    fd.append("expectedCTCCurrencyId", String(candidate.expectedCTCCurrencyId));
+  }
+  if (candidate.expectedCTCTypeId !== null && candidate.expectedCTCTypeId !== undefined) {
+    fd.append("expectedCTCTypeId", String(candidate.expectedCTCTypeId));
+  }
   fd.append("noticePeriod", String(candidate.noticePeriod));
   fd.append("experienceYears", String(candidate.experienceYears));
   const contact = candidate.contactNumber?.trim();
@@ -157,13 +180,13 @@ const buildCandidateFormData = (candidate: AddEditCandidate): FormData => {
   const email = candidate.email?.trim();
   if (email) fd.append("email", email);
 
-    if (typeof candidate.currentCTC === "number") {
-    fd.append("currentCTC", String(candidate.currentCTC));
-  }
+  //   if (typeof candidate.currentCTC === "number") {
+  //   fd.append("currentCTC", String(candidate.currentCTC));
+  // }
 
-  if (typeof candidate.expectedCTC === "number") {
-    fd.append("expectedCTC", String(candidate.expectedCTC));
-  }
+  // if (typeof candidate.expectedCTC === "number") {
+  //   fd.append("expectedCTC", String(candidate.expectedCTC));
+  // }
   if (candidate.notes) fd.append("notes", candidate.notes);
   if (candidate.linkedinProfileUrl && candidate.linkedinProfileUrl.trim()) {
     fd.append("linkedinProfileUrl", candidate.linkedinProfileUrl);

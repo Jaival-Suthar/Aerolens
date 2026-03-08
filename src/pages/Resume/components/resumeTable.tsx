@@ -29,7 +29,7 @@ import CandidateRoundsDialog from "../../Interview/components/CandidateRoundsDia
 import { Dropdown } from "primereact/dropdown";
 
 const ALL_COLUMNS = [
-  { field: "dateOfEntry", header: "Date Of Entry", sortable: true, body: "dateTemplate" },
+  { field: "dateOfEntry", header: "Sourced On ", sortable: true, body: "dateTemplate" },
   { field: "candidateName", header: "Candidate Name", sortable: true, filter: true },
   { field: "contact", header: "Candidate Contact", body: "candidateContactTemplate", sortable: true, filter: true, filterField: "contactNumber" },
   { field: "jobRole", header: "Role", sortable: true, filter: true },
@@ -37,8 +37,10 @@ const ALL_COLUMNS = [
   { field: "expectedLocation.city", header: "Expected Working Location", body: "formatLocation", sortable: true, filter: true },
   { field: "experienceYears", header: "YOE", sortable: true, filter: true },
   { field: "statusName", header: "Interview Result", sortable: true, filter: true },
-  { field: "currentCTC", header: "Current CTC", sortable: true, filter: true },
-  { field: "expectedCTC", header: "Expected CTC", sortable: true, filter: true },
+  // { field: "currentCTC", header: "Current CTC", sortable: true, filter: true },
+  // { field: "expectedCTC", header: "Expected CTC", sortable: true, filter: true },
+  { field: "currentCTCAmount", header: "Current CTC Amount", sortable: true, filter: true },
+  { field: "expectedCTCAmount", header: "Expected CTC Amount", sortable: true, filter: true },
   { field: "noticePeriod", header: "Notice Period", sortable: true, filter: true },
   { field: "linkedinProfileUrl", header: "LinkedIn Profile", body: "linkedInTemplate" },
   { field: "recruiterName", header: "Recruiter", sortable: true, filter: true },
@@ -54,7 +56,8 @@ const ALL_COLUMNS = [
 
 ];
 
-const DEFAULT_COLUMN_FIELDS = ["dateOfEntry","candidateName", "contact", "expectedLocation.city", "jobRole", "experienceYears", "statusName",];
+const DEFAULT_COLUMN_FIELDS = ["dateOfEntry","candidateName", "contact", "expectedLocation.city", "jobRole", "experienceYears", "statusName","currentCTCAmount",
+  "expectedCTCAmount"];
 const COLUMN_STORAGE_KEY = "candidateTable.visibleColumns";
 
 const ResumeTable: React.FC = () => {
@@ -106,8 +109,11 @@ const ResumeTable: React.FC = () => {
     statusName: { value: null, matchMode: FilterMatchMode.CONTAINS },
     contactNumber: { value: null, matchMode: FilterMatchMode.CONTAINS },
     email: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    currentCTC: { value: null, matchMode: FilterMatchMode.EQUALS },
-    expectedCTC: { value: null, matchMode: FilterMatchMode.EQUALS },
+    // currentCTC: { value: null, matchMode: FilterMatchMode.EQUALS },
+    // expectedCTC: { value: null, matchMode: FilterMatchMode.EQUALS },
+     // 👇 THESE TWO LINES
+    currentCTCAmount: { value: null, matchMode: FilterMatchMode.EQUALS },
+    expectedCTCAmount: { value: null, matchMode: FilterMatchMode.EQUALS },
     noticePeriod: { value: null, matchMode: FilterMatchMode.EQUALS },
     experienceYears: { value: null, matchMode: FilterMatchMode.EQUALS },
     notes: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -300,6 +306,52 @@ const ResumeTable: React.FC = () => {
     const vendorOptions = vendors.map(v => ({ label: v, value: v }));
     return <Dropdown value={options.value} options={vendorOptions} onChange={(e) => options.filterCallback(e.value)} placeholder="Select Vendor" showClear style={{ minWidth: "12rem" }} />;
   };
+  const currencySymbols: Record<string, string> = {
+    EUR: "€",
+    USD: "$",
+    INR: "₹",
+    GBP: "£",
+    AED: "د.إ"
+  };
+
+  const compensationShort: Record<string, string> = {
+    Annual: "yr",
+    Yearly: "yr",
+    Monthly: "mo",
+    Hourly: "hr"
+  };
+  const currentCTCTemplate = (row: Candidate) => {
+    if (!row.currentCTCAmount) return "-";
+  
+    const currencyName = createData?.currencies?.find(
+      c => c.currencyId === row.currentCTCCurrencyId
+    )?.currencyName;
+  
+    const type = createData?.compensationTypes?.find(
+      t => t.compensationTypeId === row.currentCTCTypeId
+    )?.compensationTypeName;
+  
+    const symbol = currencySymbols[currencyName || ""] || currencyName || "";
+    const shortType = compensationShort[type || ""] || type || "";
+  
+    return `${symbol}${row.currentCTCAmount}/${shortType}`;
+  };
+  const expectedCTCTemplate = (row: Candidate) => {
+    if (!row.expectedCTCAmount) return "-";
+  
+    const currencyName = createData?.currencies?.find(
+      c => c.currencyId === row.expectedCTCCurrencyId
+    )?.currencyName;
+  
+    const type = createData?.compensationTypes?.find(
+      t => t.compensationTypeId === row.expectedCTCTypeId
+    )?.compensationTypeName;
+  
+    const symbol = currencySymbols[currencyName || ""] || currencyName || "";
+    const shortType = compensationShort[type || ""] || type || "";
+  
+    return `${symbol}${row.expectedCTCAmount}/${shortType}`;
+  };
 
   const recruiterFilterTemplate = createDropdownFilterTemplate("recruiterName", "Recruiter");
   const statusFilterTemplate = createDropdownFilterTemplate("statusName", "Status");
@@ -316,6 +368,8 @@ const ResumeTable: React.FC = () => {
     const country = row.currentLocation?.country || "";
     return !city && !country ? "-" : `${city}, ${country}`;
   };
+
+  
 
   const settingsItems = [
     { label: "View Interview Rounds", icon: <FaRoute style={{ marginRight: 8, marginLeft: 4 }} />, action: () => { setShowSettingsMenu(false); handleViewAllRounds(); } },
@@ -464,6 +518,9 @@ const ResumeTable: React.FC = () => {
             if (col.field === "recruiterName") filterElement = recruiterFilterTemplate;
             if (col.field === "statusName") filterElement = statusFilterTemplate;
             if (col.field === "jobRole") filterElement = roleFilterTemplate;
+            if (col.field === "currentCTCAmount") bodyTemplate = currentCTCTemplate;
+            if (col.field === "expectedCTCAmount") bodyTemplate = expectedCTCTemplate;
+
 
             return (
               <Column 
