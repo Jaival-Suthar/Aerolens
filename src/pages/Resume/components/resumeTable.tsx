@@ -170,7 +170,16 @@ const ResumeTable: React.FC = () => {
   const getNestedValue = (obj: any, path: string) => path.split(".").reduce((acc, key) => acc?.[key], obj);
 
   const getColumnDisplayValue = (col: any, candidate: Candidate) => {
+    if (col.field === "currentCTCAmount") {
+      return currentCTCTemplate(candidate);
+    }
+  
+    if (col.field === "expectedCTCAmount") {
+      return expectedCTCTemplate(candidate);
+    }
+  
     switch (col.body) {
+      
       case "dateTemplate":
         return formatDate(candidate.dateOfEntry);
       case "candidateContactTemplate":
@@ -187,6 +196,7 @@ const ResumeTable: React.FC = () => {
             {url}
           </a>
         );
+        // ⭐ ADD THESE TWO CASES
       default:
         return getNestedValue(candidate, col.field);
     }
