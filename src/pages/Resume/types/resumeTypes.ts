@@ -22,8 +22,8 @@ export interface Candidate {
     country: string;
   } | null;
 
-  currentCTC: number;
-  expectedCTC: number;
+  // currentCTC: number;
+  // expectedCTC: number;
   currentCTCAmount?: number | null;
   currentCTCCurrencyId?: number | null;
   currentCTCTypeId?: number | null;
@@ -70,8 +70,8 @@ export interface CandidateUpdatePayload {
     country: string;
   } | null;
 
-  currentCTC?: number | null;
-  expectedCTC?: number | null;
+  // currentCTC?: number | null;
+  // expectedCTC?: number | null;
   currentCTCAmount?: number | null;
   currentCTCCurrencyId?: number | null;
   currentCTCTypeId?: number | null;
@@ -130,8 +130,8 @@ export interface AddEditCandidate {
     country: string;
   } | null;
 
-  currentCTC?: number;
-  expectedCTC?: number;
+  // currentCTC?: number;
+  // expectedCTC?: number;
 
   currentCTCAmount?: number | null;
   currentCTCCurrencyId?: number | null;
