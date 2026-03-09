@@ -65,7 +65,7 @@ const INITIAL_FORM: AddEditCandidate = {
 };
 
 // ---------- VALIDATION ----------
-const validateField = (field: keyof AddEditCandidate, value: any) => {
+const validateField = (field: keyof AddEditCandidate, value: any, formData?: AddEditCandidate) => {
   switch (field) {
     case "candidateName":
       return value.trim() ? "" : "Candidate name is required.";
@@ -99,9 +99,21 @@ const validateField = (field: keyof AddEditCandidate, value: any) => {
     case "currentCTCAmount":
       if (value === undefined || value === null) return "";
       return value > 0 ? "" : "Current CTC must be greater than 0.";
+    case "currentCTCCurrencyId":
+      if (!formData?.currentCTCAmount) return "";
+      return value ? "" : "Select currency for Current CTC.";
+    case "currentCTCTypeId":
+      if (!formData?.currentCTCAmount) return "";
+      return value ? "" : "Select CTC type for Current CTC.";
     case "expectedCTCAmount":
       if (value === undefined || value === null) return "";
       return value > 0 ? "" : "Expected CTC must be greater than 0.";
+    case "expectedCTCCurrencyId":
+      if (!formData?.expectedCTCAmount) return "";
+      return value ? "" : "Select currency for Expected CTC.";
+    case "expectedCTCTypeId":
+      if (!formData?.expectedCTCAmount) return "";
+      return value ? "" : "Select CTC type for Expected CTC.";
     case "noticePeriod":
       return value >= 0 ? "" : "Notice period is required.";
     case "experienceYears":
@@ -384,11 +396,15 @@ const parseAndAutofill = (text: string) => {
 
   // Current CTC
   const currentCTCMatch = text.match(/current\s*ctc[:\-]?\s*(\d+(\.\d+)?)/i);
-  if (currentCTCMatch) updatedData.currentCTC = parseFloat(currentCTCMatch[1]);
+  if (currentCTCMatch) {
+    updatedData.currentCTCAmount = parseFloat(currentCTCMatch[1]);
+  }
 
   // Expected CTC
   const expectedCTCMatch = text.match(/expected\s*ctc[:\-]?\s*(\d+(\.\d+)?)/i);
-  if (expectedCTCMatch) updatedData.expectedCTC = parseFloat(expectedCTCMatch[1]);
+  if (expectedCTCMatch) {
+    updatedData.expectedCTCAmount = parseFloat(expectedCTCMatch[1]);
+  }
 
   // Notice Period
   const noticeMatch = text.match(/notice\s*period[:\-]?\s*(\d+)/i);
@@ -514,7 +530,7 @@ const parseAndAutofill = (text: string) => {
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
     (Object.keys(formData) as (keyof AddEditCandidate)[]).forEach((key) => {
-      const errorMsg = validateField(key, formData[key]);
+      const errorMsg = validateField(key, formData[key], formData);
       if (errorMsg) newErrors[key] = errorMsg;
     });
     setErrors(newErrors);
