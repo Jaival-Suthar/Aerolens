@@ -22,8 +22,14 @@ export interface Candidate {
     country: string;
   } | null;
 
-  currentCTC: number;
-  expectedCTC: number;
+  // currentCTC: number;
+  // expectedCTC: number;
+  currentCTCAmount?: number | null;
+  currentCTCCurrencyId?: number | null;
+  currentCTCTypeId?: number | null;
+  expectedCTCAmount?: number | null;
+  expectedCTCCurrencyId?: number | null;
+  expectedCTCTypeId?: number | null;
   noticePeriod: number;
   experienceYears: number;
   statusName: string;
@@ -64,8 +70,16 @@ export interface CandidateUpdatePayload {
     country: string;
   } | null;
 
-  currentCTC?: number | null;
-  expectedCTC?: number | null;
+  // currentCTC?: number | null;
+  // expectedCTC?: number | null;
+  currentCTCAmount?: number | null;
+  currentCTCCurrencyId?: number | null;
+  currentCTCTypeId?: number | null;
+  
+  expectedCTCAmount?: number | null;
+  expectedCTCCurrencyId?: number | null;
+  expectedCTCTypeId?: number | null;
+  
   noticePeriod?: number;
   experienceYears?: number;
 
@@ -116,8 +130,15 @@ export interface AddEditCandidate {
     country: string;
   } | null;
 
-  currentCTC?: number;
-  expectedCTC?: number;
+  // currentCTC?: number;
+  // expectedCTC?: number;
+
+  currentCTCAmount?: number | null;
+  currentCTCCurrencyId?: number | null;
+  currentCTCTypeId?: number | null;
+  expectedCTCAmount?: number | null;
+  expectedCTCCurrencyId?: number | null;
+  expectedCTCTypeId?: number | null;
   noticePeriod: number;
   experienceYears: number;
   linkedinProfileUrl?: string;
@@ -149,8 +170,15 @@ export interface AddEditCandidateApiPayload {
     country: string;
   } | null;
 
-  currentCTC?: number | null;
-  expectedCTC?: number | null;
+  // currentCTC?: number | null;
+  // expectedCTC?: number | null;
+  currentCTCAmount?: number | null;
+  currentCTCCurrencyId?: number | null;
+  currentCTCTypeId?: number | null;
+  expectedCTCAmount?: number | null;
+  expectedCTCCurrencyId?: number | null;
+  expectedCTCTypeId?: number | null;
+  
 
   noticePeriod: number;
   experienceYears: number;
@@ -203,13 +231,25 @@ export interface JobProfileRequirementItem {
 
   experienceText: string | null;
 }
+// Currency type
+export interface CurrencyItem {
+  currencyId: number;       // matches Candidate.currentCTCCurrencyId type
+  currencyName: string;
+}
 
+// Compensation / CTC type
+export interface CompensationTypeItem {
+  compensationTypeId: number;   // matches Candidate.currentCTCTypeId type
+  compensationTypeName: string;
+}
 
 export interface CandidateCreateData {
   recruiters: RecruiterItem[];
   vendors: VendorItem[];
   locations: LocationItem[];
   jobProfiles: JobProfileRequirementItem[];
+  currencies?: CurrencyItem[];          // NEW
+  compensationTypes?: CompensationTypeItem[]; // NEW
 }
 export interface BulkUploadFailedRow {
   row: number;
@@ -236,3 +276,26 @@ export interface BulkUploadResponse {
   data: BulkUploadData;
 }
 
+export interface ResumeBulkUploadResponse {
+  status: "success";
+  batchId: string;
+}
+
+export interface ResumeBatchStatus {
+  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+  totalFiles: number;
+  processed: number;
+  linked: number;
+  skipped_no_match: number;
+  skipped_already_exists: number;
+  failed: number;
+  errorMessage: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+export interface ResumeBatchStatusResponse {
+  status: "success";
+  batchId: string;
+  data: ResumeBatchStatus;
+}

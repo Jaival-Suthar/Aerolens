@@ -13,6 +13,7 @@ type VendorFormData = {
   vendorName: string;
   vendorPhone: string;
   vendorEmail: string;
+  contactPersonName?: string;
 };
 
 type VendorAddEditProps = {
@@ -39,6 +40,7 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
     vendorName: "",
     vendorPhone: "",
     vendorEmail: "",
+    contactPersonName: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -50,9 +52,11 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
         vendorName: vendorToEdit.vendorName,
         vendorPhone: vendorToEdit.vendorPhone || "",
         vendorEmail: vendorToEdit.vendorEmail || "",
+        contactPersonName: vendorToEdit.contactPersonName || "",
+        
       });
     } else {
-      setFormData({ vendorName: "", vendorPhone: "", vendorEmail: "" });
+      setFormData({ vendorName: "", vendorPhone: "", vendorEmail: "", contactPersonName: "" });
     }
 
     setErrors({});
@@ -77,6 +81,8 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
   vendorName: data.vendorName.trim(),
   vendorPhone: data.vendorPhone.trim() || null,
   vendorEmail: data.vendorEmail.trim() || null,
+  contactPersonName: data.contactPersonName?.trim() || null,
+
 });
   const handleSave = async () => {
     setSubmitted(true);
@@ -162,6 +168,7 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
           </div>
         }
       >
+        
         <div className="p-field">
           <label className="font-bold mb-2 block">Organization Name*</label>
           <InputText
@@ -176,7 +183,20 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
           )}
         </div>
 
+
         <br />
+
+        <div className="p-field">
+        <label className="font-bold mb-2 block">Person of Contact</label>
+        <InputText
+          value={formData.contactPersonName || ""}
+          onChange={(e) =>
+          setFormData((prev) => ({ ...prev, contactPersonName: e.target.value }))
+          }
+        />
+        </div>
+
+        <br/>
 
         <div className="p-field">
           <label className="font-bold mb-2 block">Phone</label>

@@ -12,7 +12,7 @@ import DeleteButton from "../../../shared/DeleteButton";
 import { useSearchParams } from "react-router-dom";
 import DateRangeFilter from "../../InterviewReport/components/DateRangeFilter";
 import { Candidate, CandidateCreateData } from "../types/resumeTypes";
-import { getCandidates, downloadResume, fetchCandidateCreateData, bulkUploadCandidates } from "../services/useResume";
+import { getCandidates, downloadResume, fetchCandidateCreateData, bulkUploadCandidates, bulkUploadResumes, getResumeBulkStatus } from "../services/useResume";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import SearchButton from "../../../shared/SearchButton";
 import { FilterMatchMode } from 'primereact/api';
@@ -27,9 +27,10 @@ import PremiumDetailsDialog from "../../../shared/PremiumDetailsDialog";
 import ColumnSettingsButton from "../../../shared/ColumnSettingsButton";
 import CandidateRoundsDialog from "../../Interview/components/CandidateRoundsDialog";
 import { Dropdown } from "primereact/dropdown";
+import BulkPdfUploadButton from "../../../shared/BulkPdfUploadButton";
 
 const ALL_COLUMNS = [
-  { field: "dateOfEntry", header: "Date Of Entry", sortable: true, body: "dateTemplate" },
+  { field: "dateOfEntry", header: "Sourced On ", sortable: true, body: "dateTemplate" },
   { field: "candidateName", header: "Candidate Name", sortable: true, filter: true },
   { field: "contact", header: "Candidate Contact", body: "candidateContactTemplate", sortable: true, filter: true, filterField: "contactNumber" },
   { field: "jobRole", header: "Role", sortable: true, filter: true },
@@ -37,8 +38,10 @@ const ALL_COLUMNS = [
   { field: "expectedLocation.city", header: "Expected Working Location", body: "formatLocation", sortable: true, filter: true },
   { field: "experienceYears", header: "YOE", sortable: true, filter: true },
   { field: "statusName", header: "Interview Result", sortable: true, filter: true },
-  { field: "currentCTC", header: "Current CTC", sortable: true, filter: true },
-  { field: "expectedCTC", header: "Expected CTC", sortable: true, filter: true },
+  // { field: "currentCTC", header: "Current CTC", sortable: true, filter: true },
+  // { field: "expectedCTC", header: "Expected CTC", sortable: true, filter: true },
+  { field: "currentCTCAmount", header: "Current CTC Amount", sortable: true, filter: true },
+  { field: "expectedCTCAmount", header: "Expected CTC Amount", sortable: true, filter: true },
   { field: "noticePeriod", header: "Notice Period", sortable: true, filter: true },
   { field: "linkedinProfileUrl", header: "LinkedIn Profile", body: "linkedInTemplate" },
   { field: "recruiterName", header: "Recruiter", sortable: true, filter: true },
@@ -54,7 +57,8 @@ const ALL_COLUMNS = [
 
 ];
 
-const DEFAULT_COLUMN_FIELDS = ["dateOfEntry","candidateName", "contact", "expectedLocation.city", "jobRole", "experienceYears", "statusName",];
+const DEFAULT_COLUMN_FIELDS = ["dateOfEntry","candidateName", "contact", "expectedLocation.city", "jobRole", "experienceYears", "statusName","currentCTCAmount",
+  "expectedCTCAmount"];
 const COLUMN_STORAGE_KEY = "candidateTable.visibleColumns";
 
 const ResumeTable: React.FC = () => {
@@ -68,6 +72,7 @@ const ResumeTable: React.FC = () => {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showInterviewDialog, setShowInterviewDialog] = useState(false);
   const toastRef = useRef<Toast>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const [rows, setRows] = useState(20);
   const [searchParams, setSearchParams] = useSearchParams();
   const pageFromUrl = Number(searchParams.get("page")) || 1;
@@ -106,8 +111,11 @@ const ResumeTable: React.FC = () => {
     statusName: { value: null, matchMode: FilterMatchMode.CONTAINS },
     contactNumber: { value: null, matchMode: FilterMatchMode.CONTAINS },
     email: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    currentCTC: { value: null, matchMode: FilterMatchMode.EQUALS },
-    expectedCTC: { value: null, matchMode: FilterMatchMode.EQUALS },
+    // currentCTC: { value: null, matchMode: FilterMatchMode.EQUALS },
+    // expectedCTC: { value: null, matchMode: FilterMatchMode.EQUALS },
+     // 👇 THESE TWO LINES
+    currentCTCAmount: { value: null, matchMode: FilterMatchMode.EQUALS },
+    expectedCTCAmount: { value: null, matchMode: FilterMatchMode.EQUALS },
     noticePeriod: { value: null, matchMode: FilterMatchMode.EQUALS },
     experienceYears: { value: null, matchMode: FilterMatchMode.EQUALS },
     notes: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -144,9 +152,88 @@ const ResumeTable: React.FC = () => {
     }
   }, [accessToken]);
 
-  useEffect(() => {
-    loadAllData();
-  }, [loadAllData]);
+  const pollResumeBatch = (batchId: string) => {
+  const TERMINAL = ["COMPLETED", "FAILED"];
+
+  if (pollingRef.current) {
+    clearInterval(pollingRef.current);
+  }
+
+  pollingRef.current = setInterval(async () => {
+    try {
+      if (!accessToken) return;
+
+      const res = await getResumeBulkStatus(accessToken, batchId);
+      const data = res.data;
+
+      if (TERMINAL.includes(data.status)) {
+
+        if (pollingRef.current) {
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
+        }
+
+        if (data.status === "COMPLETED") {
+
+          const detail = (
+            <div style={{ lineHeight: "1.6", fontSize: "14px" }}>
+              <div>Processed: <b>{data.processed}</b></div>
+              <div>Linked: <b style={{ color: "#22c55e" }}>{data.linked}</b></div>
+              <div>No Match: <b style={{ color: "#f59e0b" }}>{data.skipped_no_match}</b></div>
+              <div>Already Exists: <b style={{ color: "#3b82f6" }}>{data.skipped_already_exists}</b></div>
+              <div>Failed: <b style={{ color: "#ef4444" }}>{data.failed}</b></div>
+            </div>
+          );
+
+          toastRef.current?.show({
+            severity: "success",
+            summary: "Resume Upload Completed",
+            detail,
+            life: 7000
+          });
+
+          loadAllData();
+
+        } else {
+
+          toastRef.current?.show({
+            severity: "error",
+            summary: "Batch Failed",
+            detail: data.errorMessage || "Processing failed",
+            life: 6000
+          });
+
+        }
+      }
+
+    } catch (err) {
+
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+
+      toastRef.current?.show({
+        severity: "error",
+        summary: "Polling Error",
+        detail: "Could not fetch batch status",
+        life: 6000
+      });
+
+    }
+
+  }, 3000);
+};
+
+useEffect(() => {
+  loadAllData();
+
+  return () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+    }
+  };
+}, [loadAllData]);
 
   const onPageChange = (event: any) => {
     setFirst(event.first);
@@ -164,7 +251,16 @@ const ResumeTable: React.FC = () => {
   const getNestedValue = (obj: any, path: string) => path.split(".").reduce((acc, key) => acc?.[key], obj);
 
   const getColumnDisplayValue = (col: any, candidate: Candidate) => {
+    if (col.field === "currentCTCAmount") {
+      return currentCTCTemplate(candidate);
+    }
+  
+    if (col.field === "expectedCTCAmount") {
+      return expectedCTCTemplate(candidate);
+    }
+  
     switch (col.body) {
+      
       case "dateTemplate":
         return formatDate(candidate.dateOfEntry);
       case "candidateContactTemplate":
@@ -181,6 +277,7 @@ const ResumeTable: React.FC = () => {
             {url}
           </a>
         );
+        // ⭐ ADD THESE TWO CASES
       default:
         return getNestedValue(candidate, col.field);
     }
@@ -300,6 +397,52 @@ const ResumeTable: React.FC = () => {
     const vendorOptions = vendors.map(v => ({ label: v, value: v }));
     return <Dropdown value={options.value} options={vendorOptions} onChange={(e) => options.filterCallback(e.value)} placeholder="Select Vendor" showClear style={{ minWidth: "12rem" }} />;
   };
+  const currencySymbols: Record<string, string> = {
+    EUR: "€",
+    USD: "$",
+    INR: "₹",
+    GBP: "£",
+    AED: "د.إ"
+  };
+
+  const compensationShort: Record<string, string> = {
+    Annual: "yr",
+    Yearly: "yr",
+    Monthly: "mo",
+    Hourly: "hr"
+  };
+  const currentCTCTemplate = (row: Candidate) => {
+    if (!row.currentCTCAmount) return "-";
+  
+    const currencyName = createData?.currencies?.find(
+      c => c.currencyId === row.currentCTCCurrencyId
+    )?.currencyName;
+  
+    const type = createData?.compensationTypes?.find(
+      t => t.compensationTypeId === row.currentCTCTypeId
+    )?.compensationTypeName;
+  
+    const symbol = currencySymbols[currencyName || ""] || currencyName || "";
+    const shortType = compensationShort[type || ""] || type || "";
+  
+    return `${symbol}${row.currentCTCAmount}/${shortType}`;
+  };
+  const expectedCTCTemplate = (row: Candidate) => {
+    if (!row.expectedCTCAmount) return "-";
+  
+    const currencyName = createData?.currencies?.find(
+      c => c.currencyId === row.expectedCTCCurrencyId
+    )?.currencyName;
+  
+    const type = createData?.compensationTypes?.find(
+      t => t.compensationTypeId === row.expectedCTCTypeId
+    )?.compensationTypeName;
+  
+    const symbol = currencySymbols[currencyName || ""] || currencyName || "";
+    const shortType = compensationShort[type || ""] || type || "";
+  
+    return `${symbol}${row.expectedCTCAmount}/${shortType}`;
+  };
 
   const recruiterFilterTemplate = createDropdownFilterTemplate("recruiterName", "Recruiter");
   const statusFilterTemplate = createDropdownFilterTemplate("statusName", "Status");
@@ -316,6 +459,8 @@ const ResumeTable: React.FC = () => {
     const country = row.currentLocation?.country || "";
     return !city && !country ? "-" : `${city}, ${country}`;
   };
+
+  
 
   const settingsItems = [
     { label: "View Interview Rounds", icon: <FaRoute style={{ marginRight: 8, marginLeft: 4 }} />, action: () => { setShowSettingsMenu(false); handleViewAllRounds(); } },
@@ -351,7 +496,7 @@ const ResumeTable: React.FC = () => {
 
   return (
     <>
-      <Toast ref={toastRef} />
+      <Toast ref={toastRef} position="top-right" />
       <div className="flex justify-content-between align-items-center mb-2">
         <h2 style={{ color: "#07253f" }}>Candidate Resume Management</h2>
         <div className="flex gap-2">
@@ -384,6 +529,38 @@ const ResumeTable: React.FC = () => {
               toastRef.current?.show({ severity: "error", summary: "Upload Failed", detail: error.message || "Something went wrong", life: 6000 });
             } finally { setLoading(false); }
           }} />
+          <BulkPdfUploadButton
+            onFileSelect={async (file) => {
+              if (!accessToken) return;
+
+              try {
+                setLoading(true);
+
+                const { batchId } = await bulkUploadResumes(accessToken, file);
+
+                toastRef.current?.show({
+                  severity: "info",
+                  summary: "Upload Started",
+                  detail: "Processing resumes...",
+                  life: 3000
+                });
+
+                setTimeout(() => {
+                  pollResumeBatch(batchId);
+                }, 1500);
+
+              } catch (error: any) {
+                toastRef.current?.show({
+                  severity: "error",
+                  summary: "Upload Failed",
+                  detail: error.message || "ZIP upload failed",
+                  life: 6000
+                });
+              } finally {
+                setLoading(false);
+              }
+            }}
+          />
           <AddButton onClick={handleAdd} />
           <EditButton onClick={handleEdit} disabled={!selectedResume} />
           <DeleteButton onClick={handleDelete} disabled={!selectedResume} />
@@ -464,6 +641,9 @@ const ResumeTable: React.FC = () => {
             if (col.field === "recruiterName") filterElement = recruiterFilterTemplate;
             if (col.field === "statusName") filterElement = statusFilterTemplate;
             if (col.field === "jobRole") filterElement = roleFilterTemplate;
+            if (col.field === "currentCTCAmount") bodyTemplate = currentCTCTemplate;
+            if (col.field === "expectedCTCAmount") bodyTemplate = expectedCTCTemplate;
+
 
             return (
               <Column 
