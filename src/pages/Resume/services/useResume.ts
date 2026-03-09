@@ -7,7 +7,9 @@ import type {
   AddEditCandidate,
   CandidateUpdatePayload,
   CandidateCreateData,
-  BulkUploadResponse
+  BulkUploadResponse,
+  ResumeBulkUploadResponse,
+  ResumeBatchStatusResponse
 } from "../types/resumeTypes";
 
 /* ------------------------------------------------------------------------- */
@@ -95,7 +97,9 @@ const ROUTES = {
   BY_ID: (id: number) => `/candidate/${id}`,
   RESUME: (id: number) => `/candidate/${id}/resume`,
   BULK_UPLOAD: "/candidate/bulk-upload",   // 👈 ADD THIS
-
+  RESUME_BULK_UPLOAD: "/candidate/resume-bulk-upload",
+  RESUME_BULK_STATUS: (batchId: string) =>
+    `/candidate/resume-bulk-upload/${batchId}/status`,
 };
 
 /* ------------------------------------------------------------------------- */
@@ -465,6 +469,65 @@ export const bulkUploadCandidates = async (
   return responseBody as BulkUploadResponse;
 };
 
+/* ------------------------------------------------------------------------- */
+/*  RESUME BULK ZIP UPLOAD                                                   */
+/* ------------------------------------------------------------------------- */
+
+export const bulkUploadResumes = async (
+  accessToken: string | null,
+  file: File
+): Promise<ResumeBulkUploadResponse> => {
+  if (!file) {
+    throw new Error("ZIP file is required");
+  }
+
+  const fd = new FormData();
+  fd.append("zipFile", file);
+
+  const response = await fetch(`${API_URL}${ROUTES.RESUME_BULK_UPLOAD}`, {
+    method: "POST",
+    headers: accessToken
+      ? { Authorization: `Bearer ${accessToken}` }
+      : undefined,
+    body: fd,
+    credentials: "include",
+  });
+
+  const responseBody = await response.json();
+
+  if (!response.ok) {
+    throw responseBody;
+  }
+
+  return responseBody as ResumeBulkUploadResponse;
+};
+
+/* ------------------------------------------------------------------------- */
+/*  RESUME BULK STATUS                                                       */
+/* ------------------------------------------------------------------------- */
+
+export const getResumeBulkStatus = async (
+  accessToken: string | null,
+  batchId: string
+): Promise<ResumeBatchStatusResponse> => {
+  const response = await fetch(
+    `${API_URL}${ROUTES.RESUME_BULK_STATUS(batchId)}`,
+    {
+      headers: accessToken
+        ? { Authorization: `Bearer ${accessToken}` }
+        : undefined,
+      credentials: "include",
+    }
+  );
+
+  const responseBody = await response.json();
+
+  if (!response.ok) {
+    throw responseBody;
+  }
+
+  return responseBody as ResumeBatchStatusResponse;
+};
 
 // -------------------- DIRECT DOWNLOAD LINK (optional) --------------------
 export const getResumeDownloadUrl = (candidateId: number): string =>

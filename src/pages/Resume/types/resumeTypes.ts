@@ -276,3 +276,26 @@ export interface BulkUploadResponse {
   data: BulkUploadData;
 }
 
+export interface ResumeBulkUploadResponse {
+  status: "success";
+  batchId: string;
+}
+
+export interface ResumeBatchStatus {
+  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+  totalFiles: number;
+  processed: number;
+  linked: number;
+  skipped_no_match: number;
+  skipped_already_exists: number;
+  failed: number;
+  errorMessage: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+export interface ResumeBatchStatusResponse {
+  status: "success";
+  batchId: string;
+  data: ResumeBatchStatus;
+}
