@@ -12,7 +12,7 @@ import DeleteButton from "../../../shared/DeleteButton";
 import { useSearchParams } from "react-router-dom";
 import DateRangeFilter from "../../InterviewReport/components/DateRangeFilter";
 import { Candidate, CandidateCreateData } from "../types/resumeTypes";
-import { getCandidates, downloadResume, fetchCandidateCreateData, bulkUploadCandidates } from "../services/useResume";
+import { getCandidates, downloadResume, fetchCandidateCreateData, bulkUploadCandidates, bulkUploadResumes, getResumeBulkStatus } from "../services/useResume";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import SearchButton from "../../../shared/SearchButton";
 import { FilterMatchMode } from 'primereact/api';
@@ -27,6 +27,7 @@ import PremiumDetailsDialog from "../../../shared/PremiumDetailsDialog";
 import ColumnSettingsButton from "../../../shared/ColumnSettingsButton";
 import CandidateRoundsDialog from "../../Interview/components/CandidateRoundsDialog";
 import { Dropdown } from "primereact/dropdown";
+import BulkPdfUploadButton from "../../../shared/BulkPdfUploadButton";
 
 const ALL_COLUMNS = [
   { field: "dateOfEntry", header: "Sourced On ", sortable: true, body: "dateTemplate" },
@@ -71,6 +72,7 @@ const ResumeTable: React.FC = () => {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showInterviewDialog, setShowInterviewDialog] = useState(false);
   const toastRef = useRef<Toast>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const [rows, setRows] = useState(20);
   const [searchParams, setSearchParams] = useSearchParams();
   const pageFromUrl = Number(searchParams.get("page")) || 1;
@@ -150,9 +152,88 @@ const ResumeTable: React.FC = () => {
     }
   }, [accessToken]);
 
-  useEffect(() => {
-    loadAllData();
-  }, [loadAllData]);
+  const pollResumeBatch = (batchId: string) => {
+  const TERMINAL = ["COMPLETED", "FAILED"];
+
+  if (pollingRef.current) {
+    clearInterval(pollingRef.current);
+  }
+
+  pollingRef.current = setInterval(async () => {
+    try {
+      if (!accessToken) return;
+
+      const res = await getResumeBulkStatus(accessToken, batchId);
+      const data = res.data;
+
+      if (TERMINAL.includes(data.status)) {
+
+        if (pollingRef.current) {
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
+        }
+
+        if (data.status === "COMPLETED") {
+
+          const detail = (
+            <div style={{ lineHeight: "1.6", fontSize: "14px" }}>
+              <div>Processed: <b>{data.processed}</b></div>
+              <div>Linked: <b style={{ color: "#22c55e" }}>{data.linked}</b></div>
+              <div>No Match: <b style={{ color: "#f59e0b" }}>{data.skipped_no_match}</b></div>
+              <div>Already Exists: <b style={{ color: "#3b82f6" }}>{data.skipped_already_exists}</b></div>
+              <div>Failed: <b style={{ color: "#ef4444" }}>{data.failed}</b></div>
+            </div>
+          );
+
+          toastRef.current?.show({
+            severity: "success",
+            summary: "Resume Upload Completed",
+            detail,
+            life: 7000
+          });
+
+          loadAllData();
+
+        } else {
+
+          toastRef.current?.show({
+            severity: "error",
+            summary: "Batch Failed",
+            detail: data.errorMessage || "Processing failed",
+            life: 6000
+          });
+
+        }
+      }
+
+    } catch (err) {
+
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+
+      toastRef.current?.show({
+        severity: "error",
+        summary: "Polling Error",
+        detail: "Could not fetch batch status",
+        life: 6000
+      });
+
+    }
+
+  }, 3000);
+};
+
+useEffect(() => {
+  loadAllData();
+
+  return () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+    }
+  };
+}, [loadAllData]);
 
   const onPageChange = (event: any) => {
     setFirst(event.first);
@@ -415,7 +496,7 @@ const ResumeTable: React.FC = () => {
 
   return (
     <>
-      <Toast ref={toastRef} />
+      <Toast ref={toastRef} position="top-right" />
       <div className="flex justify-content-between align-items-center mb-2">
         <h2 style={{ color: "#07253f" }}>Candidate Resume Management</h2>
         <div className="flex gap-2">
@@ -448,6 +529,38 @@ const ResumeTable: React.FC = () => {
               toastRef.current?.show({ severity: "error", summary: "Upload Failed", detail: error.message || "Something went wrong", life: 6000 });
             } finally { setLoading(false); }
           }} />
+          <BulkPdfUploadButton
+            onFileSelect={async (file) => {
+              if (!accessToken) return;
+
+              try {
+                setLoading(true);
+
+                const { batchId } = await bulkUploadResumes(accessToken, file);
+
+                toastRef.current?.show({
+                  severity: "info",
+                  summary: "Upload Started",
+                  detail: "Processing resumes...",
+                  life: 3000
+                });
+
+                setTimeout(() => {
+                  pollResumeBatch(batchId);
+                }, 1500);
+
+              } catch (error: any) {
+                toastRef.current?.show({
+                  severity: "error",
+                  summary: "Upload Failed",
+                  detail: error.message || "ZIP upload failed",
+                  life: 6000
+                });
+              } finally {
+                setLoading(false);
+              }
+            }}
+          />
           <AddButton onClick={handleAdd} />
           <EditButton onClick={handleEdit} disabled={!selectedResume} />
           <DeleteButton onClick={handleDelete} disabled={!selectedResume} />
