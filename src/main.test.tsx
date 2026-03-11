@@ -6,6 +6,7 @@ const mockRender = vi.fn();
 const mockCreateRoot = vi.fn(() => ({
   render: mockRender,
 }));
+const mockInitializeAppSchemaVersion = vi.fn();
 
 vi.mock('react-dom/client', () => ({
   createRoot: mockCreateRoot,
@@ -19,6 +20,10 @@ vi.mock('./shared/auth/AuthContext', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="auth-provider">{children}</div>
   ),
+}));
+
+vi.mock('./shared/config/appSchema', () => ({
+  initializeAppSchemaVersion: mockInitializeAppSchemaVersion,
 }));
 
 describe('main.tsx', () => {
@@ -45,6 +50,8 @@ describe('main.tsx', () => {
   it('renders app with AuthProvider and StrictMode', async () => {
     // Import main to trigger the render
     await import('./main');
+
+    expect(mockInitializeAppSchemaVersion).toHaveBeenCalledTimes(1);
 
     // Verify createRoot was called
     expect(mockCreateRoot).toHaveBeenCalledTimes(1);
@@ -74,6 +81,8 @@ describe('main.tsx', () => {
 
   it('creates root from DOM element with id "root"', async () => {
     await import('./main');
+
+    expect(mockInitializeAppSchemaVersion).toHaveBeenCalledTimes(1);
 
     // Verify createRoot was called with the correct DOM element
     expect(mockCreateRoot).toHaveBeenCalledWith(mockRootElement);
