@@ -11,6 +11,9 @@ vi.mock('./AppContent', () => ({
 vi.mock('./ProfileSideBar', () => ({
   ProfileSidebar: () => <div data-testid="profile-sidebar">ProfileSidebar</div>,
 }));
+vi.mock('./shared/GlobalToastHost', () => ({
+  default: () => <div data-testid="global-toast-host">Global Toast Host</div>,
+}));
 // Mock AuthContext (required by ProfileSidebar)
 vi.mock('./shared/auth/AuthContext', () => ({
   useAuth: () => ({

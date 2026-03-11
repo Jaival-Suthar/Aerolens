@@ -12,7 +12,7 @@ import DeleteButton from "../../../shared/DeleteButton";
 import { useSearchParams } from "react-router-dom";
 import DateRangeFilter from "../../InterviewReport/components/DateRangeFilter";
 import { Candidate, CandidateCreateData } from "../types/resumeTypes";
-import { getCandidates, downloadResume, fetchCandidateCreateData, bulkUploadCandidates, bulkUploadResumes, getResumeBulkStatus } from "../services/useResume";
+import { getCandidates, downloadResume, fetchCandidateCreateData, bulkUploadCandidates, bulkUploadResumes } from "../services/useResume";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import SearchButton from "../../../shared/SearchButton";
 import { FilterMatchMode } from 'primereact/api';
@@ -28,6 +28,10 @@ import ColumnSettingsButton from "../../../shared/ColumnSettingsButton";
 import CandidateRoundsDialog from "../../Interview/components/CandidateRoundsDialog";
 import { Dropdown } from "primereact/dropdown";
 import BulkPdfUploadButton from "../../../shared/BulkPdfUploadButton";
+import {
+  RESUME_BULK_BATCH_FINISHED_EVENT,
+  startBulkResumeBatchTracking,
+} from "../../../shared/services/bulkResumeBatchTracker";
 
 const ALL_COLUMNS = [
   { field: "dateOfEntry", header: "Sourced On ", sortable: true, body: "dateTemplate" },
@@ -58,8 +62,7 @@ const ALL_COLUMNS = [
 
 ];
 
-const DEFAULT_COLUMN_FIELDS = ["dateOfEntry","candidateName", "contact", "expectedLocation.city", "jobRole", "experienceYears", "statusName","currentCTCAmount",
-  "expectedCTCAmount"];
+const DEFAULT_COLUMN_FIELDS = ["dateOfEntry","candidateName", "contact", "expectedLocation.city", "jobRole", "experienceYears", "statusName"];
 const COLUMN_STORAGE_KEY = "candidateTable.visibleColumns";
 
 const ResumeTable: React.FC = () => {
@@ -73,7 +76,6 @@ const ResumeTable: React.FC = () => {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showInterviewDialog, setShowInterviewDialog] = useState(false);
   const toastRef = useRef<Toast>(null);
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const [rows, setRows] = useState(20);
   const [searchParams, setSearchParams] = useSearchParams();
   const pageFromUrl = Number(searchParams.get("page")) || 1;
@@ -152,85 +154,25 @@ const ResumeTable: React.FC = () => {
     }
   }, [accessToken]);
 
-  const pollResumeBatch = (batchId: string) => {
-  const TERMINAL = ["COMPLETED", "FAILED"];
-
-  if (pollingRef.current) {
-    clearInterval(pollingRef.current);
-  }
-
-  pollingRef.current = setInterval(async () => {
-    try {
-      if (!accessToken) return;
-
-      const res = await getResumeBulkStatus(accessToken, batchId);
-      const data = res.data;
-
-      if (TERMINAL.includes(data.status)) {
-
-        if (pollingRef.current) {
-          clearInterval(pollingRef.current);
-          pollingRef.current = null;
-        }
-
-        if (data.status === "COMPLETED") {
-
-          const detail = (
-            <div style={{ lineHeight: "1.6", fontSize: "14px" }}>
-              <div>Processed: <b>{data.processed}</b></div>
-              <div>Linked: <b style={{ color: "#22c55e" }}>{data.linked}</b></div>
-              <div>No Match: <b style={{ color: "#f59e0b" }}>{data.skipped_no_match}</b></div>
-              <div>Already Exists: <b style={{ color: "#3b82f6" }}>{data.skipped_already_exists}</b></div>
-              <div>Failed: <b style={{ color: "#ef4444" }}>{data.failed}</b></div>
-            </div>
-          );
-
-          toastRef.current?.show({
-            severity: "success",
-            summary: "Resume Upload Completed",
-            detail,
-            life: 7000
-          });
-
-          loadAllData();
-
-        } else {
-
-          toastRef.current?.show({
-            severity: "error",
-            summary: "Batch Failed",
-            detail: data.errorMessage || "Processing failed",
-            life: 6000
-          });
-
-        }
-      }
-
-    } catch (err) {
-
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
-      toastRef.current?.show({
-        severity: "error",
-        summary: "Polling Error",
-        detail: "Could not fetch batch status",
-        life: 6000
-      });
-
-    }
-
-  }, 3000);
-};
-
 useEffect(() => {
   loadAllData();
+}, [loadAllData]);
+
+useEffect(() => {
+  const handleBatchFinished = () => {
+    loadAllData();
+  };
+
+  window.addEventListener(
+    RESUME_BULK_BATCH_FINISHED_EVENT,
+    handleBatchFinished
+  );
 
   return () => {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-    }
+    window.removeEventListener(
+      RESUME_BULK_BATCH_FINISHED_EVENT,
+      handleBatchFinished
+    );
   };
 }, [loadAllData]);
 
@@ -554,9 +496,7 @@ useEffect(() => {
                   life: 3000
                 });
 
-                setTimeout(() => {
-                  pollResumeBatch(batchId);
-                }, 1500);
+                startBulkResumeBatchTracking(batchId);
 
               } catch (error: any) {
                 toastRef.current?.show({
