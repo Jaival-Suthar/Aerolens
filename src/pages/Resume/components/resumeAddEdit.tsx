@@ -55,6 +55,8 @@ const INITIAL_FORM: AddEditCandidate = {
   linkedinProfileUrl: undefined,
   resumeFile: null,
   notes: undefined,
+  workMode: null,
+  workModeId: null,
   // NEW FIELDS
   currentCTCAmount: null,
   currentCTCCurrencyId: null,
@@ -71,6 +73,8 @@ const validateField = (field: keyof AddEditCandidate, value: any, formData?: Add
       return value.trim() ? "" : "Candidate name is required.";
     case "recruiterName":
       return value ? "" : "Recruiter is required.";
+      case "workModeId":
+        return value ? "" : "Mode of Work is required.";
     case "contactNumber":
       if (!value) return ""; // OPTIONAL
       if (!phoneRegex.test(value.replace(/[\s-]/g, "")))
@@ -87,8 +91,8 @@ const validateField = (field: keyof AddEditCandidate, value: any, formData?: Add
       if (!value.city) return "City is required.";
       return "";
     case "currentLocation":
-    if (!value || !value.country) return "";
-    if (!value.city) return "City is required when country is selected.";
+      if (!value || !value.country) return "";
+      if (!value.city) return "City is required when country is selected.";
     return "";
     // case "currentCTC":
     //   if (value === undefined || value === null) return "";
@@ -301,6 +305,18 @@ const ctcTypeOptions = useMemo(() => {
     value: t.compensationTypeId,
   }));
 }, [createData?.compensationTypes]);
+ 
+const workModeOptions = useMemo(() => {
+  if (!createData?.workModes) return [];
+
+  return createData.workModes.map((w) => ({
+    label: w.workMode,
+    value: w.workModeId,
+  }));
+}, [createData?.workModes]);
+
+
+
   // Initialize / Reset form
   useEffect(() => {
   const loadCandidateForEdit = async () => {
@@ -336,6 +352,8 @@ const ctcTypeOptions = useMemo(() => {
         linkedinProfileUrl: freshCandidate.linkedinProfileUrl ?? undefined,
         resumeFile: null, // never prefill file
         notes: freshCandidate.notes ?? undefined,
+        workMode: freshCandidate.workMode ?? null,
+        workModeId: freshCandidate.workModeId ?? null,
       });
     } catch (err) {
       toast.current?.show({
@@ -565,6 +583,8 @@ const parseAndAutofill = (text: string) => {
     currentLocation: formData.currentLocation ?? null,
     // currentCTC: formData.currentCTC ?? null,
     // expectedCTC: formData.expectedCTC ?? null,
+    workMode: formData.workMode ?? null,
+    workModeId: formData.workModeId ?? null,
     currentCTCAmount: formData.currentCTCAmount ?? null,
     currentCTCCurrencyId: formData.currentCTCCurrencyId ?? null,
     currentCTCTypeId: formData.currentCTCTypeId ?? null,
@@ -834,6 +854,24 @@ else {
             error={shouldShowError("recruiterName")}
             disabled={loadingOptions}
             placeholder={loadingOptions ? "Loading..." : "Select Recruiter"}
+            colSize="col-12 md:col-4"
+          />
+          <DropdownField
+            id="workModeId"
+            label="Mode of Work"
+            value={formData.workModeId}
+            options={workModeOptions}
+            onChange={(e: { value: number }) => {
+              const mode = createData?.workModes?.find(
+                (m) => m.workModeId === e.value
+              );
+              handleChange("workModeId", e.value);
+              handleChange("workMode", mode?.workMode || null);
+            }}
+            onBlur={() => handleBlur("workModeId")}
+            error={shouldShowError("workModeId")}
+            disabled={loadingOptions}
+            placeholder="Select Mode of Work"
             colSize="col-12 md:col-4"
           />
           <div className="col-12">
