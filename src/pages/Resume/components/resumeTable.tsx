@@ -61,8 +61,7 @@ const ALL_COLUMNS = [
 
 ];
 
-const DEFAULT_COLUMN_FIELDS = ["dateOfEntry","candidateName", "contact", "expectedLocation.city", "jobRole", "experienceYears", "statusName","currentCTCAmount",
-  "expectedCTCAmount"];
+const DEFAULT_COLUMN_FIELDS = ["dateOfEntry","candidateName", "contact", "expectedLocation.city", "jobRole", "experienceYears", "statusName"];
 const COLUMN_STORAGE_KEY = "candidateTable.visibleColumns";
 
 const ResumeTable: React.FC = () => {
