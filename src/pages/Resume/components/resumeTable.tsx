@@ -38,6 +38,7 @@ const ALL_COLUMNS = [
   { field: "candidateName", header: "Candidate Name", sortable: true, filter: true },
   { field: "contact", header: "Candidate Contact", body: "candidateContactTemplate", sortable: true, filter: true, filterField: "contactNumber" },
   { field: "jobRole", header: "Role", sortable: true, filter: true },
+  { field: "workMode", header: "Mode of Work", sortable: true, filter: true },
   { field: "currentLocation.city", header: "Current Working Location", body: "formatCurrentLocation", sortable: true, filter: true },
   { field: "expectedLocation.city", header: "Expected Working Location", body: "formatLocation", sortable: true, filter: true },
   { field: "experienceYears", header: "YOE", sortable: true, filter: true },
@@ -90,12 +91,10 @@ const ResumeTable: React.FC = () => {
     }
     return ALL_COLUMNS.filter(col => DEFAULT_COLUMN_FIELDS.includes(col.field));
   });
-
   useEffect(() => {
     const fields = visibleColumns.map(col => col.field);
     localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(fields));
   }, [visibleColumns]);
-
   const [viewCandidate, setViewCandidate] = useState<Candidate | null>(null);
   const [globalFilterValue, setGlobalFilterValue] = useState('');
   const [createData, setCreateData] = useState<CandidateCreateData | null>(null);
@@ -113,6 +112,7 @@ const ResumeTable: React.FC = () => {
     statusName: { value: null, matchMode: FilterMatchMode.CONTAINS },
     contactNumber: { value: null, matchMode: FilterMatchMode.CONTAINS },
     email: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    workMode: { value: null, matchMode: FilterMatchMode.CONTAINS },
     // currentCTC: { value: null, matchMode: FilterMatchMode.EQUALS },
     // expectedCTC: { value: null, matchMode: FilterMatchMode.EQUALS },
      // 👇 THESE TWO LINES
@@ -364,6 +364,16 @@ useEffect(() => {
     )?.compensationTypeName;
   
     const symbol = currencySymbols[currencyName || ""] || currencyName || "";
+    // if (currencyName === "INR") {
+    //   if (type?.toLowerCase() === "annual" || type?.toLowerCase() === "yearly") {
+    //     const lpa = (row.currentCTCAmount / 100000).toFixed(2);
+    //     return `${symbol}${lpa} LPA`;
+    //   }
+    //   if (type?.toLowerCase() === "monthly") {
+    //     const lpa = ((row.currentCTCAmount * 12) / 100000).toFixed(2);
+    //     return `${symbol}${lpa} LPA`;
+    //   }
+    // }
     const shortType = compensationShort[type || ""] || type || "";
   
     return `${symbol}${row.currentCTCAmount}/${shortType}`;
