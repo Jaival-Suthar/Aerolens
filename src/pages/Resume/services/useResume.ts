@@ -133,6 +133,13 @@ const buildCandidateFormData = (candidate: AddEditCandidate): FormData => {
   if (candidate.recruiterId !== null && candidate.recruiterId !== undefined) {
     fd.append("recruiterId", String(candidate.recruiterId));
   }
+  if (candidate.workModeId !== null && candidate.workModeId !== undefined) {
+    fd.append("workModeId", String(candidate.workModeId));
+  }
+  
+  if (candidate.workMode) {
+    fd.append("workMode", candidate.workMode);
+  }
   if (candidate.vendorId !== null && candidate.vendorId !== undefined) {
     fd.append("vendorId", String(candidate.vendorId));
   }
