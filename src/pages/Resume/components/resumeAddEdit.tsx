@@ -158,6 +158,8 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   const [submitted, setSubmitted] = useState(false);
   const [resumePasteText, setResumePasteText] = useState("");
   const toast = useRef<Toast>(null);
+  const previousCurrentCountryRef = useRef<string | null>(null);
+  const previousExpectedCountryRef = useRef<string | null>(null);
   
   const resetForm = () => {
     setFormData(INITIAL_FORM);
@@ -314,6 +316,80 @@ const workModeOptions = useMemo(() => {
     value: w.workModeId,
   }));
 }, [createData?.workModes]);
+
+useEffect(() => {
+  if (!createData?.currencies || !createData?.compensationTypes) return;
+
+  const currentCountry = formData.currentLocation?.country?.trim().toLowerCase() || null;
+  const expectedCountry = formData.expectedLocation?.country?.trim().toLowerCase() || null;
+
+  const currentCountryChanged = previousCurrentCountryRef.current !== currentCountry;
+  const expectedCountryChanged = previousExpectedCountryRef.current !== expectedCountry;
+
+  if (!currentCountryChanged && !expectedCountryChanged) return;
+
+  const inrCurrencyId = createData.currencies.find(c => c.currencyName === "INR")?.currencyId;
+  const usdCurrencyId = createData.currencies.find(c => c.currencyName === "USD")?.currencyId;
+  const annualTypeId = createData.compensationTypes.find(t => t.compensationTypeName === "Annual")?.compensationTypeId;
+  const hourlyTypeId = createData.compensationTypes.find(t => t.compensationTypeName === "Hourly")?.compensationTypeId;
+
+  setFormData((prev) => {
+    const updates: Partial<AddEditCandidate> = {};
+
+    if (currentCountryChanged) {
+      if (currentCountry === "india") {
+        if (inrCurrencyId != null && prev.currentCTCCurrencyId !== inrCurrencyId) {
+          updates.currentCTCCurrencyId = inrCurrencyId;
+        }
+        if (annualTypeId != null && prev.currentCTCTypeId !== annualTypeId) {
+          updates.currentCTCTypeId = annualTypeId;
+        }
+      } else if (currentCountry === "united states" || currentCountry === "us" || currentCountry === "usa") {
+        if (usdCurrencyId != null && prev.currentCTCCurrencyId !== usdCurrencyId) {
+          updates.currentCTCCurrencyId = usdCurrencyId;
+        }
+        if (hourlyTypeId != null && prev.currentCTCTypeId !== hourlyTypeId) {
+          updates.currentCTCTypeId = hourlyTypeId;
+        }
+      }
+    }
+
+    if (expectedCountryChanged) {
+      if (expectedCountry === "india") {
+        if (inrCurrencyId != null && prev.expectedCTCCurrencyId !== inrCurrencyId) {
+          updates.expectedCTCCurrencyId = inrCurrencyId;
+        }
+        if (annualTypeId != null && prev.expectedCTCTypeId !== annualTypeId) {
+          updates.expectedCTCTypeId = annualTypeId;
+        }
+      } else if (expectedCountry === "united states" || expectedCountry === "us" || expectedCountry === "usa") {
+        if (usdCurrencyId != null && prev.expectedCTCCurrencyId !== usdCurrencyId) {
+          updates.expectedCTCCurrencyId = usdCurrencyId;
+        }
+        if (hourlyTypeId != null && prev.expectedCTCTypeId !== hourlyTypeId) {
+          updates.expectedCTCTypeId = hourlyTypeId;
+        }
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return prev;
+    }
+
+    return {
+      ...prev,
+      ...updates
+    };
+  });
+
+  previousCurrentCountryRef.current = currentCountry;
+  previousExpectedCountryRef.current = expectedCountry;
+}, [
+  formData.currentLocation?.country,
+  formData.expectedLocation?.country,
+  createData?.currencies,
+  createData?.compensationTypes
+]);
 
 
 
@@ -1061,6 +1137,7 @@ else {
           onBlur={() => handleBlur("currentCTCCurrencyId")}
           placeholder="Select Currency"
           error={shouldShowError("currentCTCCurrencyId")}
+          showClear
           required={false}
           colSize="col-12 md:col-4"
           />
@@ -1074,6 +1151,7 @@ else {
             onBlur={() => handleBlur("currentCTCTypeId")}
             placeholder="Select CTC Type"
             error={shouldShowError("currentCTCTypeId")}
+            showClear
             required={false}
             colSize="col-12 md:col-4"
           />
@@ -1099,6 +1177,7 @@ else {
           onBlur={() => handleBlur("expectedCTCCurrencyId")}
           placeholder="Select Currency"
           error={shouldShowError("expectedCTCCurrencyId")}
+          showClear
           required={false}
           colSize="col-12 md:col-4"
           />
@@ -1112,6 +1191,7 @@ else {
         onBlur={() => handleBlur("expectedCTCTypeId")}
         placeholder="Select CTC Type"
         error={shouldShowError("expectedCTCTypeId")}
+        showClear
         required={false}
         colSize="col-12 md:col-4"
         />
