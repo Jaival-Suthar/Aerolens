@@ -65,7 +65,6 @@ function ColumnSettingsButton<T>({
             display="chip"
             className="w-full"
             onChange={(e) => {
-              if (e.value.length === 0) return;
               onChange(e.value);
             }}
           />

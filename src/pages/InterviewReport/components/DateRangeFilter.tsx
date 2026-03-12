@@ -19,13 +19,15 @@ interface Props {
   onClear: () => void;
   initialStartDate?: string;
   initialEndDate?: string;
+  compact?: boolean;
 }
 
 const DateRangeFilter: React.FC<Props> = ({ 
   onApply, 
   onClear, 
   initialStartDate,
-  initialEndDate 
+  initialEndDate,
+  compact = false
 }) => {
   // Initialize state directly from props - clean and simple
   const [range, setRange] = useState<Date[] | null>(() => {
@@ -196,7 +198,7 @@ const DateRangeFilter: React.FC<Props> = ({
           position: relative;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
         }
 
         .range-calendar-panel .p-datepicker-calendar {
@@ -225,9 +227,12 @@ const DateRangeFilter: React.FC<Props> = ({
           showIcon
           dateFormat="dd/mm/yy"
           className="range-calendar"
-          placeholder="Select date range"
+          placeholder={compact ? "Date" : "Select date range"}
           aria-label="Select date range"
           panelClassName="range-calendar-panel"
+          style={{
+            width: compact ? "160px" : "240px"
+          }}
           dateTemplate={(date) => {
             const d = new Date(date.year, date.month, date.day);
             const start = range?.[0];
@@ -294,15 +299,17 @@ const DateRangeFilter: React.FC<Props> = ({
             </div>
           )}
         />
-        <button
-          className="external-clear-btn"
-          onClick={clear}
-          disabled={!range}
-          title="Clear date range"
-          aria-label="Clear date range"
-        >
-          <FiX size={18} />
-        </button>
+        {!compact && (
+            <button
+              className="external-clear-btn"
+              onClick={clear}
+              disabled={!range}
+              title="Clear date range"
+              aria-label="Clear date range"
+            >
+              <FiX size={18} />
+            </button>
+          )}
       </div>
     </>
   );

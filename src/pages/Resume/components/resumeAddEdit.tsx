@@ -694,6 +694,18 @@ else {
   );
 };
 
+  const existingResumeName = selectedResume?.resumeOriginalName;
+  const existingResumeDate = selectedResume?.resumeUploadDate;
+
+  const existingResumeType =
+    existingResumeName?.split(".").pop()?.toUpperCase() || "";
+
+  const formattedExistingResumeDate = existingResumeDate
+    ? (() => {
+        const [year, month, day] = existingResumeDate.split(" ")[0].split("-");
+        return `${Number(day)}/${Number(month)}/${year}`;
+      })()
+    : "";
 
   return (
     <>
@@ -1161,7 +1173,7 @@ else {
             >
 
               {/* CASE A: No file */}
-              {!formData.resumeFile && (
+              {!formData.resumeFile && !(isEditMode && existingResumeName) && (
                 <>
                   <p style={{ marginBottom: "0.75rem", color: "#475569", fontSize: "0.875rem" }}>
                     Drag & drop resume here or browse files
@@ -1191,7 +1203,7 @@ else {
               )}
 
               {/* CASE B: File selected */}
-              {formData.resumeFile && (
+              {(formData.resumeFile || (isEditMode && existingResumeName)) && (
                 <div
                   style={{
                     display: "flex",
@@ -1206,16 +1218,25 @@ else {
                 >
                   <div style={{ textAlign: "left" }}>
                     <strong style={{ color: "#0f172a" }}>
-                      {formData.resumeFile.name}
+                      {formData.resumeFile?.name || existingResumeName}
                     </strong>
                     <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
-                      {(formData.resumeFile.size / 1024 / 1024).toFixed(2)} MB
+                      {formData.resumeFile
+                        ? `${(formData.resumeFile.size / 1024 / 1024).toFixed(2)} MB`
+                        : `${existingResumeType} file`}
                     </div>
+                    {!formData.resumeFile && existingResumeDate && (
+                      <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                        Uploaded on: {formattedExistingResumeDate}
+                      </div>
+                    )}
                   </div>
 
                   <button
                     type="button"
-                    onClick={() => handleChange("resumeFile", null)}
+                    onClick={() => {
+                      handleChange("resumeFile", null);
+                    }}
                     style={{
                       display: "flex",
                       alignItems: "center",
