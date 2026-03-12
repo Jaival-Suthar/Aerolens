@@ -70,9 +70,9 @@ const ALL_COLUMNS = [
   { field: "interviewDate", header: "Interview Date", body: "date" },
 
   // ⬇️ Optional columns
-  { field: "meetingUrl", header: "Recording", body: "recording" },
   { field: "fromTime", header: "Start Time", body: "startTime", filter: true },
   { field: "toTime", header: "End Time", body: "endTime", filter: true },
+  { field: "meetingUrl", header: "Recording", body: "recording" },
   { field: "durationMinutes", header: "Duration (min)", filter: true },
 ];
 
@@ -87,6 +87,7 @@ const DEFAULT_COLUMN_FIELDS = [
   "interviewDate",
   "fromTime" // start time stays visible
 ];
+const COLUMN_STORAGE_KEY = "table:interview:columns";
 
 // ============================================================
 // MAIN COMPONENT
@@ -128,16 +129,45 @@ const InterviewTable: React.FC = () => {
     startDate?: string;
     endDate?: string;
   }>({});
-  const [visibleColumns, setVisibleColumns] = useState(
-  ALL_COLUMNS.filter(col =>
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+  const saved = localStorage.getItem(COLUMN_STORAGE_KEY);
+
+  if (saved) {
+    try {
+      const savedFields: string[] = JSON.parse(saved);
+
+      return ALL_COLUMNS.filter(col =>
+        savedFields.includes(col.field)
+      );
+    } catch {
+      return ALL_COLUMNS.filter(col =>
+        DEFAULT_COLUMN_FIELDS.includes(col.field)
+      );
+    }
+  }
+
+  return ALL_COLUMNS.filter(col =>
     DEFAULT_COLUMN_FIELDS.includes(col.field)
-  )
-);
+  );
+});
+  useEffect(() => {
+  const fields = visibleColumns.map(col => col.field);
+
+  localStorage.setItem(
+    COLUMN_STORAGE_KEY,
+    JSON.stringify(fields)
+  );
+}, [visibleColumns]);
   const resetToDefaultColumns = () => {
-  setVisibleColumns(
-    ALL_COLUMNS.filter(col =>
-      DEFAULT_COLUMN_FIELDS.includes(col.field)
-    )
+  const defaults = ALL_COLUMNS.filter(col =>
+    DEFAULT_COLUMN_FIELDS.includes(col.field)
+  );
+
+  setVisibleColumns(defaults);
+
+  localStorage.setItem(
+    COLUMN_STORAGE_KEY,
+    JSON.stringify(defaults.map(c => c.field))
   );
 };
 
