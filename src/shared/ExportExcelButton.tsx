@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "primereact/button";
-import { FaFileExcel } from "react-icons/fa";
+import { FaDownload } from "react-icons/fa";
 import { DataTable } from "primereact/datatable";
 
 type ExportExcelButtonProps = {
@@ -27,7 +27,7 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({ dtRef, label = "E
       className="font-medium mr-1"
       style={{
         backgroundColor: "#d4edda",   // pastel green
-        color: "#155724",             // dark green for icon
+        color: "#91c29c",             
         border: "none",
         boxShadow: "none",
         width: 40,
@@ -38,7 +38,7 @@ const ExportExcelButton: React.FC<ExportExcelButtonProps> = ({ dtRef, label = "E
         justifyContent: "center"
       }}
     >
-      <FaFileExcel style={{ color: "#155724", fontSize: 20 }} />
+      <FaDownload style={{ color: "#3f8850", fontSize: 20 }} />
     </Button>
   );
 };

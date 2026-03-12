@@ -9,6 +9,7 @@ import { Toast } from "primereact/toast";
 import { FaCheck, FaClock, FaCalendarAlt } from "react-icons/fa";
 import { getInterviewFormData, createInterview, updateInterview, getInterviewerDailyCapacity } from "../services/interviewService";
 import { useAuth } from "../../../shared/auth/AuthContext";
+import { useProfileStore } from "../../../shared/store/profile";
 import { Interview, CreateInterviewRequest, UpdateInterviewRequest, InterviewerDailyCapacity } from "../types/interviewTypes";
 import { DateTime } from "luxon";
 
@@ -120,6 +121,7 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
   const [interviewers, setInterviewers] = useState<any[]>([]);
   const [recruiters, setRecruiters] = useState<any[]>([]);
   const { accessToken } = useAuth();
+  const { member } = useProfileStore();
   const [showTimezoneDropdown, setShowTimezoneDropdown] = useState(false);
   const [formData, setFormData] = useState<InterviewFormState>({
     interviewDate: null,
@@ -301,6 +303,28 @@ const InterviewAddEditForm: React.FC<AddEditInterviewFormProps> = ({
       resetForm();
     }
   }, [visible, isEdit, interviewToEdit]);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    // NEVER run this in edit mode
+    if (isEdit) return;
+
+    if (!member) return;
+    if (!recruiters?.length) return;
+    if (formData.scheduledById) return;
+
+    const recruiter = recruiters.find(
+      r => r.value === member.memberId
+    );
+
+    if (recruiter) {
+      setFormData(prev => ({
+        ...prev,
+        scheduledById: recruiter.value
+      }));
+    }
+  }, [visible, isEdit, member, recruiters, formData.scheduledById]);
 
   const getLocalScheduledTimes = () => {
     if (!capacityData?.scheduledTimesUTC) return [];
