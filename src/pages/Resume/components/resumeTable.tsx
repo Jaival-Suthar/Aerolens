@@ -38,31 +38,22 @@ const ALL_COLUMNS = [
   { field: "candidateName", header: "Candidate Name", sortable: true, filter: true },
   { field: "contact", header: "Candidate Contact", body: "candidateContactTemplate", sortable: true, filter: true, filterField: "contactNumber" },
   { field: "jobRole", header: "Role", sortable: true, filter: true },
-  { field: "workMode", header: "Mode of Work", sortable: true, filter: true },
-  { field: "currentLocation.city", header: "Current Working Location", body: "formatCurrentLocation", sortable: true, filter: true },
-  { field: "expectedLocation.city", header: "Expected Working Location", body: "formatLocation", sortable: true, filter: true },
-  { field: "experienceYears", header: "YOE", sortable: true, filter: true },
-  { field: "statusName", header: "Interview Result", sortable: true, filter: true },
-  // { field: "currentCTC", header: "Current CTC", sortable: true, filter: true },
-  // { field: "expectedCTC", header: "Expected CTC", sortable: true, filter: true },
-  { field: "currentCTCAmount", header: "Current CTC Amount", sortable: true, filter: true },
-  { field: "expectedCTCAmount", header: "Expected CTC Amount", sortable: true, filter: true },
   { field: "noticePeriod", header: "Notice Period", sortable: true, filter: true },
-  { field: "linkedinProfileUrl", header: "LinkedIn Profile", body: "linkedInTemplate" },
+  { field: "experienceYears", header: "YOE", sortable: true, filter: true },
+  { field: "workMode", header: "Mode of Work", sortable: true, filter: true },
+  { field: "expectedLocation.city", header: "Expected Working Location", body: "formatLocation", sortable: true, filter: true },
+  { field: "currentCTCAmount", header: "Current CTC", sortable: true, filter: true },
+  { field: "expectedCTCAmount", header: "Expected CTC", sortable: true, filter: true },
+  { field: "statusName", header: "Interview Result", sortable: true, filter: true },
   { field: "recruiterName", header: "Recruiter", sortable: true, filter: true },
   { field: "vendorName", header: "Vendor", sortable: true, filter: true },
   { field: "referredBy", header: "Referred By", sortable: true, filter: true },
-  { field: "email", header: "Email", sortable: true, filter: true },
-  { field: "contactNumber", header: "Contact Number", sortable: true, filter: true },
-  { field: "jobProfileName", header: "Job Profile", sortable: true, filter: true },
-  { field: "clientName", header: "Client Name", sortable: true, filter: true },
-  { field: "departmentName", header: "Department", sortable: true, filter: true },
+  { field: "currentLocation.city", header: "Current Working Location", body: "formatCurrentLocation", sortable: true, filter: true },
+  { field: "linkedinProfileUrl", header: "LinkedIn Profile", body: "linkedInTemplate" },
   { field: "notes", header: "Notes", sortable: true, filter: true },
-
-
 ];
 
-const DEFAULT_COLUMN_FIELDS = ["dateOfEntry","candidateName", "contact", "expectedLocation.city", "jobRole", "experienceYears", "statusName"];
+const DEFAULT_COLUMN_FIELDS = ["dateOfEntry","candidateName", "contact", "jobRole", "experienceYears", "noticePeriod", "workMode", "expectedLocation.city", "currentCTCAmount", "expectedCTCAmount", "statusName", "recruiterName", "vendorName", "referredBy"];
 const COLUMN_STORAGE_KEY = "candidateTable.visibleColumns";
 
 const ResumeTable: React.FC = () => {
@@ -113,9 +104,6 @@ const ResumeTable: React.FC = () => {
     contactNumber: { value: null, matchMode: FilterMatchMode.CONTAINS },
     email: { value: null, matchMode: FilterMatchMode.CONTAINS },
     workMode: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    // currentCTC: { value: null, matchMode: FilterMatchMode.EQUALS },
-    // expectedCTC: { value: null, matchMode: FilterMatchMode.EQUALS },
-     // 👇 THESE TWO LINES
     currentCTCAmount: { value: null, matchMode: FilterMatchMode.EQUALS },
     expectedCTCAmount: { value: null, matchMode: FilterMatchMode.EQUALS },
     noticePeriod: { value: null, matchMode: FilterMatchMode.EQUALS },
@@ -550,23 +538,19 @@ useEffect(() => {
             if (col.body === "formatLocation") bodyTemplate = formatLocation;
             if (col.body === "linkedInTemplate") bodyTemplate = linkedInTemplate;
             if (col.body === "formatCurrentLocation") bodyTemplate = formatCurrentLocation;
-            // if (col.body === "dateTemplate") {
-            //   bodyTemplate = (row: Candidate) => formatDate(row.dateOfEntry);
-            //   filterElement = dateFilterTemplate;
-            //   filterFunction = dateRangeFilterFunction;
-            // }
             if (col.field === "dateOfEntry") {
               return (
                 <Column
                   key="dateOfEntry"
                   field="dateOfEntry"
-                  style={{ minWidth: "280px" }}   // 🔥 THIS FIXES IT
+                  style={{ minWidth: "100px" }}   // 🔥 THIS FIXES IT
 
                   header={
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       <span>Sourced On </span>
             
                       <DateRangeFilter
+                        compact
                         initialStartDate={dateRange?.start}
                         initialEndDate={dateRange?.end}
                         onApply={(start, end) => {
@@ -613,14 +597,46 @@ useEffect(() => {
         </DataTable>
       </div>
 
-      <ResumeAddEdit visible={showAddEditDialog} onHide={() => setShowAddEditDialog(false)} selectedResume={editingResume} onSuccess={handleAddEditSuccess} createData={createData} loadingOptions={loadingCreateData}   existingCandidates={resumes}   // ✅ ADD THIS
- />
-      <ResumeDelete visible={showDeleteDialog} onHide={() => setShowDeleteDialog(false)} selectedResume={selectedResume} onSuccess={handleDeleteSuccess} onClearSelection={() => setSelectedResume(null)} />
-      <InterviewScheduler visible={showInterviewDialog} onHide={() => setShowInterviewDialog(false)} candidateId={selectedResume?.candidateId || null} candidateName={selectedResume?.candidateName || null} toast={toastRef} />
-      <PremiumDetailsDialog visible={!!viewCandidate} title="Candidate Details" onHide={() => setViewCandidate(null)}>
-        {viewCandidate && <DetailsSection title="Complete Candidate Information"><DetailsGrid items={buildDetailsData(viewCandidate)} /></DetailsSection>}
+      <ResumeAddEdit 
+        visible={showAddEditDialog} 
+        onHide={() => setShowAddEditDialog(false)} 
+        selectedResume={editingResume} 
+        onSuccess={handleAddEditSuccess} 
+        createData={createData} 
+        loadingOptions={loadingCreateData}   
+        existingCandidates={resumes}   
+      />
+      <ResumeDelete 
+        visible={showDeleteDialog} 
+        onHide={() => setShowDeleteDialog(false)} 
+        selectedResume={selectedResume} 
+        onSuccess={handleDeleteSuccess} 
+        onClearSelection={() => setSelectedResume(null)} 
+      />
+      <InterviewScheduler 
+        visible={showInterviewDialog} 
+        onHide={() => setShowInterviewDialog(false)} 
+        candidateId={selectedResume?.candidateId || null} 
+        candidateName={selectedResume?.candidateName || null} 
+        toast={toastRef} 
+      />
+      <PremiumDetailsDialog 
+        visible={!!viewCandidate} 
+        title="Candidate Details" 
+        onHide={() => setViewCandidate(null)}
+      >
+        {viewCandidate && 
+          <DetailsSection 
+            title="Complete Candidate Information">
+              <DetailsGrid items={buildDetailsData(viewCandidate)} />
+          </DetailsSection>}
       </PremiumDetailsDialog>
-      <CandidateRoundsDialog visible={showRoundsDialog} candidateId={selectedResume?.candidateId ?? null} candidateName={selectedResume?.candidateName} onHide={() => setShowRoundsDialog(false)} />
+      <CandidateRoundsDialog 
+        visible={showRoundsDialog} 
+        candidateId={selectedResume?.candidateId ?? null} 
+        candidateName={selectedResume?.candidateName} 
+        onHide={() => setShowRoundsDialog(false)} 
+      />
     </>
   );
 };
