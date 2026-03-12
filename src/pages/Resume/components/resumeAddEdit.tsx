@@ -15,6 +15,7 @@ import {
 } from "../services/useResume";
 import { ResumeAddEditProps, AddEditCandidate, CandidateCreateData, AddEditCandidateApiPayload } from "../types/resumeTypes";
 import { useAuth } from "../../../shared/auth/AuthContext";
+import { useProfileStore } from "../../../shared/store/profile";
 
 interface DropdownFieldProps {
   id: string;
@@ -150,6 +151,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   existingCandidates
 }) => {
   const { accessToken } = useAuth();
+  const { member } = useProfileStore();
   const isEditMode = Boolean(selectedResume);
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
 
@@ -158,6 +160,8 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   const [submitted, setSubmitted] = useState(false);
   const [resumePasteText, setResumePasteText] = useState("");
   const toast = useRef<Toast>(null);
+  const previousCurrentCountryRef = useRef<string | null>(null);
+  const previousExpectedCountryRef = useRef<string | null>(null);
   
   const resetForm = () => {
     setFormData(INITIAL_FORM);
@@ -315,6 +319,80 @@ const workModeOptions = useMemo(() => {
   }));
 }, [createData?.workModes]);
 
+useEffect(() => {
+  if (!createData?.currencies || !createData?.compensationTypes) return;
+
+  const currentCountry = formData.currentLocation?.country?.trim().toLowerCase() || null;
+  const expectedCountry = formData.expectedLocation?.country?.trim().toLowerCase() || null;
+
+  const currentCountryChanged = previousCurrentCountryRef.current !== currentCountry;
+  const expectedCountryChanged = previousExpectedCountryRef.current !== expectedCountry;
+
+  if (!currentCountryChanged && !expectedCountryChanged) return;
+
+  const inrCurrencyId = createData.currencies.find(c => c.currencyName === "INR")?.currencyId;
+  const usdCurrencyId = createData.currencies.find(c => c.currencyName === "USD")?.currencyId;
+  const annualTypeId = createData.compensationTypes.find(t => t.compensationTypeName === "Annual")?.compensationTypeId;
+  const hourlyTypeId = createData.compensationTypes.find(t => t.compensationTypeName === "Hourly")?.compensationTypeId;
+
+  setFormData((prev) => {
+    const updates: Partial<AddEditCandidate> = {};
+
+    if (currentCountryChanged) {
+      if (currentCountry === "india") {
+        if (inrCurrencyId != null && prev.currentCTCCurrencyId !== inrCurrencyId) {
+          updates.currentCTCCurrencyId = inrCurrencyId;
+        }
+        if (annualTypeId != null && prev.currentCTCTypeId !== annualTypeId) {
+          updates.currentCTCTypeId = annualTypeId;
+        }
+      } else if (currentCountry === "united states" || currentCountry === "us" || currentCountry === "usa") {
+        if (usdCurrencyId != null && prev.currentCTCCurrencyId !== usdCurrencyId) {
+          updates.currentCTCCurrencyId = usdCurrencyId;
+        }
+        if (hourlyTypeId != null && prev.currentCTCTypeId !== hourlyTypeId) {
+          updates.currentCTCTypeId = hourlyTypeId;
+        }
+      }
+    }
+
+    if (expectedCountryChanged) {
+      if (expectedCountry === "india") {
+        if (inrCurrencyId != null && prev.expectedCTCCurrencyId !== inrCurrencyId) {
+          updates.expectedCTCCurrencyId = inrCurrencyId;
+        }
+        if (annualTypeId != null && prev.expectedCTCTypeId !== annualTypeId) {
+          updates.expectedCTCTypeId = annualTypeId;
+        }
+      } else if (expectedCountry === "united states" || expectedCountry === "us" || expectedCountry === "usa") {
+        if (usdCurrencyId != null && prev.expectedCTCCurrencyId !== usdCurrencyId) {
+          updates.expectedCTCCurrencyId = usdCurrencyId;
+        }
+        if (hourlyTypeId != null && prev.expectedCTCTypeId !== hourlyTypeId) {
+          updates.expectedCTCTypeId = hourlyTypeId;
+        }
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return prev;
+    }
+
+    return {
+      ...prev,
+      ...updates
+    };
+  });
+
+  previousCurrentCountryRef.current = currentCountry;
+  previousExpectedCountryRef.current = expectedCountry;
+}, [
+  formData.currentLocation?.country,
+  formData.expectedLocation?.country,
+  createData?.currencies,
+  createData?.compensationTypes
+]);
+
 
 
   // Initialize / Reset form
@@ -374,6 +452,29 @@ const workModeOptions = useMemo(() => {
     setSubmitted(false);
   }
 }, [visible, isEditMode, selectedResume, accessToken]);
+
+  useEffect(() => {
+  if (!visible) return;
+
+  // NEVER run this in edit mode
+  if (isEditMode) return;
+
+  if (!member) return;
+  if (!createData?.recruiters?.length) return;
+  if (formData.recruiterId) return;
+
+  const recruiter = createData.recruiters.find(
+    r => r.recruiterId === member.memberId
+  );
+
+  if (recruiter) {
+    setFormData(prev => ({
+      ...prev,
+      recruiterId: recruiter.recruiterId,
+      recruiterName: recruiter.recruiterName
+    }));
+  }
+}, [visible, isEditMode, member, createData?.recruiters, formData.recruiterId]);
 
 
   const handleChange = useCallback(
@@ -551,6 +652,41 @@ const parseAndAutofill = (text: string) => {
       const errorMsg = validateField(key, formData[key], formData);
       if (errorMsg) newErrors[key] = errorMsg;
     });
+
+    const hasCurrentAmount = formData.currentCTCAmount !== null && formData.currentCTCAmount !== undefined;
+    const hasCurrentCurrency = formData.currentCTCCurrencyId !== null && formData.currentCTCCurrencyId !== undefined;
+    const hasCurrentType = formData.currentCTCTypeId !== null && formData.currentCTCTypeId !== undefined;
+    const hasAnyCurrent = hasCurrentAmount || hasCurrentCurrency || hasCurrentType;
+
+    if (hasAnyCurrent) {
+      if (!hasCurrentAmount) {
+        newErrors.currentCTCAmount = "Current CTC Amount is required when currency and type are selected.";
+      }
+      if (hasCurrentAmount && !hasCurrentCurrency) {
+        newErrors.currentCTCCurrencyId = "Currency is required when Current CTC amount is provided.";
+      }
+      if (hasCurrentAmount && !hasCurrentType) {
+        newErrors.currentCTCTypeId = "CTC Type is required when Current CTC amount is provided.";
+      }
+    }
+
+    const hasExpectedAmount = formData.expectedCTCAmount !== null && formData.expectedCTCAmount !== undefined;
+    const hasExpectedCurrency = formData.expectedCTCCurrencyId !== null && formData.expectedCTCCurrencyId !== undefined;
+    const hasExpectedType = formData.expectedCTCTypeId !== null && formData.expectedCTCTypeId !== undefined;
+    const hasAnyExpected = hasExpectedAmount || hasExpectedCurrency || hasExpectedType;
+
+    if (hasAnyExpected) {
+      if (!hasExpectedAmount) {
+        newErrors.expectedCTCAmount = "Expected CTC Amount is required when currency and type are selected.";
+      }
+      if (hasExpectedAmount && !hasExpectedCurrency) {
+        newErrors.expectedCTCCurrencyId = "Currency is required when Expected CTC amount is provided.";
+      }
+      if (hasExpectedAmount && !hasExpectedType) {
+        newErrors.expectedCTCTypeId = "CTC Type is required when Expected CTC amount is provided.";
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formData]);
@@ -1061,6 +1197,7 @@ else {
           onBlur={() => handleBlur("currentCTCCurrencyId")}
           placeholder="Select Currency"
           error={shouldShowError("currentCTCCurrencyId")}
+          showClear
           required={false}
           colSize="col-12 md:col-4"
           />
@@ -1074,6 +1211,7 @@ else {
             onBlur={() => handleBlur("currentCTCTypeId")}
             placeholder="Select CTC Type"
             error={shouldShowError("currentCTCTypeId")}
+            showClear
             required={false}
             colSize="col-12 md:col-4"
           />
@@ -1099,6 +1237,7 @@ else {
           onBlur={() => handleBlur("expectedCTCCurrencyId")}
           placeholder="Select Currency"
           error={shouldShowError("expectedCTCCurrencyId")}
+          showClear
           required={false}
           colSize="col-12 md:col-4"
           />
@@ -1112,6 +1251,7 @@ else {
         onBlur={() => handleBlur("expectedCTCTypeId")}
         placeholder="Select CTC Type"
         error={shouldShowError("expectedCTCTypeId")}
+        showClear
         required={false}
         colSize="col-12 md:col-4"
         />
