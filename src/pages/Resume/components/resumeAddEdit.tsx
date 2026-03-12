@@ -15,6 +15,7 @@ import {
 } from "../services/useResume";
 import { ResumeAddEditProps, AddEditCandidate, CandidateCreateData, AddEditCandidateApiPayload } from "../types/resumeTypes";
 import { useAuth } from "../../../shared/auth/AuthContext";
+import { useProfileStore } from "../../../shared/store/profile";
 
 interface DropdownFieldProps {
   id: string;
@@ -150,6 +151,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   existingCandidates
 }) => {
   const { accessToken } = useAuth();
+  const { member } = useProfileStore();
   const isEditMode = Boolean(selectedResume);
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
 
@@ -450,6 +452,29 @@ useEffect(() => {
     setSubmitted(false);
   }
 }, [visible, isEditMode, selectedResume, accessToken]);
+
+  useEffect(() => {
+  if (!visible) return;
+
+  // NEVER run this in edit mode
+  if (isEditMode) return;
+
+  if (!member) return;
+  if (!createData?.recruiters?.length) return;
+  if (formData.recruiterId) return;
+
+  const recruiter = createData.recruiters.find(
+    r => r.recruiterId === member.memberId
+  );
+
+  if (recruiter) {
+    setFormData(prev => ({
+      ...prev,
+      recruiterId: recruiter.recruiterId,
+      recruiterName: recruiter.recruiterName
+    }));
+  }
+}, [visible, isEditMode, member, createData?.recruiters, formData.recruiterId]);
 
 
   const handleChange = useCallback(
