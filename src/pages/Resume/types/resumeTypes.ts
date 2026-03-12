@@ -24,6 +24,8 @@ export interface Candidate {
 
   // currentCTC: number;
   // expectedCTC: number;
+  workMode?: string | null;
+  workModeId?: number | null;
   currentCTCAmount?: number | null;
   currentCTCCurrencyId?: number | null;
   currentCTCTypeId?: number | null;
@@ -72,6 +74,8 @@ export interface CandidateUpdatePayload {
 
   // currentCTC?: number | null;
   // expectedCTC?: number | null;
+  workMode?: string | null; 
+  workModeId?: number | null;
   currentCTCAmount?: number | null;
   currentCTCCurrencyId?: number | null;
   currentCTCTypeId?: number | null;
@@ -132,6 +136,8 @@ export interface AddEditCandidate {
 
   // currentCTC?: number;
   // expectedCTC?: number;
+  workMode?: string | null;
+  workModeId?: number | null;
 
   currentCTCAmount?: number | null;
   currentCTCCurrencyId?: number | null;
@@ -172,6 +178,8 @@ export interface AddEditCandidateApiPayload {
 
   // currentCTC?: number | null;
   // expectedCTC?: number | null;
+  workMode?: string | null; // NEW FIELD
+  workModeId?: number | null; // NEW FIELD
   currentCTCAmount?: number | null;
   currentCTCCurrencyId?: number | null;
   currentCTCTypeId?: number | null;
@@ -242,6 +250,10 @@ export interface CompensationTypeItem {
   compensationTypeId: number;   // matches Candidate.currentCTCTypeId type
   compensationTypeName: string;
 }
+export interface WorkModeItem {
+  workModeId: number;
+  workMode: string;
+}
 
 export interface CandidateCreateData {
   recruiters: RecruiterItem[];
@@ -250,6 +262,8 @@ export interface CandidateCreateData {
   jobProfiles: JobProfileRequirementItem[];
   currencies?: CurrencyItem[];          // NEW
   compensationTypes?: CompensationTypeItem[]; // NEW
+  workModes?: WorkModeItem[];   // ADD THIS
+
 }
 export interface BulkUploadFailedRow {
   row: number;
