@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
@@ -15,6 +15,7 @@ import { Candidate, CandidateCreateData } from "../types/resumeTypes";
 import { getCandidates, downloadResume, fetchCandidateCreateData, bulkUploadCandidates, bulkUploadResumes } from "../services/useResume";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import SearchButton from "../../../shared/SearchButton";
+import ExportExcelButton from "../../../shared/ExportExcelButton";
 import { FilterMatchMode } from 'primereact/api';
 import { FaUserTie } from "react-icons/fa";
 import CogButton from "../../../shared/CogButton";
@@ -53,6 +54,43 @@ const ALL_COLUMNS = [
   { field: "notes", header: "Notes", sortable: true, filter: true },
 ];
 
+type ExportColumnDef = {
+  field: string;
+  header: string;
+};
+
+const EXPORT_COLUMN_CONFIG_BY_FIELD: Record<string, ExportColumnDef[]> = {
+  dateOfEntry: [{ field: "sourcedOn", header: "Sourced On" }],
+  candidateName: [{ field: "candidateName", header: "Candidate Name" }],
+  contact: [
+    { field: "candidateContactNumber", header: "Candidate Contact Number" },
+    { field: "candidateEmail", header: "Candidate Email" },
+  ],
+  jobRole: [{ field: "role", header: "Role" }],
+  noticePeriod: [{ field: "noticePeriod", header: "Notice Period" }],
+  experienceYears: [{ field: "yoe", header: "YOE" }],
+  workMode: [{ field: "modeOfWork", header: "Mode of Work" }],
+  "expectedLocation.city": [{ field: "expectedWorkingLocation", header: "Expected Working Location" }],
+  "currentLocation.city": [{ field: "currentWorkingLocation", header: "Current Working Location" }],
+  currentCTCAmount: [{ field: "currentCTC", header: "Current CTC" }],
+  expectedCTCAmount: [{ field: "expectedCTC", header: "Expected CTC" }],
+  statusName: [{ field: "interviewResult", header: "Interview Result" }],
+  recruiterName: [{ field: "recruiter", header: "Recruiter" }],
+  vendorName: [{ field: "vendor", header: "Vendor" }],
+  referredBy: [{ field: "referredBy", header: "Referred By" }],
+  linkedinProfileUrl: [{ field: "linkedInProfile", header: "LinkedIn Profile" }],
+  notes: [{ field: "notes", header: "Notes" }],
+};
+
+const EXPORT_COLUMNS: ExportColumnDef[] = [
+  ...ALL_COLUMNS.flatMap((column) => {
+    const mappedColumns = EXPORT_COLUMN_CONFIG_BY_FIELD[column.field];
+    if (mappedColumns) return mappedColumns;
+    return [{ field: column.field.replace(/\./g, "_"), header: column.header.trim() || column.field }];
+  }),
+  { field: "resume", header: "Resume" },
+];
+
 const DEFAULT_COLUMN_FIELDS = ["dateOfEntry","candidateName", "contact", "jobRole", "experienceYears", "noticePeriod", "workMode", "expectedLocation.city", "currentCTCAmount", "expectedCTCAmount", "statusName", "recruiterName", "vendorName", "referredBy"];
 const COLUMN_STORAGE_KEY = "candidateTable.visibleColumns";
 
@@ -74,6 +112,7 @@ const ResumeTable: React.FC = () => {
   const [showRoundsDialog, setShowRoundsDialog] = useState(false);
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
   const dt = useRef<DataTable<any>>(null);
+  const exportDt = useRef<DataTable<any>>(null);
   const [visibleColumns, setVisibleColumns] = useState(() => {
     const saved = localStorage.getItem(COLUMN_STORAGE_KEY);
     if (saved) {
@@ -178,6 +217,34 @@ useEffect(() => {
   const handleDeleteSuccess = () => { setShowDeleteDialog(false); setSelectedResume(null); loadAllData(); };
 
   const getNestedValue = (obj: any, path: string) => path.split(".").reduce((acc, key) => acc?.[key], obj);
+  const getExportField = (field: string) =>
+    EXPORT_COLUMN_CONFIG_BY_FIELD[field]?.[0]?.field || field.replace(/\./g, "_");
+
+  const normalizeExportValue = (value: unknown): string | number => {
+    if (value === null || value === undefined) return "-";
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed ? trimmed : "-";
+    }
+    return value as string | number;
+  };
+
+  const formatLocationForExport = (
+    location: { city?: string | null; country?: string | null } | null | undefined
+  ) => {
+    const city = location?.city?.trim() || "";
+    const country = location?.country?.trim() || "";
+    const parts = [city, country].filter(Boolean);
+    return parts.length ? parts.join(", ") : "-";
+  };
+
+  const formatLinkedInForExport = (linkedinProfileUrl?: string | null) => {
+    const trimmed = linkedinProfileUrl?.trim();
+    if (!trimmed) return "-";
+    return trimmed.startsWith("http://") || trimmed.startsWith("https://")
+      ? trimmed
+      : `https://${trimmed}`;
+  };
 
   const getColumnDisplayValue = (col: any, candidate: Candidate) => {
     if (col.field === "currentCTCAmount") {
@@ -399,6 +466,49 @@ useEffect(() => {
     return !city && !country ? "-" : `${city}, ${country}`;
   };
 
+  const buildExportData = (candidates: Candidate[]) => {
+    return candidates.map((candidate) => {
+      const exportRow: Record<string, string | number> = {};
+
+      ALL_COLUMNS.forEach((column) => {
+        switch (column.field) {
+          case "dateOfEntry":
+            exportRow.sourcedOn = formatDate(candidate.dateOfEntry);
+            break;
+          case "contact":
+            exportRow.candidateContactNumber = normalizeExportValue(candidate.contactNumber);
+            exportRow.candidateEmail = normalizeExportValue(candidate.email);
+            break;
+          case "expectedLocation.city":
+            exportRow.expectedWorkingLocation = formatLocationForExport(candidate.expectedLocation);
+            break;
+          case "currentLocation.city":
+            exportRow.currentWorkingLocation = formatLocationForExport(candidate.currentLocation);
+            break;
+          case "currentCTCAmount":
+            exportRow.currentCTC = normalizeExportValue(currentCTCTemplate(candidate));
+            break;
+          case "expectedCTCAmount":
+            exportRow.expectedCTC = normalizeExportValue(expectedCTCTemplate(candidate));
+            break;
+          case "linkedinProfileUrl":
+            exportRow.linkedInProfile = formatLinkedInForExport(candidate.linkedinProfileUrl);
+            break;
+          default: {
+            const exportField = getExportField(column.field);
+            const fieldValue = getNestedValue(candidate, column.field);
+            exportRow[exportField] = normalizeExportValue(fieldValue);
+          }
+        }
+      });
+
+      exportRow.resume = candidate.resumeFilename ? "Available" : "No Resume";
+      return exportRow;
+    });
+  };
+
+  const exportData = useMemo(() => buildExportData(resumes), [resumes, createData]);
+
   
 
   const settingsItems = [
@@ -436,11 +546,23 @@ useEffect(() => {
   return (
     <>
       <Toast ref={toastRef} position="top-right" />
+      <DataTable ref={exportDt} value={exportData} exportFilename="candidate_resumes" style={{ display: "none" }}>
+        {EXPORT_COLUMNS.map((column) => (
+          <Column key={`export-${column.field}`} field={column.field} header={column.header} />
+        ))}
+      </DataTable>
       <div className="flex justify-content-between align-items-center mb-2">
         <h2 style={{ color: "#07253f" }}>Candidate Resume Management</h2>
         <div className="flex gap-2">
           <SearchButton value={globalFilterValue} onChange={onGlobalFilterChange} placeholder="Search candidates..." />
           <ColumnSettingsButton value={visibleColumns} options={ALL_COLUMNS} optionLabel="header" onChange={setVisibleColumns} onReset={resetToDefaultColumns} />
+          <ExportExcelButton
+            {...({
+              data: exportData,
+              fileName: "candidate_resumes",
+              dtRef: exportDt,
+            } as any)}
+          />
           <BulkExcelUploadButton onFileSelect={async (file) => {
             if (!accessToken) return;
             try {
