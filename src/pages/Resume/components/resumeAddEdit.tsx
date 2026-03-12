@@ -627,6 +627,41 @@ const parseAndAutofill = (text: string) => {
       const errorMsg = validateField(key, formData[key], formData);
       if (errorMsg) newErrors[key] = errorMsg;
     });
+
+    const hasCurrentAmount = formData.currentCTCAmount !== null && formData.currentCTCAmount !== undefined;
+    const hasCurrentCurrency = formData.currentCTCCurrencyId !== null && formData.currentCTCCurrencyId !== undefined;
+    const hasCurrentType = formData.currentCTCTypeId !== null && formData.currentCTCTypeId !== undefined;
+    const hasAnyCurrent = hasCurrentAmount || hasCurrentCurrency || hasCurrentType;
+
+    if (hasAnyCurrent) {
+      if (!hasCurrentAmount) {
+        newErrors.currentCTCAmount = "Current CTC Amount is required when currency and type are selected.";
+      }
+      if (hasCurrentAmount && !hasCurrentCurrency) {
+        newErrors.currentCTCCurrencyId = "Currency is required when Current CTC amount is provided.";
+      }
+      if (hasCurrentAmount && !hasCurrentType) {
+        newErrors.currentCTCTypeId = "CTC Type is required when Current CTC amount is provided.";
+      }
+    }
+
+    const hasExpectedAmount = formData.expectedCTCAmount !== null && formData.expectedCTCAmount !== undefined;
+    const hasExpectedCurrency = formData.expectedCTCCurrencyId !== null && formData.expectedCTCCurrencyId !== undefined;
+    const hasExpectedType = formData.expectedCTCTypeId !== null && formData.expectedCTCTypeId !== undefined;
+    const hasAnyExpected = hasExpectedAmount || hasExpectedCurrency || hasExpectedType;
+
+    if (hasAnyExpected) {
+      if (!hasExpectedAmount) {
+        newErrors.expectedCTCAmount = "Expected CTC Amount is required when currency and type are selected.";
+      }
+      if (hasExpectedAmount && !hasExpectedCurrency) {
+        newErrors.expectedCTCCurrencyId = "Currency is required when Expected CTC amount is provided.";
+      }
+      if (hasExpectedAmount && !hasExpectedType) {
+        newErrors.expectedCTCTypeId = "CTC Type is required when Expected CTC amount is provided.";
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formData]);
