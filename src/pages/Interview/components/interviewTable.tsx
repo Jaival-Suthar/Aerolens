@@ -67,7 +67,7 @@ const ALL_COLUMNS = [
 
   { field: "roundProgress", header: "Round", body: "roundProgress" },
   { field: "result", header: "Result", body: "result", filter: true },
-  { field: "interviewDate", header: "Date", body: "date" },
+  { field: "interviewDate", header: "Interview Date", body: "date" },
 
   // ⬇️ Optional columns
   { field: "meetingUrl", header: "Recording", body: "recording" },
@@ -790,6 +790,7 @@ const interviewExportHeaders = useMemo(
                     <span>{col.header}</span>
           
                     <DateRangeFilter
+                      compact
                       initialStartDate={dateRange.startDate}
                       initialEndDate={dateRange.endDate}
                       onApply={(startDate, endDate) => {
