@@ -1,4 +1,4 @@
-export const APP_SCHEMA_VERSION = "2";
+export const APP_SCHEMA_VERSION = "3";
 export const APP_SCHEMA_VERSION_STORAGE_KEY = "app_schema_version";
 
 /**
