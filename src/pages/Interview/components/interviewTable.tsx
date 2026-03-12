@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Dropdown } from "primereact/dropdown";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
+import ExportExcelButton from "../../../shared/ExportExcelButton";
 import { Toast } from "primereact/toast";
 import InterviewDelete from "./interviewDelete";
 import InterviewAddEditForm from "./interviewAddEdit";
@@ -66,14 +67,16 @@ const ALL_COLUMNS = [
 
   { field: "roundProgress", header: "Round", body: "roundProgress" },
   { field: "result", header: "Result", body: "result", filter: true },
-  { field: "interviewDate", header: "Date", body: "date" },
+  { field: "interviewDate", header: "Interview Date", body: "date" },
 
   // ⬇️ Optional columns
-  { field: "meetingUrl", header: "Recording", body: "recording" },
   { field: "fromTime", header: "Start Time", body: "startTime", filter: true },
   { field: "toTime", header: "End Time", body: "endTime", filter: true },
+  { field: "meetingUrl", header: "Recording", body: "recording" },
   { field: "durationMinutes", header: "Duration (min)", filter: true },
 ];
+
+type ExportableInterviewRow = Record<string, string | number>;
 
 const DEFAULT_COLUMN_FIELDS = [
   "candidateName",
@@ -84,6 +87,7 @@ const DEFAULT_COLUMN_FIELDS = [
   "interviewDate",
   "fromTime" // start time stays visible
 ];
+const COLUMN_STORAGE_KEY = "table:interview:columns";
 
 // ============================================================
 // MAIN COMPONENT
@@ -101,6 +105,7 @@ const InterviewTable: React.FC = () => {
   const [isEdit, setIsEdit] = useState(false);
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
   const toast = useRef<Toast>(null);
+  const exportDt = useRef<DataTable<any>>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const pageFromUrl = Number(searchParams.get("page")) || 1;
   const [viewInterview, setViewInterview] = useState<Interview | null>(null);
@@ -124,16 +129,45 @@ const InterviewTable: React.FC = () => {
     startDate?: string;
     endDate?: string;
   }>({});
-  const [visibleColumns, setVisibleColumns] = useState(
-  ALL_COLUMNS.filter(col =>
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+  const saved = localStorage.getItem(COLUMN_STORAGE_KEY);
+
+  if (saved) {
+    try {
+      const savedFields: string[] = JSON.parse(saved);
+
+      return ALL_COLUMNS.filter(col =>
+        savedFields.includes(col.field)
+      );
+    } catch {
+      return ALL_COLUMNS.filter(col =>
+        DEFAULT_COLUMN_FIELDS.includes(col.field)
+      );
+    }
+  }
+
+  return ALL_COLUMNS.filter(col =>
     DEFAULT_COLUMN_FIELDS.includes(col.field)
-  )
-);
+  );
+});
+  useEffect(() => {
+  const fields = visibleColumns.map(col => col.field);
+
+  localStorage.setItem(
+    COLUMN_STORAGE_KEY,
+    JSON.stringify(fields)
+  );
+}, [visibleColumns]);
   const resetToDefaultColumns = () => {
-  setVisibleColumns(
-    ALL_COLUMNS.filter(col =>
-      DEFAULT_COLUMN_FIELDS.includes(col.field)
-    )
+  const defaults = ALL_COLUMNS.filter(col =>
+    DEFAULT_COLUMN_FIELDS.includes(col.field)
+  );
+
+  setVisibleColumns(defaults);
+
+  localStorage.setItem(
+    COLUMN_STORAGE_KEY,
+    JSON.stringify(defaults.map(c => c.field))
   );
 };
 
@@ -390,7 +424,7 @@ const handleViewAllRounds = () => {
 };
 
 
-  const roundProgressBodyTemplate = (rowData: Interview) => {
+const roundProgressBodyTemplate = (rowData: Interview) => {
   const current = rowData.roundNumber;
   const total = rowData.totalInterviews;
 
@@ -417,6 +451,87 @@ const handleViewAllRounds = () => {
     </div>
   );
 };
+
+const normalizeExportValue = (value: unknown): string | number => {
+  if (value === null || value === undefined) return "-";
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : "-";
+  }
+  return value as string | number;
+};
+
+const formatMeetingUrlForExport = (meetingUrl?: string) => {
+  if (!meetingUrl) return "-";
+  const trimmed = meetingUrl.trim();
+  if (!trimmed) return "-";
+  return trimmed.startsWith("http://") || trimmed.startsWith("https://")
+    ? trimmed
+    : `https://${trimmed}`;
+};
+
+const formatInterviewDateForExport = (interview: Interview) => {
+  if (!interview.fromTime) return "-";
+  const normalized = normalizeBackendDateTime(interview.fromTime);
+  if (!normalized) return "-";
+  const localDT = DateTime
+    .fromISO(normalized, { zone: "utc" })
+    .setZone(browserTimezone);
+  return localDT.toFormat("dd MMM yyyy");
+};
+
+const buildInterviewExportData = (interviewRows: Interview[]): ExportableInterviewRow[] => {
+  return interviewRows.map((interview) => {
+    const row: ExportableInterviewRow = {};
+
+    ALL_COLUMNS.forEach((col) => {
+      let exportValue: string | number = "-";
+
+      switch (col.body) {
+        case "roundProgress":
+          exportValue = `Round ${normalizeExportValue(interview.roundNumber)} / ${normalizeExportValue(interview.totalInterviews)}`;
+          break;
+        case "result":
+          exportValue = interview.result || "Pending";
+          break;
+        case "date":
+          exportValue = formatInterviewDateForExport(interview);
+          break;
+        case "startTime": {
+          const start = formatTimeForTable(interview.fromTime, interview.eventTimezone, browserTimezone);
+          exportValue = start?.text || "-";
+          break;
+        }
+        case "endTime": {
+          const end = formatTimeForTable(interview.toTime, interview.eventTimezone, browserTimezone);
+          exportValue = end?.text || "-";
+          break;
+        }
+        case "recording":
+          exportValue = formatMeetingUrlForExport(interview.meetingUrl);
+          break;
+        default:
+          exportValue = normalizeExportValue((interview as any)[col.field]);
+      }
+
+      row[col.header] = normalizeExportValue(exportValue);
+    });
+
+    row["Timezone"] = normalizeExportValue(interview.eventTimezone);
+    row["Interviewer Feedback"] = normalizeExportValue(interview.interviewerFeedback);
+    row["Recruiter Notes"] = normalizeExportValue(interview.recruiterNotes);
+
+    return row;
+  });
+};
+
+const getInterviewExportHeaders = () => [
+  ...ALL_COLUMNS.map((col) => col.header),
+  "Timezone",
+  "Interviewer Feedback",
+  "Recruiter Notes",
+];
+
 const buildInterviewDetailsData = (interview: Interview) => {
   const mapped = ALL_COLUMNS.map(col => {
     let value: any = null;
@@ -563,9 +678,28 @@ const filteredInterviews = interviews.filter((interview) => {
   return true;
 });
 
+const interviewExportData = useMemo(
+  () => buildInterviewExportData(interviews),
+  [interviews]
+);
+const interviewExportHeaders = useMemo(
+  () => getInterviewExportHeaders(),
+  []
+);
+
   return (
     <>
       <Toast ref={toast} />
+      <DataTable
+        ref={exportDt}
+        value={interviewExportData}
+        exportFilename="interviews"
+        style={{ display: "none" }}
+      >
+        {interviewExportHeaders.map((header) => (
+          <Column key={`export-${header}`} field={header} header={header} />
+        ))}
+      </DataTable>
       <div className="flex justify-content-between align-items-center mb-2">
         <h2 style={{ color: "#07253f" }}>Interviews</h2>
         <div className="flex gap-2 align-items-center">
@@ -580,6 +714,13 @@ const filteredInterviews = interviews.filter((interview) => {
             optionLabel="header"
             onChange={setVisibleColumns}
             onReset={resetToDefaultColumns}
+          />
+          <ExportExcelButton
+            {...({
+              data: interviewExportData,
+              fileName: "interviews",
+              dtRef: exportDt,
+            } as any)}
           />
           <EditButton onClick={handleEdit} disabled={!selectedInterview} />
           <DeleteButton onClick={handleDelete} disabled={!selectedInterview} />
@@ -679,6 +820,7 @@ const filteredInterviews = interviews.filter((interview) => {
                     <span>{col.header}</span>
           
                     <DateRangeFilter
+                      compact
                       initialStartDate={dateRange.startDate}
                       initialEndDate={dateRange.endDate}
                       onApply={(startDate, endDate) => {
