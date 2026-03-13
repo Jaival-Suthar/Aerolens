@@ -693,10 +693,6 @@ const parseAndAutofill = (text: string) => {
 
  
   const handleSave = useCallback(async () => {
-  
-    if (duplicateError) {
-      return;
-    }
    
     setSubmitted(true);
     
