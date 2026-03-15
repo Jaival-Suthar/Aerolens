@@ -1,0 +1,7 @@
+{
+    "workerCount": 4,
+    "rules": {
+        "core/large-method": "off",
+        "core/duplicate-logic-block": "off"
+    }
+}
