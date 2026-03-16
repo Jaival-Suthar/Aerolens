@@ -1,5 +1,9 @@
 {
     "workerCount": 4,
+    "exclude": [
+        "**/*.test.ts",
+        "**/*.test.tsx"
+    ],
     "rules": {
         "core/large-method": "off",
         "core/duplicate-logic-block": "off"
