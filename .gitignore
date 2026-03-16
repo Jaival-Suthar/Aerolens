@@ -31,3 +31,4 @@ tsconfig.tsbuildinfo
 
 **/.DS_Store
 .analysis-data/
+.perf-results.json
