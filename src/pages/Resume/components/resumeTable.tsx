@@ -522,6 +522,18 @@ useEffect(() => {
         }
         setShowInterviewDialog(true);
       }
+    },
+    {
+      label: "Initiate Onboarding",
+      icon: <i className="pi pi-user-plus" style={{ marginRight: 8, marginLeft: 4 }} />,
+      action: () => {
+        setShowSettingsMenu(false);
+        if (!selectedResume) {
+          toastRef.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select a candidate first", life: 3000 });
+          return;
+        }
+        // TODO: wire onboarding flow
+      }
     }
   ];
   const filteredResumes = resumes.filter((candidate) => {
