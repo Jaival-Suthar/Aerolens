@@ -18,9 +18,11 @@ import SearchButton from "../../../shared/SearchButton";
 import ExportExcelButton from "../../../shared/ExportExcelButton";
 import { FilterMatchMode } from 'primereact/api';
 import { FaUserTie } from "react-icons/fa";
+import { FaUserPlus } from "react-icons/fa";
 import CogButton from "../../../shared/CogButton";
 import { Toast } from "primereact/toast";
 import InterviewScheduler from "../../../shared/InterviewScheduler";
+import ResumeOnBoarding from "./resumeOnBoarding";
 import ViewButton from "../../../shared/ViewButton";
 import DetailsGrid from "../../../shared/DetailsGrid";
 import DetailsSection from "../../../shared/DetailsSection";
@@ -104,6 +106,7 @@ const ResumeTable: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showInterviewDialog, setShowInterviewDialog] = useState(false);
+  const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
   const toastRef = useRef<Toast>(null);
   const [rows, setRows] = useState(20);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -525,14 +528,15 @@ useEffect(() => {
     },
     {
       label: "Initiate Onboarding",
-      icon: <i className="pi pi-user-plus" style={{ marginRight: 8, marginLeft: 4 }} />,
+      icon: <FaUserPlus style={{ marginRight: 8, marginLeft: 4 }} />,
+
       action: () => {
         setShowSettingsMenu(false);
         if (!selectedResume) {
           toastRef.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select a candidate first", life: 3000 });
           return;
         }
-        // TODO: wire onboarding flow
+        setShowOnboardingDialog(true);
       }
     }
   ];
@@ -753,6 +757,16 @@ useEffect(() => {
         candidateId={selectedResume?.candidateId || null} 
         candidateName={selectedResume?.candidateName || null} 
         toast={toastRef} 
+      />
+      <ResumeOnBoarding
+        visible={showOnboardingDialog}
+        onHide={() => setShowOnboardingDialog(false)}
+        selectedCandidate={selectedResume}
+        createData={createData}
+        onSuccess={() => {
+          setShowOnboardingDialog(false);
+          loadAllData();
+        }}
       />
       <PremiumDetailsDialog 
         visible={!!viewCandidate} 
