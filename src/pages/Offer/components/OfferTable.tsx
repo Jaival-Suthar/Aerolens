@@ -3,7 +3,9 @@ import { DataTable, type DataTableFilterMeta, type DataTableStateEvent } from "p
 import { Column } from "primereact/column";
 import { Menu } from "primereact/menu";
 import { Toast } from "primereact/toast";
+import { FaBan, FaEdit, FaClipboardList } from "react-icons/fa";
 import SearchButton from "../../../shared/SearchButton";
+import DeleteButton from "../../../shared/DeleteButton";
 import CogButton from "../../../shared/CogButton";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import { getOffers } from "../services/offerService";
@@ -140,10 +142,9 @@ const OfferTable: React.FC = () => {
   };
 
   const actionMenuModel = [
-    { label: "Terminate Offer", command: handleTerminateOffer },
-    { label: "Delete Offer", command: handleDeleteOffer },
-    { label: "Revise Offer", command: handleReviseOffer },
-    { label: "Offer Status", command: handleOfferStatus },
+    { label: "Terminate Offer", icon: <FaBan style={{ marginRight: 8 }} />, command: handleTerminateOffer },
+    { label: "Revise Offer", icon: <FaEdit style={{ marginRight: 8 }} />, command: handleReviseOffer },
+    { label: "Offer Status", icon: <FaClipboardList style={{ marginRight: 8 }} />, command: handleOfferStatus },
   ];
 
   const globalFilterValue = (filters.global as { value?: string })?.value ?? "";
@@ -160,6 +161,7 @@ const OfferTable: React.FC = () => {
               onChange={onGlobalFilterChange}
               placeholder="Search offers..."
             />
+            <DeleteButton onClick={handleDeleteOffer} disabled={!selectedOffer} tooltip="Delete offer" />
             <div>
               <Menu model={actionMenuModel} popup ref={actionsMenuRef} />
               <CogButton

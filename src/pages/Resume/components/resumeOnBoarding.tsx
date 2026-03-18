@@ -33,10 +33,10 @@ const getInitialFormData = (candidate: Candidate | null): OnboardingFormData => 
   joiningBonus: null,
   reportingToId: null,
   vendorId: candidate?.vendorId ?? null,
-  offerLetterSent: "No",
-  serviceAgreementSent: "No",
-  ndaSent: "No",
-  codeOfConductSent: "No",
+  offerLetterSent: "Yes",
+  serviceAgreementSent: "Yes",
+  ndaSent: "Yes",
+  codeOfConductSent: "Yes",
 });
 
 /** Yes (green) / No (red) toggle buttons for document status — matches Jaival UI */
@@ -433,7 +433,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         {isEmployee && (
           <div className="flex align-items-center gap-2 flex-wrap">
             <span className="font-bold mr-2" style={{ minWidth: "260px" }}>
-              Offer Letter Sent
+              Offer Letter Sent <span className="text-red-500">*</span>
             </span>
             <DocumentToggle
               value={formData.offerLetterSent}
@@ -444,7 +444,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         {isConsultant && (
           <div className="flex align-items-center gap-2 flex-wrap">
             <span className="font-bold mr-2" style={{ minWidth: "260px" }}>
-              Service Agreement Sent
+              Service Agreement Sent <span className="text-red-500">*</span>
             </span>
             <DocumentToggle
               value={formData.serviceAgreementSent}
@@ -454,7 +454,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         )}
         <div className="flex align-items-center gap-2 flex-wrap">
           <span className="font-bold mr-2" style={{ minWidth: "260px" }}>
-            NDA Sent
+            NDA Sent <span className="text-red-500">*</span>
           </span>
           <DocumentToggle
             value={formData.ndaSent}
@@ -463,7 +463,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         </div>
         <div className="flex align-items-center gap-2 flex-wrap">
           <span className="font-bold mr-2" style={{ minWidth: "260px" }}>
-            Code of Conduct Sent
+            Code of Conduct Sent <span className="text-red-500">*</span>
           </span>
           <DocumentToggle
             value={formData.codeOfConductSent}
