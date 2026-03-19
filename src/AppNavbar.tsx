@@ -14,7 +14,8 @@ import {
   FaCog,
   FaUser,
   FaUserTie,
-  FaBuilding, 
+  FaUserPlus,
+  FaBuilding,
   FaLayerGroup,
   FaRegCalendarAlt,
   FaBullseye
@@ -103,7 +104,7 @@ const AppNavbar: React.FC = () => {
     },
     {
       label: "Transaction",
-      className: isMenuActive(undefined, ["/resume"])
+      className: isMenuActive(undefined, ["/resume", "/interview", "/offers"])
         ? "nav-item-active nav-dropdown-active"
         : "",
       items: [
@@ -114,13 +115,18 @@ const AppNavbar: React.FC = () => {
           className: isMenuActive("/resume") ? "nav-subitem-active" : "",
         },
         {
-          label: "Interview", // ✅ New top-level heading
-          icon: <FaRegCalendarAlt  style={{ marginRight: 8, marginLeft: 4 }} />,
-          command: () => navigate("/interview"),
+          label: "Interview",
+          icon: <FaRegCalendarAlt style={{ marginRight: 8, marginLeft: 4 }} />,
+          command: () => handleNavigation("/interview"),
           className: isMenuActive("/interview") ? "nav-subitem-active" : "",
         },
+        {
+          label: "Onboarding",
+          icon: <FaUserPlus style={{ marginRight: 8, marginLeft: 4 }} />,
+          command: () => handleNavigation("/offers"),
+          className: isMenuActive("/offers") ? "nav-subitem-active" : "",
+        },
       ],
-      
     },
     {
       label: "Reports",

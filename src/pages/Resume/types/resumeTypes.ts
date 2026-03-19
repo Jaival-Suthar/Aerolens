@@ -313,3 +313,43 @@ export interface ResumeBatchStatusResponse {
   batchId: string;
   data: ResumeBatchStatus;
 }
+
+/* ------------------ ONBOARDING (Initiate Onboarding dialog) ------------------ */
+
+export type OnboardingDocumentStatus = "Yes" | "No";
+
+/** Employment type: Employee or Consultant. In production options come from lookup; conditional rendering (Vendor / Offer Letter vs Service Agreement) is unchanged. */
+export type OnboardingEmploymentType = "Employee" | "Consultant";
+
+export interface OnboardingFormData {
+  candidateName: string;
+  /** JPR (Job Profile Requirement) — used as jobProfileRequirementId when creating offer. */
+  jprProjectDepartmentId: number | null;
+  /** Employment type from API dropdown; drives Vendor visibility and document row (Offer Letter vs Service Agreement). */
+  employmentTypeLookupId: number | null;
+  /** Legacy: kept for backward compat; conditionals use employmentTypeName from API when available. */
+  employmentType: OnboardingEmploymentType | null;
+  modeOfWorkingId: number | null;
+  joiningDate: Date | null;
+  offeredCtcValue: number | null;
+  currencyId: number | null;
+  compensationTypeId: number | null;
+  variablePay: number | null;
+  joiningBonus: number | null;
+  reportingToId: number | null;
+  vendorId: number | null;
+  /** Shown when employment type is Employee. */
+  offerLetterSent: OnboardingDocumentStatus;
+  /** Shown when employment type is Consultant. */
+  serviceAgreementSent: OnboardingDocumentStatus;
+  ndaSent: OnboardingDocumentStatus;
+  codeOfConductSent: OnboardingDocumentStatus;
+}
+
+export interface ResumeOnBoardingProps {
+  visible: boolean;
+  onHide: () => void;
+  selectedCandidate: Candidate | null;
+  createData: CandidateCreateData | null;
+  onSuccess: () => void;
+}
