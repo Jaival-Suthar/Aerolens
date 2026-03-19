@@ -159,7 +159,13 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     if (!formData.jprProjectDepartmentId) next.jprProjectDepartmentId = "Find JPR (Project/Department) is required.";
     if (!formData.modeOfWorkingId) next.modeOfWorkingId = "Mode of Working is required.";
     if (!formData.joiningDate) next.joiningDate = "Joining date is required.";
-    if (formData.offeredCtcValue == null || formData.offeredCtcValue <= 0) next.offeredCtcValue = "Offered CTC value is required.";
+    if (
+      formData.offeredCtcValue === null ||
+      formData.offeredCtcValue === undefined ||
+      Number(formData.offeredCtcValue) <= 0
+    ) {
+      next.offeredCtcValue = "Offered CTC must be greater than 0.";
+    }
     if (!formData.currencyId) next.currencyId = "Currency is required.";
     if (!formData.compensationTypeId) next.compensationTypeId = "Compensation type is required.";
     if (!formData.reportingToId) next.reportingToId = "Reporting to is required.";
@@ -211,7 +217,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
       joiningDate,
       ndaSent: formData.ndaSent === "Yes",
       codeOfConductSent: formData.codeOfConductSent === "Yes",
-      offeredCTCAmount: formData.offeredCtcValue ?? undefined,
+      offeredCTCAmount: (formData.offeredCtcValue != null && formData.offeredCtcValue >= 1) ? formData.offeredCtcValue : undefined,
       currencyLookupId: formData.currencyId ?? undefined,
       compensationTypeLookupId: formData.compensationTypeId ?? undefined,
       variablePay: formData.variablePay ?? undefined,
@@ -228,7 +234,10 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
       onSuccess();
       onHide();
     } catch (err: unknown) {
-      const message = err && typeof err === "object" && "message" in err ? String((err as { message: unknown }).message) : "Failed to create offer.";
+      const e = err as { message?: string; details?: { validationErrors?: { message?: string }[] } };
+      const message = Array.isArray(e?.details?.validationErrors) && e.details.validationErrors.length > 0
+        ? e.details.validationErrors.map((v) => v.message).filter(Boolean).join(", ") || e?.message
+        : (e?.message ?? "Failed to create offer.");
       showGlobalToast({ severity: "error", summary: "Error", detail: message, life: 5000 });
     } finally {
       setSaving(false);
@@ -352,10 +361,17 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           <InputNumber
             value={formData.offeredCtcValue ?? undefined}
             onValueChange={(e) => {
-              setFormData((p) => ({ ...p, offeredCtcValue: e.value ?? null }));
+              const value = typeof e.value === "number" ? e.value : null;
+            
+              setFormData((p) => ({
+                ...p,
+                offeredCtcValue: value,
+              }));
+            
               clearError("offeredCtcValue");
             }}
             mode="decimal"
+            min={1}
             className={shouldShowError("offeredCtcValue") ? "p-invalid w-full" : "w-full"}
           />
           {shouldShowError("offeredCtcValue") && <small className="p-error block mt-1">{shouldShowError("offeredCtcValue")}</small>}

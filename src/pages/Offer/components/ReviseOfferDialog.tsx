@@ -47,9 +47,10 @@ const ReviseOfferDialog: React.FC<ReviseOfferDialogProps> = ({
   const validate = (): boolean => {
     const next: Record<string, string> = {};
     if (!reason.trim()) next.reason = "Reason for revision is required.";
-    const hasCTC = newCTC != null && newCTC >= 0;
+    const hasCTC = newCTC != null && newCTC >= 1;
     const hasDate = newJoiningDate != null;
-    if (!hasCTC && !hasDate) next.change = "Enter at least one: Change in CTC or Change in Joining Date.";
+    if (newCTC != null && newCTC < 1) next.change = "CTC must be at least 1.";
+    else if (!hasCTC && !hasDate) next.change = "Enter at least one: Change in CTC or Change in Joining Date.";
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -57,7 +58,7 @@ const ReviseOfferDialog: React.FC<ReviseOfferDialogProps> = ({
   const handleRevise = async () => {
     if (!selectedOffer || !accessToken || !validate()) return;
     const payload: { reason: string; newCTC?: number; newJoiningDate?: string } = { reason: reason.trim() };
-    if (newCTC != null && newCTC >= 0) payload.newCTC = newCTC;
+    if (newCTC != null && newCTC >= 1) payload.newCTC = newCTC;
     if (newJoiningDate) {
       const d = newJoiningDate instanceof Date ? newJoiningDate : new Date(newJoiningDate);
       payload.newJoiningDate = d.toISOString().slice(0, 10);
@@ -85,7 +86,10 @@ const ReviseOfferDialog: React.FC<ReviseOfferDialogProps> = ({
         });
       }
     } catch (error: unknown) {
-      const message = error && typeof error === "object" && "message" in error ? String((error as { message: unknown }).message) : "Failed to revise offer.";
+      const err = error as { message?: string; details?: { validationErrors?: { message?: string }[] } };
+      const message = Array.isArray(err?.details?.validationErrors) && err.details.validationErrors.length > 0
+        ? err.details.validationErrors.map((v) => v.message).filter(Boolean).join(", ") || err?.message
+        : (err?.message ?? "Failed to revise offer.");
       toast.current?.show({ severity: "error", summary: "Error", detail: message, life: 3000 });
     } finally {
       setLoading(false);
@@ -128,7 +132,7 @@ const ReviseOfferDialog: React.FC<ReviseOfferDialogProps> = ({
             value={newCTC ?? undefined}
             onValueChange={(e) => setNewCTC(e.value ?? null)}
             mode="decimal"
-            min={0}
+            min={1}
             className="w-full"
             placeholder="New CTC"
           />

@@ -59,7 +59,10 @@ const OfferDelete: React.FC<OfferDeleteProps> = ({
         });
       }
     } catch (error: unknown) {
-      const message = error && typeof error === "object" && "message" in error ? String((error as { message: unknown }).message) : "Failed to delete offer.";
+      const err = error as { message?: string; details?: { validationErrors?: { message?: string }[] } };
+      const message = Array.isArray(err?.details?.validationErrors) && err.details.validationErrors.length > 0
+        ? err.details.validationErrors.map((v) => v.message).filter(Boolean).join(", ") || err?.message
+        : (err?.message ?? "Failed to delete offer.");
       toast.current?.show({ severity: "error", summary: "Error", detail: message, life: 3000 });
     } finally {
       setLoading(false);

@@ -74,10 +74,10 @@ function formatOfferedCTC(r: OfferTableRow, formData: OfferFormDataResponse | nu
       toNum(row.compensation_type_lookup_id) ??
       toNum(row.expectedCTCTypeId);
     if (!currencyName && currencyId != null)
-      currencyName = formData?.currencies?.find((c) => c.currencyId === currencyId || Number(c.currencyId) === Number(currencyId))?.currencyName ?? "";
+      currencyName = formData?.currencies?.find((c) => c.currencyLookupId === currencyId || Number(c.currencyLookupId) === Number(currencyId))?.currencyName ?? "";
     if (!typeName && compensationTypeId != null)
       typeName = formData?.compensationTypes?.find(
-        (t) => t.compensationTypeId === compensationTypeId || Number(t.compensationTypeId) === Number(compensationTypeId)
+        (t) => t.compensationTypeLookupId === compensationTypeId || Number(t.compensationTypeLookupId) === Number(compensationTypeId)
       )?.compensationTypeName ?? "";
   }
   const symbol = (currencyName && (CURRENCY_SYMBOLS[currencyName] || currencyName)) || "";
@@ -127,7 +127,10 @@ const OfferTable: React.FC = () => {
       setOfferFormData((prev) => formData ?? prev);
     } catch (e) {
       console.error("Failed to load offers:", e);
-      const message = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : "Failed to load offers";
+      const err = e as { message?: string; details?: { validationErrors?: { message?: string }[] } };
+      const message = Array.isArray(err?.details?.validationErrors) && err.details.validationErrors.length > 0
+        ? err.details.validationErrors.map((v) => v.message).filter(Boolean).join(", ") || err?.message
+        : (err?.message ?? "Failed to load offers");
       toastRef.current?.show({ severity: "error", summary: "Error", detail: message, life: 5000 });
       setOffers([]);
     } finally {
@@ -209,7 +212,7 @@ const OfferTable: React.FC = () => {
   };
 
   const actionMenuModel = [
-    { label: "Terminate Offer", icon: <FaBan style={{ marginRight: 8 }} />, command: handleTerminateOffer },
+    { label: "Terminate Offer", icon: <FaBan style={{ marginRight: 8 }} />, command: handleTerminateOffer, disabled: selectedOffer?.offerStatus !== "ACCEPTED" },
     { label: "Revise Offer", icon: <FaEdit style={{ marginRight: 8 }} />, command: handleReviseOffer },
     { label: "Offer Status", icon: <FaClipboardList style={{ marginRight: 8 }} />, command: handleOfferStatus },
   ];

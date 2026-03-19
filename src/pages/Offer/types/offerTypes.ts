@@ -82,12 +82,12 @@ export interface OfferActionResponse {
   message?: string;
 }
 
-/** Response from GET /offers/form-data. */
+/** Response from GET /offers/form-data. Aligned with backend lookup keys. */
 export interface OfferFormDataResponse {
   employmentTypes: { employmentTypeLookupId: number; employmentTypeName: string }[];
-  workModes: { lookupId: number; value: string }[];
-  currencies: { currencyId: number; currencyName: string }[];
-  compensationTypes: { compensationTypeId: number; compensationTypeName: string }[];
+  workModes: { workModelLookupId: number; workModelName: string }[];
+  currencies: { currencyLookupId: number; currencyName: string }[];
+  compensationTypes: { compensationTypeLookupId: number; compensationTypeName: string }[];
   vendors: { vendorId: number; vendorName: string }[];
   members: { memberId: number; memberName: string }[];
   jobProfileRequirements: { jobProfileRequirementId: number; jobRole: string; [key: string]: unknown }[];
