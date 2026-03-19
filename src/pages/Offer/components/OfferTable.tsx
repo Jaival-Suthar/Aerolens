@@ -10,6 +10,10 @@ import CogButton from "../../../shared/CogButton";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import { getOffers } from "../services/offerService";
 import type { OfferTableRow } from "../types/offerTypes";
+import OfferDelete from "./OfferDelete";
+import TerminateOfferDialog from "./TerminateOfferDialog";
+import ReviseOfferDialog from "./ReviseOfferDialog";
+import OfferStatusDialog from "./OfferStatusDialog";
 import { FilterMatchMode } from "primereact/api";
 import { useSearchParams } from "react-router-dom";
 
@@ -32,6 +36,10 @@ const OfferTable: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedOffer, setSelectedOffer] = useState<OfferTableRow | null>(null);
   const actionsMenuRef = useRef<Menu>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showTerminateDialog, setShowTerminateDialog] = useState(false);
+  const [showReviseDialog, setShowReviseDialog] = useState(false);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
 
   const [rows, setRows] = useState(() => Number(searchParams.get("rows")) || 20);
   const [first, setFirst] = useState(() => Number(searchParams.get("first")) || 0);
@@ -110,35 +118,27 @@ const OfferTable: React.FC = () => {
   };
 
   const handleTerminateOffer = () => {
-    if (!selectedOffer) {
-      toastRef.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select an offer first.", life: 3000 });
-      return;
-    }
-    toastRef.current?.show({ severity: "info", summary: "Terminate Offer", detail: "Coming soon.", life: 3000 });
+    if (selectedOffer) setShowTerminateDialog(true);
+    else toastRef.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select an offer first.", life: 3000 });
   };
 
   const handleDeleteOffer = () => {
-    if (!selectedOffer) {
-      toastRef.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select an offer first.", life: 3000 });
-      return;
-    }
-    toastRef.current?.show({ severity: "info", summary: "Delete Offer", detail: "Coming soon.", life: 3000 });
+    if (selectedOffer) setShowDeleteDialog(true);
+    else toastRef.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select an offer first.", life: 3000 });
   };
 
   const handleReviseOffer = () => {
-    if (!selectedOffer) {
-      toastRef.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select an offer first.", life: 3000 });
-      return;
-    }
-    toastRef.current?.show({ severity: "info", summary: "Revise Offer", detail: "Coming soon.", life: 3000 });
+    if (selectedOffer) setShowReviseDialog(true);
+    else toastRef.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select an offer first.", life: 3000 });
   };
 
   const handleOfferStatus = () => {
-    if (!selectedOffer) {
-      toastRef.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select an offer first.", life: 3000 });
-      return;
-    }
-    toastRef.current?.show({ severity: "info", summary: "Offer Status", detail: "Coming soon.", life: 3000 });
+    if (selectedOffer) setShowStatusDialog(true);
+    else toastRef.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select an offer first.", life: 3000 });
+  };
+
+  const handleActionSuccess = () => {
+    loadOffers();
   };
 
   const actionMenuModel = [
@@ -211,6 +211,32 @@ const OfferTable: React.FC = () => {
           </DataTable>
         </div>
       </div>
+
+      <OfferDelete
+        visible={showDeleteDialog}
+        onHide={() => setShowDeleteDialog(false)}
+        selectedOffer={selectedOffer}
+        onSuccess={handleActionSuccess}
+        onClearSelection={() => setSelectedOffer(null)}
+      />
+      <TerminateOfferDialog
+        visible={showTerminateDialog}
+        onHide={() => setShowTerminateDialog(false)}
+        selectedOffer={selectedOffer}
+        onSuccess={handleActionSuccess}
+      />
+      <ReviseOfferDialog
+        visible={showReviseDialog}
+        onHide={() => setShowReviseDialog(false)}
+        selectedOffer={selectedOffer}
+        onSuccess={handleActionSuccess}
+      />
+      <OfferStatusDialog
+        visible={showStatusDialog}
+        onHide={() => setShowStatusDialog(false)}
+        selectedOffer={selectedOffer}
+        onSuccess={handleActionSuccess}
+      />
     </>
   );
 };

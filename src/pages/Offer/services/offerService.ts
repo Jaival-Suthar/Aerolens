@@ -3,7 +3,15 @@
  * Endpoints: GET /offers, POST /offers/:candidateId, GET /offers/form-data
  */
 
-import type { OfferTableRow, CreateOfferPayload, OfferFormDataResponse } from "../types/offerTypes";
+import type {
+  OfferTableRow,
+  CreateOfferPayload,
+  OfferFormDataResponse,
+  OfferActionResponse,
+  TerminateOfferPayload,
+  ReviseOfferPayload,
+  UpdateOfferStatusPayload,
+} from "../types/offerTypes";
 
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
 
@@ -49,4 +57,56 @@ export async function createOffer(
 /** GET /offers/form-data — lookup data for Initiate Onboarding form. */
 export async function getOfferFormData(accessToken: string | null): Promise<OfferFormDataResponse> {
   return apiFetch<OfferFormDataResponse>("/offers/form-data", { method: "GET" }, accessToken ?? undefined);
+}
+
+/** DELETE /offers/:offerId — soft delete. */
+export async function deleteOffer(offerId: number, accessToken: string | null): Promise<OfferActionResponse> {
+  const raw = await apiFetch<OfferActionResponse | { data?: OfferActionResponse }>(
+    `/offers/${offerId}`,
+    { method: "DELETE" },
+    accessToken ?? undefined
+  );
+  return (raw as { data?: OfferActionResponse }).data ?? (raw as OfferActionResponse);
+}
+
+/** POST /offers/:offerId/terminate */
+export async function terminateOffer(
+  offerId: number,
+  payload: TerminateOfferPayload,
+  accessToken: string | null
+): Promise<OfferActionResponse> {
+  const raw = await apiFetch<OfferActionResponse | { data?: OfferActionResponse }>(
+    `/offers/${offerId}/terminate`,
+    { method: "POST", body: JSON.stringify(payload) },
+    accessToken ?? undefined
+  );
+  return (raw as { data?: OfferActionResponse }).data ?? (raw as OfferActionResponse);
+}
+
+/** POST /offers/:offerId/revise */
+export async function reviseOffer(
+  offerId: number,
+  payload: ReviseOfferPayload,
+  accessToken: string | null
+): Promise<OfferActionResponse> {
+  const raw = await apiFetch<OfferActionResponse | { data?: OfferActionResponse }>(
+    `/offers/${offerId}/revise`,
+    { method: "POST", body: JSON.stringify(payload) },
+    accessToken ?? undefined
+  );
+  return (raw as { data?: OfferActionResponse }).data ?? (raw as OfferActionResponse);
+}
+
+/** POST /offers/:offerId/status */
+export async function updateOfferStatus(
+  offerId: number,
+  payload: UpdateOfferStatusPayload,
+  accessToken: string | null
+): Promise<OfferActionResponse> {
+  const raw = await apiFetch<OfferActionResponse | { data?: OfferActionResponse }>(
+    `/offers/${offerId}/status`,
+    { method: "POST", body: JSON.stringify(payload) },
+    accessToken ?? undefined
+  );
+  return (raw as { data?: OfferActionResponse }).data ?? (raw as OfferActionResponse);
 }

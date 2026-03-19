@@ -43,6 +43,36 @@ export interface CreateOfferPayload {
   codeOfConductSent: boolean;
 }
 
+/** Payload for POST /offers/:offerId/terminate */
+export interface TerminateOfferPayload {
+  terminationDate: string;
+  terminationReason: string;
+}
+
+/** Payload for POST /offers/:offerId/revise — at least one of newCTC or newJoiningDate required */
+export interface ReviseOfferPayload {
+  reason: string;
+  newCTC?: number;
+  newJoiningDate?: string;
+}
+
+/** Payload for POST /offers/:offerId/status */
+export interface UpdateOfferStatusPayload {
+  status: "ACCEPTED" | "REJECTED";
+  decisionDate: string;
+  signedOfferLetterReceived?: boolean;
+  signedServiceAgreementReceived?: boolean;
+  signedNDAReceived?: boolean;
+  signedCodeOfConductReceived?: boolean;
+  rejectionReason?: string;
+}
+
+/** Common API response shape for offer actions */
+export interface OfferActionResponse {
+  success: boolean;
+  message?: string;
+}
+
 /** Response from GET /offers/form-data. */
 export interface OfferFormDataResponse {
   employmentTypes: { employmentTypeLookupId: number; employmentTypeName: string }[];
