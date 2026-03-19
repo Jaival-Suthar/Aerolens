@@ -39,10 +39,10 @@ const OfferStatusDialog: React.FC<OfferStatusDialogProps> = ({
 }) => {
   const [status, setStatus] = useState<"ACCEPTED" | "REJECTED" | null>(null);
   const [decisionDate, setDecisionDate] = useState<Date | null>(null);
-  const [signedOfferLetterReceived, setSignedOfferLetterReceived] = useState<DocStatus>("No");
-  const [signedServiceAgreementReceived, setSignedServiceAgreementReceived] = useState<DocStatus>("No");
-  const [signedNDAReceived, setSignedNDAReceived] = useState<DocStatus>("No");
-  const [signedCodeOfConductReceived, setSignedCodeOfConductReceived] = useState<DocStatus>("No");
+  const [signedOfferLetterReceived, setSignedOfferLetterReceived] = useState<DocStatus>("Yes");
+  const [signedServiceAgreementReceived, setSignedServiceAgreementReceived] = useState<DocStatus>("Yes");
+  const [signedNDAReceived, setSignedNDAReceived] = useState<DocStatus>("Yes");
+  const [signedCodeOfConductReceived, setSignedCodeOfConductReceived] = useState<DocStatus>("Yes");
   const [rejectionReason, setRejectionReason] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -55,10 +55,10 @@ const OfferStatusDialog: React.FC<OfferStatusDialogProps> = ({
     if (!visible) {
       setStatus(null);
       setDecisionDate(null);
-      setSignedOfferLetterReceived("No");
-      setSignedServiceAgreementReceived("No");
-      setSignedNDAReceived("No");
-      setSignedCodeOfConductReceived("No");
+      setSignedOfferLetterReceived("Yes");
+      setSignedServiceAgreementReceived("Yes");
+      setSignedNDAReceived("Yes");
+      setSignedCodeOfConductReceived("Yes");
       setRejectionReason("");
       setErrors({});
     }
