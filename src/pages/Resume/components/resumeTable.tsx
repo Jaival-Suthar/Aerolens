@@ -422,16 +422,6 @@ useEffect(() => {
     )?.compensationTypeName;
   
     const symbol = currencySymbols[currencyName || ""] || currencyName || "";
-    // if (currencyName === "INR") {
-    //   if (type?.toLowerCase() === "annual" || type?.toLowerCase() === "yearly") {
-    //     const lpa = (row.currentCTCAmount / 100000).toFixed(2);
-    //     return `${symbol}${lpa} LPA`;
-    //   }
-    //   if (type?.toLowerCase() === "monthly") {
-    //     const lpa = ((row.currentCTCAmount * 12) / 100000).toFixed(2);
-    //     return `${symbol}${lpa} LPA`;
-    //   }
-    // }
     const shortType = compensationShort[type || ""] || type || "";
   
     return `${symbol}${row.currentCTCAmount}/${shortType}`;

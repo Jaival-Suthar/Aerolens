@@ -104,6 +104,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     label: t.compensationTypeName,
     value: t.compensationTypeId,
   }));
+
   const workModeOptions = (createData?.workModes ?? []).map((w) => ({
     label: w.workMode,
     value: w.workModeId,
@@ -344,7 +345,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         </div>
       </div>
 
-      {/* Row 3: Offered CTC Value * | Currency * | Compensation Type * */}
+      {/* Row 3: Offered CTC Value * | Currency * | Compensation Type * — display as number + symbol/type */}
       <div className="grid p-fluid mb-2">
         <div className="col-12 md:col-4">
           <label className="block font-bold mb-1">Offered CTC Value <span className="text-red-500">*</span></label>

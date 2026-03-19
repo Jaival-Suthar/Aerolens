@@ -8,8 +8,8 @@ import SearchButton from "../../../shared/SearchButton";
 import DeleteButton from "../../../shared/DeleteButton";
 import CogButton from "../../../shared/CogButton";
 import { useAuth } from "../../../shared/auth/AuthContext";
-import { getOffers } from "../services/offerService";
-import type { OfferTableRow } from "../types/offerTypes";
+import { getOffers, getOfferFormData } from "../services/offerService";
+import type { OfferTableRow, OfferFormDataResponse } from "../types/offerTypes";
 import OfferDelete from "./OfferDelete";
 import TerminateOfferDialog from "./TerminateOfferDialog";
 import ReviseOfferDialog from "./ReviseOfferDialog";
@@ -28,11 +28,73 @@ const formatNumber = (value: number | null | undefined) => {
   return value.toLocaleString();
 };
 
+/** Format: symbol + amount / compensation short (e.g. "$40/hr", "₹40/yr"). Compensation types: Annual, Monthly, Hourly. */
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  EUR: "€",
+  USD: "$",
+  INR: "₹",
+  GBP: "£",
+  AED: "د.إ",
+};
+const COMPENSATION_SHORT: Record<string, string> = {
+  Annual: "yr",
+  Monthly: "mo",
+  Hourly: "hr",
+  Yearly: "yr",
+};
+function toNum(v: unknown): number | null {
+  if (v == null) return null;
+  if (typeof v === "number" && !Number.isNaN(v)) return v;
+  if (typeof v === "string") {
+    const n = Number(v);
+    return Number.isNaN(n) ? null : n;
+  }
+  return null;
+}
+
+function formatOfferedCTC(r: OfferTableRow, formData: OfferFormDataResponse | null): string {
+  if (r.offeredCTCAmount == null) return "—";
+  const row = r as unknown as Record<string, unknown>;
+  // Prefer display-friendly values from GET /offers (backend sends currencyName, compensationTypeName)
+  let currencyName = (row.currencyName as string)?.trim() || "";
+  let typeName = (row.compensationTypeName as string)?.trim() || "";
+  if (!currencyName || !typeName) {
+    const currencyId =
+      toNum(row.currencyLookupId) ??
+      toNum(row.currencyId) ??
+      toNum(row.offeredCTCCurrencyLookupId) ??
+      toNum(row.offeredCTCCurrencyId) ??
+      toNum(row.currency_lookup_id) ??
+      toNum(row.expectedCTCCurrencyId);
+    const compensationTypeId =
+      toNum(row.compensationTypeLookupId) ??
+      toNum(row.compensationTypeId) ??
+      toNum(row.offeredCompensationTypeLookupId) ??
+      toNum(row.offeredCTCTypeId) ??
+      toNum(row.compensation_type_lookup_id) ??
+      toNum(row.expectedCTCTypeId);
+    if (!currencyName && currencyId != null)
+      currencyName = formData?.currencies?.find((c) => c.currencyId === currencyId || Number(c.currencyId) === Number(currencyId))?.currencyName ?? "";
+    if (!typeName && compensationTypeId != null)
+      typeName = formData?.compensationTypes?.find(
+        (t) => t.compensationTypeId === compensationTypeId || Number(t.compensationTypeId) === Number(compensationTypeId)
+      )?.compensationTypeName ?? "";
+  }
+  const symbol = (currencyName && (CURRENCY_SYMBOLS[currencyName] || currencyName)) || "";
+  const shortType = (typeName && (COMPENSATION_SHORT[typeName] || typeName)) || typeName || "";
+  // Column: symbol + amount / short type only (no currency name in words)
+  if (symbol && shortType) return `${symbol}${r.offeredCTCAmount}/${shortType}`;
+  if (symbol) return `${symbol}${r.offeredCTCAmount}`;
+  if (shortType) return `${r.offeredCTCAmount}/${shortType}`;
+  return formatNumber(r.offeredCTCAmount);
+}
+
 const OfferTable: React.FC = () => {
   const toastRef = useRef<Toast>(null);
   const { accessToken } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [offers, setOffers] = useState<OfferTableRow[]>([]);
+  const [offerFormData, setOfferFormData] = useState<OfferFormDataResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedOffer, setSelectedOffer] = useState<OfferTableRow | null>(null);
   const actionsMenuRef = useRef<Menu>(null);
@@ -49,6 +111,7 @@ const OfferTable: React.FC = () => {
     candidateName: { value: null, matchMode: FilterMatchMode.CONTAINS },
     employmentTypeName: { value: null, matchMode: FilterMatchMode.CONTAINS },
     workModeName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    vendorName: { value: null, matchMode: FilterMatchMode.CONTAINS },
     offerStatus: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
 
@@ -56,8 +119,12 @@ const OfferTable: React.FC = () => {
     if (!accessToken) return;
     try {
       setLoading(true);
-      const data = await getOffers(accessToken);
-      setOffers(Array.isArray(data) ? data : []);
+      const [offersData, formData] = await Promise.all([
+        getOffers(accessToken),
+        getOfferFormData(accessToken).catch(() => null),
+      ]);
+      setOffers(Array.isArray(offersData) ? offersData : []);
+      setOfferFormData((prev) => formData ?? prev);
     } catch (e) {
       console.error("Failed to load offers:", e);
       const message = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : "Failed to load offers";
@@ -149,6 +216,11 @@ const OfferTable: React.FC = () => {
 
   const globalFilterValue = (filters.global as { value?: string })?.value ?? "";
 
+  const offeredCTCBody = useCallback(
+    (r: OfferTableRow) => formatOfferedCTC(r, offerFormData),
+    [offerFormData]
+  );
+
   return (
     <>
       <Toast ref={toastRef} position="top-right" />
@@ -183,7 +255,18 @@ const OfferTable: React.FC = () => {
             filters={filters}
             filterDisplay="menu"
             onFilter={(e) => setFilters(e.filters)}
-            globalFilterFields={["candidateName", "employmentTypeName", "workModeName", "offerStatus"]}
+            globalFilterFields={[
+              "candidateName",
+              "employmentTypeName",
+              "workModeName",
+              "vendorName",
+              "offerStatus",
+              "offerId",
+              "offeredCTCAmount",
+              "offerVersion",
+              "variablePay",
+              "joiningBonus",
+            ]}
             scrollable
             scrollHeight="flex"
             tableStyle={{ minWidth: "80rem" }}
@@ -202,8 +285,9 @@ const OfferTable: React.FC = () => {
             <Column field="candidateName" header="Candidate Name" sortable filter />
             <Column field="employmentTypeName" header="Employment Type" sortable filter />
             <Column field="workModeName" header="Mode of Working" sortable filter />
+            <Column field="vendorName" header="Vendor" sortable filter />
             <Column field="joiningDate" header="Joining Date" body={(r: OfferTableRow) => formatDate(r.joiningDate)} sortable />
-            <Column field="offeredCTCAmount" header="Offered CTC" body={(r: OfferTableRow) => formatNumber(r.offeredCTCAmount)} sortable />
+            <Column field="offeredCTCAmount" header="Offered CTC" body={offeredCTCBody} sortable />
             <Column field="offerVersion" header="Offer Version" sortable />
             <Column field="offerStatus" header="Offer Status" sortable filter />
             <Column field="variablePay" header="Variable Pay" body={(r: OfferTableRow) => formatNumber(r.variablePay)} sortable />

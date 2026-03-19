@@ -10,8 +10,17 @@ export interface OfferTableRow {
   jobRole: string;
   employmentTypeName: string;
   workModeName: string;
+  vendorName?: string | null;
   joiningDate: string | null;
   offeredCTCAmount: number | null;
+  /** Display-friendly from GET /offers. */
+  currencyName?: string | null;
+  compensationTypeName?: string | null;
+  /** Optional IDs for fallback resolution. */
+  currencyId?: number | null;
+  currencyLookupId?: number | null;
+  compensationTypeId?: number | null;
+  compensationTypeLookupId?: number | null;
   offerStatus: string;
   offerVersion: number;
   variablePay: number | null;
