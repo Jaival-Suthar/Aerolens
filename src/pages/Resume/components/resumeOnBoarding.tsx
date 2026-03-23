@@ -19,6 +19,14 @@ import type {
   ResumeOnBoardingProps,
 } from "../types/resumeTypes";
 
+type JprDropdownOption = {
+  label: string;
+  value: number;
+  jobRole: string;
+  clientName: string;
+  departmentName: string;
+};
+
 const getInitialFormData = (candidate: Candidate | null): OnboardingFormData => ({
   candidateName: candidate?.candidateName ?? "",
   jprProjectDepartmentId: candidate?.jobProfileRequirementId ?? null,
@@ -114,10 +122,46 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     value: v.vendorId,
   }));
 
-  const jprOptions = (createData?.jobProfiles ?? []).map((j) => ({
-    label: `${j.jobRole} (${j.departmentName ?? ""})`.trim(),
+  const jprOptions: JprDropdownOption[] = (createData?.jobProfiles ?? []).map((j) => ({
+    label: [j.jobRole, j.clientName, j.departmentName].filter(Boolean).join(" | "),
     value: j.jobProfileRequirementId,
+    jobRole: j.jobRole,
+    clientName: j.clientName ?? "",
+    departmentName: j.departmentName ?? "",
   }));
+
+  const jprOptionTemplate = (option: JprDropdownOption | null) => {
+    if (!option) return null;
+    return (
+      <div className="flex flex-column gap-1 py-1">
+        <div className="flex align-items-center gap-2 flex-wrap">
+          <span className="font-semibold text-900">{option.jobRole}</span>
+        </div>
+        <div className="flex flex-wrap gap-3 text-xs text-500">
+          {option.clientName ? <span>Client: {option.clientName}</span> : null}
+          {option.departmentName ? <span>Dept: {option.departmentName}</span> : null}
+        </div>
+      </div>
+    );
+  };
+
+  const jprValueTemplate = (option: JprDropdownOption | null) => {
+    if (!option) return <span>Select</span>;
+    const clientPart = option.clientName ? `Client: ${option.clientName}` : "";
+    const deptPart = option.departmentName ? `Dept: ${option.departmentName}` : "";
+    const meta = [clientPart, deptPart].filter(Boolean).join(" · ");
+    return (
+      <span className="block truncate">
+        <span className="font-semibold">{option.jobRole}</span>
+        {meta ? (
+          <>
+            {" "}
+            <span className="text-600 text-sm">· {meta}</span>
+          </>
+        ) : null}
+      </span>
+    );
+  };
   const reportingToOptions = (offerFormData?.members ?? []).map((m) => ({
     label: m.memberName,
     value: m.memberId,
@@ -273,11 +317,14 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           <label className="block font-bold mb-1">Candidate Name</label>
           <InputText value={formData.candidateName} disabled className="w-full" />
         </div>
-        <div className="col-12 md:col-4">
-          <label className="block font-bold mb-1">Find JPR (Project/Department) <span className="text-red-500">*</span></label>
+        <div className="col-12 md:col-8">
+          <label className="block font-bold mb-1">Final JPR (Project/Department) <span className="text-red-500">*</span></label>
           <Dropdown
             value={formData.jprProjectDepartmentId}
             options={jprOptions}
+            optionLabel="label"
+            itemTemplate={jprOptionTemplate}
+            valueTemplate={jprValueTemplate}
             onChange={(e) => {
               setFormData((p) => ({ ...p, jprProjectDepartmentId: e.value }));
               clearError("jprProjectDepartmentId");

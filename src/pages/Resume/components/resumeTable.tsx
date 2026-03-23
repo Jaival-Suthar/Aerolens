@@ -446,6 +446,7 @@ useEffect(() => {
   const recruiterFilterTemplate = createDropdownFilterTemplate("recruiterName", "Recruiter");
   const statusFilterTemplate = createDropdownFilterTemplate("statusName", "Status");
   const roleFilterTemplate = createDropdownFilterTemplate("jobRole", "Job Role");
+  const workModeFilterTemplate = createDropdownFilterTemplate("workMode", "Mode of Work");
 
   const formatLocation = (row: Candidate) => {
     const city = row.expectedLocation?.city || "";
@@ -702,6 +703,7 @@ useEffect(() => {
             if (col.field === "recruiterName") filterElement = recruiterFilterTemplate;
             if (col.field === "statusName") filterElement = statusFilterTemplate;
             if (col.field === "jobRole") filterElement = roleFilterTemplate;
+            if (col.field === "workMode") filterElement = workModeFilterTemplate;
             if (col.field === "currentCTCAmount") bodyTemplate = currentCTCTemplate;
             if (col.field === "expectedCTCAmount") bodyTemplate = expectedCTCTemplate;
 

@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { DataTable, type DataTableFilterMeta, type DataTableStateEvent } from "primereact/datatable";
 import { Column } from "primereact/column";
+import { Dropdown } from "primereact/dropdown";
 import { Menu } from "primereact/menu";
 import { Toast } from "primereact/toast";
 import { FaBan, FaEdit, FaClipboardList } from "react-icons/fa";
@@ -167,9 +168,10 @@ const OfferTable: React.FC = () => {
   const [filters, setFilters] = useState<DataTableFilterMeta>({
     global: { value: searchParams.get("q") || null, matchMode: FilterMatchMode.CONTAINS },
     candidateName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    jobRole: { value: null, matchMode: FilterMatchMode.CONTAINS },
     employmentTypeName: { value: null, matchMode: FilterMatchMode.CONTAINS },
     workModeName: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    vendorName: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    vendorName: { value: null, matchMode: FilterMatchMode.EQUALS },
     offerStatus: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
 
@@ -318,6 +320,97 @@ const OfferTable: React.FC = () => {
     [offerFormData]
   );
 
+  /** Distinct trimmed values (stable sort) so filter options don’t duplicate on whitespace. */
+  const uniqueValues = (arr: (string | null | undefined)[]) => {
+    const set = new Set<string>();
+    for (const x of arr) {
+      if (x == null) continue;
+      const t = String(x).trim();
+      if (t) set.add(t);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  };
+
+  /** Fixed width + ellipsis: filter menu layout stays stable regardless of option length. */
+  const OFFER_FILTER_DROPDOWN_WIDTH = "14rem";
+  const offerFilterDropdownPanelStyle = {
+    width: OFFER_FILTER_DROPDOWN_WIDTH,
+    minWidth: OFFER_FILTER_DROPDOWN_WIDTH,
+    maxWidth: OFFER_FILTER_DROPDOWN_WIDTH,
+  };
+  const offerFilterDropdownStyle = {
+    width: OFFER_FILTER_DROPDOWN_WIDTH,
+    minWidth: OFFER_FILTER_DROPDOWN_WIDTH,
+    maxWidth: OFFER_FILTER_DROPDOWN_WIDTH,
+  };
+
+  type OfferFilterOption = { label: string; value: string };
+
+  const offerFilterItemTemplate = (option: OfferFilterOption) => {
+    if (!option) return null;
+    return (
+      <span className="block truncate" title={option.value}>
+        {option.label}
+      </span>
+    );
+  };
+
+  const createOfferFilterValueTemplate =
+    (placeholder: string) =>
+    (option: OfferFilterOption | null) => {
+      if (!option) return <span className="truncate block text-500">{placeholder}</span>;
+      return (
+        <span className="block truncate" title={option.value}>
+          {option.label}
+        </span>
+      );
+    };
+
+  const createDropdownFilterTemplate = (field: keyof OfferTableRow, header: string) => (options: any) => {
+    const values = uniqueValues(offers.map((r) => r[field] as string | null | undefined));
+    const dropdownOptions: OfferFilterOption[] = values.map((v) => ({ label: v, value: v }));
+    const placeholder = `Select ${header}`;
+    return (
+      <Dropdown
+        value={options.value}
+        options={dropdownOptions}
+        optionLabel="label"
+        itemTemplate={offerFilterItemTemplate}
+        valueTemplate={createOfferFilterValueTemplate(placeholder)}
+        onChange={(e) => options.filterCallback(e.value)}
+        placeholder={placeholder}
+        showClear
+        style={offerFilterDropdownStyle}
+        panelStyle={offerFilterDropdownPanelStyle}
+      />
+    );
+  };
+
+  const vendorFilterTemplate = (options: any) => {
+    const vendors = uniqueValues(offers.map((r) => r.vendorName));
+    const vendorOptions: OfferFilterOption[] = vendors.map((v) => ({ label: v, value: v }));
+    const placeholder = "Select Vendor";
+    return (
+      <Dropdown
+        value={options.value}
+        options={vendorOptions}
+        optionLabel="label"
+        itemTemplate={offerFilterItemTemplate}
+        valueTemplate={createOfferFilterValueTemplate(placeholder)}
+        onChange={(e) => options.filterCallback(e.value)}
+        placeholder={placeholder}
+        showClear
+        style={offerFilterDropdownStyle}
+        panelStyle={offerFilterDropdownPanelStyle}
+      />
+    );
+  };
+
+  const employmentTypeFilterTemplate = createDropdownFilterTemplate("employmentTypeName", "Employment Type");
+  const workModeFilterTemplate = createDropdownFilterTemplate("workModeName", "Mode of Working");
+  const offerStatusFilterTemplate = createDropdownFilterTemplate("offerStatus", "Offer Status");
+  const jobRoleFilterTemplate = createDropdownFilterTemplate("jobRole", "Job Role");
+
   return (
     <>
       <Toast ref={toastRef} position="top-right" />
@@ -355,6 +448,7 @@ const OfferTable: React.FC = () => {
             onFilter={(e) => setFilters(e.filters)}
             globalFilterFields={[
               "candidateName",
+              "jobRole",
               "employmentTypeName",
               "workModeName",
               "vendorName",
@@ -381,13 +475,49 @@ const OfferTable: React.FC = () => {
             <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
             <Column field="createdAt" header="Created Date" body={(r: OfferTableRow) => formatDate(r.createdAt)} sortable />
             <Column field="candidateName" header="Candidate Name" sortable filter />
-            <Column field="employmentTypeName" header="Employment Type" sortable filter />
-            <Column field="workModeName" header="Mode of Working" sortable filter />
-            <Column field="vendorName" header="Vendor" sortable filter />
+            <Column
+              field="jobRole"
+              header="Job Role"
+              sortable
+              filter
+              filterElement={jobRoleFilterTemplate}
+              showFilterMatchModes={false}
+            />
+            <Column
+              field="employmentTypeName"
+              header="Employment Type"
+              sortable
+              filter
+              filterElement={employmentTypeFilterTemplate}
+              showFilterMatchModes={false}
+            />
+            <Column
+              field="workModeName"
+              header="Mode of Working"
+              sortable
+              filter
+              filterElement={workModeFilterTemplate}
+              showFilterMatchModes={false}
+            />
+            <Column
+              field="vendorName"
+              header="Vendor"
+              sortable
+              filter
+              filterElement={vendorFilterTemplate}
+              showFilterMatchModes={false}
+            />
             <Column field="joiningDate" header="Joining Date" body={(r: OfferTableRow) => formatDate(r.joiningDate)} sortable />
             <Column field="offeredCTCAmount" header="Offered CTC" body={offeredCTCBody} sortable />
             <Column field="offerVersion" header="Offer Version" sortable />
-            <Column field="offerStatus" header="Offer Status" sortable filter />
+            <Column
+              field="offerStatus"
+              header="Offer Status"
+              sortable
+              filter
+              filterElement={offerStatusFilterTemplate}
+              showFilterMatchModes={false}
+            />
             <Column field="variablePay" header="Variable Pay" body={(r: OfferTableRow) => formatNumber(r.variablePay)} sortable />
             <Column field="joiningBonus" header="Joining Bonus" body={(r: OfferTableRow) => formatNumber(r.joiningBonus)} sortable />
           </DataTable>

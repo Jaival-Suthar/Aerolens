@@ -165,7 +165,7 @@ const OfferStatusDialog: React.FC<OfferStatusDialogProps> = ({
         </div>
 
         <div className="field mb-3">
-          <label className="block font-bold mb-1">Acceptance/Rejection Date <span className="text-red-500">*</span></label>
+          <label className="block font-bold mb-1">Decision Date <span className="text-red-500">*</span></label>
           <Calendar
             value={decisionDate}
             onChange={(e) => setDecisionDate(e.value ?? null)}
