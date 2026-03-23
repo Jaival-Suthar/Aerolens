@@ -11,6 +11,7 @@ import type {
   TerminateOfferPayload,
   ReviseOfferPayload,
   UpdateOfferStatusPayload,
+  OfferDetailsPayload,
 } from "../types/offerTypes";
 
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
@@ -57,6 +58,11 @@ export async function createOffer(
 /** GET /offers/form-data — lookup data for Initiate Onboarding form. */
 export async function getOfferFormData(accessToken: string | null): Promise<OfferFormDataResponse> {
   return apiFetch<OfferFormDataResponse>("/offers/form-data", { method: "GET" }, accessToken ?? undefined);
+}
+
+/** GET /offers/:offerId/details — full offer + revision history for view dialog. */
+export async function getOfferDetails(offerId: number, accessToken: string | null): Promise<OfferDetailsPayload> {
+  return apiFetch<OfferDetailsPayload>(`/offers/${offerId}/details`, { method: "GET" }, accessToken ?? undefined);
 }
 
 /** DELETE /offers/:offerId — soft delete. */

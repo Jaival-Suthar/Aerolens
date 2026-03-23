@@ -82,6 +82,51 @@ export interface OfferActionResponse {
   message?: string;
 }
 
+/** Offer row from GET /offers/:offerId/details (display names included). */
+export interface OfferDetailsOffer {
+  offerId: number;
+  candidateId?: number;
+  candidateName: string;
+  jobRole: string;
+  employmentTypeName: string;
+  workModeName: string;
+  vendorName?: string | null;
+  currencyName?: string | null;
+  compensationTypeName?: string | null;
+  createdByName?: string | null;
+  reportingManagerName?: string | null;
+  joiningDate: string | null;
+  offeredCTCAmount: number | null;
+  offerStatus: string;
+  offerVersion: number;
+  variablePay?: number | null;
+  joiningBonus?: number | null;
+  createdAtFormatted?: string | null;
+  createdAt?: string | null;
+  documentsStatus?: string | null;
+  onboardingStatus?: string | null;
+}
+
+/** Single revision from offer_revision (newest first). */
+export interface OfferRevision {
+  revisionId: number;
+  offerId: number;
+  previousCTC: number | null;
+  newCTC: number | null;
+  previousJoiningDate: string | null;
+  newJoiningDate: string | null;
+  reason: string;
+  revisedBy?: number;
+  revisedByName?: string | null;
+}
+
+/** Payload inside GET /offers/:offerId/details response `data`. */
+export interface OfferDetailsPayload {
+  offer: OfferDetailsOffer;
+  revisionCount: number;
+  revisions: OfferRevision[];
+}
+
 /** Response from GET /offers/form-data. Aligned with backend lookup keys. */
 export interface OfferFormDataResponse {
   employmentTypes: { employmentTypeLookupId: number; employmentTypeName: string }[];
