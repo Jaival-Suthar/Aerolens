@@ -6,10 +6,16 @@ import { Toast } from "primereact/toast";
 import { FaBan, FaEdit, FaClipboardList } from "react-icons/fa";
 import SearchButton from "../../../shared/SearchButton";
 import DeleteButton from "../../../shared/DeleteButton";
+import ViewButton from "../../../shared/ViewButton";
+import DetailsGrid from "../../../shared/DetailsGrid";
+import DetailsSection from "../../../shared/DetailsSection";
+import PremiumDetailsDialog from "../../../shared/PremiumDetailsDialog";
 import CogButton from "../../../shared/CogButton";
+import { ProgressSpinner } from "primereact/progressspinner";
+import { Message } from "primereact/message";
 import { useAuth } from "../../../shared/auth/AuthContext";
-import { getOffers, getOfferFormData } from "../services/offerService";
-import type { OfferTableRow, OfferFormDataResponse } from "../types/offerTypes";
+import { getOffers, getOfferFormData, getOfferDetails } from "../services/offerService";
+import type { OfferTableRow, OfferFormDataResponse, OfferDetailsOffer, OfferDetailsPayload, OfferRevision } from "../types/offerTypes";
 import OfferDelete from "./OfferDelete";
 import TerminateOfferDialog from "./TerminateOfferDialog";
 import ReviseOfferDialog from "./ReviseOfferDialog";
@@ -89,6 +95,56 @@ function formatOfferedCTC(r: OfferTableRow, formData: OfferFormDataResponse | nu
   return formatNumber(r.offeredCTCAmount);
 }
 
+function formatOfferedCTCFromDetailOffer(offer: OfferDetailsOffer): string {
+  const amt = offer.offeredCTCAmount;
+  if (amt == null) return "—";
+  const currencyName = (offer.currencyName ?? "").trim();
+  const typeName = (offer.compensationTypeName ?? "").trim();
+  const symbol = (currencyName && (CURRENCY_SYMBOLS[currencyName] || currencyName)) || "";
+  const shortType = (typeName && (COMPENSATION_SHORT[typeName] || typeName)) || typeName || "";
+  if (symbol && shortType) return `${symbol}${amt}/${shortType}`;
+  if (symbol) return `${symbol}${amt}`;
+  if (shortType) return `${amt}/${shortType}`;
+  return formatNumber(amt);
+}
+
+/** Parse ISO / API timestamp and show date only in the user's local timezone (not raw UTC string). */
+function formatOfferCreatedAt(offer: OfferDetailsOffer): string {
+  const raw = String(offer.createdAt ?? offer.createdAtFormatted ?? "").trim();
+  if (!raw) return "";
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return raw;
+  return d.toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function buildOfferDetailsGridItems(offer: OfferDetailsOffer) {
+  const items = [
+    { label: "Offer ID", value: String(offer.offerId) },
+    ...(offer.candidateId != null ? [{ label: "Candidate ID", value: String(offer.candidateId) }] : []),
+    { label: "Candidate Name", value: offer.candidateName || "" },
+    { label: "Position / Role", value: offer.jobRole || "" },
+    { label: "Employment Type", value: offer.employmentTypeName || "" },
+    { label: "Mode of Working", value: offer.workModeName || "" },
+    { label: "Vendor", value: offer.vendorName ?? "" },
+    { label: "Joining Date", value: formatDate(offer.joiningDate) },
+    { label: "Offered CTC", value: formatOfferedCTCFromDetailOffer(offer) },
+    { label: "Offer Version", value: String(offer.offerVersion) },
+    { label: "Offer Status", value: offer.offerStatus || "" },
+    { label: "Variable Pay", value: formatNumber(offer.variablePay ?? null) },
+    { label: "Joining Bonus", value: formatNumber(offer.joiningBonus ?? null) },
+    { label: "Created By", value: offer.createdByName ?? "" },
+    { label: "Reporting Manager", value: offer.reportingManagerName ?? "" },
+    { label: "Created", value: formatOfferCreatedAt(offer) },
+    { label: "Documents Status", value: offer.documentsStatus ?? "" },
+    { label: "Onboarding Status", value: offer.onboardingStatus ?? "" },
+  ];
+  return items.filter((item) => item.value !== null && item.value !== undefined && item.value !== "");
+}
+
 const OfferTable: React.FC = () => {
   const toastRef = useRef<Toast>(null);
   const { accessToken } = useAuth();
@@ -102,6 +158,10 @@ const OfferTable: React.FC = () => {
   const [showTerminateDialog, setShowTerminateDialog] = useState(false);
   const [showReviseDialog, setShowReviseDialog] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [offerDetailsOpen, setOfferDetailsOpen] = useState(false);
+  const [offerDetails, setOfferDetails] = useState<OfferDetailsPayload | null>(null);
+  const [offerDetailsLoading, setOfferDetailsLoading] = useState(false);
+  const [offerDetailsError, setOfferDetailsError] = useState<string | null>(null);
 
   const [rows, setRows] = useState(() => Number(searchParams.get("rows")) || 20);
   const [first, setFirst] = useState(() => Number(searchParams.get("first")) || 0);
@@ -208,7 +268,43 @@ const OfferTable: React.FC = () => {
   };
 
   const handleActionSuccess = () => {
+    setSelectedOffer(null);
+    setOfferDetailsOpen(false);
+    setOfferDetails(null);
+    setOfferDetailsError(null);
     loadOffers();
+  };
+
+  const closeOfferDetailsDialog = () => {
+    setOfferDetailsOpen(false);
+    setOfferDetails(null);
+    setOfferDetailsLoading(false);
+    setOfferDetailsError(null);
+  };
+
+  const handleViewOffer = () => {
+    if (!selectedOffer || !accessToken) {
+      toastRef.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select an offer first.", life: 3000 });
+      return;
+    }
+    setOfferDetailsOpen(true);
+    setOfferDetails(null);
+    setOfferDetailsError(null);
+    setOfferDetailsLoading(true);
+    getOfferDetails(selectedOffer.offerId, accessToken)
+      .then((data) => {
+        setOfferDetails(data);
+      })
+      .catch((e: unknown) => {
+        const err = e as { message?: string; details?: { validationErrors?: { message?: string }[] } };
+        const message =
+          (Array.isArray(err?.details?.validationErrors) && err.details.validationErrors.length > 0
+            ? err.details.validationErrors.map((v) => v.message).filter(Boolean).join(", ") || err?.message
+            : err?.message) ?? "Could not load offer details.";
+        setOfferDetailsError(message);
+        toastRef.current?.show({ severity: "error", summary: "Offer details", detail: message, life: 5000 });
+      })
+      .finally(() => setOfferDetailsLoading(false));
   };
 
   const actionMenuModel = [
@@ -237,6 +333,7 @@ const OfferTable: React.FC = () => {
               placeholder="Search offers..."
             />
             <DeleteButton onClick={handleDeleteOffer} disabled={!selectedOffer} tooltip="Delete offer" />
+            <ViewButton onClick={handleViewOffer} disabled={!selectedOffer} tooltip="View offer details" />
             <div>
               <Menu model={actionMenuModel} popup ref={actionsMenuRef} />
               <CogButton
@@ -324,6 +421,46 @@ const OfferTable: React.FC = () => {
         selectedOffer={selectedOffer}
         onSuccess={handleActionSuccess}
       />
+      <PremiumDetailsDialog visible={offerDetailsOpen} title="Offer Details" onHide={closeOfferDetailsDialog}>
+        {offerDetailsLoading && (
+          <div className="flex justify-content-center align-items-center py-6">
+            <ProgressSpinner style={{ width: 48, height: 48 }} strokeWidth="4" />
+          </div>
+        )}
+        {!offerDetailsLoading && offerDetailsError && (
+          <Message severity="error" text={offerDetailsError} className="w-full" />
+        )}
+        {!offerDetailsLoading && !offerDetailsError && offerDetails?.offer && (
+          <>
+            <DetailsSection title="Offer Information">
+              <DetailsGrid items={buildOfferDetailsGridItems(offerDetails.offer)} />
+            </DetailsSection>
+            <DetailsSection title={`Revision History (${offerDetails.revisionCount ?? offerDetails.revisions?.length ?? 0})`}>
+              {offerDetails.revisions?.length ? (
+                <DataTable
+                  value={offerDetails.revisions}
+                  dataKey="revisionId"
+                  size="small"
+                  stripedRows
+                  scrollable
+                  scrollHeight="280px"
+                  emptyMessage="No revisions"
+                >
+                  <Column field="revisionId" header="Revision #" style={{ width: "6rem" }} />
+                  <Column field="previousCTC" header="Previous CTC" body={(r: OfferRevision) => formatNumber(r.previousCTC)} />
+                  <Column field="newCTC" header="New CTC" body={(r: OfferRevision) => formatNumber(r.newCTC)} />
+                  <Column field="previousJoiningDate" header="Prev. Joining" body={(r: OfferRevision) => formatDate(r.previousJoiningDate)} />
+                  <Column field="newJoiningDate" header="New Joining" body={(r: OfferRevision) => formatDate(r.newJoiningDate)} />
+                  <Column field="reason" header="Reason" style={{ minWidth: "12rem" }} />
+                  <Column field="revisedByName" header="Revised By" />
+                </DataTable>
+              ) : (
+                <p className="text-600 m-0">No revisions recorded for this offer.</p>
+              )}
+            </DetailsSection>
+          </>
+        )}
+      </PremiumDetailsDialog>
     </>
   );
 };

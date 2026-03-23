@@ -18,6 +18,7 @@ const PremiumDetailsDialog: React.FC<Props> = ({
     <Dialog
       visible={visible}
       onHide={onHide}
+      header={title}
       modal
       dismissableMask
       style={{ width: "72vw", maxWidth: 960 }}
