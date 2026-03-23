@@ -123,8 +123,6 @@ function formatOfferCreatedAt(offer: OfferDetailsOffer): string {
 
 function buildOfferDetailsGridItems(offer: OfferDetailsOffer) {
   const items = [
-    { label: "Offer ID", value: String(offer.offerId) },
-    ...(offer.candidateId != null ? [{ label: "Candidate ID", value: String(offer.candidateId) }] : []),
     { label: "Candidate Name", value: offer.candidateName || "" },
     { label: "Position / Role", value: offer.jobRole || "" },
     { label: "Employment Type", value: offer.employmentTypeName || "" },
@@ -138,7 +136,7 @@ function buildOfferDetailsGridItems(offer: OfferDetailsOffer) {
     { label: "Joining Bonus", value: formatNumber(offer.joiningBonus ?? null) },
     { label: "Created By", value: offer.createdByName ?? "" },
     { label: "Reporting Manager", value: offer.reportingManagerName ?? "" },
-    { label: "Created", value: formatOfferCreatedAt(offer) },
+    { label: "Created At", value: formatOfferCreatedAt(offer) },
     { label: "Documents Status", value: offer.documentsStatus ?? "" },
     { label: "Onboarding Status", value: offer.onboardingStatus ?? "" },
   ];
