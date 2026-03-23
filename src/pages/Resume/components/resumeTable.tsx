@@ -18,9 +18,11 @@ import SearchButton from "../../../shared/SearchButton";
 import ExportExcelButton from "../../../shared/ExportExcelButton";
 import { FilterMatchMode } from 'primereact/api';
 import { FaUserTie } from "react-icons/fa";
+import { FaUserPlus } from "react-icons/fa";
 import CogButton from "../../../shared/CogButton";
 import { Toast } from "primereact/toast";
 import InterviewScheduler from "../../../shared/InterviewScheduler";
+import ResumeOnBoarding from "./resumeOnBoarding";
 import ViewButton from "../../../shared/ViewButton";
 import DetailsGrid from "../../../shared/DetailsGrid";
 import DetailsSection from "../../../shared/DetailsSection";
@@ -104,6 +106,7 @@ const ResumeTable: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showInterviewDialog, setShowInterviewDialog] = useState(false);
+  const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
   const toastRef = useRef<Toast>(null);
   const [rows, setRows] = useState(20);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -419,16 +422,6 @@ useEffect(() => {
     )?.compensationTypeName;
   
     const symbol = currencySymbols[currencyName || ""] || currencyName || "";
-    // if (currencyName === "INR") {
-    //   if (type?.toLowerCase() === "annual" || type?.toLowerCase() === "yearly") {
-    //     const lpa = (row.currentCTCAmount / 100000).toFixed(2);
-    //     return `${symbol}${lpa} LPA`;
-    //   }
-    //   if (type?.toLowerCase() === "monthly") {
-    //     const lpa = ((row.currentCTCAmount * 12) / 100000).toFixed(2);
-    //     return `${symbol}${lpa} LPA`;
-    //   }
-    // }
     const shortType = compensationShort[type || ""] || type || "";
   
     return `${symbol}${row.currentCTCAmount}/${shortType}`;
@@ -453,6 +446,7 @@ useEffect(() => {
   const recruiterFilterTemplate = createDropdownFilterTemplate("recruiterName", "Recruiter");
   const statusFilterTemplate = createDropdownFilterTemplate("statusName", "Status");
   const roleFilterTemplate = createDropdownFilterTemplate("jobRole", "Job Role");
+  const workModeFilterTemplate = createDropdownFilterTemplate("workMode", "Mode of Work");
 
   const formatLocation = (row: Candidate) => {
     const city = row.expectedLocation?.city || "";
@@ -521,6 +515,19 @@ useEffect(() => {
           return;
         }
         setShowInterviewDialog(true);
+      }
+    },
+    {
+      label: "Initiate Onboarding",
+      icon: <FaUserPlus style={{ marginRight: 8, marginLeft: 4 }} />,
+
+      action: () => {
+        setShowSettingsMenu(false);
+        if (!selectedResume) {
+          toastRef.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select a candidate first", life: 3000 });
+          return;
+        }
+        setShowOnboardingDialog(true);
       }
     }
   ];
@@ -696,6 +703,7 @@ useEffect(() => {
             if (col.field === "recruiterName") filterElement = recruiterFilterTemplate;
             if (col.field === "statusName") filterElement = statusFilterTemplate;
             if (col.field === "jobRole") filterElement = roleFilterTemplate;
+            if (col.field === "workMode") filterElement = workModeFilterTemplate;
             if (col.field === "currentCTCAmount") bodyTemplate = currentCTCTemplate;
             if (col.field === "expectedCTCAmount") bodyTemplate = expectedCTCTemplate;
 
@@ -741,6 +749,16 @@ useEffect(() => {
         candidateId={selectedResume?.candidateId || null} 
         candidateName={selectedResume?.candidateName || null} 
         toast={toastRef} 
+      />
+      <ResumeOnBoarding
+        visible={showOnboardingDialog}
+        onHide={() => setShowOnboardingDialog(false)}
+        selectedCandidate={selectedResume}
+        createData={createData}
+        onSuccess={() => {
+          setShowOnboardingDialog(false);
+          loadAllData();
+        }}
       />
       <PremiumDetailsDialog 
         visible={!!viewCandidate} 
