@@ -12,6 +12,10 @@ export type UseResumeShareParams = {
 
 /**
  * Handles resume share link generation and Copy / WhatsApp / Email flows.
+ *
+ * The share URL is prefetched when the modal opens so Copy / WhatsApp / Email
+ * can run synchronously on click. Browsers cancel mailto: and often block
+ * window.open after an await, because that breaks the user gesture chain.
  */
 export function useResumeShare({
   candidateId,
@@ -29,24 +33,37 @@ export function useResumeShare({
       setShareUrl(null);
       setPopupBlockedHint(false);
       setLoading(false);
+      return;
     }
-  }, [visible]);
 
-  const ensureShareUrl = useCallback(async () => {
     if (candidateId == null || !accessToken) {
-      throw new Error("Missing candidate or session");
+      return;
     }
-    if (shareUrl) return shareUrl;
+
+    let cancelled = false;
     setLoading(true);
-    try {
-      const data = await createResumeShareLink(accessToken, candidateId);
-      const url = data.shareUrl;
-      setShareUrl(url);
-      return url;
-    } finally {
-      setLoading(false);
-    }
-  }, [accessToken, candidateId, shareUrl]);
+    createResumeShareLink(accessToken, candidateId)
+      .then((data) => {
+        if (!cancelled) setShareUrl(data.shareUrl);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          toastRef.current?.show({
+            severity: "error",
+            summary: "Share failed",
+            detail: "Could not generate share link. Close the dialog and try again.",
+            life: 5000,
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, candidateId, accessToken, toastRef]);
 
   const buildMessage = useCallback(
     (url: string) => {
@@ -58,9 +75,17 @@ export function useResumeShare({
   );
 
   const copyLink = useCallback(async () => {
+    if (!shareUrl) {
+      toastRef.current?.show({
+        severity: "warn",
+        summary: "Not ready",
+        detail: "Wait for the link to finish generating.",
+        life: 3000,
+      });
+      return;
+    }
     try {
-      const url = await ensureShareUrl();
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(shareUrl);
       toastRef.current?.show({
         severity: "success",
         summary: "Copied",
@@ -72,48 +97,48 @@ export function useResumeShare({
         severity: "error",
         summary: "Copy failed",
         detail:
-          "Could not copy the link. Try again or use HTTPS — or use Copy Link after generating once.",
+          "Could not copy the link. Try again or use HTTPS — or copy from the address bar after opening the link in a new tab.",
         life: 5000,
       });
     }
-  }, [ensureShareUrl, toastRef]);
+  }, [shareUrl, toastRef]);
 
-  const shareViaWhatsApp = useCallback(async () => {
-    try {
-      const url = await ensureShareUrl();
-      const message = buildMessage(url);
-      const w = window.open(
-        `https://wa.me/?text=${encodeURIComponent(message)}`,
-        "_blank"
-      );
-      setPopupBlockedHint(!w);
-    } catch {
+  const shareViaWhatsApp = useCallback(() => {
+    if (!shareUrl) {
       toastRef.current?.show({
-        severity: "error",
-        summary: "Share failed",
-        detail: "Could not generate share link.",
-        life: 4000,
+        severity: "warn",
+        summary: "Not ready",
+        detail: "Wait for the link to finish generating.",
+        life: 3000,
       });
+      return;
     }
-  }, [ensureShareUrl, buildMessage, toastRef]);
+    const message = buildMessage(shareUrl);
+    const w = window.open(
+      `https://wa.me/?text=${encodeURIComponent(message)}`,
+      "_blank"
+    );
+    setPopupBlockedHint(!w);
+  }, [shareUrl, buildMessage, toastRef]);
 
-  const shareViaEmail = useCallback(async () => {
-    try {
-      const url = await ensureShareUrl();
-      const message = buildMessage(url);
-      window.location.href = `mailto:?subject=${encodeURIComponent("Resume Sharing")}&body=${encodeURIComponent(message)}`;
-    } catch {
+  /** Must stay synchronous after click — no await before mailto (browser cancels otherwise). */
+  const shareViaEmail = useCallback(() => {
+    if (!shareUrl) {
       toastRef.current?.show({
-        severity: "error",
-        summary: "Share failed",
-        detail: "Could not generate share link.",
-        life: 4000,
+        severity: "warn",
+        summary: "Not ready",
+        detail: "Wait for the link to finish generating.",
+        life: 3000,
       });
+      return;
     }
-  }, [ensureShareUrl, buildMessage, toastRef]);
+    const message = buildMessage(shareUrl);
+    window.location.href = `mailto:?subject=${encodeURIComponent("Resume Sharing")}&body=${encodeURIComponent(message)}`;
+  }, [shareUrl, buildMessage, toastRef]);
 
   return {
     loading,
+    shareUrl,
     popupBlockedHint,
     setPopupBlockedHint,
     copyLink,

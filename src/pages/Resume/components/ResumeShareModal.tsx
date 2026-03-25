@@ -28,6 +28,7 @@ const ResumeShareModal: React.FC<ResumeShareModalProps> = ({
 
   const {
     loading,
+    shareUrl,
     popupBlockedHint,
     copyLink,
     shareViaWhatsApp,
@@ -59,6 +60,12 @@ const ResumeShareModal: React.FC<ResumeShareModalProps> = ({
           </div>
         )}
 
+        {!loading && visible && candidateId != null && !shareUrl && (
+          <p className="m-0 text-sm text-600" role="status">
+            Share link could not be created. Close and open this dialog to retry.
+          </p>
+        )}
+
         {popupBlockedHint && (
           <p className="m-0 text-sm text-orange-700" role="status">
             If WhatsApp didn&apos;t open, use <strong>Copy Link</strong> below.
@@ -79,8 +86,8 @@ const ResumeShareModal: React.FC<ResumeShareModalProps> = ({
             type="button"
             label="Share via WhatsApp"
             icon={<FaWhatsapp className="mr-2" />}
-            onClick={() => void shareViaWhatsApp()}
-            disabled={loading || candidateId == null}
+            onClick={() => shareViaWhatsApp()}
+            disabled={loading || candidateId == null || !shareUrl}
             className="w-full justify-content-start"
             outlined
           />
@@ -88,8 +95,8 @@ const ResumeShareModal: React.FC<ResumeShareModalProps> = ({
             type="button"
             label="Share via Email"
             icon={<FaEnvelope className="mr-2" />}
-            onClick={() => void shareViaEmail()}
-            disabled={loading || candidateId == null}
+            onClick={() => shareViaEmail()}
+            disabled={loading || candidateId == null || !shareUrl}
             className="w-full justify-content-start"
             outlined
           />
