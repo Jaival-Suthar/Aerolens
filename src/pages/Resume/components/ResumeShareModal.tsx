@@ -4,7 +4,7 @@ import { Button } from "primereact/button";
 import { ProgressSpinner } from "primereact/progressspinner";
 import type { Toast } from "primereact/toast";
 import type { MutableRefObject } from "react";
-import { FaCopy, FaEnvelope, FaWhatsapp } from "react-icons/fa";
+import { FaCopy, FaWhatsapp } from "react-icons/fa";
 import { useResumeShare } from "../hooks/useResumeShare";
 import type { Candidate } from "../types/resumeTypes";
 
@@ -30,10 +30,8 @@ const ResumeShareModal: React.FC<ResumeShareModalProps> = ({
     loading,
     shareUrl,
     popupBlockedHint,
-    emailFallbackHint,
     copyLink,
     shareViaWhatsApp,
-    shareViaEmail,
     openEmailInGmail,
     openEmailInOutlook,
   } = useResumeShare({
@@ -75,32 +73,6 @@ const ResumeShareModal: React.FC<ResumeShareModalProps> = ({
           </p>
         )}
 
-        {emailFallbackHint && (
-          <div className="flex flex-column gap-2" role="status">
-            <p className="m-0 text-sm text-700">
-              Email app did not open. Use web compose instead:
-            </p>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                label="Open Gmail"
-                onClick={() => openEmailInGmail()}
-                disabled={loading || candidateId == null || !shareUrl}
-                className="flex-1"
-                outlined
-              />
-              <Button
-                type="button"
-                label="Open Outlook"
-                onClick={() => openEmailInOutlook()}
-                disabled={loading || candidateId == null || !shareUrl}
-                className="flex-1"
-                outlined
-              />
-            </div>
-          </div>
-        )}
-
         <div className="flex flex-column gap-2">
           <Button
             type="button"
@@ -120,15 +92,30 @@ const ResumeShareModal: React.FC<ResumeShareModalProps> = ({
             className="w-full justify-content-start"
             outlined
           />
-          <Button
-            type="button"
-            label="Share via Email"
-            icon={<FaEnvelope className="mr-2" />}
-            onClick={() => shareViaEmail()}
-            disabled={loading || candidateId == null || !shareUrl}
-            className="w-full justify-content-start"
-            outlined
-          />
+        </div>
+
+        <div className="flex flex-column gap-2" role="group" aria-label="Web email share options">
+          <p className="m-0 text-sm text-700">
+            Send via Email (Web):
+          </p>
+          <div className="flex flex-column md:flex-row gap-2">
+            <Button
+              type="button"
+              label="Open Gmail"
+              onClick={() => openEmailInGmail()}
+              disabled={loading || candidateId == null || !shareUrl}
+              className="flex-1"
+              outlined
+            />
+            <Button
+              type="button"
+              label="Open Outlook"
+              onClick={() => openEmailInOutlook()}
+              disabled={loading || candidateId == null || !shareUrl}
+              className="flex-1"
+              outlined
+            />
+          </div>
         </div>
       </div>
     </Dialog>
