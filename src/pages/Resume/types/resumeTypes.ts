@@ -12,6 +12,8 @@ export interface Candidate {
   recruiterEmail: string | null;     // Read-only from backend
 
   jobProfileRequirementId: number; // Read-only from backend
+  /** Job / role applied for (from joined job profile) */
+  jobRole?: string | null;
 
   expectedLocation: {
     city: string;
