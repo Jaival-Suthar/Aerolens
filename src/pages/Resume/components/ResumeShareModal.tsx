@@ -30,9 +30,12 @@ const ResumeShareModal: React.FC<ResumeShareModalProps> = ({
     loading,
     shareUrl,
     popupBlockedHint,
+    emailFallbackHint,
     copyLink,
     shareViaWhatsApp,
     shareViaEmail,
+    openEmailInGmail,
+    openEmailInOutlook,
   } = useResumeShare({
     candidateId,
     jobRole,
@@ -70,6 +73,32 @@ const ResumeShareModal: React.FC<ResumeShareModalProps> = ({
           <p className="m-0 text-sm text-orange-700" role="status">
             If WhatsApp didn&apos;t open, use <strong>Copy Link</strong> below.
           </p>
+        )}
+
+        {emailFallbackHint && (
+          <div className="flex flex-column gap-2" role="status">
+            <p className="m-0 text-sm text-700">
+              Email app did not open. Use web compose instead:
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                label="Open Gmail"
+                onClick={() => openEmailInGmail()}
+                disabled={loading || candidateId == null || !shareUrl}
+                className="flex-1"
+                outlined
+              />
+              <Button
+                type="button"
+                label="Open Outlook"
+                onClick={() => openEmailInOutlook()}
+                disabled={loading || candidateId == null || !shareUrl}
+                className="flex-1"
+                outlined
+              />
+            </div>
+          </div>
         )}
 
         <div className="flex flex-column gap-2">

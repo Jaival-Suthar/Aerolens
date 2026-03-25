@@ -27,11 +27,13 @@ export function useResumeShare({
   const [loading, setLoading] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [popupBlockedHint, setPopupBlockedHint] = useState(false);
+  const [emailFallbackHint, setEmailFallbackHint] = useState(false);
 
   useEffect(() => {
     if (!visible) {
       setShareUrl(null);
       setPopupBlockedHint(false);
+      setEmailFallbackHint(false);
       setLoading(false);
       return;
     }
@@ -121,6 +123,52 @@ export function useResumeShare({
     setPopupBlockedHint(!w);
   }, [shareUrl, buildMessage, toastRef]);
 
+  const openEmailInGmail = useCallback(() => {
+    if (!shareUrl) {
+      toastRef.current?.show({
+        severity: "warn",
+        summary: "Not ready",
+        detail: "Wait for the link to finish generating.",
+        life: 3000,
+      });
+      return;
+    }
+    const message = buildMessage(shareUrl);
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent("Resume Sharing")}&body=${encodeURIComponent(message)}`;
+    const popup = window.open(gmailUrl, "_blank", "noopener,noreferrer");
+    if (!popup) {
+      toastRef.current?.show({
+        severity: "warn",
+        summary: "Popup blocked",
+        detail: "Allow popups for this site or copy the link instead.",
+        life: 4000,
+      });
+    }
+  }, [shareUrl, buildMessage, toastRef]);
+
+  const openEmailInOutlook = useCallback(() => {
+    if (!shareUrl) {
+      toastRef.current?.show({
+        severity: "warn",
+        summary: "Not ready",
+        detail: "Wait for the link to finish generating.",
+        life: 3000,
+      });
+      return;
+    }
+    const message = buildMessage(shareUrl);
+    const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?subject=${encodeURIComponent("Resume Sharing")}&body=${encodeURIComponent(message)}`;
+    const popup = window.open(outlookUrl, "_blank", "noopener,noreferrer");
+    if (!popup) {
+      toastRef.current?.show({
+        severity: "warn",
+        summary: "Popup blocked",
+        detail: "Allow popups for this site or copy the link instead.",
+        life: 4000,
+      });
+    }
+  }, [shareUrl, buildMessage, toastRef]);
+
   /** Must stay synchronous after click — no await before mailto (browser cancels otherwise). */
   const shareViaEmail = useCallback(() => {
     if (!shareUrl) {
@@ -132,17 +180,52 @@ export function useResumeShare({
       });
       return;
     }
+    setEmailFallbackHint(false);
     const message = buildMessage(shareUrl);
-    window.location.href = `mailto:?subject=${encodeURIComponent("Resume Sharing")}&body=${encodeURIComponent(message)}`;
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent("Resume Sharing")}&body=${encodeURIComponent(message)}`;
+
+    let switchedContext = false;
+    const markSwitched = () => {
+      switchedContext = true;
+      window.removeEventListener("blur", markSwitched);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        markSwitched();
+      }
+    };
+
+    window.addEventListener("blur", markSwitched, { once: true });
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.location.href = mailtoUrl;
+
+    window.setTimeout(() => {
+      window.removeEventListener("blur", markSwitched);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      if (!switchedContext) {
+        setEmailFallbackHint(true);
+        toastRef.current?.show({
+          severity: "info",
+          summary: "Email app not opened?",
+          detail:
+            "If nothing opened, use Gmail/Outlook buttons below or configure a default mailto handler.",
+          life: 6000,
+        });
+      }
+    }, 1200);
   }, [shareUrl, buildMessage, toastRef]);
 
   return {
     loading,
     shareUrl,
     popupBlockedHint,
+    emailFallbackHint,
     setPopupBlockedHint,
     copyLink,
     shareViaWhatsApp,
     shareViaEmail,
+    openEmailInGmail,
+    openEmailInOutlook,
   };
 }
