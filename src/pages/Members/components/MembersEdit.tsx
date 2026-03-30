@@ -12,6 +12,10 @@ import { patchMember, getMemberById } from '../services/memberService';
 import { useAuth } from '../../../shared/auth/AuthContext';
 import type { Member, MemberPatchPayload, MemberFormData } from '../types/memberTypes';
 import DialogButton from "../../../shared/DialogAddEditButton";
+import {
+  CONTACT_NUMBER_ERROR_MESSAGE,
+  isValidContactNumber,
+} from "../../../shared/validation/contactNumber";
 
 interface Skill {
   skillName: string;
@@ -229,10 +233,10 @@ const MemberEdit: React.FC<Props> = ({
     }
 
     if (!form.memberContact?.trim()) {
-      newErrors.memberContact = 'Contact number is required';
+      newErrors.memberContact = "Contact number is required";
       isValid = false;
-    } else if (!/^\+?[\d\s-]{10,}$/.test(form.memberContact)) {
-      newErrors.memberContact = 'Invalid contact number';
+    } else if (!isValidContactNumber(form.memberContact)) {
+      newErrors.memberContact = CONTACT_NUMBER_ERROR_MESSAGE;
       isValid = false;
     }
 
@@ -370,7 +374,8 @@ const MemberEdit: React.FC<Props> = ({
                 value={form.memberContact || ''}
                 onChange={e => updateField('memberContact', e.target.value)}
                 className={classNames({ 'p-invalid': errors.memberContact })}
-                placeholder="+91 9999999999"
+                placeholder="+91 9876543210"
+                maxLength={22}
                 style={{ width: '100%' }}
               />
               {errors.memberContact && <small style={{ color: 'red' }}>{errors.memberContact}</small>}

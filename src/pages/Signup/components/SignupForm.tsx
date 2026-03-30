@@ -7,6 +7,10 @@ import DialogButton from "../../../shared/DialogAddEditButton";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import { SignupFormData } from "../types/signuptypes";
 import { registerUser, fetchMemberCreateData } from "../services/useSignup";
+import {
+  CONTACT_NUMBER_ERROR_MESSAGE,
+  isValidContactNumber,
+} from "../../../shared/validation/contactNumber";
 
 const PASSWORD_REGEX =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()[\]{}\-_=+|\\:;"'<>,./]).{8,}$/;
@@ -91,8 +95,11 @@ export default function SignupForm({
     const e: Record<string, string> = {};
 
     if (!formData.fullName.trim()) e.fullName = "Full name is required";
-    if (!formData.contactNumber.trim())
+    if (!formData.contactNumber.trim()) {
       e.contactNumber = "Contact number is required";
+    } else if (!isValidContactNumber(formData.contactNumber)) {
+      e.contactNumber = CONTACT_NUMBER_ERROR_MESSAGE;
+    }
     if (!formData.email.trim()) e.email = "Email is required";
     if (!formData.designationId) {
       e.designationId = "Designation is required";
@@ -188,6 +195,8 @@ export default function SignupForm({
             value={formData.contactNumber}
             onChange={handleChange}
             className={errors.contactNumber ? "p-invalid" : ""}
+            placeholder="+91 9876543210"
+            maxLength={22}
           />
           <small className="p-error">{errors.contactNumber}</small>
         </div>
