@@ -15,7 +15,7 @@ import type {
   Candidate,
   CandidateCreateData,
   OnboardingFormData,
-  OnboardingDocumentStatus,
+  OnboardingDocumentChoice,
   ResumeOnBoardingProps,
 } from "../types/resumeTypes";
 
@@ -41,16 +41,16 @@ const getInitialFormData = (candidate: Candidate | null): OnboardingFormData => 
   joiningBonus: null,
   reportingToId: null,
   vendorId: candidate?.vendorId ?? null,
-  offerLetterSent: "Yes",
-  serviceAgreementSent: "Yes",
-  ndaSent: "Yes",
-  codeOfConductSent: "Yes",
+  offerLetterSent: null,
+  serviceAgreementSent: null,
+  ndaSent: null,
+  codeOfConductSent: null,
 });
 
-/** Yes (green) / No (red) toggle buttons for document status — matches Jaival UI */
+/** Yes (green) / No (red) toggle buttons; neither selected until the user picks one. */
 const DocumentToggle: React.FC<{
-  value: OnboardingDocumentStatus;
-  onChange: (v: OnboardingDocumentStatus) => void;
+  value: OnboardingDocumentChoice;
+  onChange: (v: "Yes" | "No") => void;
 }> = ({ value, onChange }) => (
   <div className="flex gap-1">
     <Button

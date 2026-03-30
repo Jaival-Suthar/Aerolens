@@ -27,6 +27,7 @@ import JobProfileRequirementsAddEdit
 import {
   createJobProfileRequirements
 } from "../../JobProfileRequirements/services/jobProfileRequirementsService";
+import type { JobProfileRequirementsPayload } from "../../JobProfileRequirements/types/jobProfileRequirementsTypes";
 const cleanBullet = (text: string) =>
   text
     // remove hidden/private unicode chars
@@ -366,14 +367,33 @@ const previewJD = async (jobProfileId: number) => {
       </div>
     );
   };
-  const createRequirement = async (payload: any) => {
-  return createJobProfileRequirements(accessToken, payload);
-};
+  const createRequirement = async (payload: JobProfileRequirementsPayload) => {
+    const response = await createJobProfileRequirements(accessToken, payload);
+
+    if (!response.success) {
+      const backendMsg = [response.message, response.error].find((m) => String(m ?? "").trim()) ?? "";
+      if (response.details?.validationErrors && Array.isArray(response.details.validationErrors)) {
+        const validationError: any = new Error(backendMsg);
+        validationError.validationErrors = response.details.validationErrors;
+        throw validationError;
+      }
+      throw new Error(backendMsg);
+    }
+
+    toast.current?.show({
+      severity: "success",
+      summary: "Success",
+      detail: response.message ?? "",
+      life: 3000,
+    });
+
+    return response;
+  };
 
   /* -------------------- Render -------------------- */
   return (
     <>
-      <Toast ref={toast} />
+      <Toast ref={toast} position="top-right" />
       {/* 🔹 Header */}
       <div className="flex justify-content-between align-items-center mb-3">
         <h2>Job Profiles</h2>
