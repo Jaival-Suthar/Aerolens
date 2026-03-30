@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { Dialog } from "primereact/dialog";
 import { Dropdown } from "primereact/dropdown";
 import { Calendar } from "primereact/calendar";
@@ -15,12 +15,26 @@ const STATUS_OPTIONS = [
   { label: "Rejected", value: "REJECTED" },
 ];
 
-type DocStatus = "Yes" | "No";
+type DocStatus = "Yes" | "No" | null;
 
-const DocToggle: React.FC<{ value: DocStatus; onChange: (v: DocStatus) => void }> = ({ value, onChange }) => (
+const DocToggle: React.FC<{ value: DocStatus; onChange: (v: "Yes" | "No") => void }> = ({ value, onChange }) => (
   <div className="flex gap-1">
-    <Button label="Yes" size="small" severity="success" outlined={value !== "Yes"} onClick={() => onChange("Yes")} />
-    <Button label="No" size="small" severity="danger" outlined={value !== "No"} onClick={() => onChange("No")} />
+    <Button
+      label="Yes"
+      size="small"
+      severity="success"
+      outlined={value !== "Yes"}
+      onClick={() => onChange("Yes")}
+      style={value === "Yes" ? { fontWeight: 600 } : undefined}
+    />
+    <Button
+      label="No"
+      size="small"
+      severity="danger"
+      outlined={value !== "No"}
+      onClick={() => onChange("No")}
+      style={value === "No" ? { fontWeight: 600 } : undefined}
+    />
   </div>
 );
 
@@ -39,10 +53,10 @@ const OfferStatusDialog: React.FC<OfferStatusDialogProps> = ({
 }) => {
   const [status, setStatus] = useState<"ACCEPTED" | "REJECTED" | null>(null);
   const [decisionDate, setDecisionDate] = useState<Date | null>(null);
-  const [signedOfferLetterReceived, setSignedOfferLetterReceived] = useState<DocStatus>("Yes");
-  const [signedServiceAgreementReceived, setSignedServiceAgreementReceived] = useState<DocStatus>("Yes");
-  const [signedNDAReceived, setSignedNDAReceived] = useState<DocStatus>("Yes");
-  const [signedCodeOfConductReceived, setSignedCodeOfConductReceived] = useState<DocStatus>("Yes");
+  const [signedOfferLetterReceived, setSignedOfferLetterReceived] = useState<DocStatus>(null);
+  const [signedServiceAgreementReceived, setSignedServiceAgreementReceived] = useState<DocStatus>(null);
+  const [signedNDAReceived, setSignedNDAReceived] = useState<DocStatus>(null);
+  const [signedCodeOfConductReceived, setSignedCodeOfConductReceived] = useState<DocStatus>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -51,18 +65,16 @@ const OfferStatusDialog: React.FC<OfferStatusDialogProps> = ({
 
   const isEmployee = selectedOffer?.employmentTypeName?.trim().toLowerCase() === "employee";
 
-  useEffect(() => {
-    if (!visible) {
-      setStatus(null);
-      setDecisionDate(null);
-      setSignedOfferLetterReceived("Yes");
-      setSignedServiceAgreementReceived("Yes");
-      setSignedNDAReceived("Yes");
-      setSignedCodeOfConductReceived("Yes");
-      setRejectionReason("");
-      setErrors({});
-    }
-  }, [visible]);
+  const resetForm = () => {
+    setStatus(null);
+    setDecisionDate(null);
+    setSignedOfferLetterReceived(null);
+    setSignedServiceAgreementReceived(null);
+    setSignedNDAReceived(null);
+    setSignedCodeOfConductReceived(null);
+    setRejectionReason("");
+    setErrors({});
+  };
 
   const handleHide = () => onHide();
 
@@ -136,6 +148,7 @@ const OfferStatusDialog: React.FC<OfferStatusDialogProps> = ({
       <Toast ref={toast} position="top-right" />
       <Dialog
         visible={visible}
+        onShow={resetForm}
         onHide={handleHide}
         header="Offer Status"
         footer={
@@ -160,6 +173,7 @@ const OfferStatusDialog: React.FC<OfferStatusDialogProps> = ({
             onChange={(e) => setStatus(e.value)}
             placeholder="Select"
             className={errors.status ? "p-invalid w-full" : "w-full"}
+            showClear
           />
           {errors.status && <small className="p-error block mt-1">{errors.status}</small>}
         </div>
