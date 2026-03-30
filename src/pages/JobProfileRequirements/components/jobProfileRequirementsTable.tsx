@@ -155,17 +155,19 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfileRequirements | nu
   // Centralized error handler - reduces duplication
   const showError = (message: string) => {
     toast.current?.show({
-      severity: 'error',
-      summary: 'Error',
-      detail: message
+      severity: "error",
+      summary: "Error",
+      detail: message,
+      life: 3000,
     });
   };
 
   const showSuccess = (message: string) => {
     toast.current?.show({
-      severity: 'success',
-      summary: 'Success',
-      detail: message
+      severity: "success",
+      summary: "Success",
+      detail: message ?? "",
+      life: 3000,
     });
   };
 
@@ -469,7 +471,7 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfileRequirements | nu
 
   return (
     <div className="card" style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden"}}>
-      <Toast ref={toast} />
+      <Toast ref={toast} position="top-right" />
       
       <div className="flex justify-content-between align-items-center mb-2">
         <h2 style={{ color: "#07253f" }}>Job Profile Requirements</h2>
