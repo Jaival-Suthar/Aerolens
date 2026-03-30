@@ -355,3 +355,14 @@ export interface ResumeOnBoardingProps {
   createData: CandidateCreateData | null;
   onSuccess: () => void;
 }
+
+export interface SendWhatsAppMessagePayload {
+  to: string;
+  message: string;
+}
+
+export interface SendWhatsAppMessageResult {
+  success: boolean;
+  messageId?: string;
+  messagingProduct?: string;
+}

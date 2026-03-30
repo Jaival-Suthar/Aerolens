@@ -2,7 +2,9 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
-import { FaDownload, FaEye, FaRoute, FaShare } from "react-icons/fa";
+import { Dialog } from "primereact/dialog";
+import { InputTextarea } from "primereact/inputtextarea";
+import { FaDownload, FaEye, FaRoute, FaShare, FaWhatsapp } from "react-icons/fa";
 import BulkExcelUploadButton from "../../../shared/BulkExcepUploadButton";
 import ResumeAddEdit from "../components/resumeAddEdit";
 import ResumeDelete from "./resumeDelete";
@@ -13,6 +15,7 @@ import { useSearchParams } from "react-router-dom";
 import DateRangeFilter from "../../InterviewReport/components/DateRangeFilter";
 import { Candidate, CandidateCreateData } from "../types/resumeTypes";
 import { getCandidates, downloadResume, fetchCandidateCreateData, bulkUploadCandidates, bulkUploadResumes } from "../services/useResume";
+import { sendWhatsAppMessage } from "../services/whatsappService";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import SearchButton from "../../../shared/SearchButton";
 import ExportExcelButton from "../../../shared/ExportExcelButton";
@@ -96,6 +99,7 @@ const EXPORT_COLUMNS: ExportColumnDef[] = [
 
 const DEFAULT_COLUMN_FIELDS = ["dateOfEntry","candidateName", "contact", "jobRole", "experienceYears", "noticePeriod", "workMode", "expectedLocation.city", "currentCTCAmount", "expectedCTCAmount", "statusName", "recruiterName", "vendorName", "referredBy"];
 const COLUMN_STORAGE_KEY = "candidateTable.visibleColumns";
+const WHATSAPP_DEFAULT_MESSAGE = "Hiii";
 
 const ResumeTable: React.FC = () => {
   const { accessToken } = useAuth();
@@ -108,6 +112,10 @@ const ResumeTable: React.FC = () => {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showInterviewDialog, setShowInterviewDialog] = useState(false);
   const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
+  const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
+  const [whatsAppDetailsText, setWhatsAppDetailsText] = useState("");
+  const [whatsAppMessage, setWhatsAppMessage] = useState(WHATSAPP_DEFAULT_MESSAGE);
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const toastRef = useRef<Toast>(null);
   const [rows, setRows] = useState(20);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -446,6 +454,107 @@ useEffect(() => {
     return `${symbol}${row.expectedCTCAmount}/${shortType}`;
   };
 
+  const buildWhatsAppCandidateSummary = (c: Candidate): string => {
+    const currentCtc =
+      c.currentCTCAmount != null && c.currentCTCAmount !== undefined
+        ? String(currentCTCTemplate(c))
+        : "-";
+    const expectedCtc =
+      c.expectedCTCAmount != null && c.expectedCTCAmount !== undefined
+        ? String(expectedCTCTemplate(c))
+        : "-";
+    const expYears =
+      c.experienceYears != null && c.experienceYears !== undefined
+        ? `${c.experienceYears} years`
+        : "-";
+    const linkedIn = formatLinkedInForExport(c.linkedinProfileUrl);
+    const notice =
+      c.noticePeriod === 0
+        ? "Immediate"
+        : c.noticePeriod != null
+          ? `${c.noticePeriod} days`
+          : "-";
+    return [
+      `Full Name: ${c.candidateName?.trim() || "-"}`,
+      `Contact Number: ${c.contactNumber?.trim() || "-"}`,
+      `Email ID: ${c.email?.trim() || "-"}`,
+      `LinkedIn: ${linkedIn}`,
+      `Over all exp: ${expYears}`,
+      `Relevant exp: ${expYears}`,
+      `Current CTC: ${currentCtc}`,
+      `Expected CTC: ${expectedCtc}`,
+      `Notice: ${notice}`,
+      `Education Highest: -`,
+    ].join("\n");
+  };
+
+  const getWhatsAppRecipientPhone = () => {
+    const fromRow = (selectedResume?.contactNumber ?? "").trim();
+    const fromEnv = (import.meta.env.VITE_WHATSAPP_DEFAULT_RECIPIENT_PHONE ?? "").trim();
+    return fromRow || fromEnv;
+  };
+
+  const openWhatsAppDialog = () => {
+    if (!selectedResume) {
+      toastRef.current?.show({
+        severity: "warn",
+        summary: "No selection",
+        detail: "Select a candidate first.",
+        life: 3000,
+      });
+      return;
+    }
+    setWhatsAppDetailsText(buildWhatsAppCandidateSummary(selectedResume));
+    setWhatsAppMessage(WHATSAPP_DEFAULT_MESSAGE);
+    setShowWhatsAppDialog(true);
+  };
+
+  const closeWhatsAppDialog = () => {
+    if (sendingWhatsApp) return;
+    setShowWhatsAppDialog(false);
+  };
+
+  const handleSendWhatsApp = async () => {
+    const to = getWhatsAppRecipientPhone();
+    if (!to) {
+      toastRef.current?.show({
+        severity: "warn",
+        summary: "No recipient",
+        detail: "Select a candidate with a phone number or set VITE_WHATSAPP_DEFAULT_RECIPIENT_PHONE.",
+        life: 4000,
+      });
+      return;
+    }
+    const details = whatsAppDetailsText.trim();
+    const msg = whatsAppMessage.trim();
+    if (!details && !msg) {
+      toastRef.current?.show({
+        severity: "warn",
+        summary: "Nothing to send",
+        detail: "Add candidate details and/or a message.",
+        life: 3000,
+      });
+      return;
+    }
+    const combined = [details, msg].filter(Boolean).join("\n\n");
+    try {
+      setSendingWhatsApp(true);
+      await sendWhatsAppMessage({
+        to,
+        message: combined,
+      });
+      toastRef.current?.show({ severity: "success", summary: "WhatsApp Sent", detail: "Message sent successfully.", life: 3000 });
+      setShowWhatsAppDialog(false);
+      setWhatsAppDetailsText("");
+      setWhatsAppMessage(WHATSAPP_DEFAULT_MESSAGE);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to send WhatsApp message.";
+      toastRef.current?.show({ severity: "error", summary: "Send Failed", detail: message, life: 5000 });
+    } finally {
+      setSendingWhatsApp(false);
+    }
+  };
+
   const recruiterFilterTemplate = createDropdownFilterTemplate("recruiterName", "Recruiter");
   const statusFilterTemplate = createDropdownFilterTemplate("statusName", "Status");
   const roleFilterTemplate = createDropdownFilterTemplate("jobRole", "Job Role");
@@ -508,7 +617,21 @@ useEffect(() => {
 
   
 
-  const settingsItems = [
+  const settingsItems: {
+    label: string;
+    icon: React.ReactNode;
+    action: () => void;
+    disabled?: boolean;
+  }[] = [
+    {
+      label: "Send WhatsApp",
+      icon: <FaWhatsapp style={{ marginRight: 8, marginLeft: 4, color: "#25D366" }} />,
+      disabled: !selectedResume,
+      action: () => {
+        setShowSettingsMenu(false);
+        openWhatsAppDialog();
+      },
+    },
     { label: "View Interview Rounds", icon: <FaRoute style={{ marginRight: 8, marginLeft: 4 }} />, action: () => { setShowSettingsMenu(false); handleViewAllRounds(); } },
     {
       label: "Schedule Interview", icon: <FaUserTie style={{ marginRight: 8, marginLeft: 4 }} />, action: () => {
@@ -639,7 +762,35 @@ useEffect(() => {
             {showSettingsMenu && (
               <div className="card shadow-3" style={{ position: "absolute", right: 0, top: 50, zIndex: 1000, minWidth: 220, backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "0.5rem" }}>
                 {settingsItems.map((item, idx) => (
-                  <div key={idx} className="p-2 cursor-pointer border-round" onClick={item.action} style={{ display: "flex", alignItems: "center" }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f3f4f6"} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                  <div
+                    key={idx}
+                    className="p-2 border-round"
+                    role="button"
+                    tabIndex={item.disabled ? -1 : 0}
+                    onClick={() => {
+                      if (item.disabled) return;
+                      item.action();
+                    }}
+                    onKeyDown={(e) => {
+                      if (item.disabled) return;
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        item.action();
+                      }
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      cursor: item.disabled ? "not-allowed" : "pointer",
+                      opacity: item.disabled ? 0.45 : 1,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!item.disabled) e.currentTarget.style.backgroundColor = "#f3f4f6";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
                     <span style={{ fontSize: "16px", color: "#374151" }}>{item.icon}</span>
                     <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>{item.label}</span>
                   </div>
@@ -787,6 +938,47 @@ useEffect(() => {
         accessToken={accessToken}
         toastRef={toastRef}
       />
+      <Dialog
+        visible={showWhatsAppDialog}
+        onHide={closeWhatsAppDialog}
+        modal
+        header="Send WhatsApp Message"
+        style={{ width: "min(520px, 95vw)" }}
+        footer={
+          <div className="flex justify-content-end gap-2">
+            <Button type="button" label="Cancel" severity="secondary" outlined onClick={closeWhatsAppDialog} disabled={sendingWhatsApp} />
+            <Button
+              type="button"
+              label={sendingWhatsApp ? "Sending..." : "Send"}
+              icon={<FaWhatsapp style={{ marginRight: 6 }} />}
+              onClick={handleSendWhatsApp}
+              disabled={sendingWhatsApp}
+              style={{ backgroundColor: "#25D366", borderColor: "#25D366", color: "#fff" }}
+            />
+          </div>
+        }
+      >
+        <p className="text-sm text-600 mt-0 mb-3">
+          Opens from the cog menu with a selected candidate. Recipient uses their phone when set, otherwise your default number from configuration. The blocks below are combined into one WhatsApp message.
+        </p>
+        <label className="block font-semibold mb-1">Candidate details</label>
+        <InputTextarea
+          value={whatsAppDetailsText}
+          onChange={(e) => setWhatsAppDetailsText(e.target.value)}
+          rows={12}
+          className="w-full mb-3"
+          disabled={sendingWhatsApp}
+        />
+        <label className="block font-semibold mb-1">Message</label>
+        <InputTextarea
+          value={whatsAppMessage}
+          onChange={(e) => setWhatsAppMessage(e.target.value)}
+          rows={4}
+          className="w-full"
+          disabled={sendingWhatsApp}
+          placeholder="Additional note sent below the candidate details"
+        />
+      </Dialog>
     </>
   );
 };
