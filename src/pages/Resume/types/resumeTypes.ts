@@ -356,13 +356,20 @@ export interface ResumeOnBoardingProps {
   onSuccess: () => void;
 }
 
-export interface SendWhatsAppMessagePayload {
-  to: string;
-  message: string;
+/** Row from GET /whatsapp/groups → data.groups */
+export interface WhatsAppGroup {
+  groupId: number;
+  groupName: string;
 }
 
-export interface SendWhatsAppMessageResult {
-  success: boolean;
-  messageId?: string;
-  messagingProduct?: string;
+export interface WhatsAppGroupsData {
+  groups: WhatsAppGroup[];
+}
+
+/** POST /whatsapp/send-resume — only customMessage (not `message`) is sent from FE per API contract. */
+export interface QueueWhatsAppSendResumePayload {
+  candidateId: number;
+  groupId: number;
+  /** Optional plain text for template {{9}}; max 1024 on backend. */
+  customMessage?: string;
 }

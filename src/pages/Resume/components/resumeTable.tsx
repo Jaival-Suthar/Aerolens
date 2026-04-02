@@ -3,6 +3,7 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { Dialog } from "primereact/dialog";
+import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
 import { FaDownload, FaEye, FaRoute, FaShare, FaWhatsapp } from "react-icons/fa";
 import BulkExcelUploadButton from "../../../shared/BulkExcepUploadButton";
@@ -13,9 +14,9 @@ import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
 import { useSearchParams } from "react-router-dom";
 import DateRangeFilter from "../../InterviewReport/components/DateRangeFilter";
-import { Candidate, CandidateCreateData } from "../types/resumeTypes";
+import { Candidate, CandidateCreateData, type WhatsAppGroup } from "../types/resumeTypes";
 import { getCandidates, downloadResume, fetchCandidateCreateData, bulkUploadCandidates, bulkUploadResumes } from "../services/useResume";
-import { sendWhatsAppMessage } from "../services/whatsappService";
+import { getWhatsAppGroups, queueWhatsAppSendResume } from "../services/whatsappService";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import SearchButton from "../../../shared/SearchButton";
 import ExportExcelButton from "../../../shared/ExportExcelButton";
@@ -99,7 +100,8 @@ const EXPORT_COLUMNS: ExportColumnDef[] = [
 
 const DEFAULT_COLUMN_FIELDS = ["dateOfEntry","candidateName", "contact", "jobRole", "experienceYears", "noticePeriod", "workMode", "expectedLocation.city", "currentCTCAmount", "expectedCTCAmount", "statusName", "recruiterName", "vendorName", "referredBy"];
 const COLUMN_STORAGE_KEY = "candidateTable.visibleColumns";
-const WHATSAPP_DEFAULT_MESSAGE = "Hiii";
+/** Backend max for customMessage / template {{9}} */
+const WHATSAPP_NOTE_MAX_LENGTH = 1024;
 
 const ResumeTable: React.FC = () => {
   const { accessToken } = useAuth();
@@ -113,8 +115,11 @@ const ResumeTable: React.FC = () => {
   const [showInterviewDialog, setShowInterviewDialog] = useState(false);
   const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
   const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
-  const [whatsAppDetailsText, setWhatsAppDetailsText] = useState("");
-  const [whatsAppMessage, setWhatsAppMessage] = useState(WHATSAPP_DEFAULT_MESSAGE);
+  const [whatsAppGroups, setWhatsAppGroups] = useState<WhatsAppGroup[]>([]);
+  const [whatsAppGroupsLoading, setWhatsAppGroupsLoading] = useState(false);
+  const [whatsAppGroupError, setWhatsAppGroupError] = useState<string | null>(null);
+  const [whatsAppSelectedGroupId, setWhatsAppSelectedGroupId] = useState<number | null>(null);
+  const [whatsAppNote, setWhatsAppNote] = useState("");
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const toastRef = useRef<Toast>(null);
   const [rows, setRows] = useState(20);
@@ -454,45 +459,34 @@ useEffect(() => {
     return `${symbol}${row.expectedCTCAmount}/${shortType}`;
   };
 
-  const buildWhatsAppCandidateSummary = (c: Candidate): string => {
-    const currentCtc =
-      c.currentCTCAmount != null && c.currentCTCAmount !== undefined
-        ? String(currentCTCTemplate(c))
-        : "-";
-    const expectedCtc =
-      c.expectedCTCAmount != null && c.expectedCTCAmount !== undefined
-        ? String(expectedCTCTemplate(c))
-        : "-";
-    const expYears =
-      c.experienceYears != null && c.experienceYears !== undefined
-        ? `${c.experienceYears} years`
-        : "-";
-    const linkedIn = formatLinkedInForExport(c.linkedinProfileUrl);
-    const notice =
-      c.noticePeriod === 0
-        ? "Immediate"
-        : c.noticePeriod != null
-          ? `${c.noticePeriod} days`
-          : "-";
-    return [
-      `Full Name: ${c.candidateName?.trim() || "-"}`,
-      `Contact Number: ${c.contactNumber?.trim() || "-"}`,
-      `Email ID: ${c.email?.trim() || "-"}`,
-      `LinkedIn: ${linkedIn}`,
-      `Over all exp: ${expYears}`,
-      `Relevant exp: ${expYears}`,
-      `Current CTC: ${currentCtc}`,
-      `Expected CTC: ${expectedCtc}`,
-      `Notice: ${notice}`,
-      `Education Highest: -`,
-    ].join("\n");
-  };
+  useEffect(() => {
+    if (!showWhatsAppDialog || !accessToken) return;
 
-  const getWhatsAppRecipientPhone = () => {
-    const fromRow = (selectedResume?.contactNumber ?? "").trim();
-    const fromEnv = (import.meta.env.VITE_WHATSAPP_DEFAULT_RECIPIENT_PHONE ?? "").trim();
-    return fromRow || fromEnv;
-  };
+    let cancelled = false;
+    setWhatsAppGroupsLoading(true);
+    setWhatsAppGroupError(null);
+
+    getWhatsAppGroups(accessToken)
+      .then((data) => {
+        if (!cancelled) setWhatsAppGroups(data.groups ?? []);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          const msg = err instanceof Error ? err.message : "Failed to load WhatsApp groups";
+          setWhatsAppGroupError(msg);
+          setWhatsAppGroups([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setWhatsAppGroupsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showWhatsAppDialog, accessToken]);
+
+  const whatsAppNoteLooksLikeHtml = (text: string) => /<[a-z][\s\S]*>/i.test(text);
 
   const openWhatsAppDialog = () => {
     if (!selectedResume) {
@@ -504,8 +498,9 @@ useEffect(() => {
       });
       return;
     }
-    setWhatsAppDetailsText(buildWhatsAppCandidateSummary(selectedResume));
-    setWhatsAppMessage(WHATSAPP_DEFAULT_MESSAGE);
+    setWhatsAppSelectedGroupId(null);
+    setWhatsAppNote("");
+    setWhatsAppGroupError(null);
     setShowWhatsAppDialog(true);
   };
 
@@ -515,41 +510,62 @@ useEffect(() => {
   };
 
   const handleSendWhatsApp = async () => {
-    const to = getWhatsAppRecipientPhone();
-    if (!to) {
+    if (!selectedResume) return;
+    if (whatsAppSelectedGroupId == null) {
       toastRef.current?.show({
         severity: "warn",
-        summary: "No recipient",
-        detail: "Select a candidate with a phone number or set VITE_WHATSAPP_DEFAULT_RECIPIENT_PHONE.",
-        life: 4000,
-      });
-      return;
-    }
-    const details = whatsAppDetailsText.trim();
-    const msg = whatsAppMessage.trim();
-    if (!details && !msg) {
-      toastRef.current?.show({
-        severity: "warn",
-        summary: "Nothing to send",
-        detail: "Add candidate details and/or a message.",
+        summary: "Group required",
+        detail: "Select a WhatsApp group.",
         life: 3000,
       });
       return;
     }
-    const combined = [details, msg].filter(Boolean).join("\n\n");
+    const note = whatsAppNote.trim();
+    if (note.length > WHATSAPP_NOTE_MAX_LENGTH) {
+      toastRef.current?.show({
+        severity: "warn",
+        summary: "Message too long",
+        detail: `Additional message must be at most ${WHATSAPP_NOTE_MAX_LENGTH} characters.`,
+        life: 4000,
+      });
+      return;
+    }
+    if (note && whatsAppNoteLooksLikeHtml(note)) {
+      toastRef.current?.show({
+        severity: "warn",
+        summary: "Invalid message",
+        detail: "Additional message must be plain text only (no HTML).",
+        life: 4000,
+      });
+      return;
+    }
+
     try {
       setSendingWhatsApp(true);
-      await sendWhatsAppMessage({
-        to,
-        message: combined,
+      const result = await queueWhatsAppSendResume(accessToken, {
+        candidateId: selectedResume.candidateId,
+        groupId: whatsAppSelectedGroupId,
+        ...(note ? { customMessage: note } : {}),
       });
-      toastRef.current?.show({ severity: "success", summary: "WhatsApp Sent", detail: "Message sent successfully.", life: 3000 });
+      toastRef.current?.show({
+        severity: "success",
+        summary: "WhatsApp queued",
+        detail:
+          result.message?.trim() ||
+          "Share request accepted. Sending runs in the background; delivery is not confirmed here.",
+        life: 5000,
+      });
       setShowWhatsAppDialog(false);
-      setWhatsAppDetailsText("");
-      setWhatsAppMessage(WHATSAPP_DEFAULT_MESSAGE);
+      setWhatsAppSelectedGroupId(null);
+      setWhatsAppNote("");
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to send WhatsApp message.";
-      toastRef.current?.show({ severity: "error", summary: "Send Failed", detail: message, life: 5000 });
+      let message = "Failed to queue WhatsApp share.";
+      if (error instanceof Error) message = error.message;
+      else if (error && typeof error === "object" && "message" in error) {
+        const m = (error as { message?: unknown }).message;
+        if (typeof m === "string" && m.trim()) message = m;
+      }
+      toastRef.current?.show({ severity: "error", summary: "Queue failed", detail: message, life: 5000 });
     } finally {
       setSendingWhatsApp(false);
     }
@@ -624,7 +640,7 @@ useEffect(() => {
     disabled?: boolean;
   }[] = [
     {
-      label: "Send WhatsApp",
+      label: "Share resume (WhatsApp)",
       icon: <FaWhatsapp style={{ marginRight: 8, marginLeft: 4, color: "#25D366" }} />,
       disabled: !selectedResume,
       action: () => {
@@ -942,42 +958,69 @@ useEffect(() => {
         visible={showWhatsAppDialog}
         onHide={closeWhatsAppDialog}
         modal
-        header="Send WhatsApp Message"
+        header="Share resume via WhatsApp"
         style={{ width: "min(520px, 95vw)" }}
         footer={
           <div className="flex justify-content-end gap-2">
             <Button type="button" label="Cancel" severity="secondary" outlined onClick={closeWhatsAppDialog} disabled={sendingWhatsApp} />
             <Button
               type="button"
-              label={sendingWhatsApp ? "Sending..." : "Send"}
+              label={sendingWhatsApp ? "Queueing…" : "Share resume"}
               icon={<FaWhatsapp style={{ marginRight: 6 }} />}
               onClick={handleSendWhatsApp}
-              disabled={sendingWhatsApp}
+              disabled={
+                sendingWhatsApp ||
+                whatsAppGroupsLoading ||
+                whatsAppSelectedGroupId == null ||
+                (!whatsAppGroupsLoading && whatsAppGroups.length === 0)
+              }
               style={{ backgroundColor: "#25D366", borderColor: "#25D366", color: "#fff" }}
             />
           </div>
         }
       >
         <p className="text-sm text-600 mt-0 mb-3">
-          Opens from the cog menu with a selected candidate. Recipient uses their phone when set, otherwise your default number from configuration. The blocks below are combined into one WhatsApp message.
+          Candidate details and the resume PDF are filled by the server into the WhatsApp template. You only choose who receives it (group) and an optional short note (template “Additional message”). Recipients are resolved on the server — do not enter phone numbers here.
         </p>
-        <label className="block font-semibold mb-1">Candidate details</label>
-        <InputTextarea
-          value={whatsAppDetailsText}
-          onChange={(e) => setWhatsAppDetailsText(e.target.value)}
-          rows={12}
-          className="w-full mb-3"
-          disabled={sendingWhatsApp}
+        {selectedResume && (
+          <div className="mb-3">
+            <label className="block font-semibold mb-1">Candidate</label>
+            <InputText value={selectedResume.candidateName} readOnly className="w-full" />
+          </div>
+        )}
+        <label className="block font-semibold mb-1">
+          WhatsApp group <span className="text-red-500">*</span>
+        </label>
+        <Dropdown
+          value={whatsAppSelectedGroupId}
+          options={whatsAppGroups}
+          optionLabel="groupName"
+          optionValue="groupId"
+          placeholder={whatsAppGroupsLoading ? "Loading groups…" : "Select group"}
+          onChange={(e) => setWhatsAppSelectedGroupId(e.value ?? null)}
+          className="w-full mb-2"
+          disabled={sendingWhatsApp || whatsAppGroupsLoading || whatsAppGroups.length === 0}
+          showClear
         />
-        <label className="block font-semibold mb-1">Message</label>
+        {whatsAppGroupError && (
+          <small className="p-error block mb-3">{whatsAppGroupError}</small>
+        )}
+        {!whatsAppGroupsLoading && !whatsAppGroupError && whatsAppGroups.length === 0 && (
+          <small className="text-600 block mb-3">No active WhatsApp groups are available.</small>
+        )}
+        <label className="block font-semibold mb-1">Additional message (optional)</label>
         <InputTextarea
-          value={whatsAppMessage}
-          onChange={(e) => setWhatsAppMessage(e.target.value)}
+          value={whatsAppNote}
+          onChange={(e) => setWhatsAppNote(e.target.value)}
           rows={4}
+          maxLength={WHATSAPP_NOTE_MAX_LENGTH}
           className="w-full"
           disabled={sendingWhatsApp}
-          placeholder="Additional note sent below the candidate details"
+          placeholder="Plain text only, max 1024 characters. Leave empty if not needed."
         />
+        <small className="text-600 block mt-1">
+          {whatsAppNote.length}/{WHATSAPP_NOTE_MAX_LENGTH} characters
+        </small>
       </Dialog>
     </>
   );

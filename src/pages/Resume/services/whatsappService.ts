@@ -1,89 +1,125 @@
-import type { SendWhatsAppMessagePayload, SendWhatsAppMessageResult } from "../types/resumeTypes";
+/**
+ * WhatsApp resume sharing — backend queue API (/whatsapp/*).
+ * FE sends only candidateId, groupId, and optional customMessage (plain text, max 1024).
+ * Never sends phone numbers; recipients are resolved server-side from the group.
+ */
 
-const GRAPH_BASE_URL = "https://graph.facebook.com";
-const GRAPH_VERSION = (import.meta.env.VITE_WHATSAPP_GRAPH_VERSION || "v22.0").trim();
-const PHONE_NUMBER_ID = (import.meta.env.VITE_WHATSAPP_PHONE_NUMBER_ID || "").trim();
-function normalizeAccessToken(raw: string): string {
-  return raw.replace(/^\uFEFF/, "").trim().replace(/^["']|["']$/g, "");
+import type {
+  QueueWhatsAppSendResumePayload,
+  WhatsAppGroupsData,
+} from "../types/resumeTypes";
+
+const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
+
+function makeHeaders(accessToken?: string): HeadersInit {
+  const headers: HeadersInit = { "Content-Type": "application/json" };
+  if (accessToken) (headers as Record<string, string>)["Authorization"] = `Bearer ${accessToken}`;
+  return headers;
 }
 
-const ACCESS_TOKEN = normalizeAccessToken(import.meta.env.VITE_WHATSAPP_ACCESS_TOKEN || "");
+type ApiEnvelope<T> = {
+  success?: boolean;
+  message?: string;
+  data?: T;
+  error?: string;
+};
 
-function parseErrorMessage(raw: unknown): string {
-  if (raw && typeof raw === "object") {
-    const maybe = raw as {
-      error?: { message?: string };
-      message?: string;
-    };
-    return maybe.error?.message || maybe.message || "Failed to send WhatsApp message.";
+async function readJson(res: Response): Promise<unknown> {
+  try {
+    return await res.json();
+  } catch {
+    return null;
   }
-  return "Failed to send WhatsApp message.";
 }
 
-function normalizePhoneForWhatsApp(value: string): string {
-  const digits = value.replace(/\D/g, "");
-  if (digits.length === 10) return `91${digits}`;
-  return digits;
-}
+/** GET /whatsapp/groups — active groups for the share dropdown. */
+export async function getWhatsAppGroups(accessToken: string | null): Promise<WhatsAppGroupsData> {
+  if (!accessToken) throw new Error("Access token is required");
 
-export async function sendWhatsAppMessage(
-  payload: SendWhatsAppMessagePayload
-): Promise<SendWhatsAppMessageResult> {
-  if (!PHONE_NUMBER_ID) {
-    throw new Error("Missing VITE_WHATSAPP_PHONE_NUMBER_ID in .env");
-  }
-  if (!ACCESS_TOKEN) {
-    throw new Error("Missing VITE_WHATSAPP_ACCESS_TOKEN in .env");
-  }
-
-  const to = normalizePhoneForWhatsApp(payload.to);
-  if (!to || to.length < 10) {
-    throw new Error("Enter a valid phone number.");
-  }
-
-  const text = (payload.message || "").trim();
-  if (!text) {
-    throw new Error("Message cannot be empty.");
-  }
-
-  const endpoint = `${GRAPH_BASE_URL}/${GRAPH_VERSION}/${PHONE_NUMBER_ID}/messages`;
-  const body = {
-    messaging_product: "whatsapp",
-    to,
-    type: "text",
-    text: {
-      body: text,
-      preview_url: false,
-    },
-  };
-
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${ACCESS_TOKEN}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
+  const res = await fetch(`${API_BASE_URL}/whatsapp/groups`, {
+    method: "GET",
+    headers: makeHeaders(accessToken),
+    credentials: "include",
   });
 
-  let json: unknown = null;
-  try {
-    json = await res.json();
-  } catch {
-    json = null;
-  }
+  const body = (await readJson(res)) as ApiEnvelope<WhatsAppGroupsData> | null;
 
   if (!res.ok) {
-    throw new Error(parseErrorMessage(json));
+    const msg =
+      body && typeof body === "object" && typeof (body as ApiEnvelope<unknown>).message === "string"
+        ? (body as ApiEnvelope<unknown>).message
+        : res.statusText;
+    throw new Error(msg || "Failed to load WhatsApp groups");
   }
 
-  const data = json as {
-    messages?: { id: string }[];
-    messaging_product?: string;
+  if (!body || typeof body !== "object") {
+    throw new Error("Invalid response from server");
+  }
+
+  const env = body as ApiEnvelope<WhatsAppGroupsData>;
+  if (env.success === false) {
+    throw new Error(env.message || "Failed to load WhatsApp groups");
+  }
+
+  const data = env.data ?? (body as unknown as WhatsAppGroupsData);
+  if (!data || !Array.isArray(data.groups)) {
+    return { groups: [] };
+  }
+  return { groups: data.groups };
+}
+
+export interface QueueWhatsAppSendResumeResponse {
+  queued: boolean;
+  /** Top-level API message for UI (e.g. toast detail). */
+  message?: string;
+}
+
+/** POST /whatsapp/send-resume — queues template send; 200 + queued === true means accepted, not delivered yet. */
+export async function queueWhatsAppSendResume(
+  accessToken: string | null,
+  payload: QueueWhatsAppSendResumePayload
+): Promise<QueueWhatsAppSendResumeResponse> {
+  if (!accessToken) throw new Error("Access token is required");
+
+  const jsonBody: Record<string, unknown> = {
+    candidateId: payload.candidateId,
+    groupId: payload.groupId,
   };
+  const note = payload.customMessage?.trim();
+  if (note) jsonBody.customMessage = note;
+
+  const res = await fetch(`${API_BASE_URL}/whatsapp/send-resume`, {
+    method: "POST",
+    headers: makeHeaders(accessToken),
+    credentials: "include",
+    body: JSON.stringify(jsonBody),
+  });
+
+  const body = (await readJson(res)) as ApiEnvelope<{ queued?: boolean }> | null;
+
+  if (!res.ok) {
+    const msg =
+      body && typeof body === "object" && typeof (body as ApiEnvelope<unknown>).message === "string"
+        ? (body as ApiEnvelope<unknown>).message
+        : res.statusText;
+    throw new Error(msg || "Failed to queue WhatsApp share");
+  }
+
+  if (!body || typeof body !== "object") {
+    throw new Error("Invalid response from server");
+  }
+
+  const env = body as ApiEnvelope<{ queued?: boolean }>;
+  if (env.success === false) {
+    throw new Error(env.message || "Failed to queue WhatsApp share");
+  }
+
+  if (!env.data?.queued) {
+    throw new Error(env.message || "WhatsApp share was not queued. Please try again.");
+  }
+
   return {
-    success: true,
-    messageId: data.messages?.[0]?.id,
-    messagingProduct: data.messaging_product,
+    queued: true,
+    message: typeof env.message === "string" ? env.message : undefined,
   };
 }
