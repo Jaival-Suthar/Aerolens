@@ -5,7 +5,7 @@ import { Button } from "primereact/button";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
-import { FaDownload, FaEye, FaRoute, FaShare, FaWhatsapp } from "react-icons/fa";
+import { FaCopy, FaDownload, FaEye, FaRoute, FaShare, FaWhatsapp } from "react-icons/fa";
 import BulkExcelUploadButton from "../../../shared/BulkExcepUploadButton";
 import ResumeAddEdit from "../components/resumeAddEdit";
 import ResumeDelete from "./resumeDelete";
@@ -16,7 +16,9 @@ import { useSearchParams } from "react-router-dom";
 import DateRangeFilter from "../../InterviewReport/components/DateRangeFilter";
 import { Candidate, CandidateCreateData, type WhatsAppGroup } from "../types/resumeTypes";
 import { getCandidates, downloadResume, fetchCandidateCreateData, bulkUploadCandidates, bulkUploadResumes } from "../services/useResume";
-import { getWhatsAppGroups, queueWhatsAppSendResume } from "../services/whatsappService";
+import { getWhatsAppGroups, getWhatsAppSharePreviewText, queueWhatsAppSendResume } from "../services/whatsappService";
+import { buildWhatsAppSharePreviewText } from "../utils/whatsappSharePreview";
+import { showGlobalToast } from "../../../shared/services/globalToastService";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import SearchButton from "../../../shared/SearchButton";
 import ExportExcelButton from "../../../shared/ExportExcelButton";
@@ -120,6 +122,8 @@ const ResumeTable: React.FC = () => {
   const [whatsAppGroupError, setWhatsAppGroupError] = useState<string | null>(null);
   const [whatsAppSelectedGroupId, setWhatsAppSelectedGroupId] = useState<number | null>(null);
   const [whatsAppNote, setWhatsAppNote] = useState("");
+  const [whatsAppPreviewText, setWhatsAppPreviewText] = useState("");
+  const [whatsAppPreviewLoading, setWhatsAppPreviewLoading] = useState(false);
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const toastRef = useRef<Toast>(null);
   const [rows, setRows] = useState(20);
@@ -486,7 +490,65 @@ useEffect(() => {
     };
   }, [showWhatsAppDialog, accessToken]);
 
+  const whatsAppPreviewCandidateId = selectedResume?.candidateId;
+
+  useEffect(() => {
+    if (!showWhatsAppDialog || !accessToken || whatsAppPreviewCandidateId == null || !selectedResume) {
+      return;
+    }
+
+    let cancelled = false;
+    setWhatsAppPreviewLoading(true);
+    setWhatsAppPreviewText("");
+
+    getWhatsAppSharePreviewText(accessToken, whatsAppPreviewCandidateId)
+      .then((serverText) => {
+        if (cancelled) return;
+        if (serverText?.trim()) {
+          setWhatsAppPreviewText(serverText.trim());
+        } else {
+          setWhatsAppPreviewText(buildWhatsAppSharePreviewText(selectedResume, createData));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setWhatsAppPreviewText(buildWhatsAppSharePreviewText(selectedResume, createData));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setWhatsAppPreviewLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showWhatsAppDialog, accessToken, whatsAppPreviewCandidateId, createData, selectedResume]);
+
   const whatsAppNoteLooksLikeHtml = (text: string) => /<[a-z][\s\S]*>/i.test(text);
+
+  const handleCopyWhatsAppPreview = async () => {
+    const text = whatsAppPreviewText.trim();
+    if (!text) {
+      showGlobalToast({ severity: "warn", summary: "Nothing to copy", detail: "Preview is still loading.", life: 3000 });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      showGlobalToast({
+        severity: "success",
+        summary: "Copied",
+        detail: "Candidate details preview copied to clipboard.",
+        life: 3000,
+      });
+    } catch {
+      showGlobalToast({
+        severity: "error",
+        summary: "Copy failed",
+        detail: "Could not copy to clipboard. Select the text and copy manually.",
+        life: 4000,
+      });
+    }
+  };
 
   const openWhatsAppDialog = () => {
     if (!selectedResume) {
@@ -507,6 +569,8 @@ useEffect(() => {
   const closeWhatsAppDialog = () => {
     if (sendingWhatsApp) return;
     setShowWhatsAppDialog(false);
+    setWhatsAppPreviewText("");
+    setWhatsAppPreviewLoading(false);
   };
 
   const handleSendWhatsApp = async () => {
@@ -959,7 +1023,7 @@ useEffect(() => {
         onHide={closeWhatsAppDialog}
         modal
         header="Share resume via WhatsApp"
-        style={{ width: "min(520px, 95vw)" }}
+        style={{ width: "min(640px, 96vw)" }}
         footer={
           <div className="flex justify-content-end gap-2">
             <Button type="button" label="Cancel" severity="secondary" outlined onClick={closeWhatsAppDialog} disabled={sendingWhatsApp} />
@@ -979,15 +1043,30 @@ useEffect(() => {
           </div>
         }
       >
-        <p className="text-sm text-600 mt-0 mb-3">
-          Candidate details and the resume PDF are filled by the server into the WhatsApp template. You only choose who receives it (group) and an optional short note (template “Additional message”). Recipients are resolved on the server — do not enter phone numbers here.
-        </p>
-        {selectedResume && (
-          <div className="mb-3">
-            <label className="block font-semibold mb-1">Candidate</label>
-            <InputText value={selectedResume.candidateName} readOnly className="w-full" />
-          </div>
-        )}
+        {/* <p className="text-sm text-600 mt-0 mb-3">
+          Below is the candidate block that matches the WhatsApp template body (from the server when available, otherwise built here). The PDF resume is attached separately. Pick a group and optional additional message; recipients are resolved on the server.
+        </p> */}
+        <div className="flex align-items-center justify-content-between flex-wrap gap-2 mb-1">
+          <label className="block font-semibold m-0">Candidate details preview</label>
+          <Button
+            type="button"
+            label="Copy to clipboard"
+            icon={<FaCopy style={{ marginRight: 6 }} />}
+            size="small"
+            outlined
+            severity="secondary"
+            onClick={handleCopyWhatsAppPreview}
+            disabled={sendingWhatsApp || whatsAppPreviewLoading || !whatsAppPreviewText.trim()}
+          />
+        </div>
+        <InputTextarea
+          readOnly
+          value={whatsAppPreviewLoading ? "Loading preview…" : whatsAppPreviewText}
+          rows={11}
+          className="w-full mb-3"
+          style={{ fontFamily: "ui-monospace, monospace", fontSize: "13px", lineHeight: 1.5 }}
+          disabled={sendingWhatsApp}
+        />
         <label className="block font-semibold mb-1">
           WhatsApp group <span className="text-red-500">*</span>
         </label>

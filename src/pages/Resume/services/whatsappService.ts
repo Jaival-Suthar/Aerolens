@@ -8,7 +8,7 @@ import type {
   QueueWhatsAppSendResumePayload,
   WhatsAppGroupsData,
 } from "../types/resumeTypes";
-
+import { ApiEnvelope } from "../types/whatsappTypes";
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
 
 function makeHeaders(accessToken?: string): HeadersInit {
@@ -16,13 +16,6 @@ function makeHeaders(accessToken?: string): HeadersInit {
   if (accessToken) (headers as Record<string, string>)["Authorization"] = `Bearer ${accessToken}`;
   return headers;
 }
-
-type ApiEnvelope<T> = {
-  success?: boolean;
-  message?: string;
-  data?: T;
-  error?: string;
-};
 
 async function readJson(res: Response): Promise<unknown> {
   try {
@@ -66,6 +59,43 @@ export async function getWhatsAppGroups(accessToken: string | null): Promise<Wha
     return { groups: [] };
   }
   return { groups: data.groups };
+}
+
+/**
+ * GET /whatsapp/candidates/:candidateId/share-preview — template body text ({{1}}–{{8}}) as the server will send.
+ * Returns null if the route is missing or errors (caller should use client fallback).
+ */
+export async function getWhatsAppSharePreviewText(
+  accessToken: string | null,
+  candidateId: number
+): Promise<string | null> {
+  if (!accessToken) return null;
+
+  const res = await fetch(`${API_BASE_URL}/whatsapp/candidates/${candidateId}/share-preview`, {
+    method: "GET",
+    headers: makeHeaders(accessToken),
+    credentials: "include",
+  });
+
+  const body = (await readJson(res)) as ApiEnvelope<Record<string, unknown>> | null;
+
+  if (!res.ok || !body || typeof body !== "object") {
+    return null;
+  }
+
+  const env = body as ApiEnvelope<Record<string, unknown>>;
+  if (env.success === false) return null;
+
+  const data = env.data;
+  if (typeof data === "string" && data.trim()) return data;
+  if (data && typeof data === "object") {
+    const o = data as Record<string, unknown>;
+    for (const key of ["body", "preview", "text", "candidateDetails", "templateBody"]) {
+      const v = o[key];
+      if (typeof v === "string" && v.trim()) return v;
+    }
+  }
+  return null;
 }
 
 export interface QueueWhatsAppSendResumeResponse {
