@@ -5,7 +5,7 @@ import { Button } from "primereact/button";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
-import { FaCopy, FaDownload, FaEye, FaRoute, FaShare, FaWhatsapp } from "react-icons/fa";
+import { FaCopy, FaDownload, FaEye, FaRoute, FaWhatsapp } from "react-icons/fa";
 import BulkExcelUploadButton from "../../../shared/BulkExcepUploadButton";
 import ResumeAddEdit from "../components/resumeAddEdit";
 import ResumeDelete from "./resumeDelete";
@@ -35,7 +35,6 @@ import DetailsSection from "../../../shared/DetailsSection";
 import PremiumDetailsDialog from "../../../shared/PremiumDetailsDialog";
 import ColumnSettingsButton from "../../../shared/ColumnSettingsButton";
 import CandidateRoundsDialog from "../../Interview/components/CandidateRoundsDialog";
-import ResumeShareModal from "./ResumeShareModal";
 import { Dropdown } from "primereact/dropdown";
 import BulkPdfUploadButton from "../../../shared/BulkPdfUploadButton";
 import {
@@ -131,7 +130,6 @@ const ResumeTable: React.FC = () => {
   const pageFromUrl = Number(searchParams.get("page")) || 1;
   const [first, setFirst] = useState((pageFromUrl - 1) * 10);
   const [showRoundsDialog, setShowRoundsDialog] = useState(false);
-  const [shareCandidate, setShareCandidate] = useState<Candidate | null>(null);
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
   const dt = useRef<DataTable<any>>(null);
   const exportDt = useRef<DataTable<any>>(null);
@@ -390,7 +388,6 @@ useEffect(() => {
       <div className="flex gap-1">
         <Button icon={<FaDownload />} className="p-button-outlined p-button-m" tooltip="Download" onClick={() => handleDownloadResume(candidate.candidateId)} />
         <Button icon={<FaEye />} className="p-button-outlined p-button-m" tooltip="Preview" onClick={() => handlePreviewResume(candidate.candidateId)} />
-        <Button icon={<FaShare />} className="p-button-outlined p-button-m" tooltip="Share" onClick={() => setShareCandidate(candidate)} />
       </div>
     );
   };
@@ -1010,13 +1007,6 @@ useEffect(() => {
         candidateId={selectedResume?.candidateId ?? null} 
         candidateName={selectedResume?.candidateName} 
         onHide={() => setShowRoundsDialog(false)} 
-      />
-      <ResumeShareModal
-        visible={!!shareCandidate}
-        onHide={() => setShareCandidate(null)}
-        candidate={shareCandidate}
-        accessToken={accessToken}
-        toastRef={toastRef}
       />
       <Dialog
         visible={showWhatsAppDialog}
