@@ -319,6 +319,8 @@ export interface ResumeBatchStatusResponse {
 /* ------------------ ONBOARDING (Initiate Onboarding dialog) ------------------ */
 
 export type OnboardingDocumentStatus = "Yes" | "No";
+/** Unset until the user chooses Yes or No in the onboarding dialog. */
+export type OnboardingDocumentChoice = OnboardingDocumentStatus | null;
 
 /** Employment type: Employee or Consultant. In production options come from lookup; conditional rendering (Vendor / Offer Letter vs Service Agreement) is unchanged. */
 export type OnboardingEmploymentType = "Employee" | "Consultant";
@@ -341,11 +343,11 @@ export interface OnboardingFormData {
   reportingToId: number | null;
   vendorId: number | null;
   /** Shown when employment type is Employee. */
-  offerLetterSent: OnboardingDocumentStatus;
+  offerLetterSent: OnboardingDocumentChoice;
   /** Shown when employment type is Consultant. */
-  serviceAgreementSent: OnboardingDocumentStatus;
-  ndaSent: OnboardingDocumentStatus;
-  codeOfConductSent: OnboardingDocumentStatus;
+  serviceAgreementSent: OnboardingDocumentChoice;
+  ndaSent: OnboardingDocumentChoice;
+  codeOfConductSent: OnboardingDocumentChoice;
 }
 
 export interface ResumeOnBoardingProps {

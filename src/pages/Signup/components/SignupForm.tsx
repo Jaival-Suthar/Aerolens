@@ -9,6 +9,10 @@ import { SignupFormData } from "../types/signuptypes";
 import { registerUser, fetchMemberCreateData } from "../services/useSignup";
 import PhoneInputField from "../../../shared/components/PhoneInput";
 import { isLikelyE164 } from "../../../shared/utils/phoneE164";
+import {
+  CONTACT_NUMBER_ERROR_MESSAGE,
+  isValidContactNumber,
+} from "../../../shared/validation/contactNumber";
 
 const PASSWORD_REGEX =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()[\]{}\-_=+|\\:;"'<>,./]).{8,}$/;
@@ -93,7 +97,7 @@ export default function SignupForm({
     const e: Record<string, string> = {};
 
     if (!formData.fullName.trim()) e.fullName = "Full name is required";
-    if (!formData.contactNumber.trim())
+    if (!formData.contactNumber.trim()) {
       e.contactNumber = "Contact number is required";
     else if (!isLikelyE164(formData.contactNumber.trim()))
       e.contactNumber =

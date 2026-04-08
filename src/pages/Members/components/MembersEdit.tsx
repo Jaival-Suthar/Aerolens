@@ -14,6 +14,10 @@ import type { Member, MemberPatchPayload, MemberFormData } from '../types/member
 import DialogButton from "../../../shared/DialogAddEditButton";
 import PhoneInputField from "../../../shared/components/PhoneInput";
 import { isLikelyE164 } from "../../../shared/utils/phoneE164";
+import {
+  CONTACT_NUMBER_ERROR_MESSAGE,
+  isValidContactNumber,
+} from "../../../shared/validation/contactNumber";
 
 interface Skill {
   skillName: string;
@@ -231,7 +235,7 @@ const MemberEdit: React.FC<Props> = ({
     }
 
     if (!form.memberContact?.trim()) {
-      newErrors.memberContact = 'Contact number is required';
+      newErrors.memberContact = "Contact number is required";
       isValid = false;
     } else if (!isLikelyE164(form.memberContact.trim())) {
       newErrors.memberContact =
