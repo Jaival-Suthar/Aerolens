@@ -96,6 +96,7 @@ const ROUTES = {
   BASE: "/candidate",
   BY_ID: (id: number) => `/candidate/${id}`,
   RESUME: (id: number) => `/candidate/${id}/resume`,
+  SHARE: (id: number) => `/candidate/${id}/share`,
   BULK_UPLOAD: "/candidate/bulk-upload",   // 👈 ADD THIS
   RESUME_BULK_UPLOAD: "/candidate/resume-bulk-upload",
   RESUME_BULK_STATUS: (batchId: string) =>
@@ -402,6 +403,28 @@ export const uploadResume = async (
     return response;
   } catch (error) {
     logger.error("Error in uploadResume:", error);
+    throw error;
+  }
+};
+
+// -------------------- RESUME SHARE (temporary public link) --------------------
+export type ResumeShareLinkResponse = {
+  shareUrl: string;
+};
+
+export const createResumeShareLink = async (
+  accessToken: string | null,
+  candidateId: number
+): Promise<ResumeShareLinkResponse> => {
+  try {
+    const endpoint = ROUTES.SHARE(candidateId);
+    return await apiFetch<ResumeShareLinkResponse>(
+      endpoint,
+      { method: "POST", body: JSON.stringify({}) },
+      accessToken || undefined
+    );
+  } catch (error) {
+    logger.error("Error creating resume share link:", error);
     throw error;
   }
 };

@@ -145,7 +145,13 @@ export const patchMember = async (
     console.log("patchMember response data:", data);
     if (!response.ok) {
       const msg = data.message || `Failed to update member: ${response.status}`;
-      throw new Error(msg);
+      const err = new Error(msg) as Error & {
+        validationErrors?: Array<{ field: string; message: string }>;
+      };
+      if (data.details?.validationErrors) {
+        err.validationErrors = data.details.validationErrors;
+      }
+      throw err;
     }
 
     if (!data.success) {

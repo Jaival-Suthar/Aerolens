@@ -12,6 +12,8 @@ export interface Candidate {
   recruiterEmail: string | null;     // Read-only from backend
 
   jobProfileRequirementId: number; // Read-only from backend
+  /** Job / role applied for (from joined job profile) */
+  jobRole?: string | null;
 
   expectedLocation: {
     city: string;
@@ -354,4 +356,22 @@ export interface ResumeOnBoardingProps {
   selectedCandidate: Candidate | null;
   createData: CandidateCreateData | null;
   onSuccess: () => void;
+}
+
+/** Row from GET /whatsapp/groups → data.groups */
+export interface WhatsAppGroup {
+  groupId: number;
+  groupName: string;
+}
+
+export interface WhatsAppGroupsData {
+  groups: WhatsAppGroup[];
+}
+
+/** POST /whatsapp/send-resume — FE sends customMessage (backend also accepts message; same meaning). */
+export interface QueueWhatsAppSendResumePayload {
+  candidateId: number;
+  groupId: number;
+  /** Optional plain text for template var 9; max 1024 on backend. */
+  customMessage?: string;
 }

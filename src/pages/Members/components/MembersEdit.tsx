@@ -12,6 +12,8 @@ import { patchMember, getMemberById } from '../services/memberService';
 import { useAuth } from '../../../shared/auth/AuthContext';
 import type { Member, MemberPatchPayload, MemberFormData } from '../types/memberTypes';
 import DialogButton from "../../../shared/DialogAddEditButton";
+import PhoneInputField from "../../../shared/components/PhoneInput";
+import { isLikelyE164 } from "../../../shared/utils/phoneE164";
 import {
   CONTACT_NUMBER_ERROR_MESSAGE,
   isValidContactNumber,
@@ -235,8 +237,9 @@ const MemberEdit: React.FC<Props> = ({
     if (!form.memberContact?.trim()) {
       newErrors.memberContact = "Contact number is required";
       isValid = false;
-    } else if (!isValidContactNumber(form.memberContact)) {
-      newErrors.memberContact = CONTACT_NUMBER_ERROR_MESSAGE;
+    } else if (!isLikelyE164(form.memberContact.trim())) {
+      newErrors.memberContact =
+        'Enter a valid international number with country code (e.g. +91…, +44…).';
       isValid = false;
     }
 
@@ -302,14 +305,27 @@ const MemberEdit: React.FC<Props> = ({
       });
       onSuccess();
       onHide();
-    } catch (error: any) {
-    toast.current?.show({
-      severity: 'error',
-      summary: 'Validation Error',
-      detail: error.message || 'Please fix highlighted fields',
-      life: 2000,
-    });
-  } finally {
+    } catch (error: unknown) {
+      const err = error as Error & {
+        validationErrors?: Array<{ field: string; message: string }>;
+      };
+      const ve = err.validationErrors;
+      if (Array.isArray(ve)) {
+        const next: FormErrors = { ...errors };
+        for (const row of ve) {
+          if (row.field === 'memberContact') next.memberContact = row.message;
+          if (row.field === 'email') next.email = row.message;
+          if (row.field === 'memberName') next.memberName = row.message;
+        }
+        setErrors(next);
+      }
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Validation Error',
+        detail: err.message || 'Please fix highlighted fields',
+        life: 3000,
+      });
+    } finally {
       setSubmitting(false);
     }
   };
@@ -370,15 +386,13 @@ const MemberEdit: React.FC<Props> = ({
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
                 Contact Number *
               </label>
-              <InputText
+              <PhoneInputField
+                id="member-contact-e164"
                 value={form.memberContact || ''}
-                onChange={e => updateField('memberContact', e.target.value)}
-                className={classNames({ 'p-invalid': errors.memberContact })}
-                placeholder="+91 9876543210"
-                maxLength={22}
-                style={{ width: '100%' }}
+                onChange={(v) => updateField('memberContact', v)}
+                disabled={submitting || loading}
+                error={errors.memberContact}
               />
-              {errors.memberContact && <small style={{ color: 'red' }}>{errors.memberContact}</small>}
             </div>
 
             {/* Email */}
