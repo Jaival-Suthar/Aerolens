@@ -16,7 +16,7 @@ import { useSearchParams } from "react-router-dom";
 import DateRangeFilter from "../../InterviewReport/components/DateRangeFilter";
 import { Candidate, CandidateCreateData, type WhatsAppGroup } from "../types/resumeTypes";
 import { getCandidates, downloadResume, fetchCandidateCreateData, bulkUploadCandidates, bulkUploadResumes } from "../services/useResume";
-import { getWhatsAppGroups, getWhatsAppSharePreviewText, queueWhatsAppSendResume } from "../services/whatsappService";
+import { getWhatsAppGroups, getWhatsAppShareLog, queueWhatsAppSendResume } from "../services/whatsappService";
 import { buildWhatsAppSharePreviewText } from "../utils/whatsappSharePreview";
 import { showGlobalToast } from "../../../shared/services/globalToastService";
 import { useAuth } from "../../../shared/auth/AuthContext";
@@ -103,6 +103,76 @@ const DEFAULT_COLUMN_FIELDS = ["dateOfEntry","candidateName", "contact", "jobRol
 const COLUMN_STORAGE_KEY = "candidateTable.visibleColumns";
 /** Backend max for customMessage / template {{9}} */
 const WHATSAPP_NOTE_MAX_LENGTH = 1024;
+const WHATSAPP_POLL_INTERVAL_MS = 2000;
+const WHATSAPP_POLL_MAX_ATTEMPTS = 120;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Poll GET /whatsapp/shares/:queueId until queue status is DONE or FAILED; final toast uses global host (works across routes). */
+async function pollWhatsAppShareUntilTerminal(
+  accessToken: string,
+  queueId: number,
+  candidateLabel: string
+): Promise<void> {
+  for (let attempt = 0; attempt < WHATSAPP_POLL_MAX_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      await delay(WHATSAPP_POLL_INTERVAL_MS);
+    }
+    try {
+      const data = await getWhatsAppShareLog(accessToken, queueId);
+      const status = String(data.queue.status || "").toUpperCase();
+
+      if (status === "DONE") {
+        const msgs = data.messages;
+        const sent = msgs.filter((m) => String(m.messageStatus || "").toUpperCase() === "SENT").length;
+        const failed = msgs.filter((m) => String(m.messageStatus || "").toUpperCase() === "FAILED").length;
+        let detail =
+          msgs.length === 0
+            ? "Job finished; no per-recipient log rows returned."
+            : `${sent} sent${failed ? `, ${failed} failed` : ""}.`;
+        const firstFail = msgs.find((m) => String(m.messageStatus || "").toUpperCase() === "FAILED");
+        if (firstFail?.errorMessage?.trim()) {
+          detail += ` ${firstFail.errorMessage.trim()}`;
+        }
+        showGlobalToast({
+          severity: failed > 0 ? "warn" : "success",
+          summary: `WhatsApp share #${queueId} complete`,
+          detail: `${candidateLabel}: ${detail}`,
+          life: 8000,
+        });
+        return;
+      }
+
+      if (status === "FAILED") {
+        showGlobalToast({
+          severity: "error",
+          summary: `WhatsApp share #${queueId} failed`,
+          detail: `${candidateLabel}: The job did not complete successfully.`,
+          life: 8000,
+        });
+        return;
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Could not load share status.";
+      showGlobalToast({
+        severity: "error",
+        summary: "WhatsApp share status",
+        detail: msg,
+        life: 7000,
+      });
+      return;
+    }
+  }
+
+  showGlobalToast({
+    severity: "warn",
+    summary: "WhatsApp share status",
+    detail: `Job #${queueId} (${candidateLabel}): timed out waiting for completion.`,
+    life: 8000,
+  });
+}
 
 const ResumeTable: React.FC = () => {
   const { accessToken } = useAuth();
@@ -121,8 +191,6 @@ const ResumeTable: React.FC = () => {
   const [whatsAppGroupError, setWhatsAppGroupError] = useState<string | null>(null);
   const [whatsAppSelectedGroupId, setWhatsAppSelectedGroupId] = useState<number | null>(null);
   const [whatsAppNote, setWhatsAppNote] = useState("");
-  const [whatsAppPreviewText, setWhatsAppPreviewText] = useState("");
-  const [whatsAppPreviewLoading, setWhatsAppPreviewLoading] = useState(false);
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const toastRef = useRef<Toast>(null);
   const [rows, setRows] = useState(20);
@@ -487,46 +555,18 @@ useEffect(() => {
     };
   }, [showWhatsAppDialog, accessToken]);
 
-  const whatsAppPreviewCandidateId = selectedResume?.candidateId;
-
-  useEffect(() => {
-    if (!showWhatsAppDialog || !accessToken || whatsAppPreviewCandidateId == null || !selectedResume) {
-      return;
-    }
-
-    let cancelled = false;
-    setWhatsAppPreviewLoading(true);
-    setWhatsAppPreviewText("");
-
-    getWhatsAppSharePreviewText(accessToken, whatsAppPreviewCandidateId)
-      .then((serverText) => {
-        if (cancelled) return;
-        if (serverText?.trim()) {
-          setWhatsAppPreviewText(serverText.trim());
-        } else {
-          setWhatsAppPreviewText(buildWhatsAppSharePreviewText(selectedResume, createData));
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setWhatsAppPreviewText(buildWhatsAppSharePreviewText(selectedResume, createData));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setWhatsAppPreviewLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [showWhatsAppDialog, accessToken, whatsAppPreviewCandidateId, createData, selectedResume]);
+  /** Client-side preview only (official API is GET groups + POST send-resume; template body is built on the server when sending). */
+  const whatsAppSharePreviewDisplay = useMemo(() => {
+    if (!showWhatsAppDialog || !selectedResume) return "";
+    return buildWhatsAppSharePreviewText(selectedResume, createData);
+  }, [showWhatsAppDialog, selectedResume, createData]);
 
   const whatsAppNoteLooksLikeHtml = (text: string) => /<[a-z][\s\S]*>/i.test(text);
 
   const handleCopyWhatsAppPreview = async () => {
-    const text = whatsAppPreviewText.trim();
+    const text = whatsAppSharePreviewDisplay.trim();
     if (!text) {
-      showGlobalToast({ severity: "warn", summary: "Nothing to copy", detail: "Preview is still loading.", life: 3000 });
+      showGlobalToast({ severity: "warn", summary: "Nothing to copy", detail: "No candidate preview available.", life: 3000 });
       return;
     }
     try {
@@ -566,8 +606,6 @@ useEffect(() => {
   const closeWhatsAppDialog = () => {
     if (sendingWhatsApp) return;
     setShowWhatsAppDialog(false);
-    setWhatsAppPreviewText("");
-    setWhatsAppPreviewLoading(false);
   };
 
   const handleSendWhatsApp = async () => {
@@ -608,17 +646,23 @@ useEffect(() => {
         groupId: whatsAppSelectedGroupId,
         ...(note ? { customMessage: note } : {}),
       });
-      toastRef.current?.show({
-        severity: "success",
-        summary: "WhatsApp queued",
-        detail:
-          result.message?.trim() ||
-          "Share request accepted. Sending runs in the background; delivery is not confirmed here.",
-        life: 5000,
-      });
+      const name = selectedResume.candidateName;
       setShowWhatsAppDialog(false);
       setWhatsAppSelectedGroupId(null);
       setWhatsAppNote("");
+      showGlobalToast({
+        severity: "info",
+        summary: "WhatsApp queued",
+        detail:
+          result.queueId != null
+            ? `Job #${result.queueId} for ${name}. Checking recipient results…`
+            : result.message?.trim() ||
+              "Share accepted but no job id was returned; per-recipient status unavailable.",
+        life: 4500,
+      });
+      if (accessToken && result.queueId != null) {
+        void pollWhatsAppShareUntilTerminal(accessToken, result.queueId, name);
+      }
     } catch (error: unknown) {
       let message = "Failed to queue WhatsApp share.";
       if (error instanceof Error) message = error.message;
@@ -626,7 +670,7 @@ useEffect(() => {
         const m = (error as { message?: unknown }).message;
         if (typeof m === "string" && m.trim()) message = m;
       }
-      toastRef.current?.show({ severity: "error", summary: "Queue failed", detail: message, life: 5000 });
+      showGlobalToast({ severity: "error", summary: "Queue failed", detail: message, life: 5000 });
     } finally {
       setSendingWhatsApp(false);
     }
@@ -1033,8 +1077,8 @@ useEffect(() => {
           </div>
         }
       >
-        {/* <p className="text-sm text-600 mt-0 mb-3">
-          Below is the candidate block that matches the WhatsApp template body (from the server when available, otherwise built here). The PDF resume is attached separately. Pick a group and optional additional message; recipients are resolved on the server.
+        {/*         <p className="text-sm text-600 mt-0 mb-3">
+          Preview below matches the WhatsApp template body fields (Meta vars 1–8); the server builds the final text when you queue send. The PDF resume is attached separately via the backend. Pick a group and optional additional message (var 9); recipients are resolved on the server only.
         </p> */}
         <div className="flex align-items-center justify-content-between flex-wrap gap-2 mb-1">
           <label className="block font-semibold m-0">Candidate details preview</label>
@@ -1046,12 +1090,12 @@ useEffect(() => {
             outlined
             severity="secondary"
             onClick={handleCopyWhatsAppPreview}
-            disabled={sendingWhatsApp || whatsAppPreviewLoading || !whatsAppPreviewText.trim()}
+            disabled={sendingWhatsApp || !whatsAppSharePreviewDisplay.trim()}
           />
         </div>
         <InputTextarea
           readOnly
-          value={whatsAppPreviewLoading ? "Loading preview…" : whatsAppPreviewText}
+          value={whatsAppSharePreviewDisplay}
           rows={11}
           className="w-full mb-3"
           style={{ fontFamily: "ui-monospace, monospace", fontSize: "13px", lineHeight: 1.5 }}

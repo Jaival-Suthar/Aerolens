@@ -366,10 +366,10 @@ export interface WhatsAppGroupsData {
   groups: WhatsAppGroup[];
 }
 
-/** POST /whatsapp/send-resume — only customMessage (not `message`) is sent from FE per API contract. */
+/** POST /whatsapp/send-resume — FE sends customMessage (backend also accepts message; same meaning). */
 export interface QueueWhatsAppSendResumePayload {
   candidateId: number;
   groupId: number;
-  /** Optional plain text for template {{9}}; max 1024 on backend. */
+  /** Optional plain text for template var 9; max 1024 on backend. */
   customMessage?: string;
 }
