@@ -7,6 +7,8 @@ import DialogButton from "../../../shared/DialogAddEditButton";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import { SignupFormData } from "../types/signuptypes";
 import { registerUser, fetchMemberCreateData } from "../services/useSignup";
+import PhoneInputField from "../../../shared/components/PhoneInput";
+import { isLikelyE164 } from "../../../shared/utils/phoneE164";
 
 const PASSWORD_REGEX =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()[\]{}\-_=+|\\:;"'<>,./]).{8,}$/;
@@ -93,6 +95,9 @@ export default function SignupForm({
     if (!formData.fullName.trim()) e.fullName = "Full name is required";
     if (!formData.contactNumber.trim())
       e.contactNumber = "Contact number is required";
+    else if (!isLikelyE164(formData.contactNumber.trim()))
+      e.contactNumber =
+        "Enter a valid international number with country code (e.g. +91…, +44…).";
     if (!formData.email.trim()) e.email = "Email is required";
     if (!formData.designationId) {
       e.designationId = "Designation is required";
@@ -141,12 +146,23 @@ export default function SignupForm({
       onSuccess?.(res.message || "User created successfully");
       onHide(); // Close dialog on success
       
-    } catch (error: any) {
-      console.log("❌ Error message:", error.message);
-      
-      // Ensure onError is called
-      const errorMsg = error.message || "Registration failed. Please try again.";
-      
+    } catch (error: unknown) {
+      const err = error as {
+        message?: string;
+        details?: { validationErrors?: Array<{ field: string; message: string }> };
+      };
+      console.log("❌ Error message:", err.message);
+
+      let errorMsg = err.message || "Registration failed. Please try again.";
+      const ve = err.details?.validationErrors;
+      if (Array.isArray(ve)) {
+        const row = ve.find((r) => r.field === "memberContact");
+        if (row?.message) {
+          errorMsg = row.message;
+          setErrors((p) => ({ ...p, contactNumber: row.message }));
+        }
+      }
+
       if (onError) {
         onError(errorMsg);
       } else {
@@ -180,16 +196,18 @@ export default function SignupForm({
           <small className="p-error">{errors.fullName}</small>
         </div>
 
-        {/* Contact */}
         <div className="field col-12 md:col-6">
           <label>Contact Number *</label>
-          <InputText
-            name="contactNumber"
+          <PhoneInputField
+            id="signup-contact-e164"
             value={formData.contactNumber}
-            onChange={handleChange}
-            className={errors.contactNumber ? "p-invalid" : ""}
+            onChange={(v) => {
+              setFormData((p) => ({ ...p, contactNumber: v }));
+              setErrors((p) => ({ ...p, contactNumber: "" }));
+            }}
+            disabled={loading}
+            error={errors.contactNumber || null}
           />
-          <small className="p-error">{errors.contactNumber}</small>
         </div>
 
         {/* Email */}
