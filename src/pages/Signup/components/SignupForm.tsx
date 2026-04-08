@@ -99,9 +99,10 @@ export default function SignupForm({
     if (!formData.fullName.trim()) e.fullName = "Full name is required";
     if (!formData.contactNumber.trim()) {
       e.contactNumber = "Contact number is required";
-    else if (!isLikelyE164(formData.contactNumber.trim()))
+    } else if (!isLikelyE164(formData.contactNumber.trim())) {
       e.contactNumber =
         "Enter a valid international number with country code (e.g. +91…, +44…).";
+    }
     if (!formData.email.trim()) e.email = "Email is required";
     if (!formData.designationId) {
       e.designationId = "Designation is required";
