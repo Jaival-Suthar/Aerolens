@@ -95,8 +95,9 @@ export interface WhatsAppMessageLogRow {
   messageLogId: number;
   candidateId: number;
   groupId: number;
-  memberId: number;
-  phoneNumber: string;
+  /** Null when the worker logs a sentinel row before recipients were resolved. */
+  memberId: number | null;
+  phoneNumber: string | null;
   messageStatus: string;
   metaMessageId: string | null;
   errorMessage: string | null;
@@ -150,21 +151,24 @@ function normalizeMessageLogRow(raw: unknown): WhatsAppMessageLogRow | null {
   const messageLogId = readFiniteNumber(o.messageLogId ?? o.message_log_id ?? o.id);
   const candidateId = readFiniteNumber(o.candidateId ?? o.candidate_id);
   const groupId = readFiniteNumber(o.groupId ?? o.group_id);
-  const memberId = readFiniteNumber(o.memberId ?? o.member_id);
-  if (
-    !Number.isFinite(messageLogId) ||
-    !Number.isFinite(candidateId) ||
-    !Number.isFinite(groupId) ||
-    !Number.isFinite(memberId)
-  ) {
+  if (!Number.isFinite(messageLogId) || !Number.isFinite(candidateId) || !Number.isFinite(groupId)) {
     return null;
   }
+  const rawMember = o.memberId ?? o.member_id;
+  const memberId =
+    rawMember == null || rawMember === ""
+      ? null
+      : readFiniteNumber(rawMember);
+  const memberIdNorm = memberId != null && Number.isFinite(memberId) ? memberId : null;
+  const rawPhone = o.phoneNumber ?? o.phone_number;
+  const phoneNumber =
+    rawPhone == null || rawPhone === "" ? null : readString(rawPhone);
   return {
     messageLogId,
     candidateId,
     groupId,
-    memberId,
-    phoneNumber: readString(o.phoneNumber ?? o.phone_number),
+    memberId: memberIdNorm,
+    phoneNumber,
     messageStatus: readString(o.messageStatus ?? o.message_status),
     metaMessageId: readNullableString(o.metaMessageId ?? o.meta_message_id),
     errorMessage: readNullableString(o.errorMessage ?? o.error_message),
