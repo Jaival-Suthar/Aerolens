@@ -11,14 +11,8 @@ import {
 } from './useResume';
 import type { Candidate, AddEditCandidate } from '../types/resumeTypes';
 
-// Mock environment variables
-const MOCK_BASE_URL = 'https://aerolens-backend.onrender.com';
-vi.stubGlobal('import.meta', {
-  env: {
-    VITE_BASE_URL: MOCK_BASE_URL,
-    DEV: false,
-  },
-});
+/** Matches runtime VITE_BASE_URL baked into the module at build/test time */
+const API_BASE = import.meta.env.VITE_BASE_URL as string;
 
 // Mock AuthContext
 vi.mock('../../../shared/auth/AuthContext', () => ({
@@ -73,7 +67,7 @@ describe('Candidate Service', () => {
       const result = await createCandidate('mock-token-123', mockCandidate);
 
       expect(fetch).toHaveBeenCalledWith(
-        `${MOCK_BASE_URL}/candidate`,
+        `${API_BASE}/candidate`,
         expect.objectContaining({
           method: 'POST',
           credentials: 'include',
@@ -118,7 +112,7 @@ describe('Candidate Service', () => {
       const result = await createCandidate('mock-token-123', mockCandidate);
 
       expect(fetch).toHaveBeenCalledWith(
-        `${MOCK_BASE_URL}/candidate`,
+        `${API_BASE}/candidate`,
         expect.objectContaining({
           method: 'POST',
           credentials: 'include',
@@ -153,12 +147,12 @@ describe('Candidate Service', () => {
         ok: false,
         status: 400,
         statusText: 'Bad Request',
-        text: async () => 'Invalid email format',
+        json: async () => ({ message: 'Invalid email format' }),
       } as Response);
 
-      await expect(createCandidate('mock-token-123', mockCandidate)).rejects.toThrow(
-        'API Error (400)'
-      );
+      await expect(createCandidate('mock-token-123', mockCandidate)).rejects.toEqual({
+        message: 'Invalid email format',
+      });
     });
   });
 
@@ -203,13 +197,13 @@ describe('Candidate Service', () => {
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ data: { candidates: mockCandidates, totalCount: 2 } }),
+        json: async () => ({ data: mockCandidates }),
       } as Response);
 
       const result = await getCandidates('mock-token-123', 1, 10);
 
       expect(fetch).toHaveBeenCalledWith(
-        `${MOCK_BASE_URL}/candidate?page=1&limit=10`,
+        `${API_BASE}/candidate?page=1&limit=10`,
         expect.objectContaining({
           method: 'GET',
           credentials: 'include',
@@ -224,7 +218,7 @@ describe('Candidate Service', () => {
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ data: { candidates: [] } }),
+        json: async () => ({ data: [] }),
       } as Response);
 
       const result = await getCandidates('mock-token-123', 1, 10);
@@ -239,13 +233,13 @@ describe('Candidate Service', () => {
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ data: { candidates: mockCandidates } }),
+        json: async () => ({ data: mockCandidates }),
       } as Response);
 
       await getCandidates('mock-token-123');
 
       expect(fetch).toHaveBeenCalledWith(
-        `${MOCK_BASE_URL}/candidate?page=1&limit=10`,
+        `${API_BASE}/candidate?page=1&limit=10`,
         expect.objectContaining({
           method: 'GET',
           credentials: 'include',
@@ -292,7 +286,7 @@ describe('Candidate Service', () => {
       const result = await updateCandidate('mock-token-123', 1, updatePayload);
 
       expect(fetch).toHaveBeenCalledWith(
-  `${MOCK_BASE_URL}/candidate/1`,
+  `${API_BASE}/candidate/1`,
   expect.objectContaining({
     method: 'PATCH',
     headers: expect.objectContaining({
@@ -326,11 +320,12 @@ describe('Candidate Service', () => {
         ok: false,
         status: 404,
         statusText: 'Not Found',
+        json: async () => ({ message: 'Not Found' }),
       } as Response);
 
-      await expect(updateCandidate('mock-token-123', 999, updatePayload)).rejects.toThrow(
-        'Failed to update candidate: Not Found'
-      );
+      await expect(updateCandidate('mock-token-123', 999, updatePayload)).rejects.toEqual({
+        message: 'Not Found',
+      });
     });
   });
 
@@ -348,7 +343,7 @@ describe('Candidate Service', () => {
       await deleteCandidate('mock-token-123', 1);
 
       expect(fetch).toHaveBeenCalledWith(
-        `${MOCK_BASE_URL}/candidate/1`,
+        `${API_BASE}/candidate/1`,
         expect.objectContaining({
           method: 'DELETE',
           credentials: 'include',
@@ -367,10 +362,12 @@ describe('Candidate Service', () => {
         ok: false,
         status: 404,
         statusText: 'Not Found',
-        text: async () => 'Candidate not found',
+        json: async () => ({ message: 'Candidate not found' }),
       } as Response);
 
-      await expect(deleteCandidate('mock-token-123', 999)).rejects.toThrow('API Error (404)');
+      await expect(deleteCandidate('mock-token-123', 999)).rejects.toEqual({
+        message: 'Candidate not found',
+      });
     });
 
     it('should handle server error on delete', async () => {
@@ -378,10 +375,12 @@ describe('Candidate Service', () => {
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
-        text: async () => 'Database connection failed',
+        json: async () => ({ message: 'Database connection failed' }),
       } as Response);
 
-      await expect(deleteCandidate('mock-token-123', 1)).rejects.toThrow('API Error (500)');
+      await expect(deleteCandidate('mock-token-123', 1)).rejects.toEqual({
+        message: 'Database connection failed',
+      });
     });
   });
 
@@ -405,7 +404,7 @@ describe('Candidate Service', () => {
       const result = await uploadResume('mock-token-123', 1, mockFile);
 
       expect(fetch).toHaveBeenCalledWith(
-        `${MOCK_BASE_URL}/candidate/1/resume`,
+        `${API_BASE}/candidate/1/resume`,
         expect.objectContaining({
           method: 'POST',
           credentials: 'include',
@@ -426,10 +425,12 @@ describe('Candidate Service', () => {
         ok: false,
         status: 413,
         statusText: 'Payload Too Large',
-        text: async () => 'File size exceeds limit',
+        json: async () => ({ message: 'File size exceeds limit' }),
       } as Response);
 
-      await expect(uploadResume('mock-token-123', 1, mockFile)).rejects.toThrow('API Error (413)');
+      await expect(uploadResume('mock-token-123', 1, mockFile)).rejects.toEqual({
+        message: 'File size exceeds limit',
+      });
     });
   });
 
@@ -449,7 +450,7 @@ describe('Candidate Service', () => {
       const result = await downloadResume('mock-token-123', 1);
 
       expect(fetch).toHaveBeenCalledWith(
-        `${MOCK_BASE_URL}/candidate/1/resume`,
+        `${API_BASE}/candidate/1/resume`,
         expect.objectContaining({
           headers: expect.any(Object),
         })
@@ -462,12 +463,12 @@ describe('Candidate Service', () => {
         ok: false,
         status: 404,
         statusText: 'Not Found',
-        text: async () => 'Resume not found',
+        json: async () => ({ message: 'Resume not found' }),
       } as Response);
 
-      await expect(downloadResume('mock-token-123', 1)).rejects.toThrow(
-        'Failed to download resume: Resume not found'
-      );
+      await expect(downloadResume('mock-token-123', 1)).rejects.toEqual({
+        message: 'Resume not found',
+      });
     });
 
     it('should handle server error on download', async () => {
@@ -475,12 +476,12 @@ describe('Candidate Service', () => {
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
-        text: async () => 'Server error',
+        json: async () => ({ message: 'Server error' }),
       } as Response);
 
-      await expect(downloadResume('mock-token-123', 1)).rejects.toThrow(
-        'Failed to download resume: Server error'
-      );
+      await expect(downloadResume('mock-token-123', 1)).rejects.toEqual({
+        message: 'Server error',
+      });
     });
   });
 
@@ -490,13 +491,13 @@ describe('Candidate Service', () => {
   describe('getResumeDownloadUrl', () => {
     it('should return correct download URL', () => {
       const url = getResumeDownloadUrl(1);
-      expect(url).toBe(`${MOCK_BASE_URL}/candidate/1/resume`);
+      expect(url).toBe(`${API_BASE}/candidate/1/resume`);
     });
 
     it('should return correct download URL for different candidate IDs', () => {
-      expect(getResumeDownloadUrl(1)).toBe(`${MOCK_BASE_URL}/candidate/1/resume`);
-      expect(getResumeDownloadUrl(42)).toBe(`${MOCK_BASE_URL}/candidate/42/resume`);
-      expect(getResumeDownloadUrl(999)).toBe(`${MOCK_BASE_URL}/candidate/999/resume`);
+      expect(getResumeDownloadUrl(1)).toBe(`${API_BASE}/candidate/1/resume`);
+      expect(getResumeDownloadUrl(42)).toBe(`${API_BASE}/candidate/42/resume`);
+      expect(getResumeDownloadUrl(999)).toBe(`${API_BASE}/candidate/999/resume`);
     });
   });
 

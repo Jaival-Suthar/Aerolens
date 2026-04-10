@@ -3,25 +3,32 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import ResumeAddEdit from "../components/resumeAddEdit";
-import {
-  createCandidate,
-  updateCandidate,
-  uploadResume,
-} from "../services/useResume";
 
 const mockCreateCandidate = vi.hoisted(() => vi.fn());
 const mockUpdateCandidate = vi.hoisted(() => vi.fn());
 const mockUploadResume = vi.hoisted(() => vi.fn());
+const mockGetCandidateById = vi.hoisted(() => vi.fn());
 
-vi.mock('../../../shared/auth/AuthContext', () => ({
+vi.mock("../../../shared/auth/AuthContext", () => ({
   useAuth: () => ({
-    accessToken: 'mock-token-123',
+    accessToken: "mock-token-123",
     isAuthenticated: true,
     login: vi.fn(),
     logout: vi.fn(),
     logoutAll: vi.fn(),
     refreshAccessToken: vi.fn(),
-  })
+  }),
+}));
+
+vi.mock("../../../shared/store/profile", () => ({
+  useProfileStore: () => ({ member: null }),
+}));
+
+vi.mock("primereact/toast", () => ({
+  Toast: React.forwardRef((_props, ref) => {
+    React.useImperativeHandle(ref, () => ({ show: vi.fn() }));
+    return <div data-testid="toast" />;
+  }),
 }));
 // ---------- MOCKS ----------
 vi.mock("primereact/dialog", () => ({
@@ -111,27 +118,99 @@ vi.mock("../services/useResume", () => ({
   createCandidate: mockCreateCandidate,
   updateCandidate: mockUpdateCandidate,
   uploadResume: mockUploadResume,
+  getCandidateById: mockGetCandidateById,
 }));
 
-vi.mock("react-icons/fa", () => ({
-  FaCheck: () => <span data-testid="icon-check">✓</span>,
-}));
+vi.mock("react-icons/fa", () => {
+  const Stub = (props: { children?: React.ReactNode }) => (
+    <span data-testid="fa-icon">{props.children}</span>
+  );
+  return new Proxy(
+    { __esModule: true } as Record<string, unknown>,
+    {
+      get(_, prop: string | symbol) {
+        if (prop === "__esModule") return true;
+        return Stub;
+      },
+    }
+  );
+});
+
+const MOCK_CREATE_DATA = {
+  recruiters: [
+    { recruiterId: 1, recruiterName: "Jayraj" },
+    { recruiterId: 2, recruiterName: "Khushi" },
+  ],
+  vendors: [],
+  locations: [
+    { city: "Ahmedabad", country: "India" },
+    { city: "Bangalore", country: "India" },
+  ],
+  jobProfiles: [
+    {
+      jobProfileRequirementId: 1,
+      jobRole: "Frontend Dev",
+      clientName: "Acme",
+      departmentName: "Eng",
+      city: "Ahmedabad",
+      country: "India",
+      experienceText: "3",
+    },
+  ],
+  currencies: [
+    { currencyId: 1, currencyName: "INR" },
+    { currencyId: 2, currencyName: "USD" },
+  ],
+  compensationTypes: [
+    { compensationTypeId: 1, compensationTypeName: "Annual" },
+    { compensationTypeId: 2, compensationTypeName: "Hourly" },
+  ],
+  workModes: [{ workModeId: 1, workMode: "Remote" }],
+} as const;
 
 // ---------- HELPERS ----------
-const renderComponent = (props = {}) => {
+const renderComponent = (props: Record<string, unknown> = {}) => {
   const defaultProps = {
     visible: true,
     onHide: vi.fn(),
     onSuccess: vi.fn(),
     selectedResume: null,
+    createData: MOCK_CREATE_DATA,
+    loadingOptions: false,
+    existingCandidates: [],
   };
-  return render(<ResumeAddEdit {...defaultProps} {...props} />);
+  return render(<ResumeAddEdit {...(defaultProps as any)} {...(props as any)} />);
 };
 
 // ---------- TESTS ----------
 describe("ResumeAddEdit Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetCandidateById.mockImplementation(async (_token: string, id: number) => ({
+      candidateId: id,
+      candidateName: "Bob",
+      contactNumber: "9876543210",
+      email: "bob@example.com",
+      recruiterId: 2,
+      recruiterName: "Khushi",
+      vendorId: null,
+      referredBy: undefined,
+      jobProfileRequirementId: 1,
+      expectedLocation: { city: "Bangalore", country: "India" },
+      currentLocation: null,
+      currentCTCAmount: null,
+      currentCTCCurrencyId: null,
+      currentCTCTypeId: null,
+      expectedCTCAmount: null,
+      expectedCTCCurrencyId: null,
+      expectedCTCTypeId: null,
+      noticePeriod: 45,
+      experienceYears: 5,
+      linkedinProfileUrl: "https://linkedin.com/in/bob",
+      notes: undefined,
+      workMode: null,
+      workModeId: null,
+    }));
   });
 
   it("renders add dialog with empty fields", () => {
@@ -300,10 +379,14 @@ describe("ResumeAddEdit Component", () => {
     await userEvent.click(screen.getByText("Update Candidate"));
 
     await waitFor(() => {
-      expect(updateCandidate).toHaveBeenCalledTimes(1);
-      expect(updateCandidate).toHaveBeenCalledWith('mock-token-123',10, expect.any(Object));
-      expect(uploadResume).toHaveBeenCalledTimes(1);
-      expect(uploadResume).toHaveBeenCalledWith('mock-token-123',10, file);
+      expect(mockUpdateCandidate).toHaveBeenCalledTimes(1);
+      expect(mockUpdateCandidate).toHaveBeenCalledWith(
+        "mock-token-123",
+        10,
+        expect.any(Object)
+      );
+      expect(mockUploadResume).toHaveBeenCalledTimes(1);
+      expect(mockUploadResume).toHaveBeenCalledWith("mock-token-123", 10, file);
     });
   });
 

@@ -86,17 +86,21 @@ vi.mock("primereact/button", () => ({
   ),
 }));
 
-// Mock react-icons
-vi.mock("react-icons/fa", () => ({
-  FaBriefcase: () => <span data-testid="icon-briefcase" />,
-  FaUsers: () => <span data-testid="icon-users" />,
-  FaDatabase: () => <span data-testid="icon-database" />,
-  FaFile: () => <span data-testid="icon-file" />,
-  FaChartBar: () => <span data-testid="icon-chartbar" />,
-  FaIdCard: () => <span data-testid="icon-idcard" />,
-  FaCog: () => <span data-testid="icon-cog" />,
-  FaUser: () => <span data-testid="icon-user" />,
-}));
+vi.mock("react-icons/fa", () => {
+  const Stub = () => <span data-testid="fa-icon-stub" />;
+  const named: Record<string, unknown> = {
+    __esModule: true,
+    FaCog: () => <span data-testid="icon-cog" />,
+    FaUser: () => <span data-testid="icon-user" />,
+  };
+  return new Proxy(named, {
+    get(t, p: string | symbol) {
+      if (typeof p === "string" && p in t) return t[p];
+      if (p === "__esModule") return true;
+      return Stub;
+    },
+  });
+});
 
 describe("AppNavbar", () => {
   beforeEach(() => {

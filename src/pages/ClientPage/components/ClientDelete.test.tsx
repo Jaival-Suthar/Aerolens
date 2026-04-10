@@ -1,7 +1,7 @@
 // ClientDelete.test.tsx
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import ClientDelete from "../components/clientDelete";
 import type { ClientType } from "../types/clientTypes";
 
@@ -24,7 +24,12 @@ vi.mock("../../../shared/DialogDeleteButton", () => ({
       <button onClick={onCancel} data-testid="cancel-button">
         Cancel
       </button>
-      <button onClick={onDelete} data-testid="delete-button">
+      <button
+        onClick={() => {
+          void Promise.resolve(onDelete()).catch(() => {});
+        }}
+        data-testid="delete-button"
+      >
         Delete
       </button>
     </div>
@@ -117,7 +122,7 @@ describe("ClientDelete", () => {
     expect(mockOnDelete).not.toHaveBeenCalled();
   });
 
-  it("calls onDelete with client and onHide when delete button is clicked", () => {
+    it("calls onDelete with client and onHide when delete button is clicked", async () => {
     render(
       <ClientDelete
         visible={true}
@@ -130,12 +135,14 @@ describe("ClientDelete", () => {
     const deleteButton = screen.getByTestId("delete-button");
     fireEvent.click(deleteButton);
 
-    expect(mockOnDelete).toHaveBeenCalledTimes(1);
-    expect(mockOnDelete).toHaveBeenCalledWith(mockClient);
-    expect(mockOnHide).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(mockOnDelete).toHaveBeenCalledTimes(1);
+      expect(mockOnDelete).toHaveBeenCalledWith(mockClient);
+      expect(mockOnHide).toHaveBeenCalledTimes(1);
+    });
   });
 
-  it("calls onDelete with null when client is null", () => {
+  it("calls onDelete with null when client is null", async () => {
     render(
       <ClientDelete
         visible={true}
@@ -148,9 +155,11 @@ describe("ClientDelete", () => {
     const deleteButton = screen.getByTestId("delete-button");
     fireEvent.click(deleteButton);
 
-    expect(mockOnDelete).toHaveBeenCalledTimes(1);
-    expect(mockOnDelete).toHaveBeenCalledWith(null);
-    expect(mockOnHide).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(mockOnDelete).toHaveBeenCalledTimes(1);
+      expect(mockOnDelete).toHaveBeenCalledWith(null);
+      expect(mockOnHide).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("renders DialogDeleteButton component", () => {
@@ -200,13 +209,13 @@ describe("ClientDelete", () => {
     expect(screen.getByTestId("dialog-footer")).toBeInTheDocument();
   });
 
-  it("calls onDelete before onHide in correct order", () => {
+  it("calls onDelete before onHide in correct order", async () => {
     const callOrder: string[] = [];
-    
-    const trackingOnDelete = vi.fn(() => {
+
+    const trackingOnDelete = vi.fn(async () => {
       callOrder.push("delete");
     });
-    
+
     const trackingOnHide = vi.fn(() => {
       callOrder.push("hide");
     });
@@ -223,6 +232,8 @@ describe("ClientDelete", () => {
     const deleteButton = screen.getByTestId("delete-button");
     fireEvent.click(deleteButton);
 
-    expect(callOrder).toEqual(["delete", "hide"]);
+    await waitFor(() => {
+      expect(callOrder).toEqual(["delete", "hide"]);
+    });
   });
 });

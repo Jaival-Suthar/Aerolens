@@ -1,117 +1,144 @@
-import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { vi, describe, it, beforeEach, expect } from 'vitest';
-import LookupPage from './page';
-import { useLookupData } from './hooks/useLookupData';
-import { useSearchParams } from 'react-router-dom';
+import React from "react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { vi, describe, it, beforeEach, expect } from "vitest";
+import LookupPage from "./page";
+import { useLookupData } from "./hooks/useLookupData";
+import { useLocationData } from "./hooks/useLocationData";
 
-// Mock the custom hook
-vi.mock('./hooks/useLookupData', () => ({
+vi.mock("./hooks/useLookupData", () => ({
   useLookupData: vi.fn(),
 }));
 
-// Mock react-router-dom useSearchParams
-vi.mock('react-router-dom', () => ({
-  useSearchParams: vi.fn(),
+vi.mock("./hooks/useLocationData", () => ({
+  useLocationData: vi.fn(),
 }));
 
-// Mock child component LookupTable
-vi.mock('./components/lookupTable', () => ({
-  default: ({ data, onPageChange, onDataChange }: any) => (
+vi.mock("./components/lookupTable", () => ({
+  default: ({ data, onDataChange }: any) => (
     <div>
       <div data-testid="lookup-table">{data.length} items</div>
-      <button onClick={() => onPageChange(3, 15)}>Change Page</button>
-      <button onClick={() => onDataChange()}>Data Change</button>
+      <button type="button" onClick={() => onDataChange?.()}>
+        Data Change
+      </button>
     </div>
   ),
 }));
 
-describe('LookupPage', () => {
-  const mockSetSearchParams = vi.fn();
+vi.mock("./components/locationLookupTable", () => ({
+  default: ({ data }: any) => (
+    <div data-testid="location-table">{data?.length ?? 0} locations</div>
+  ),
+}));
+
+vi.mock("primereact/progressspinner", () => ({
+  ProgressSpinner: () => <div role="progressbar" aria-label="Loading" />,
+}));
+
+vi.mock("primereact/message", () => ({
+  Message: ({ text }: { text?: string }) => <div role="alert">{text}</div>,
+}));
+
+describe("LookupPage", () => {
+  const mockLookupRefetch = vi.fn();
+  const mockLocationRefetch = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useSearchParams as any).mockReturnValue([new URLSearchParams(), mockSetSearchParams]);
-  });
-
-  it('renders loading spinner when loading and no data', () => {
-    (useLookupData as any).mockReturnValue({ data: [], loading: true, error: null, meta: null });
-    render(<LookupPage />);
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
-  });
-
-  it('renders error message when error occurs', () => {
-    (useLookupData as any).mockReturnValue({ data: [], loading: false, error: 'Failed to fetch', meta: null });
-    render(<LookupPage />);
-    expect(screen.getByText('Failed to fetch')).toBeInTheDocument();
-  });
-
-  it('renders LookupTable when data is available', () => {
     (useLookupData as any).mockReturnValue({
-      data: [{ id: 1, tag: 'status', value: 'active' }],
+      data: [],
       loading: false,
       error: null,
-      meta: { total: 1, page: 1, limit: 10 },
+      refetch: mockLookupRefetch,
     });
-    render(<LookupPage />);
-    expect(screen.getByTestId('lookup-table')).toHaveTextContent('1 items');
+    (useLocationData as any).mockReturnValue({
+      data: [],
+      loading: false,
+      error: null,
+      refetch: mockLocationRefetch,
+    });
   });
 
-  it('prefers search params over localStorage values', async () => {
-    localStorage.setItem('lookupPagination', JSON.stringify({ page: 5, limit: 50 }));
-    (useSearchParams as any).mockReturnValue([new URLSearchParams({ page: '3', limit: '15' }), mockSetSearchParams]);
-    (useLookupData as any).mockReturnValue({ data: [], loading: false, error: null, meta: null });
+  it("renders loading spinner when lookup loading and no data", () => {
+    (useLookupData as any).mockReturnValue({
+      data: [],
+      loading: true,
+      error: null,
+      refetch: mockLookupRefetch,
+    });
     render(<LookupPage />);
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+  });
+
+  it("renders error message when lookup hook reports error", () => {
+    (useLookupData as any).mockReturnValue({
+      data: [],
+      loading: false,
+      error: "Failed to fetch",
+      refetch: mockLookupRefetch,
+    });
+    render(<LookupPage />);
+    expect(screen.getByRole("alert")).toHaveTextContent("Failed to fetch");
+  });
+
+  it("renders LookupTable when lookup data is available", () => {
+    (useLookupData as any).mockReturnValue({
+      data: [{ id: 1, tag: "status", value: "active" }],
+      loading: false,
+      error: null,
+      refetch: mockLookupRefetch,
+    });
+    render(<LookupPage />);
+    expect(screen.getByTestId("lookup-table")).toHaveTextContent("1 items");
+  });
+
+  it("switches to Location Lookup tab and shows location table", async () => {
+    (useLocationData as any).mockReturnValue({
+      data: [{ id: 1 }],
+      loading: false,
+      error: null,
+      refetch: mockLocationRefetch,
+    });
+    render(<LookupPage />);
+    fireEvent.click(screen.getByRole("button", { name: /Location Lookup/i }));
     await waitFor(() => {
-      expect(screen.getByTestId('lookup-table')).toBeInTheDocument();
-      expect(mockSetSearchParams).not.toHaveBeenCalled(); // search params present, no need to update
-    });
-    localStorage.clear();
-  });
-
-  it('uses localStorage if search params are missing', async () => {
-    localStorage.setItem('lookupPagination', JSON.stringify({ page: 2, limit: 20 }));
-    (useLookupData as any).mockReturnValue({ data: [], loading: false, error: null, meta: null });
-    render(<LookupPage />);
-    await waitFor(() => {
-      expect(mockSetSearchParams).toHaveBeenCalledWith({ page: '2', limit: '20' });
-    });
-    localStorage.clear();
-  });
-
-  it('defaults to page 1 and limit 10 if no search params or localStorage', () => {
-    (useLookupData as any).mockReturnValue({ data: [], loading: false, error: null, meta: null });
-    render(<LookupPage />);
-    expect(screen.getByTestId('lookup-table')).toBeInTheDocument();
-  });
-
-  it('handles onPageChange callback correctly', async () => {
-    (useLookupData as any).mockReturnValue({ data: [{ id: 1 }], loading: false, error: null, meta: { total: 10, page: 1, limit: 5 } });
-    render(<LookupPage />);
-    fireEvent.click(screen.getByText('Change Page'));
-    await waitFor(() => {
-      expect(mockSetSearchParams).toHaveBeenCalledWith({ page: '3', limit: '15' });
-      expect(JSON.parse(localStorage.getItem('lookupPagination') || '{}')).toEqual({ page: 3, limit: 15 });
+      expect(screen.getByTestId("location-table")).toHaveTextContent("1 locations");
     });
   });
 
-//   it('handles onDataChange callback by resetting page to 1', () => {
-//     (useLookupData as any).mockReturnValue({ data: [{ id: 1 }], loading: false, error: null, meta: { total: 10, page: 5, limit: 5 } });
-//     render(<LookupPage />);
-//     fireEvent.click(screen.getByText('Data Change'));
-//     expect(mockSetSearchParams).toHaveBeenCalledWith({ page: '1', limit: '5' });
-//     expect(JSON.parse(localStorage.getItem('lookupPagination') || '{}')).toEqual({ page: 1, limit: 5 });
-//   });
-
-  it('renders LookupTable even when meta is undefined', () => {
-    (useLookupData as any).mockReturnValue({ data: [{ id: 1 }], loading: false, error: null, meta: undefined });
+  it("calls lookup refetch when Data Change is clicked", async () => {
+    (useLookupData as any).mockReturnValue({
+      data: [{ id: 1 }],
+      loading: false,
+      error: null,
+      refetch: mockLookupRefetch,
+    });
     render(<LookupPage />);
-    expect(screen.getByTestId('lookup-table')).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Data Change"));
+    expect(mockLookupRefetch).toHaveBeenCalled();
   });
 
-  it('renders empty table if data is empty but not loading', () => {
-    (useLookupData as any).mockReturnValue({ data: [], loading: false, error: null, meta: { total: 0, page: 1, limit: 10 } });
+  // REMOVED: URLSearchParams / localStorage pagination tests — Lookup page no longer uses useSearchParams or lookupPagination in page.tsx.
+  // REMOVED: onPageChange callback test — LookupTable is no longer passed onPageChange from page.tsx.
+
+  it("renders LookupTable even when meta is not used by page", () => {
+    (useLookupData as any).mockReturnValue({
+      data: [{ id: 1 }],
+      loading: false,
+      error: null,
+      refetch: mockLookupRefetch,
+    });
     render(<LookupPage />);
-    expect(screen.getByTestId('lookup-table')).toHaveTextContent('0 items');
+    expect(screen.getByTestId("lookup-table")).toBeInTheDocument();
+  });
+
+  it("renders empty table if data is empty but not loading", () => {
+    (useLookupData as any).mockReturnValue({
+      data: [],
+      loading: false,
+      error: null,
+      refetch: mockLookupRefetch,
+    });
+    render(<LookupPage />);
+    expect(screen.getByTestId("lookup-table")).toHaveTextContent("0 items");
   });
 });

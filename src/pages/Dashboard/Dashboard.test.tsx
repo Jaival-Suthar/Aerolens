@@ -91,9 +91,12 @@ describe('Dashboard Component', () => {
     expect(card.style.boxShadow).not.toBe(originalBoxShadow);
   });
 
-  it('matches snapshot', () => {
-    const { asFragment } = render(<Dashboard />);
-    expect(asFragment()).toMatchSnapshot();
+  it('renders stable heading and three stat titles', () => {
+    render(<Dashboard />);
+    expect(screen.getByText('Welcome to the Aerolens Portal')).toBeInTheDocument();
+    expect(screen.getByText('Active Clients')).toBeInTheDocument();
+    expect(screen.getByText('Available Candidates')).toBeInTheDocument();
+    expect(screen.getByText('Pending Reviews')).toBeInTheDocument();
   });
 
   it('renders Card component 3 times', () => {

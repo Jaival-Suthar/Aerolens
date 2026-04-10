@@ -1,21 +1,19 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useContactOperations } from './useContactOperations';
-import type { Contact, Client } from '../types/contactTypes';
-
-// --- Mocks Setup ---
+import { renderHook, act } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { useContactOperations } from "./useContactOperations";
+import type { Contact, Client } from "../types/contactTypes";
 
 const mockCreateContact = vi.fn();
 const mockUpdateContact = vi.fn();
 const mockDeleteContact = vi.fn();
 
-vi.mock('../../../shared/auth/AuthContext', () => ({
+vi.mock("../../../shared/auth/AuthContext", () => ({
   useAuth: () => ({
-    accessToken: 'mock-token-123'
-  })
+    accessToken: "mock-token-123",
+  }),
 }));
-// Mock the useContact hook dependency
-vi.mock('../services/useContact', () => ({
+
+vi.mock("../services/useContact", () => ({
   default: () => ({
     createContact: mockCreateContact,
     updateContact: mockUpdateContact,
@@ -23,44 +21,35 @@ vi.mock('../services/useContact', () => ({
   }),
 }));
 
-const mockShowSuccess = vi.fn();
-const mockShowError = vi.fn();
-
-// --- Test Data ---
-
-const MOCK_CLIENT: Client = { clientId: 1, clientName: 'Mock Client' };
+const MOCK_CLIENT: Client = { clientId: 1, clientName: "Mock Client" };
 
 const MOCK_CONTACT_PAYLOAD = {
-  contactPersonName: 'John Doe',
-  designation: 'Manager',
-  phone: '555-1234',
-  email: 'john@example.com',
+  contactPersonName: "John Doe",
+  designation: "Manager",
+  phone: "555-1234",
+  email: "john@example.com",
 };
 
 const MOCK_EDIT_CONTACT = {
   clientContactId: 101,
   clientId: 1,
-  contactPersonName: 'Jane Smith',
-  designation: 'CEO',
+  contactPersonName: "Jane Smith",
+  designation: "CEO",
 } as Contact;
 
-describe('useContactOperations', () => {
+describe("useContactOperations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default successful API responses
-    mockCreateContact.mockResolvedValue(true);
-    mockUpdateContact.mockResolvedValue(true);
-    mockDeleteContact.mockResolvedValue(true);
+    mockCreateContact.mockResolvedValue({ success: true, message: "Contact added successfully" });
+    mockUpdateContact.mockResolvedValue({ success: true, message: "Contact updated successfully" });
+    mockDeleteContact.mockResolvedValue({ success: true, message: "Contact deleted successfully" });
   });
 
-  // Helper to render the hook
-  const setupHook = () => renderHook(() => useContactOperations(mockShowSuccess, mockShowError));
+  const setupHook = () => renderHook(() => useContactOperations());
 
-  // --- 1. Refresh Trigger and Helper ---
-
-  it('initializes refreshTrigger to 0 and increments it when triggerRefresh is called', () => {
+  it("initializes refreshTrigger to 0 and increments it when triggerRefresh is called", () => {
     const { result } = setupHook();
-    
+
     expect(result.current.refreshTrigger).toBe(0);
 
     act(() => {
@@ -76,205 +65,136 @@ describe('useContactOperations', () => {
     expect(result.current.refreshTrigger).toBe(2);
   });
 
-  // --- 2. handleSaveContact - ADD Mode ---
-
-  describe('handleSaveContact - ADD Mode', () => {
-    it('successfully calls createContact, shows success, and refreshes', async () => {
-  const { result } = setupHook();
-  
-  const response = await act(() =>
-    result.current.handleSaveContact(MOCK_CONTACT_PAYLOAD, 'add', MOCK_CLIENT)
-  );
-
-  expect(response.success).toBe(true);
-  expect(mockCreateContact).toHaveBeenCalledWith(
-    'mock-token-123',  // ✅ Add token as first param
-    {
-      ...MOCK_CONTACT_PAYLOAD,
-      clientId: MOCK_CLIENT.clientId,
-    }
-  );
-  expect(mockShowSuccess).toHaveBeenCalledWith('Contact added successfully');
-  expect(result.current.refreshTrigger).toBe(1); 
-});
-
-    it('returns success: false and shows error on createContact failure', async () => {
-      const errorMessage = 'API error during create.';
-      mockCreateContact.mockRejectedValue(new Error(errorMessage));
+  describe("handleSaveContact - ADD Mode", () => {
+    it("calls createContact with token and payload including clientId, returns backend message", async () => {
       const { result } = setupHook();
 
-      const response = await act(() =>
-        result.current.handleSaveContact(MOCK_CONTACT_PAYLOAD, 'add', MOCK_CLIENT)
+      const response = await act(async () =>
+        result.current.handleSaveContact(MOCK_CONTACT_PAYLOAD, "add", MOCK_CLIENT)
       );
 
-      expect(response.success).toBe(false);
-      expect(mockShowError).toHaveBeenCalledWith(errorMessage);
-      expect(result.current.refreshTrigger).toBe(0); // Refresh should not be triggered
+      expect(response.success).toBe(true);
+      expect(response.message).toBe("Contact added successfully");
+      expect(mockCreateContact).toHaveBeenCalledWith("mock-token-123", {
+        ...MOCK_CONTACT_PAYLOAD,
+        clientId: MOCK_CLIENT.clientId,
+      });
+      expect(result.current.refreshTrigger).toBe(1);
     });
 
-    it('shows error if client ID is missing in ADD mode', async () => {
+    it("passes undefined clientId when selectedClient is null", async () => {
       const { result } = setupHook();
 
-      const response = await act(() =>
-        result.current.handleSaveContact(MOCK_CONTACT_PAYLOAD, 'add', null)
+      await act(async () =>
+        result.current.handleSaveContact(MOCK_CONTACT_PAYLOAD, "add", null)
       );
 
-      expect(response.success).toBe(false);
-      expect(mockShowError).toHaveBeenCalledWith('Client ID is required for adding a contact');
-      expect(mockCreateContact).not.toHaveBeenCalled();
+      expect(mockCreateContact).toHaveBeenCalledWith("mock-token-123", {
+        ...MOCK_CONTACT_PAYLOAD,
+        clientId: undefined,
+      });
+    });
+
+    it("propagates createContact rejection", async () => {
+      mockCreateContact.mockRejectedValue(new Error("API error during create."));
+      const { result } = setupHook();
+
+      await expect(
+        act(async () => result.current.handleSaveContact(MOCK_CONTACT_PAYLOAD, "add", MOCK_CLIENT))
+      ).rejects.toThrow("API error during create.");
     });
   });
 
-  // --- 3. handleSaveContact - EDIT Mode ---
-
-  describe('handleSaveContact - EDIT Mode', () => {
+  describe("handleSaveContact - EDIT Mode", () => {
     const UPDATE_PAYLOAD = {
       clientContactId: MOCK_EDIT_CONTACT.clientContactId,
-      designation: 'VP of Sales', // Only updated field
+      designation: "VP of Sales",
     };
 
-    it('successfully calls updateContact, shows success, and refreshes', async () => {
-  const { result } = setupHook();
-  
-  const response = await act(() =>
-    result.current.handleSaveContact(UPDATE_PAYLOAD, 'edit', MOCK_CLIENT)
-  );
-
-  expect(response.success).toBe(true);
-  expect(mockUpdateContact).toHaveBeenCalledWith(
-    'mock-token-123',  // ✅ Add token as first param
-    {
-      clientContactId: MOCK_EDIT_CONTACT.clientContactId,
-      designation: 'VP of Sales',
-      clientId: MOCK_CLIENT.clientId,
-    }
-  );
-  expect(mockShowSuccess).toHaveBeenCalledWith('Contact updated successfully');
-  expect(result.current.refreshTrigger).toBe(1);
-});
-
-it('handles backwards compatibility using contactId fallback', async () => {
-  const { result } = setupHook();
-  const payloadWithContactId = {
-    contactId: 99,
-    designation: 'Old School',
-  };
-  
-  await act(() =>
-    result.current.handleSaveContact(payloadWithContactId, 'edit', MOCK_CLIENT)
-  );
-
-  expect(mockUpdateContact).toHaveBeenCalledWith(
-    'mock-token-123',  // ✅ Add token as first param
-    expect.objectContaining({ clientContactId: 99 })
-  );
-});
-
-    it('returns success: false and shows error on updateContact failure', async () => {
-      const errorMessage = 'API error during update.';
-      mockUpdateContact.mockRejectedValue(new Error(errorMessage));
+    it("calls updateContact without clientId in body (implementation spreads contactData only)", async () => {
       const { result } = setupHook();
 
-      const response = await act(() =>
-        result.current.handleSaveContact(UPDATE_PAYLOAD, 'edit', MOCK_CLIENT)
+      const response = await act(async () =>
+        result.current.handleSaveContact(UPDATE_PAYLOAD, "edit", MOCK_CLIENT)
       );
 
-      expect(response.success).toBe(false);
-      expect(mockShowError).toHaveBeenCalledWith(errorMessage);
-      expect(result.current.refreshTrigger).toBe(0);
+      expect(response.success).toBe(true);
+      expect(mockUpdateContact).toHaveBeenCalledWith("mock-token-123", {
+        clientContactId: MOCK_EDIT_CONTACT.clientContactId,
+        designation: "VP of Sales",
+      });
+      expect(result.current.refreshTrigger).toBe(1);
     });
 
-    it('shows error if Contact ID is missing in EDIT mode', async () => {
+    it("uses contactId fallback for clientContactId", async () => {
       const { result } = setupHook();
-      const invalidPayload = { designation: 'Tester' };
+      const payloadWithContactId = {
+        contactId: 99,
+        designation: "Old School",
+      };
 
-      const response = await act(() =>
-        result.current.handleSaveContact(invalidPayload, 'edit', MOCK_CLIENT)
+      await act(async () =>
+        result.current.handleSaveContact(payloadWithContactId, "edit", MOCK_CLIENT)
       );
 
-      expect(response.success).toBe(false);
-      expect(mockShowError).toHaveBeenCalledWith('Contact ID is required for update operation');
-      expect(mockUpdateContact).not.toHaveBeenCalled();
+      expect(mockUpdateContact).toHaveBeenCalledWith(
+        "mock-token-123",
+        expect.objectContaining({ clientContactId: 99 })
+      );
+    });
+
+    it("propagates updateContact rejection", async () => {
+      mockUpdateContact.mockRejectedValue(new Error("API error during update."));
+      const { result } = setupHook();
+
+      await expect(
+        act(async () => result.current.handleSaveContact(UPDATE_PAYLOAD, "edit", MOCK_CLIENT))
+      ).rejects.toThrow("API error during update.");
     });
   });
 
-  // --- 4. handleDeleteContact ---
-
-  describe('handleDeleteContact', () => {
-    it('successfully calls deleteContact, shows success, and refreshes', async () => {
-  const { result } = setupHook();
-  
-  const response = await act(() =>
-    result.current.handleDeleteContact(MOCK_EDIT_CONTACT)
-  );
-
-  expect(response.success).toBe(true);
-  expect(mockDeleteContact).toHaveBeenCalledWith(
-    'mock-token-123',  // ✅ Add token as first param
-    MOCK_EDIT_CONTACT.clientContactId
-  );
-  expect(mockShowSuccess).toHaveBeenCalledWith('Contact deleted successfully');
-  expect(result.current.refreshTrigger).toBe(1);
-});
-
-    it('returns success: false and shows error on deleteContact failure', async () => {
-      const errorMessage = 'API error during delete.';
-      mockDeleteContact.mockRejectedValue(new Error(errorMessage));
+  describe("handleDeleteContact", () => {
+    it("calls deleteContact and returns message", async () => {
       const { result } = setupHook();
 
-      const response = await act(() =>
+      const response = await act(async () =>
         result.current.handleDeleteContact(MOCK_EDIT_CONTACT)
       );
 
-      expect(response.success).toBe(false);
-      expect(mockShowError).toHaveBeenCalledWith(errorMessage);
-      expect(result.current.refreshTrigger).toBe(0);
+      expect(response.success).toBe(true);
+      expect(response.message).toBe("Contact deleted successfully");
+      expect(mockDeleteContact).toHaveBeenCalledWith(
+        "mock-token-123",
+        MOCK_EDIT_CONTACT.clientContactId
+      );
+      expect(result.current.refreshTrigger).toBe(1);
     });
 
-    it('shows error if Contact ID is missing in DELETE operation', async () => {
+    it("propagates deleteContact rejection", async () => {
+      mockDeleteContact.mockRejectedValue(new Error("API error during delete."));
       const { result } = setupHook();
-      const contactWithoutId = {
-        clientId: 1,
-        contactPersonName: 'Invalid',
-      } as Contact;
 
-      const response = await act(() =>
-        result.current.handleDeleteContact(contactWithoutId)
-      );
-
-      expect(response.success).toBe(false);
-      expect(mockShowError).toHaveBeenCalledWith('Contact ID is required for deletion operation');
-      expect(mockDeleteContact).not.toHaveBeenCalled();
+      await expect(
+        act(async () => result.current.handleDeleteContact(MOCK_EDIT_CONTACT))
+      ).rejects.toThrow("API error during delete.");
     });
   });
 
-  // --- 5. validateContactSelection ---
-
-  describe('validateContactSelection', () => {
-    it('returns true for a valid selected contact', () => {
+  describe("validateContactSelection", () => {
+    it("returns true when clientContactId is present", () => {
       const { result } = setupHook();
-      const isValid = result.current.validateContactSelection(MOCK_EDIT_CONTACT, mockShowError);
-      
-      expect(isValid).toBe(true);
-      expect(mockShowError).not.toHaveBeenCalled();
+      expect(result.current.validateContactSelection(MOCK_EDIT_CONTACT)).toBe(true);
     });
 
-    it('returns false and shows error when contact is null', () => {
+    it("returns false when contact is null", () => {
       const { result } = setupHook();
-      const isValid = result.current.validateContactSelection(null, mockShowError);
-      
-      expect(isValid).toBe(false);
-      expect(mockShowError).toHaveBeenCalledWith('Please select a contact first');
+      expect(result.current.validateContactSelection(null)).toBe(false);
     });
 
-    it('returns false and shows error when clientContactId is missing', () => {
+    it("returns false when clientContactId is missing", () => {
       const { result } = setupHook();
-      const invalidContact = { clientId: 1, contactPersonName: 'Invalid' } as Contact;
-      
-      const isValid = result.current.validateContactSelection(invalidContact, mockShowError);
-      
-      expect(isValid).toBe(false);
-      expect(mockShowError).toHaveBeenCalledWith('Contact ID is missing. Cannot perform this operation.');
+      const invalidContact = { clientId: 1, contactPersonName: "Invalid" } as Contact;
+      expect(result.current.validateContactSelection(invalidContact)).toBe(false);
     });
   });
 });

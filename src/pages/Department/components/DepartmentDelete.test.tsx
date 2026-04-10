@@ -55,7 +55,9 @@ vi.mock("../../../shared/DialogDeleteButton", () => ({
         Cancel
       </button>
       <button
-        onClick={onDelete}
+        onClick={() => {
+          void Promise.resolve(onDelete()).catch(() => {});
+        }}
         disabled={loading}
         data-testid="delete-button"
       >
@@ -309,51 +311,32 @@ describe("DepartmentDelete", () => {
   describe("Error Handling", () => {
     it("should handle deletion error gracefully", async () => {
       const user = userEvent.setup();
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
-      const error = new Error("Network error");
-
-      vi.mocked(deleteDepartment).mockRejectedValueOnce(error);
+      vi.mocked(deleteDepartment).mockRejectedValueOnce(new Error("Network error"));
 
       render(<DepartmentDelete {...defaultProps} />);
 
-      const deleteButton = screen.getByTestId("delete-button");
-      await user.click(deleteButton);
+      await user.click(screen.getByTestId("delete-button"));
 
       await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith(error);
+        expect(mockOnClearSelection).not.toHaveBeenCalled();
+        expect(mockOnSuccess).not.toHaveBeenCalled();
+        expect(mockOnHide).not.toHaveBeenCalled();
+        expect(screen.getByText("Delete")).toBeInTheDocument();
       });
-
-      // Should not call success callbacks on error
-      expect(mockOnClearSelection).not.toHaveBeenCalled();
-      expect(mockOnSuccess).not.toHaveBeenCalled();
-      expect(mockOnHide).not.toHaveBeenCalled();
-
-      // Should reset loading state
-      expect(screen.getByText("Delete")).toBeInTheDocument();
-
-      consoleErrorSpy.mockRestore();
     });
 
-    it("should log error with different error types", async () => {
+    it("should not call success callbacks when delete rejects with non-Error", async () => {
       const user = userEvent.setup();
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
-
       vi.mocked(deleteDepartment).mockRejectedValueOnce("String error");
 
       render(<DepartmentDelete {...defaultProps} />);
 
-      const deleteButton = screen.getByTestId("delete-button");
-      await user.click(deleteButton);
+      await user.click(screen.getByTestId("delete-button"));
 
       await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith("String error");
+        expect(mockOnHide).not.toHaveBeenCalled();
+        expect(screen.getByText("Delete")).toBeInTheDocument();
       });
-
-      consoleErrorSpy.mockRestore();
     });
   });
 

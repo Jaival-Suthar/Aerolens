@@ -1,8 +1,10 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import ResumeTable from "../components/resumeTable";
+import { MemoryRouter } from "react-router-dom";
+import ResumeTable from "./resumeTable";
 import * as useResumeService from "../services/useResume";
+import type { CandidateCreateData } from "../types/resumeTypes";
 import { vi } from "vitest";
 import { cleanup } from "@testing-library/react";
 
@@ -109,11 +111,23 @@ vi.mock("../../../shared/DeleteButton", () => ({
   ),
 }));
 
-// Mock react-icons
-vi.mock("react-icons/fa", () => ({
-  FaDownload: () => <span>FaDownload</span>,
-  FaEye: () => <span>FaEye</span>,
+vi.mock("../../../shared/services/globalToastService", () => ({
+  showGlobalToast: vi.fn(),
 }));
+
+const MOCK_CREATE_DATA: CandidateCreateData = {
+  recruiters: [],
+  vendors: [],
+  locations: [],
+  jobProfiles: [],
+  currencies: [],
+  compensationTypes: [],
+  workModes: [],
+};
+
+function renderWithRouter(ui: React.ReactElement) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+}
 
 describe("ResumeTable Component", () => {
   const mockCandidates = [
@@ -122,11 +136,13 @@ describe("ResumeTable Component", () => {
       candidateName: "John Doe",
       contactNumber: "1234567890",
       email: "john@example.com",
+      recruiterId: 1,
       recruiterName: "Recruiter A",
+      jobProfileRequirementId: 1,
       jobRole: "Developer",
-      preferredJobLocation: "Mumbai",
-      currentCTC: 1000000,
-      expectedCTC: 1200000,
+      dateOfEntry: "2024-06-01T10:00:00.000Z",
+      expectedLocation: { city: "Mumbai", country: "India" },
+      workMode: "Remote",
       noticePeriod: 30,
       experienceYears: 5,
       statusName: "Active",
@@ -138,11 +154,13 @@ describe("ResumeTable Component", () => {
       candidateName: "Jane Smith",
       contactNumber: "0987654321",
       email: "jane@example.com",
+      recruiterId: 2,
       recruiterName: "Recruiter B",
+      jobProfileRequirementId: 1,
       jobRole: "Designer",
-      preferredJobLocation: "Delhi",
-      currentCTC: 800000,
-      expectedCTC: 900000,
+      dateOfEntry: "2024-06-02T10:00:00.000Z",
+      expectedLocation: { city: "Delhi", country: "India" },
+      workMode: "Hybrid",
       noticePeriod: 60,
       experienceYears: 3,
       statusName: "Pending",
@@ -153,13 +171,12 @@ describe("ResumeTable Component", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(useResumeService, "fetchCandidateCreateData").mockResolvedValue(MOCK_CREATE_DATA);
+    vi.spyOn(useResumeService, "getCandidates").mockResolvedValue({ candidates: mockCandidates });
   });
 
   it("loads and displays resumes", async () => {
-    vi.spyOn(useResumeService, "getCandidates").mockResolvedValue({ candidates: mockCandidates });
-
-
-    render(<ResumeTable />);
+    renderWithRouter(<ResumeTable />);
 
     await waitFor(() => {
       expect(useResumeService.getCandidates).toHaveBeenCalledTimes(1);
@@ -167,15 +184,16 @@ describe("ResumeTable Component", () => {
 
     expect(screen.getByText("Candidate Resume Management")).toBeInTheDocument();
 
-    // Candidate names should appear
-    expect(screen.getByText("John Doe")).toBeInTheDocument();
-    expect(screen.getByText("Jane Smith")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getAllByText("John Doe").length).toBeGreaterThan(0);
+    });
+    expect(screen.getAllByText("Jane Smith").length).toBeGreaterThan(0);
   });
 
   it("handles error when loading resumes", async () => {
-    vi.spyOn(useResumeService, "getCandidates").mockRejectedValue(new Error("Failed to load"));
+    vi.mocked(useResumeService.getCandidates).mockRejectedValueOnce(new Error("Failed to load"));
 
-    render(<ResumeTable />);
+    renderWithRouter(<ResumeTable />);
 
     await waitFor(() => {
       expect(useResumeService.getCandidates).toHaveBeenCalledTimes(1);
@@ -186,46 +204,34 @@ describe("ResumeTable Component", () => {
   });
 
   it("opens Add dialog when Add button clicked", async () => {
-  vi.spyOn(useResumeService, "getCandidates").mockResolvedValue({ candidates: [] });
+    vi.mocked(useResumeService.getCandidates).mockResolvedValueOnce({ candidates: [] });
 
+    renderWithRouter(<ResumeTable />);
+    await waitFor(() => screen.getByTestId("add-button"));
 
-  render(<ResumeTable />);
-  await waitFor(() => screen.getByTestId("add-button"));
+    await userEvent.click(screen.getByTestId("add-button"));
 
-  await userEvent.click(screen.getByTestId("add-button")); // Use await for userEvent
-
-  await waitFor(() => {
-    expect(screen.getByTestId("resume-addedit-dialog")).toBeInTheDocument();
-  });
-});
-
-  it("opens Edit dialog only when a resume is selected", async () => {
-    vi.spyOn(useResumeService, "getCandidates").mockResolvedValue({ candidates: mockCandidates });
-
-
-    render(<ResumeTable />);
-    await waitFor(() => screen.getByText("John Doe"));
-
-    // Edit button disabled if no selection
-    const editButton = screen.getByTestId("edit-button");
-    expect(editButton).toBeDisabled();
-
-    // Simulate resume selection by setting state via clicking on row or using DOM methods is complex,
-    // so we can simulate by finding the DataTable selection callback or manually fire state change
-    // Here, we directly enable Edit button by simulating selection in test
-
-    // To test selection, simulate selection change by firing event or by setting selectedResume state directly
-    // Since this is complex without full DataTable mock, test click on Edit button after mocking selection
-
-    // A better way is to call handleEdit after setting state, but that's internal...
-    // Instead, mock Edit button enabled and click to test dialog opens
-
-    // For now, simulate by rerendering with selection enabled (not ideal but for demo)
+    await waitFor(() => {
+      expect(screen.getByTestId("resume-addedit-dialog")).toBeInTheDocument();
+    });
   });
 
-  it("opens Delete dialog only when a resume is selected", async () => {
-    // Similar note as Edit: testing selection in primeReact DataTable is complicated in tests.
-    // So for now, test handlers called properly on Delete button click when enabled.
+  it("disables Edit when no row is selected", async () => {
+    renderWithRouter(<ResumeTable />);
+    await waitFor(() => {
+      expect(screen.getAllByText("John Doe").length).toBeGreaterThan(0);
+    });
+
+    expect(screen.getByTestId("edit-button")).toBeDisabled();
+  });
+
+  it("disables Delete when no row is selected", async () => {
+    renderWithRouter(<ResumeTable />);
+    await waitFor(() => {
+      expect(screen.getAllByText("John Doe").length).toBeGreaterThan(0);
+    });
+
+    expect(screen.getByTestId("delete-button")).toBeDisabled();
   });
 
 //   it("calls download resume when clicking Download button", async () => {
