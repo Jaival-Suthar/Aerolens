@@ -1,67 +1,45 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, Mock } from 'vitest';
+import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest';
 import { useLookupData } from './useLookupData';
 import { lookupService } from '../services/lookupService';
-import { LookupEntry, LookupApiResponse } from '../types/lookupTypes';
-import * as router from 'react-router-dom';
+import type { LookupEntry, LookupApiResponse } from '../types/lookupTypes';
 
-// ✅ Mock AuthContext for accessToken
+const authState = { accessToken: 'mock-token-123' as string | null };
+
 vi.mock('../../../shared/auth/AuthContext', () => ({
-  useAuth: () => ({
-    accessToken: 'mock-token-123',
-  }),
+  useAuth: () => ({ accessToken: authState.accessToken }),
 }));
 
-// ✅ Mock lookupService
 vi.mock('../services/lookupService', () => ({
   lookupService: {
     getAll: vi.fn(),
   },
 }));
 
-// ✅ Mock useSearchParams from react-router-dom
-vi.mock('react-router-dom', () => ({
-  useSearchParams: vi.fn(() => [new URLSearchParams()]),
-}));
-
-// ✅ Mock Data
 const mockData: LookupEntry[] = [
   { lookupKey: 1, tag: 'tag1', value: 'value1' },
   { lookupKey: 2, tag: 'tag2', value: 'value2' },
 ];
 
-const mockMeta = {
-  currentPage: 1,
-  totalPages: 2,
-  totalRecords: 20,
-  limit: 10,
-  hasNextPage: true,
-  hasPrevPage: false,
-  nextPage: 2,
-  prevPage: null,
-};
-
 const mockApiResponse: LookupApiResponse = {
   success: true,
   data: mockData,
-  meta: mockMeta,
   message: 'Data fetched successfully',
 };
 
 describe('useLookupData', { timeout: 10000 }, () => {
   const mockGetAll = lookupService.getAll as Mock;
-  const mockUseSearchParams = router.useSearchParams as Mock;
   const token = 'mock-token-123';
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseSearchParams.mockReturnValue([new URLSearchParams()]);
+    authState.accessToken = 'mock-token-123';
   });
 
-  it('fetches data with default page and limit', async () => {
+  it('loads lookups with access token', async () => {
     mockGetAll.mockResolvedValue(mockApiResponse);
 
-    const { result } = renderHook(() => useLookupData(1, 10));
+    const { result } = renderHook(() => useLookupData());
 
     expect(result.current.loading).toBe(true);
 
@@ -69,36 +47,21 @@ describe('useLookupData', { timeout: 10000 }, () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(mockGetAll).toHaveBeenCalledWith(token, 1, 10);
+    expect(mockGetAll).toHaveBeenCalledWith(token);
     expect(result.current.data).toEqual(mockData);
-    expect(result.current.meta).toEqual(mockMeta);
     expect(result.current.error).toBe(null);
-  });
-
-  it('fetches data using URL search params', async () => {
-    mockUseSearchParams.mockReturnValue([new URLSearchParams('page=2&limit=20')]);
-    mockGetAll.mockResolvedValue(mockApiResponse);
-
-    const { result } = renderHook(() => useLookupData(1, 10));
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
-
-    expect(mockGetAll).toHaveBeenCalledWith(token, 2, 20);
-    expect(result.current.data).toEqual(mockData);
   });
 
   it('handles API error correctly', async () => {
     mockGetAll.mockRejectedValue(new Error('Network error'));
 
-    const { result } = renderHook(() => useLookupData(1, 10));
+    const { result } = renderHook(() => useLookupData());
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(mockGetAll).toHaveBeenCalledWith(token, 1, 10);
+    expect(mockGetAll).toHaveBeenCalledWith(token);
     expect(result.current.error).toBe('Network error');
     expect(result.current.data).toEqual([]);
   });
@@ -106,13 +69,13 @@ describe('useLookupData', { timeout: 10000 }, () => {
   it('handles invalid API response', async () => {
     mockGetAll.mockResolvedValue({ success: false, message: 'Invalid data' });
 
-    const { result } = renderHook(() => useLookupData(1, 10));
+    const { result } = renderHook(() => useLookupData());
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(mockGetAll).toHaveBeenCalledWith(token, 1, 10);
+    expect(mockGetAll).toHaveBeenCalledWith(token);
     expect(result.current.error).toBe('Invalid data');
     expect(result.current.data).toEqual([]);
   });
@@ -120,7 +83,7 @@ describe('useLookupData', { timeout: 10000 }, () => {
   it('triggers refetch with refetch function', async () => {
     mockGetAll.mockResolvedValue(mockApiResponse);
 
-    const { result } = renderHook(() => useLookupData(1, 10));
+    const { result } = renderHook(() => useLookupData());
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -137,78 +100,66 @@ describe('useLookupData', { timeout: 10000 }, () => {
     });
 
     expect(mockGetAll).toHaveBeenCalledTimes(2);
-    expect(mockGetAll).toHaveBeenLastCalledWith(token, 1, 10);
+    expect(mockGetAll).toHaveBeenLastCalledWith(token);
   });
 
-  it('triggers refetch with externalRefresh', async () => {
+  it('triggers refetch when externalRefresh changes', async () => {
     mockGetAll.mockResolvedValue(mockApiResponse);
 
-    const { result, rerender } = renderHook(
-      ({ externalRefresh }) => useLookupData(1, 10, externalRefresh),
+    const { rerender } = renderHook(
+      ({ externalRefresh }) => useLookupData(externalRefresh),
       { initialProps: { externalRefresh: 0 } }
     );
 
     await waitFor(() => {
-      expect(result.current.loading).toBe(false);
+      expect(mockGetAll).toHaveBeenCalledTimes(1);
     });
-
-    expect(mockGetAll).toHaveBeenCalledTimes(1);
 
     rerender({ externalRefresh: 1 });
 
     await waitFor(() => {
-      expect(result.current.loading).toBe(false);
+      expect(mockGetAll).toHaveBeenCalledTimes(2);
     });
 
-    expect(mockGetAll).toHaveBeenCalledTimes(2);
-    expect(mockGetAll).toHaveBeenLastCalledWith(token, 1, 10);
+    expect(mockGetAll).toHaveBeenLastCalledWith(token);
   });
 
   it('handles empty data response', async () => {
-    mockGetAll.mockResolvedValue({ success: true, data: [], meta: mockMeta });
+    mockGetAll.mockResolvedValue({ success: true, data: [] });
 
-    const { result } = renderHook(() => useLookupData(1, 10));
+    const { result } = renderHook(() => useLookupData());
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(mockGetAll).toHaveBeenCalledWith(token, 1, 10);
+    expect(mockGetAll).toHaveBeenCalledWith(token);
     expect(result.current.data).toEqual([]);
-    expect(result.current.meta).toEqual(mockMeta);
     expect(result.current.error).toBe(null);
   });
 
-  it('prevents state updates after unmount', async () => {
+  it('does not fetch when access token is missing', () => {
+    authState.accessToken = null;
+
+    const { result } = renderHook(() => useLookupData());
+
+    expect(mockGetAll).not.toHaveBeenCalled();
+    expect(result.current.loading).toBe(true);
+  });
+
+  it('avoids state updates after unmount', async () => {
     mockGetAll.mockImplementation(
       () =>
-        new Promise((resolve) => {
-          setTimeout(() => resolve(mockApiResponse), 100);
+        new Promise<LookupApiResponse>((resolve) => {
+          setTimeout(() => resolve(mockApiResponse), 80);
         })
     );
 
-    const { unmount } = renderHook(() => useLookupData(1, 10));
+    const { unmount } = renderHook(() => useLookupData());
 
+    expect(mockGetAll).toHaveBeenCalledWith(token);
     unmount();
 
-    await waitFor(() => {
-      expect(mockGetAll).toHaveBeenCalledWith(token, 1, 10);
-    });
-  });
-
-  it('handles invalid URL params gracefully', async () => {
-    mockUseSearchParams.mockReturnValue([new URLSearchParams('page=invalid&limit=invalid')]);
-    mockGetAll.mockResolvedValue(mockApiResponse);
-
-    const { result } = renderHook(() => useLookupData(1, 10));
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
-
-    expect(mockGetAll).toHaveBeenCalledWith(token, NaN, NaN);
-    expect(result.current.data).toEqual(mockData);
-    expect(result.current.meta).toEqual(mockMeta);
-    expect(result.current.error).toBe(null);
+    await new Promise((r) => setTimeout(r, 150));
   });
 });

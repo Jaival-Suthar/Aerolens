@@ -1,4 +1,3 @@
-// src/Resume/services/__tests__/candidateService.test.ts
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   createCandidate,
@@ -9,10 +8,72 @@ import {
   downloadResume,
   getResumeDownloadUrl,
 } from './useResume';
-import type { Candidate, AddEditCandidate } from '../types/resumeTypes';
+import type {
+  Candidate,
+  AddEditCandidate,
+  CandidateUpdatePayload,
+} from '../types/resumeTypes';
 
 /** Matches runtime VITE_BASE_URL baked into the module at build/test time */
 const API_BASE = import.meta.env.VITE_BASE_URL as string;
+
+
+function makeAddEdit(overrides?: Partial<AddEditCandidate>): AddEditCandidate {
+  return {
+    candidateName: 'John Doe',
+    contactNumber: '1234567890',
+    email: 'john@example.com',
+    recruiterId: 1,
+    recruiterName: 'Jane Smith',
+    jobProfileRequirementId: 10,
+    expectedLocation: { city: 'New York', country: 'USA' },
+    currentCTCAmount: 100000,
+    currentCTCCurrencyId: 1,
+    currentCTCTypeId: 1,
+    expectedCTCAmount: 120000,
+    expectedCTCCurrencyId: 1,
+    expectedCTCTypeId: 1,
+    noticePeriod: 30,
+    experienceYears: 5,
+    linkedinProfileUrl: 'https://linkedin.com/in/johndoe',
+    resumeFile: null,
+    ...overrides,
+  };
+}
+
+function toCandidate(
+  id: number,
+  payload: AddEditCandidate,
+  extras?: Partial<Candidate>
+): Candidate {
+  return {
+    candidateId: id,
+    candidateName: payload.candidateName,
+    contactNumber: payload.contactNumber ?? '',
+    email: payload.email ?? '',
+    recruiterId: payload.recruiterId,
+    recruiterName: payload.recruiterName,
+    recruiterContact: null,
+    recruiterEmail: null,
+    jobProfileRequirementId: payload.jobProfileRequirementId,
+    jobRole: 'Software Engineer',
+    expectedLocation: payload.expectedLocation ?? null,
+    currentLocation: payload.currentLocation ?? null,
+    workMode: null,
+    workModeId: null,
+    currentCTCAmount: payload.currentCTCAmount ?? null,
+    currentCTCCurrencyId: payload.currentCTCCurrencyId ?? null,
+    currentCTCTypeId: payload.currentCTCTypeId ?? null,
+    expectedCTCAmount: payload.expectedCTCAmount ?? null,
+    expectedCTCCurrencyId: payload.expectedCTCCurrencyId ?? null,
+    expectedCTCTypeId: payload.expectedCTCTypeId ?? null,
+    noticePeriod: payload.noticePeriod,
+    experienceYears: payload.experienceYears,
+    statusName: 'Active',
+    linkedinProfileUrl: payload.linkedinProfileUrl ?? null,
+    ...extras,
+  };
+}
 
 // Mock AuthContext
 vi.mock('../../../shared/auth/AuthContext', () => ({
@@ -35,28 +96,8 @@ describe('Candidate Service', () => {
   // =========================================================================
   describe('createCandidate', () => {
     it('should create a candidate successfully', async () => {
-      const mockCandidate: AddEditCandidate = {
-        candidateName: 'John Doe',
-        contactNumber: '1234567890',
-        email: 'john@example.com',
-        recruiterName: 'Jane Smith',
-        jobRole: 'Software Engineer',
-        preferredJobLocation: 'New York',
-        currentCTC: 100000,
-        expectedCTC: 120000,
-        statusName: 'Active',
-        noticePeriod: 30,
-        experienceYears: 5,
-        linkedinProfileUrl: 'https://linkedin.com/in/johndoe',
-        resumeFile: null,
-      };
-
-      const mockResponse: Candidate = {
-        candidateId: 1,
-        ...mockCandidate,
-        statusName: 'Active',
-        resumeFile: undefined,
-      } as any;
+      const mockCandidate = makeAddEdit();
+      const mockResponse = toCandidate(1, mockCandidate);
 
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
@@ -79,29 +120,10 @@ describe('Candidate Service', () => {
 
     it('should create a candidate with resume file', async () => {
       const mockFile = new File(['resume content'], 'resume.pdf', { type: 'application/pdf' });
-      const mockCandidate: AddEditCandidate = {
-        candidateName: 'John Doe',
-        contactNumber: '1234567890',
-        email: 'john@example.com',
-        recruiterName: 'Jane Smith',
-        jobRole: 'Software Engineer',
-        preferredJobLocation: 'New York',
-        currentCTC: 100000,
-        expectedCTC: 120000,
-        noticePeriod: 30,
-        statusName: 'Active',
-        experienceYears: 5,
-        linkedinProfileUrl: 'https://linkedin.com/in/johndoe',
-        resumeFile: mockFile,
-      };
-
-      const mockResponse: Candidate = {
-        candidateId: 1,
-        ...mockCandidate,
-        statusName: 'Active',
+      const mockCandidate = makeAddEdit({ resumeFile: mockFile });
+      const mockResponse = toCandidate(1, mockCandidate, {
         resumeFilename: 'resume_123.pdf',
-        resumeFile: undefined,
-      } as any;
+      });
 
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
@@ -127,21 +149,7 @@ describe('Candidate Service', () => {
     });
 
     it('should handle creation failure with error message', async () => {
-      const mockCandidate: AddEditCandidate = {
-        candidateName: 'John Doe',
-        contactNumber: '1234567890',
-        email: 'invalid-email',
-        recruiterName: 'Jane Smith',
-        jobRole: 'Software Engineer',
-        preferredJobLocation: 'New York',
-        currentCTC: 100000,
-        expectedCTC: 120000,
-        noticePeriod: 30,
-        statusName: 'Active',
-        experienceYears: 5,
-        linkedinProfileUrl: 'https://linkedin.com/in/johndoe',
-        resumeFile: null,
-      };
+      const mockCandidate = makeAddEdit({ email: 'invalid-email' });
 
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: false,
@@ -161,37 +169,27 @@ describe('Candidate Service', () => {
   // =========================================================================
   describe('getCandidates', () => {
     it('should fetch candidates with pagination', async () => {
+      const first = makeAddEdit();
+      const second = makeAddEdit({
+        candidateName: 'Jane Smith',
+        contactNumber: '0987654321',
+        email: 'jane@example.com',
+        recruiterName: 'Bob Johnson',
+        recruiterId: 2,
+        jobProfileRequirementId: 11,
+        expectedLocation: { city: 'San Francisco', country: 'USA' },
+        currentCTCAmount: 90000,
+        expectedCTCAmount: 110000,
+        noticePeriod: 60,
+        experienceYears: 3,
+        linkedinProfileUrl: 'https://linkedin.com/in/janesmith',
+      });
       const mockCandidates: Candidate[] = [
-        {
-          candidateId: 1,
-          candidateName: 'John Doe',
-          contactNumber: '1234567890',
-          email: 'john@example.com',
-          recruiterName: 'Jane Smith',
-          jobRole: 'Software Engineer',
-          preferredJobLocation: 'New York',
-          currentCTC: 100000,
-          expectedCTC: 120000,
-          noticePeriod: 30,
-          experienceYears: 5,
-          statusName: 'Active',
-          linkedinProfileUrl: 'https://linkedin.com/in/johndoe',
-        },
-        {
-          candidateId: 2,
-          candidateName: 'Jane Smith',
-          contactNumber: '0987654321',
-          email: 'jane@example.com',
-          recruiterName: 'Bob Johnson',
+        toCandidate(1, first, { jobRole: 'Software Engineer' }),
+        toCandidate(2, second, {
           jobRole: 'Product Manager',
-          preferredJobLocation: 'San Francisco',
-          currentCTC: 90000,
-          expectedCTC: 110000,
-          noticePeriod: 60,
-          experienceYears: 3,
           statusName: 'Pending',
-          linkedinProfileUrl: 'https://linkedin.com/in/janesmith',
-        },
+        }),
       ];
 
       vi.mocked(fetch).mockResolvedValueOnce({
@@ -253,18 +251,22 @@ describe('Candidate Service', () => {
   // =========================================================================
   describe('updateCandidate', () => {
     it('should update candidate with all data', async () => {
-      const updatePayload = {
+      const updatePayload: CandidateUpdatePayload = {
         candidateName: 'John Updated',
         contactNumber: '1234567890',
         email: 'john.updated@example.com',
+        recruiterId: 1,
         recruiterName: 'Jane Smith',
-        jobRole: 'Senior Software Engineer',
-        preferredJobLocation: 'New York',
-        currentCTC: 110000,
-        expectedCTC: 130000,
+        jobProfileRequirementId: 10,
+        expectedLocation: { city: 'New York', country: 'USA' },
+        currentCTCAmount: 110000,
+        currentCTCCurrencyId: 1,
+        currentCTCTypeId: 1,
+        expectedCTCAmount: 130000,
+        expectedCTCCurrencyId: 1,
+        expectedCTCTypeId: 1,
         noticePeriod: 30,
         experienceYears: 6,
-        statusName: 'Active',
         linkedinProfileUrl: 'https://linkedin.com/in/johnupdated',
       };
 
@@ -274,6 +276,8 @@ describe('Candidate Service', () => {
         data: {
           candidateId: 1,
           ...updatePayload,
+          jobRole: 'Senior Software Engineer',
+          statusName: 'Active',
         },
       };
 
@@ -301,18 +305,22 @@ describe('Candidate Service', () => {
     });
 
     it('should handle update failure', async () => {
-      const updatePayload = {
+      const updatePayload: CandidateUpdatePayload = {
         candidateName: 'John Doe',
         contactNumber: '1234567890',
         email: 'john@example.com',
+        recruiterId: 1,
         recruiterName: 'Jane Smith',
-        jobRole: 'Software Engineer',
-        preferredJobLocation: 'New York',
-        currentCTC: 100000,
-        expectedCTC: 120000,
+        jobProfileRequirementId: 10,
+        expectedLocation: { city: 'New York', country: 'USA' },
+        currentCTCAmount: 100000,
+        currentCTCCurrencyId: 1,
+        currentCTCTypeId: 1,
+        expectedCTCAmount: 120000,
+        expectedCTCCurrencyId: 1,
+        expectedCTCTypeId: 1,
         noticePeriod: 30,
         experienceYears: 5,
-        statusName: 'Active',
         linkedinProfileUrl: 'https://linkedin.com/in/johndoe',
       };
 

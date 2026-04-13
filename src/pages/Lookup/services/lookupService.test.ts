@@ -48,7 +48,7 @@ describe('lookupService', () => {
       const result = await lookupService.getAll('mock-token-123');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        `${import.meta.env.VITE_BASE_URL}/lookup?page=1&limit=10`,
+        `${import.meta.env.VITE_BASE_URL}/lookup?page=1&limit=1000`,
         {
           method: 'GET',
           headers: {
@@ -60,22 +60,20 @@ describe('lookupService', () => {
       expect(result).toEqual(mockResponse);
     });
 
-    it('should fetch all lookup entries with custom pagination', async () => {
+    it('always uses page=1 and limit=1000 for getAll', async () => {
       const mockResponse: LookupApiResponse = {
         success: true,
         message: 'Operation successful',
-        data: [
-          { lookupKey: 1, tag: 'STATUS', value: 'ACTIVE' },
-        ],
+        data: [{ lookupKey: 1, tag: 'STATUS', value: 'ACTIVE' }],
         meta: {
-          currentPage: 2,
-          totalPages: 5,
-          totalRecords: 50,
-          limit: 20,
-          hasNextPage: true,
-          hasPrevPage: true,
-          nextPage: 3,
-          prevPage: 1,
+          currentPage: 1,
+          totalPages: 1,
+          totalRecords: 1,
+          limit: 1000,
+          hasNextPage: false,
+          hasPrevPage: false,
+          nextPage: null,
+          prevPage: null,
         },
       };
 
@@ -84,20 +82,19 @@ describe('lookupService', () => {
         json: vi.fn().mockResolvedValue(mockResponse),
       });
 
-      const result = await lookupService.getAll('mock-token-123',2, 20);
+      const result = await lookupService.getAll('mock-token-123');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        `${import.meta.env.VITE_BASE_URL}/lookup?page=2&limit=20`,
+        `${import.meta.env.VITE_BASE_URL}/lookup?page=1&limit=1000`,
         expect.objectContaining({
           method: 'GET',
           headers: {
-  'Authorization': 'Bearer mock-token-123',
-  'Content-Type': 'application/json',
-}
+            Authorization: 'Bearer mock-token-123',
+            'Content-Type': 'application/json',
+          },
         })
       );
-      expect(result.meta?.currentPage).toBe(2);
-      expect(result.meta?.limit).toBe(20);
+      expect(result.data).toHaveLength(1);
     });
 
     it('should return empty data array when no records exist', async () => {
@@ -403,10 +400,10 @@ describe('lookupService', () => {
         json: vi.fn().mockResolvedValue(mockResponse),
       });
 
-      const result = await lookupService.getAll('mock-token-123',9999, 10);
+      const result = await lookupService.getAll('mock-token-123');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        `${import.meta.env.VITE_BASE_URL}/lookup?page=9999&limit=10`,
+        `${import.meta.env.VITE_BASE_URL}/lookup?page=1&limit=1000`,
         expect.any(Object)
       );
       expect(result.data).toEqual([]);
@@ -435,7 +432,7 @@ describe('lookupService', () => {
         json: vi.fn().mockResolvedValue(mockResponse),
       });
 
-      await lookupService.getAll('mock-token-123',1, 1000);
+      await lookupService.getAll('mock-token-123');
 
       expect(global.fetch).toHaveBeenCalledWith(
         `${import.meta.env.VITE_BASE_URL}/lookup?page=1&limit=1000`,
@@ -499,11 +496,12 @@ describe('lookupService', () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
+        statusText: 'Internal Server Error',
         text: vi.fn().mockResolvedValue(''),
       });
 
       await expect(lookupService.getAll('mock-token-123')).rejects.toThrow(
-        "HTTP 500: undefined"
+        'HTTP 500: Internal Server Error'
       );
     });
   });

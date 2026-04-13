@@ -69,11 +69,13 @@ describe('departmentService', () => {
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: false,
         status: 400,
-        text: async () => 'Error text',
+        json: async () => ({ message: 'Bad request body' }),
         statusText: 'Bad Request',
       } as Response);
 
-      await expect(getDepartments('mock-token-123',1)).rejects.toThrow('API Error (400)');
+      await expect(getDepartments('mock-token-123', 1)).rejects.toEqual({
+        message: 'Bad request body',
+      });
     });
 
     it('throws on fetch error', async () => {
@@ -124,22 +126,22 @@ describe('departmentService', () => {
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: false,
         status: 400,
-        text: async () => JSON.stringify(errorResponse),
+        json: async () => errorResponse,
         statusText: 'Bad Request',
       } as Response);
 
-      await expect(addDepartment('mock-token-123', payload)).rejects.toThrow('API Error (400)');
+      await expect(addDepartment('mock-token-123', payload)).rejects.toEqual(errorResponse);
     });
 
     it('throws generic error if no error message', async () => {
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: false,
         status: 400,
-        text: async () => '{}',
+        json: async () => ({}),
         statusText: 'Bad Request',
       } as Response);
 
-      await expect(addDepartment('mock-token-123', payload)).rejects.toThrow('API Error (400)');
+      await expect(addDepartment('mock-token-123', payload)).rejects.toEqual({});
     });
 
     it('throws error on fetch reject', async () => {
@@ -220,35 +222,57 @@ describe('departmentService', () => {
   expect(response).toEqual(department);
 });
 
-    it('throws error if neither name nor description provided', async () => {
-      await expect(updateDepartment('mock-token-123', { departmentId: 5 })).rejects.toThrow(
-  'At least one field required for update'  // Match the actual error message
-);
-      expect(fetch).not.toHaveBeenCalled();
+    it('sends PATCH with empty JSON body when only departmentId is provided', async () => {
+      const department = {
+        departmentId: 5,
+        departmentName: '',
+        departmentDescription: '',
+        clientId: 1,
+      };
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          success: true,
+          message: 'ok',
+          data: department,
+        }),
+      } as Response);
+
+      await updateDepartment('mock-token-123', { departmentId: 5 });
+
+      expect(fetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/department/5`,
+        expect.objectContaining({
+          method: 'PATCH',
+          credentials: 'include',
+          body: '{}',
+        })
+      );
     });
 
     it('throws error with API error message', async () => {
       const errorResponse: ErrorResponse = { success: false, message: 'Update failed' };
 
       vi.mocked(fetch).mockResolvedValueOnce({
-  ok: false,
-  status: 400,
-  text: async () => JSON.stringify(errorResponse),
-  statusText: 'Bad Request',
-} as Response);
+        ok: false,
+        status: 400,
+        json: async () => errorResponse,
+        statusText: 'Bad Request',
+      } as Response);
 
-await expect(updateDepartment('mock-token-123', basePayload)).rejects.toThrow('API Error (400)');
+      await expect(updateDepartment('mock-token-123', basePayload)).rejects.toEqual(errorResponse);
     });
 
     it('throws generic error if no message from API', async () => {
       vi.mocked(fetch).mockResolvedValueOnce({
-  ok: false,
-  status: 400,
-  text: async () => '{}',
-  statusText: 'Bad Request',
-} as Response);
+        ok: false,
+        status: 400,
+        json: async () => ({}),
+        statusText: 'Bad Request',
+      } as Response);
 
-await expect(updateDepartment('mock-token-123', basePayload)).rejects.toThrow('API Error (400)');
+      await expect(updateDepartment('mock-token-123', basePayload)).rejects.toEqual({});
     });
 
     it('throws error on fetch rejected', async () => {
@@ -275,31 +299,31 @@ await expect(updateDepartment('mock-token-123', basePayload)).rejects.toThrow('A
       credentials: 'include',
     })
   );
-  expect(result).toBeUndefined();
+  expect(result).toEqual({});
 });
 
     it('throws error with API error message', async () => {
       const errorResponse: ErrorResponse = { success: false, message: 'Delete failed' };
 
       vi.mocked(fetch).mockResolvedValueOnce({
-  ok: false,
-  status: 400,
-  text: async () => JSON.stringify(errorResponse),
-  statusText: 'Bad Request',
-} as Response);
+        ok: false,
+        status: 400,
+        json: async () => errorResponse,
+        statusText: 'Bad Request',
+      } as Response);
 
-await expect(deleteDepartment('mock-token-123', 10)).rejects.toThrow('API Error (400)');
+      await expect(deleteDepartment('mock-token-123', 10)).rejects.toEqual(errorResponse);
     });
 
     it('throws generic error if no message from API', async () => {
       vi.mocked(fetch).mockResolvedValueOnce({
-  ok: false,
-  status: 400,
-  text: async () => '{}',
-  statusText: 'Bad Request',
-} as Response);
+        ok: false,
+        status: 400,
+        json: async () => ({}),
+        statusText: 'Bad Request',
+      } as Response);
 
-await expect(deleteDepartment('mock-token-123', 10)).rejects.toThrow('API Error (400)');
+      await expect(deleteDepartment('mock-token-123', 10)).rejects.toEqual({});
     });
 
     it('throws error on fetch rejected', async () => {

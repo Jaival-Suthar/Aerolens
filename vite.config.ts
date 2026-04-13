@@ -26,6 +26,7 @@ export default defineConfig({
     react(),
     tsconfigPaths(),
     javascriptObfuscator({
+    apply: 'build',
     include: ["dist/assets/*.js"], // ✅ obfuscate built chunks only
     exclude: ["node_modules/**"],
     options: {

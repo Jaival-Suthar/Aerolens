@@ -1,9 +1,7 @@
 // ContactAddEdit.test.tsx
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-// Import 'unmount' from @testing-library/react to help with rerendering components that use portals/state.
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import unmount from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ContactAddEdit from '../components/contactAddEdit';
 import type { Contact } from '../types/contactTypes';
@@ -51,6 +49,47 @@ vi.mock('react-icons/fa', () => ({
   FaCheck: vi.fn(() => <span data-testid="mock-fa-check" />),
 }));
 
+vi.mock('../../../shared/auth/AuthContext', () => ({
+  useAuth: () => ({ accessToken: 'mock-token-123' }),
+}));
+
+const mockGetDesignations = vi.fn().mockResolvedValue(['Manager', 'Developer']);
+
+vi.mock('../services/useContact', () => ({
+  default: () => ({
+    getDesignations: mockGetDesignations,
+  }),
+}));
+
+vi.mock('primereact/dropdown', () => ({
+  Dropdown: (props: any) => {
+    const stringValue =
+      typeof props.value === 'string'
+        ? props.value
+        : props.value?.value != null
+          ? String(props.value.value)
+          : '';
+    return (
+      <select
+        id={props.id}
+        data-testid={`dropdown-${props.id}`}
+        aria-label={typeof props.placeholder === 'string' ? props.placeholder : 'designation'}
+        value={stringValue}
+        disabled={props.disabled}
+        onChange={(e) =>
+          props.onChange?.({ value: (e.target as HTMLSelectElement).value })
+        }
+      >
+        <option value=""> </option>
+        {(props.options || []).map((o: { label: string; value: string }) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    );
+  },
+}));
 
 // --- Setup Data ---
 
@@ -112,7 +151,7 @@ describe('ContactAddEdit Component', () => {
       
       // Check that fields are empty
       expect(screen.getByTestId('input-contactPersonName')).toHaveValue('');
-      expect(screen.getByTestId('input-designation')).toHaveValue('');
+      expect(screen.getByTestId('dropdown-designation')).toHaveValue('');
       expect(screen.getByTestId('input-phone')).toHaveValue('');
       expect(screen.getByTestId('input-email')).toHaveValue('');
     });
@@ -123,13 +162,13 @@ describe('ContactAddEdit Component', () => {
       
       // 1. Form field population
       const nameInput = screen.getByLabelText(/Contact Person Name/i);
-      const designationInput = screen.getByLabelText(/Designation/i);
+      const designationSelect = screen.getByTestId('dropdown-designation');
       const phoneInput = screen.getByLabelText(/Phone/i);
       const emailInput = screen.getByLabelText(/Email/i);
       const saveButton = screen.getByRole('button', { name: /Add Contact/i });
 
       await user.type(nameInput, 'New Contact');
-      await user.type(designationInput, 'Developer');
+      await user.selectOptions(designationSelect, 'Developer');
       await user.type(phoneInput, '9876543210');
       await user.type(emailInput, 'new.contact@test.com '); // Note the trailing space for trim test
       
@@ -165,16 +204,18 @@ describe('ContactAddEdit Component', () => {
       clientId: null, // Should not be needed in edit mode
     };
 
-    it('renders with "Edit Contact" header and pre-filled fields', () => {
+    it('renders with "Edit Contact" header and pre-filled fields', async () => {
       render(<ContactAddEdit {...defaultProps} />);
-      
+
       expect(screen.getByTestId('mock-dialog')).toHaveAttribute('data-header', 'Edit Contact');
-      
-      // Check that fields are pre-filled with contact data
+
       expect(screen.getByTestId('input-contactPersonName')).toHaveValue(mockContact.contactPersonName);
-      expect(screen.getByTestId('input-designation')).toHaveValue(mockContact.designation);
       expect(screen.getByTestId('input-phone')).toHaveValue(mockContact.phone);
       expect(screen.getByTestId('input-email')).toHaveValue(mockContact.email);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('dropdown-designation')).toHaveValue(mockContact.designation);
+      });
     });
     
     it('successfully submits an update and calls onSave with the updated payload', async () => {
@@ -227,12 +268,10 @@ describe('ContactAddEdit Component', () => {
 
       await waitFor(() => {
         expect(mockOnSave).not.toHaveBeenCalled();
-        // Assertions Focus: Text content verification & CSS classes
         expect(screen.getByText(/Contact Person Name is required/i)).toBeInTheDocument();
         expect(screen.getByText(/Designation is required/i)).toBeInTheDocument();
-        expect(screen.getByText(/Phone is required/i)).toBeInTheDocument();
         expect(screen.getByText(/Email is required/i)).toBeInTheDocument();
-        
+
         expect(screen.getByTestId('input-contactPersonName')).toHaveClass('p-invalid');
       });
     });
@@ -247,8 +286,8 @@ describe('ContactAddEdit Component', () => {
       
       // Fill required fields except invalid email
       await user.type(nameInput, 'Valid Name');
-      await user.type(screen.getByLabelText(/Designation/i), 'Designation');
-      await user.type(screen.getByLabelText(/Phone/i), '123');
+      await user.selectOptions(screen.getByTestId('dropdown-designation'), 'Manager');
+      await user.type(screen.getByLabelText(/Phone/i), '9876543210');
       await user.type(emailInput, 'invalid-email'); // Invalid format
 
       await user.click(saveButton);
