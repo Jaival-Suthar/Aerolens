@@ -307,6 +307,46 @@ describe('lookupService', () => {
     });
   });
 
+  describe('patch', () => {
+    it('should PATCH lookup value when key and value are valid', async () => {
+      const mockResponse: LookupApiResponse = {
+        success: true,
+        message: 'Updated',
+        data: { lookupKey: 2, tag: 'T', value: 'NEW' },
+      };
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue(mockResponse),
+      });
+
+      const result = await lookupService.patch('mock-token-123', 2, { value: 'NEW' });
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${import.meta.env.VITE_BASE_URL}/lookup/2`,
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ value: 'NEW' }),
+        })
+      );
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should reject invalid lookupKey', async () => {
+      await expect(
+        lookupService.patch('mock-token-123', 0, { value: 'X' })
+      ).rejects.toThrow(/Invalid lookupKey provided/);
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('should reject empty value', async () => {
+      await expect(
+        lookupService.patch('mock-token-123', 1, { value: '   ' })
+      ).rejects.toThrow(/value is required for patch/);
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+  });
+
   describe('delete', () => {
     it('should delete a lookup entry by key', async () => {
       global.fetch = vi.fn().mockResolvedValue({

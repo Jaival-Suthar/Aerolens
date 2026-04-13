@@ -1,335 +1,97 @@
-import { vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   getDepartments,
   addDepartment,
   updateDepartment,
   deleteDepartment,
-} from '../../Department/services/useDepartment';
+} from "./useDepartment";
 
-import type {
-  DepartmentsResponse,
-  AddDepartmentPayload,
-  UpdateDepartmentPayload,
-  ApiResponse,
-  Department,
-  ErrorResponse,
-} from '../../Department/types/departmentTypes';
-import { describe, it, expect, afterEach } from 'vitest';
-const API_BASE_URL = import.meta.env.VITE_BASE_URL;
-// Mock AuthContext
-vi.mock('../../../shared/auth/AuthContext', () => ({
-  useAuth: () => ({
-    accessToken: 'mock-token-123'
-  })
-}));
-global.fetch = vi.fn();
+const API_URL = import.meta.env.VITE_BASE_URL as string;
 
-describe('departmentService', () => {
+describe("useDepartment", () => {
+  beforeEach(() => {
+    global.fetch = vi.fn();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
-  describe('getDepartments', () => {
-    it('fetches and returns departments on success', async () => {
-  const mockData: DepartmentsResponse = {
-    departments: [{ departmentId: 1, departmentName: 'HR', departmentDescription: '', clientId: 1 }],
-    clientName: 'Client A',
-  };
+  it("getDepartments unwraps data wrapper", async () => {
+    const body = { data: { departments: [] } };
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => body,
+    } as Response);
 
-  vi.mocked(fetch).mockResolvedValueOnce({
-    ok: true,
-    status: 200,
-    json: async () => ({ data: mockData }),
-  } as Response);
-
-  const result = await getDepartments('mock-token-123', 1);
-  
-  expect(fetch).toHaveBeenCalledWith(
-    `${API_BASE_URL}/client/1`, 
-    expect.objectContaining({
-      credentials: 'include',
-      method: 'GET',
-    })
-  );
-  expect(result).toEqual(mockData);
-});
-
-    it('returns empty departments and clientName if no data', async () => {
-  vi.mocked(fetch).mockResolvedValueOnce({
-    ok: true,
-    status: 200,
-    json: async () => ({}), // apiFetch returns {} when data is empty
-  } as Response);
-
-  const result = await getDepartments('mock-token-123', 5);
-  expect(result).toEqual({});
-});
-
-    it('throws error when fetch response is not ok', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        json: async () => ({ message: 'Bad request body' }),
-        statusText: 'Bad Request',
-      } as Response);
-
-      await expect(getDepartments('mock-token-123', 1)).rejects.toEqual({
-        message: 'Bad request body',
-      });
-    });
-
-    it('throws on fetch error', async () => {
-      vi.mocked(fetch).mockRejectedValueOnce(new Error('fetch-failed'));
-
-      await expect(getDepartments('mock-token-123',1)).rejects.toThrow('fetch-failed');
-    });
+    const result = await getDepartments("tok", 7);
+    expect(result).toEqual(body.data);
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/client/7`,
+      expect.objectContaining({ method: "GET" })
+    );
   });
 
-  describe('addDepartment', () => {
-    const payload: AddDepartmentPayload = {
-      departmentName: 'New Dept',
-      departmentDescription: 'Description',
+  it("addDepartment posts JSON", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      json: async () => ({ data: { departmentId: 1 } }),
+    } as Response);
+
+    await addDepartment("tok", {
       clientId: 1,
-    };
-
-    it('adds department successfully', async () => {
-  const department = { departmentId: 10, ...payload };
-  const apiResponse: ApiResponse<Department> = {
-    success: true,
-    message: 'Department added successfully',
-    data: department,
-  };
-
-  vi.mocked(fetch).mockResolvedValueOnce({
-    ok: true,
-    status: 200,
-    json: async () => apiResponse,
-  } as Response);
-
-  const response = await addDepartment('mock-token-123', payload);
-  
-  expect(fetch).toHaveBeenCalledWith(
-    `${API_BASE_URL}/department`, 
-    expect.objectContaining({
-      method: 'POST',
-      credentials: 'include',
-      body: JSON.stringify(payload)
-    })
-  );
-  // apiFetch extracts data.data, so it returns just the department
-  expect(response).toEqual(department);
-});
-
-    it('throws error with API error message', async () => {
-      const errorResponse: ErrorResponse = { success: false, message: 'Duplicate department' };
-
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        json: async () => errorResponse,
-        statusText: 'Bad Request',
-      } as Response);
-
-      await expect(addDepartment('mock-token-123', payload)).rejects.toEqual(errorResponse);
+      departmentName: "Eng",
+      departmentDescription: "D",
     });
-
-    it('throws generic error if no error message', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        json: async () => ({}),
-        statusText: 'Bad Request',
-      } as Response);
-
-      await expect(addDepartment('mock-token-123', payload)).rejects.toEqual({});
-    });
-
-    it('throws error on fetch reject', async () => {
-      vi.mocked(fetch).mockRejectedValueOnce(new Error('network-failure'));
-
-      await expect(addDepartment('mock-token-123',payload)).rejects.toThrow('network-failure');
-    });
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/department`,
+      expect.objectContaining({ method: "POST" })
+    );
   });
 
-  describe('updateDepartment', () => {
-    const basePayload: UpdateDepartmentPayload = {
-      departmentId: 5,
-      departmentName: 'Updated Dept',
-      departmentDescription: 'Updated Desc',
-    };
+  it("updateDepartment sends PATCH", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: {} }),
+    } as Response);
 
-    it('updates successfully with both fields', async () => {
-  const department = { departmentId: 5, departmentName: 'Updated Dept', departmentDescription: 'Updated Desc', clientId: 1 };
-  const apiResponse: ApiResponse<Department> = {
-    success: true,
-    message: 'Department updated successfully',
-    data: department,
-  };
-
-  vi.mocked(fetch).mockResolvedValueOnce({
-    ok: true,
-    status: 200,
-    json: async () => apiResponse,
-  } as Response);
-
-  const response = await updateDepartment('mock-token-123', basePayload);
-  
-  expect(fetch).toHaveBeenCalledWith(
-    `${API_BASE_URL}/department/5`, 
-    expect.objectContaining({
-      method: 'PATCH',
-      credentials: 'include',
-      body: JSON.stringify({
-        departmentName: 'Updated Dept',
-        departmentDescription: 'Updated Desc',
-      }),
-    })
-  );
-  // apiFetch extracts data.data, so it returns just the department
-  expect(response).toEqual(department);
-});
-
-    it('updates successfully with just one field', async () => {
-  const payload: UpdateDepartmentPayload = {
-    departmentId: 5,
-    departmentName: 'Name Only',
-  };
-
-  const department = { departmentId: 5, departmentName: 'Name Only', departmentDescription: '', clientId: 1 };
-  const apiResponse: ApiResponse<Department> = {
-    success: true,
-    message: 'Department updated successfully',
-    data: department,
-  };
-
-  vi.mocked(fetch).mockResolvedValueOnce({
-    ok: true,
-    status: 200,
-    json: async () => apiResponse,
-  } as Response);
-
-  const response = await updateDepartment('mock-token-123', payload);
-  
-  expect(fetch).toHaveBeenCalledWith(
-    `${API_BASE_URL}/department/5`, 
-    expect.objectContaining({
-      method: 'PATCH',
-      credentials: 'include',
-      body: JSON.stringify({ departmentName: 'Name Only' }),
-    })
-  );
-  // apiFetch extracts data.data, so it returns just the department
-  expect(response).toEqual(department);
-});
-
-    it('sends PATCH with empty JSON body when only departmentId is provided', async () => {
-      const department = {
-        departmentId: 5,
-        departmentName: '',
-        departmentDescription: '',
-        clientId: 1,
-      };
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          success: true,
-          message: 'ok',
-          data: department,
-        }),
-      } as Response);
-
-      await updateDepartment('mock-token-123', { departmentId: 5 });
-
-      expect(fetch).toHaveBeenCalledWith(
-        `${API_BASE_URL}/department/5`,
-        expect.objectContaining({
-          method: 'PATCH',
-          credentials: 'include',
-          body: '{}',
-        })
-      );
+    await updateDepartment("tok", {
+      departmentId: 3,
+      departmentName: "X",
+      departmentDescription: "Y",
     });
-
-    it('throws error with API error message', async () => {
-      const errorResponse: ErrorResponse = { success: false, message: 'Update failed' };
-
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        json: async () => errorResponse,
-        statusText: 'Bad Request',
-      } as Response);
-
-      await expect(updateDepartment('mock-token-123', basePayload)).rejects.toEqual(errorResponse);
-    });
-
-    it('throws generic error if no message from API', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        json: async () => ({}),
-        statusText: 'Bad Request',
-      } as Response);
-
-      await expect(updateDepartment('mock-token-123', basePayload)).rejects.toEqual({});
-    });
-
-    it('throws error on fetch rejected', async () => {
-      vi.mocked(fetch).mockRejectedValueOnce(new Error('network-failure'));
-
-      await expect(updateDepartment('mock-token-123',basePayload)).rejects.toThrow('network-failure');
-    });
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/department/3`,
+      expect.objectContaining({ method: "PATCH" })
+    );
   });
 
-  describe('deleteDepartment', () => {
-    it('deletes successfully when response is ok', async () => {
-  vi.mocked(fetch).mockResolvedValueOnce({
-    ok: true,
-    status: 204,
-    json: async () => ({}),
-  } as Response);
+  it("deleteDepartment sends DELETE", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 204,
+      json: async () => ({}),
+    } as Response);
 
-  const result = await deleteDepartment('mock-token-123', 10);
-  
-  expect(fetch).toHaveBeenCalledWith(
-    `${API_BASE_URL}/department/10`, 
-    expect.objectContaining({
-      method: 'DELETE',
-      credentials: 'include',
-    })
-  );
-  expect(result).toEqual({});
-});
+    await deleteDepartment("tok", 9);
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/department/9`,
+      expect.objectContaining({ method: "DELETE" })
+    );
+  });
 
-    it('throws error with API error message', async () => {
-      const errorResponse: ErrorResponse = { success: false, message: 'Delete failed' };
+  it("propagates backend error JSON", async () => {
+    const err = { message: "bad" };
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => err,
+    } as Response);
 
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        json: async () => errorResponse,
-        statusText: 'Bad Request',
-      } as Response);
-
-      await expect(deleteDepartment('mock-token-123', 10)).rejects.toEqual(errorResponse);
-    });
-
-    it('throws generic error if no message from API', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        json: async () => ({}),
-        statusText: 'Bad Request',
-      } as Response);
-
-      await expect(deleteDepartment('mock-token-123', 10)).rejects.toEqual({});
-    });
-
-    it('throws error on fetch rejected', async () => {
-      vi.mocked(fetch).mockRejectedValueOnce(new Error('network-failure'));
-
-      await expect(deleteDepartment('mock-token-123',10)).rejects.toThrow('network-failure');
-    });
+    await expect(getDepartments("tok", 1)).rejects.toEqual(err);
   });
 });

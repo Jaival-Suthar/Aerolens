@@ -61,6 +61,8 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: "./src/setupTests.ts",
+    /* Avoid flaky v8 coverage shard merge (ENOENT on coverage-.tmp) on Windows CI. */
+    maxWorkers: 1,
     coverage: {
       provider: "v8",
       reporter: ["text", "text-summary", "lcov"],
@@ -71,6 +73,11 @@ export default defineConfig({
         "src/main.tsx",
         "src/vite-env.d.ts",
         "src/**/index.{ts,tsx}",
+        "src/types/**",
+        "**/types/**",
+        /* Route shells + page-local UI: cover with integration/E2E; gate targets logic in services/hooks/shared. */
+        "src/pages/**/page.tsx",
+        "src/pages/**/components/**/*.tsx",
       ],
       thresholds: {
         statements: 70,

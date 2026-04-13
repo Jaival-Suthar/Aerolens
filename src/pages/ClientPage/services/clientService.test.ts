@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import {
   getClients,
+  getAllClients,
   createClient,
   updateClient,
   deleteClient,
@@ -22,6 +23,42 @@ const BASE_URL = import.meta.env.VITE_BASE_URL;
 const TOKEN = "mock-token-123";
 
 describe("clientService API calls", () => {
+  describe("getAllClients", () => {
+    it("returns data array from large page fetch", async () => {
+      const rows: ClientType[] = [
+        { clientId: 1, clientName: "A", address: "Addr" },
+      ];
+      (global.fetch as any).mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue({ data: rows }),
+      });
+
+      const res = await getAllClients(TOKEN);
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${BASE_URL}/client?page=1&limit=10000`,
+        expect.objectContaining({
+          credentials: "include",
+          headers: expect.objectContaining({
+            Authorization: `Bearer ${TOKEN}`,
+          }),
+        })
+      );
+      expect(res).toEqual(rows);
+    });
+
+    it("rethrows normalized API errors when response not ok", async () => {
+      (global.fetch as any).mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: vi.fn().mockResolvedValue({ message: "fail", error: "E" }),
+      });
+
+      await expect(getAllClients(TOKEN)).rejects.toMatchObject({
+        message: "fail",
+      });
+    });
+  });
+
   // ---------------- getClients ----------------
   describe("getClients", () => {
     it("fetches clients successfully", async () => {

@@ -56,4 +56,66 @@ describe("buildWhatsAppSharePreviewText", () => {
     const text = buildWhatsAppSharePreviewText({ ...base, noticePeriod: 0 }, createData);
     expect(text).toContain("Notice Period: Immediate");
   });
+
+  it("formats LinkedIn as full URL when already absolute", () => {
+    const withHttp = buildWhatsAppSharePreviewText(
+      { ...base, linkedinProfileUrl: "http://linkedin.com/in/x" },
+      createData
+    );
+    expect(withHttp).toContain("LinkedIn: http://linkedin.com/in/x");
+
+    const withHttps = buildWhatsAppSharePreviewText(
+      { ...base, linkedinProfileUrl: "https://linkedin.com/in/y" },
+      createData
+    );
+    expect(withHttps).toContain("LinkedIn: https://linkedin.com/in/y");
+  });
+
+  it("prefixes bare LinkedIn paths with https://", () => {
+    const text = buildWhatsAppSharePreviewText(
+      { ...base, linkedinProfileUrl: "linkedin.com/in/z" },
+      createData
+    );
+    expect(text).toContain("LinkedIn: https://linkedin.com/in/z");
+  });
+
+  it("uses N/A for invalid or missing experience and CTC", () => {
+    const text = buildWhatsAppSharePreviewText(
+      {
+        ...base,
+        experienceYears: null as unknown as number,
+        currentCTCAmount: null as unknown as number,
+        expectedCTCAmount: NaN as unknown as number,
+        candidateName: "   ",
+        contactNumber: "",
+        email: undefined as unknown as string,
+      },
+      createData
+    );
+    expect(text).toContain("Full Name: N/A");
+    expect(text).toContain("Contact Number: N/A");
+    expect(text).toContain("Email ID: N/A");
+    expect(text).toContain("Years of Experience: N/A");
+    expect(text).toMatch(/Current CTC:\s*N\/A/);
+    expect(text).toMatch(/Expected CTC:\s*N\/A/);
+  });
+
+  it("uses EUR symbol from map and Annual when type name missing", () => {
+    const data: CandidateCreateData = {
+      ...createData,
+      currencies: [{ currencyId: 2, currencyName: "EUR" }],
+      compensationTypes: [],
+    };
+    const text = buildWhatsAppSharePreviewText(
+      {
+        ...base,
+        currentCTCAmount: 1000,
+        currentCTCCurrencyId: 2,
+        currentCTCTypeId: 99,
+      },
+      data
+    );
+    expect(text).toContain("€");
+    expect(text).toContain("Annual");
+  });
 });
