@@ -1,7 +1,7 @@
 import React from "react";
 import { describe, it, vi, beforeEach, expect } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { AddLookupForm } from "./AddLookupForm";
+import { AddLookupForm } from "./AddEditLookupForm";
 import { lookupService } from "../services/lookupService";
 vi.mock('../../../shared/auth/AuthContext', () => ({
   useAuth: () => ({

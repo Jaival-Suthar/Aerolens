@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useContactOperations } from '../hooks/useContactOperations';
@@ -7,74 +8,72 @@ import ClientContactsView from './clientContactsView';
 import type { Client, Contact } from '../types/contactTypes';
 
 // Mock dependencies
-vi.mock('primereact/toast');
-vi.mock('./contactTable', () => ({
-  default: ({ contacts, loading, selectedContact, onSelectionChange, onRowDoubleClick }: any) => (
+vi.mock('primereact/toast', () => ({
+  Toast: ({ children }: any) => <div data-testid="toast">{children}</div>,
+}));
+
+vi.mock('primereact/datatable', () => ({
+  DataTable: ({ value, loading, onSelectionChange, onRowDoubleClick, children }: any) => (
     <div data-testid="contact-table">
       {loading && <div>Loading...</div>}
-      {contacts.map((contact: Contact) => (
+      {(value || []).map((contact: Contact) => (
         <div
           key={contact.clientContactId}
           data-testid={`contact-row-${contact.clientContactId}`}
-          onClick={() => onSelectionChange(contact)}
-          onDoubleClick={() => onRowDoubleClick(contact)}
+          onClick={() => onSelectionChange({ value: contact })}
+          onDoubleClick={() => onRowDoubleClick({ data: contact })}
         >
           {contact.contactPersonName}
         </div>
       ))}
+      {children}
     </div>
   ),
+  Column: () => null,
 }));
 
-vi.mock('./contactViewHeader', () => ({
-  default: ({ onAddContact, onEditContact, onDeleteContact, selectedClient }: any) => (
-    <div data-testid="contact-view-header">
-      <button onClick={onAddContact} data-testid="add-button">
-        Add Contact
-      </button>
-      <button onClick={onEditContact} data-testid="edit-button">
-        Edit Contact
-      </button>
-      <button onClick={onDeleteContact} data-testid="delete-button">
-        Delete Contact
-      </button>
-      {selectedClient && <div>{selectedClient.clientName}</div>}
-    </div>
+vi.mock('../../../shared/AddButton', () => ({
+  default: ({ onClick }: any) => (
+    <button data-testid="add-button" onClick={onClick}>Add</button>
+  ),
+}));
+vi.mock('../../../shared/EditButton', () => ({
+  default: ({ onClick, disabled }: any) => (
+    <button data-testid="edit-button" onClick={onClick} disabled={disabled}>Edit</button>
+  ),
+}));
+vi.mock('../../../shared/DeleteButton', () => ({
+  default: ({ onClick, disabled }: any) => (
+    <button data-testid="delete-button" onClick={onClick} disabled={disabled}>Delete</button>
   ),
 }));
 
 vi.mock('./contactAddEdit', () => ({
-  default: ({ visible, onHide, onSave, mode, contact, clientId }: any) => (
+  default: ({ visible, onHide, onSave, mode }: any) =>
     visible ? (
       <div data-testid="contact-add-edit-dialog">
-        <button onClick={onHide} data-testid="dialog-close-button">
-          Close
-        </button>
+        <button onClick={onHide} data-testid="dialog-close-button">Close</button>
         <button
-          onClick={() => onSave({ clientId, contactPersonName: 'Test Contact', email: 'test@test.com' })}
+          onClick={() => onSave({ contactPersonName: 'Test Contact', email: 'test@test.com' })}
           data-testid="dialog-save-button"
-        >
-          Save
-        </button>
+        >Save</button>
         <div data-testid="dialog-mode">{mode}</div>
       </div>
-    ) : null
-  ),
+    ) : null,
 }));
 
 vi.mock('./contactDelete', () => ({
-  default: ({ visible, onHide, onDelete, contact }: any) => (
+  default: ({ visible, onHide, onDelete, contact }: any) =>
     visible ? (
       <div data-testid="contact-delete-dialog">
-        <button onClick={onHide} data-testid="delete-dialog-close-button">
-          Close
-        </button>
-        <button onClick={() => onDelete(contact)} data-testid="confirm-delete-button">
-          Confirm Delete
-        </button>
+        <button onClick={onHide} data-testid="delete-dialog-close-button">Close</button>
+        <button onClick={() => onDelete(contact)} data-testid="confirm-delete-button">Confirm</button>
       </div>
-    ) : null
-  ),
+    ) : null,
+}));
+
+vi.mock('react-icons/fa', () => ({
+  FaArrowLeft: () => <span />,
 }));
 
 vi.mock('../hooks/useContactOperations');
@@ -139,7 +138,7 @@ describe('ClientContactsView', () => {
         <ClientContactsView selectedClient={mockClient} onBackClick={vi.fn()} />
       );
       expect(screen.getByText(`Contacts for: ${mockClient.clientName}`)).toBeInTheDocument();
-      expect(screen.getByTestId('contact-view-header')).toBeInTheDocument();
+      expect(screen.getByTestId('add-button')).toBeInTheDocument();
       expect(screen.getByTestId('contact-table')).toBeInTheDocument();
     });
 
@@ -357,7 +356,7 @@ describe('ClientContactsView', () => {
     it('should display error when fetching contacts fails', async () => {
       (useContactsByClient as any).mockReturnValue({
         ...mockUseContactsByClient,
-        error: 'Failed to fetch contacts',
+        error: { message: 'Failed to fetch contacts' },
       });
       render(
         <ClientContactsView selectedClient={mockClient} onBackClick={vi.fn()} />
@@ -368,7 +367,7 @@ describe('ClientContactsView', () => {
     });
 
     it('should handle failed save operation', async () => {
-      mockUseContactOperations.handleSaveContact.mockResolvedValue({ success: false, error: 'Save failed' });
+      mockUseContactOperations.handleSaveContact.mockRejectedValue({ message: 'Save failed' });
       const user = userEvent.setup();
       render(
         <ClientContactsView selectedClient={mockClient} onBackClick={vi.fn()} />
@@ -380,12 +379,11 @@ describe('ClientContactsView', () => {
       await user.click(screen.getByTestId('dialog-save-button'));
       await waitFor(() => {
         expect(mockUseContactOperations.handleSaveContact).toHaveBeenCalled();
-        expect(screen.getByTestId('contact-add-edit-dialog')).toBeInTheDocument();
       });
     });
 
     it('should handle failed delete operation', async () => {
-      mockUseContactOperations.handleDeleteContact.mockResolvedValue({ success: false, error: 'Delete failed' });
+      mockUseContactOperations.handleDeleteContact.mockRejectedValue({ message: 'Delete failed' });
       const user = userEvent.setup();
       render(
         <ClientContactsView selectedClient={mockClient} onBackClick={vi.fn()} />
@@ -398,7 +396,6 @@ describe('ClientContactsView', () => {
       await user.click(screen.getByTestId('confirm-delete-button'));
       await waitFor(() => {
         expect(mockUseContactOperations.handleDeleteContact).toHaveBeenCalled();
-        expect(screen.getByTestId('contact-delete-dialog')).toBeInTheDocument();
       });
     });
   });

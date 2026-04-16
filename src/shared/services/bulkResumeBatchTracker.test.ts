@@ -3,6 +3,7 @@ import { getResumeBulkStatus } from "../../pages/Resume/services/useResume";
 import { showGlobalToast } from "./globalToastService";
 import {
   POLLING_INTERVAL,
+  MAX_POLL_ATTEMPTS,
   RESUME_BULK_BATCH_FINISHED_EVENT,
   startBulkResumeBatchTracking,
   stopBulkResumeBatchTracking,
@@ -109,5 +110,44 @@ describe("bulkResumeBatchTracker", () => {
       "mock-token-123",
       "batch-2"
     );
+  });
+
+  it("shows error toast and emits on FAILED", async () => {
+    const finishedListener = vi.fn();
+    window.addEventListener(RESUME_BULK_BATCH_FINISHED_EVENT, finishedListener);
+    vi.mocked(getResumeBulkStatus).mockResolvedValue(makeStatusResponse("FAILED"));
+
+    startBulkResumeBatchTracking("batch-fail");
+    await vi.advanceTimersByTimeAsync(POLLING_INTERVAL);
+
+    expect(showGlobalToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: "error",
+        summary: "Batch Failed",
+      })
+    );
+    expect(finishedListener).toHaveBeenCalled();
+    window.removeEventListener(
+      RESUME_BULK_BATCH_FINISHED_EVENT,
+      finishedListener
+    );
+  });
+
+  it("ignores empty batch id", () => {
+    startBulkResumeBatchTracking("");
+    expect(getResumeBulkStatus).not.toHaveBeenCalled();
+  });
+
+  it("stops polling after max attempts", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(getResumeBulkStatus).mockResolvedValue(
+      makeStatusResponse("PROCESSING")
+    );
+
+    startBulkResumeBatchTracking("batch-timeout");
+    await vi.advanceTimersByTimeAsync(POLLING_INTERVAL * (MAX_POLL_ATTEMPTS + 2));
+
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

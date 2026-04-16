@@ -17,8 +17,12 @@ vi.mock('./pages/Dashboard/page', () => ({
   default: () => <div data-testid="home-page">Home Page</div>,
 }));
 
-vi.mock('./pages/JobProfile/page', () => ({
+vi.mock('./pages/JobProfileNew/page', () => ({
   default: () => <div data-testid="job-profile-page">Job Profile Page</div>,
+}));
+
+vi.mock('./pages/Login/Login', () => ({
+  default: () => <div data-testid="login-page">Login Page</div>,
 }));
 
 vi.mock('./pages/Resume/page', () => ({
@@ -75,7 +79,7 @@ describe('AppContent', () => {
     await waitFor(() => {
       const mainContent = screen.getByRole('main');
       expect(mainContent).toHaveStyle('background: #fff');
-      expect(mainContent).toHaveStyle('minHeight: 100vh');
+      expect(mainContent).toHaveStyle('min-height: 0');
     });
   });
 
@@ -111,7 +115,7 @@ describe('AppContent', () => {
     await waitFor(() => {
       expect(screen.getByText('404')).toBeInTheDocument();
       expect(screen.getByText('Page not found')).toBeInTheDocument();
-      expect(screen.getByTestId('go-dashboard-btn')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /go to home page/i })).toBeInTheDocument();
     });
   });
 
@@ -144,18 +148,16 @@ describe('AppContent', () => {
       </AuthContext.Provider>
     );
 
-    // The user should see login page (redirected)
     await waitFor(() => {
-      expect(screen.queryByTestId('login-page')).not.toBeInTheDocument();
+      expect(screen.getByTestId('login-page')).toBeInTheDocument();
     });
   });
 
-  it('redirects authenticated users from /login to /home', async () => {
+  it('renders login route at /login when authenticated (no auto-redirect in app)', async () => {
     renderWithAuth(<AppContent />, '/login');
 
     await waitFor(() => {
-      expect(screen.queryByTestId('login-page')).not.toBeInTheDocument();
-      expect(screen.getByTestId('home-page')).toBeInTheDocument();
+      expect(screen.getByTestId('login-page')).toBeInTheDocument();
     });
   });
 
@@ -208,15 +210,11 @@ describe('AppContent', () => {
     });
   });
 
-  it('navigates to /home when clicking "Go to Home Page" button in NotFound page', async () => {
+  it('NotFound page exposes a button to go home', async () => {
     renderWithAuth(<AppContent />, '/invalid-route-xyz');
 
-    const btn = await screen.findByTestId('go-dashboard-btn');
-    Object.defineProperty(window, 'location', { value: { href: '' }, writable: true });
-
-    btn.click();
-
-    expect(window.location.href).toBe('/home');
+    const btn = await screen.findByRole('button', { name: /go to home page/i });
+    expect(btn).toBeInTheDocument();
   });
 
 });

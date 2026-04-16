@@ -19,9 +19,8 @@ vi.mock('primereact/button', () => ({
   ),
 }));
 
-// Mock react-icons
-vi.mock('react-icons/fa', () => ({
-  FaFileExcel: () => <span data-testid="file-excel-icon">📊</span>,
+vi.mock("react-icons/fa", () => ({
+  FaDownload: () => <span data-testid="export-download-icon">↓</span>,
 }));
 
 // Mock PrimeReact DataTable
@@ -50,11 +49,10 @@ describe('ExportExcelButton', () => {
     expect(button).toBeInTheDocument();
   });
 
-  it('renders the FaFileExcel icon', () => {
+  it("renders the FaDownload icon", () => {
     render(<ExportExcelButton dtRef={dtRef} />);
 
-    const icon = screen.getByTestId('file-excel-icon');
-    expect(icon).toBeInTheDocument();
+    expect(screen.getByTestId("export-download-icon")).toBeInTheDocument();
   });
 
   it('calls exportCSV when button is clicked', async () => {
