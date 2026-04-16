@@ -88,6 +88,7 @@ vi.mock("primereact/button", () => ({
 
 // Mock react-icons
 vi.mock("react-icons/fa", () => ({
+  FaClipboardList: () => <span data-testid="icon-clipboardlist" />,
   FaBriefcase: () => <span data-testid="icon-briefcase" />,
   FaUsers: () => <span data-testid="icon-users" />,
   FaDatabase: () => <span data-testid="icon-database" />,
@@ -96,6 +97,13 @@ vi.mock("react-icons/fa", () => ({
   FaIdCard: () => <span data-testid="icon-idcard" />,
   FaCog: () => <span data-testid="icon-cog" />,
   FaUser: () => <span data-testid="icon-user" />,
+  FaUserTie: () => <span data-testid="icon-usertie" />,
+  FaUserPlus: () => <span data-testid="icon-userplus" />,
+  FaBuilding: () => <span data-testid="icon-building" />,
+  FaLayerGroup: () => <span data-testid="icon-layergroup" />,
+  FaRegCalendarAlt: () => <span data-testid="icon-calendar" />,
+  FaBullseye: () => <span data-testid="icon-bullseye" />,
+  FaHistory: () => <span data-testid="icon-history" />,
 }));
 
 describe("AppNavbar", () => {
@@ -257,6 +265,17 @@ describe("AppNavbar", () => {
   
   expect(mockToggleSidebar).toHaveBeenCalledTimes(1);
   expect(mockNavigate).not.toHaveBeenCalled();
+});
+
+    it("should navigate to /audit-logs when 'Audit Logs' is selected from settings", async () => {
+  const user = userEvent.setup();
+  renderComponent();
+
+  await user.click(screen.getByTestId("button-Settings"));
+  const auditLogsItem = screen.getByTestId("settings-menu-item-Audit Logs");
+  await user.click(auditLogsItem);
+
+  expect(mockNavigate).toHaveBeenCalledWith("/audit-logs");
 });
   });
 
