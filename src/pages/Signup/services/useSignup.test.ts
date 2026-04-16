@@ -1,298 +1,112 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { registerUser, fetchMemberCreateData } from "./useSignup";
 
-// --- MOCK DEFINITIONS & SETUP ---
+const API_URL = import.meta.env.VITE_BASE_URL as string;
 
-// Mock Environment Variable and Base URL
-const API_BASE_URL = 'http://test-api.com';
+const form = {
+  fullName: "A B",
+  contactNumber: "+1234567890",
+  email: "a@b.com",
+  password: "secret",
+  confirmPassword: "secret",
+  designationId: 1,
+  vendorId: null,
+  isRecruiter: true,
+  isInterviewer: false,
+};
 
-// Mock types (assuming these are from "../types/signuptypes")
-interface SignupFormData {
-  fullName: string;
-  contactNumber: string;
-  email: string;
-  password: string;
-  designation: string;
-  isRecruiter: boolean;
-}
+describe("useSignup service", () => {
+  beforeEach(() => {
+    global.fetch = vi.fn();
+  });
 
-interface SignupResponse {
-  success: boolean;
-  message: string;
-  token?: string;
-}
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
-// ----------------------------------------------------------------------
-// Copy of the functions provided by the user, adapted to the test environment.
-// In a real project, these would be imported from `../api/auth`.
-// ----------------------------------------------------------------------
+  it("registerUser returns data on success", async () => {
+    const ok = { success: true, message: "ok", data: {} };
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      json: async () => ok,
+    } as Response);
 
-const registerUser = async (
-  formData: SignupFormData
-): Promise<SignupResponse> => {
-  try {
-    const payload = {
-      memberName: formData.fullName,
-      memberContact: formData.contactNumber,
-      email: formData.email,
-      password: formData.password,
-      designation: formData.designation,
-      isRecruiter: formData.isRecruiter,
-    };
+    const result = await registerUser(form, "token");
+    expect(result).toEqual(ok);
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/auth/register`,
+      expect.objectContaining({ method: "POST" })
+    );
+  });
 
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+  it("registerUser throws ApiError shape on HTTP error", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({
+        success: false,
+        error: "EMAIL_EXISTS",
+        message: "taken",
+      }),
+    } as Response);
+
+    await expect(registerUser(form, "token")).rejects.toMatchObject({
+      success: false,
+      error: "EMAIL_EXISTS",
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      // ✅ Handle structured backend validation error
-      if (data.error === "VALIDATION_ERROR" && Array.isArray(data.details)) {
-        const fieldErrors = data.details
-          .map((d: { field: string; message: string }) => `${d.field}: ${d.message}`)
-          .join(", ");
-        // Throw an Error with a concise message containing all field errors
-        throw new Error(fieldErrors || data.message || "Validation failed");
-      }
-
-      throw new Error(data.message || "Registration failed");
-    }
-
-    // console.log("Registration successful:", data); // Removed console logs for testing
-    return data as SignupResponse;
-  } catch (error: any) {
-    // console.error("Registration failed:", error.message); // Removed console logs for testing
-    // The inner Error message is correctly propagated
-    throw new Error(error.message || "Registration failed");
-  }
-};
-
-// ✅ Updated to accept token for Authorization
-const fetchDesignations = async (token: string): Promise<string[]> => {
-  const response = await fetch(`${API_BASE_URL}/lookup?page=1&limit=100`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
   });
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Failed to fetch designations: ${response.status} - ${text}`);
-  }
-
-  const result = await response.json();
-
-  const designations = result.data
-    .filter((item: any) => item.tag === "designation")
-    .map((item: any) => item.value);
-
-  return designations;
-};
-
-
-// --- TEST MOCK DATA ---
-
-const mockFormData: SignupFormData = {
-  fullName: 'Test User',
-  contactNumber: '1234567890',
-  email: 'test@example.com',
-  password: 'Password123!',
-  designation: 'Developer',
-  isRecruiter: false,
-};
-
-const mockDesignationsLookup = {
-  data: [
-    { id: 1, value: 'Admin', tag: 'designation' },
-    { id: 2, value: 'Developer', tag: 'designation' },
-    { id: 3, value: 'HR', tag: 'department' }, // Should be filtered out
-    { id: 4, value: 'Manager', tag: 'designation' },
-  ],
-  meta: { total: 4 }
-};
-
-const mockToken = 'test-auth-token-123';
-
-// Mock implementation for fetch
-const mockFetch = vi.fn();
-// Restore the original fetch after tests, set the mock before each test
-const originalFetch = global.fetch;
-
-
-beforeEach(() => {
-  mockFetch.mockClear();
-  global.fetch = mockFetch;
-});
-
-afterEach(() => {
-  global.fetch = originalFetch;
-});
-
-
-// --- TEST SUITE FOR registerUser ---
-describe('registerUser', () => {
-
-  it('should successfully register a user and return the response data', async () => {
-    // Mock successful API response (HTTP 200 OK)
-    const mockSuccessResponse: SignupResponse = { success: true, message: 'User created', token: 'jwt' };
-    
-    mockFetch.mockResolvedValueOnce({
+  it("registerUser throws when success false with 200", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
-      json: async () => mockSuccessResponse,
+      status: 200,
+      json: async () => ({ success: false, message: "nope" }),
     } as Response);
 
-    const result = await registerUser(mockFormData);
-
-    // 1. Assert fetch call details
-    expect(mockFetch).toHaveBeenCalledWith(
-      `${API_BASE_URL}/auth/register`,
-      expect.objectContaining({
-        method: 'POST',
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          memberName: mockFormData.fullName,
-          memberContact: mockFormData.contactNumber,
-          email: mockFormData.email,
-          password: mockFormData.password,
-          designation: mockFormData.designation,
-          isRecruiter: mockFormData.isRecruiter,
-        }),
-      })
-    );
-    
-    // 2. Assert return value
-    expect(result).toEqual(mockSuccessResponse);
+    await expect(registerUser(form, "token")).rejects.toMatchObject({
+      success: false,
+    });
   });
 
-  it('should throw an error for generic HTTP failure (e.g., 401)', async () => {
-    // Mock HTTP 401 Unauthorized response
-    const mockErrorData = { message: 'Invalid credentials' };
-    
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      json: async () => mockErrorData,
-    } as Response);
-
-    await expect(registerUser(mockFormData)).rejects.toThrow('Invalid credentials');
-  });
-
-  it('should throw a concatenated error message for VALIDATION_ERROR', async () => {
-    // Mock structured validation error
-    const mockValidationError = {
-      error: 'VALIDATION_ERROR',
-      message: 'Input validation failed',
-      details: [
-        { field: 'email', message: 'Email format is incorrect' },
-        { field: 'password', message: 'Password is too weak' },
-      ],
-    };
-
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      json: async () => mockValidationError,
-    } as Response);
-
-    await expect(registerUser(mockFormData)).rejects.toThrow(
-      'email: Email format is incorrect, password: Password is too weak'
-    );
-  });
-  
-  it('should throw a general error if backend validation details are missing', async () => {
-    // Mock validation error without 'details' array
-    const mockValidationError = {
-      error: 'VALIDATION_ERROR',
-      message: 'Generic validation error',
-    };
-
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      json: async () => mockValidationError,
-    } as Response);
-
-    await expect(registerUser(mockFormData)).rejects.toThrow(
-      'Generic validation error'
-    );
-  });
-
-
-  it('should throw a network error if fetch fails', async () => {
-    // Mock network failure
-    const networkError = new Error('Failed to fetch');
-    mockFetch.mockRejectedValueOnce(networkError);
-
-    await expect(registerUser(mockFormData)).rejects.toThrow('Failed to fetch');
-  });
-});
-
-
-// --- TEST SUITE FOR fetchDesignations ---
-describe('fetchDesignations', () => {
-
-  it('should successfully fetch, filter, and map designations', async () => {
-    // Mock successful lookup API response (HTTP 200 OK)
-    mockFetch.mockResolvedValueOnce({
+  it("registerUser handles invalid JSON via parseJsonSafely", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
-      json: async () => mockDesignationsLookup,
-      text: async () => JSON.stringify(mockDesignationsLookup),
+      status: 200,
+      json: async () => {
+        throw new SyntaxError("bad json");
+      },
     } as Response);
 
-    const result = await fetchDesignations(mockToken);
-
-    // 1. Assert fetch call details, especially the Authorization header
-    expect(mockFetch).toHaveBeenCalledWith(
-      `${API_BASE_URL}/lookup?page=1&limit=100`,
-      expect.objectContaining({
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${mockToken}`,
-        },
-      })
-    );
-
-    // 2. Assert filtering and mapping (only designation tags)
-    expect(result).toEqual(['Admin', 'Developer', 'Manager']);
+    await expect(registerUser(form, "token")).rejects.toMatchObject({
+      error: "INVALID_RESPONSE",
+    });
   });
 
-  it('should throw an error for HTTP failure during fetchDesignations', async () => {
-    // Mock HTTP 500 Internal Server Error
-    const statusText = 'Internal Server Error';
-    
-    mockFetch.mockResolvedValueOnce({
+  it("fetchMemberCreateData returns nested data", async () => {
+    const data = { designations: [] };
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, data }),
+    } as Response);
+
+    await expect(fetchMemberCreateData("t")).resolves.toEqual(data);
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/member/create-data`,
+      expect.objectContaining({ method: "GET" })
+    );
+  });
+
+  it("fetchMemberCreateData throws on failure", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
       ok: false,
       status: 500,
-      json: async () => ({}),
-      text: async () => statusText,
+      json: async () => ({ success: false, message: "fail" }),
     } as Response);
 
-    await expect(fetchDesignations(mockToken)).rejects.toThrow(
-      `Failed to fetch designations: 500 - ${statusText}`
-    );
-  });
-
-  it('should throw an error for empty response text during HTTP failure', async () => {
-    // Mock HTTP 403 Forbidden with empty body
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 403,
-      json: async () => ({}),
-      text: async () => '', // Empty response text
-    } as Response);
-
-    await expect(fetchDesignations(mockToken)).rejects.toThrow(
-      `Failed to fetch designations: 403 -`
-    );
-  });
-
-  it('should throw a network error if fetch fails during designation lookup', async () => {
-    // Mock network failure
-    const networkError = new Error('DNS resolution failed');
-    mockFetch.mockRejectedValueOnce(networkError);
-
-    await expect(fetchDesignations(mockToken)).rejects.toThrow('DNS resolution failed');
+    await expect(fetchMemberCreateData("t")).rejects.toMatchObject({
+      success: false,
+    });
   });
 });

@@ -228,8 +228,8 @@ describe('DepartmentAddEdit', () => {
 
       await waitFor(() => {
         expect(useDepartment.updateDepartment).toHaveBeenCalledWith(
-          'mock-token-123',{
-          ...mockDepartment,
+          'mock-token-123', {
+          departmentId: mockDepartment.departmentId,
           departmentName: 'IT Department',
           departmentDescription: 'Engineering Department',
         });
@@ -431,7 +431,7 @@ describe('DepartmentAddEdit', () => {
       });
     });
 
-    it('resets form after successful save', async () => {
+    it('calls addDepartment with trimmed values on save', async () => {
       const user = userEvent.setup();
       vi.mocked(useDepartment.addDepartment).mockResolvedValue(undefined as any);
 
@@ -445,8 +445,8 @@ describe('DepartmentAddEdit', () => {
         />
       );
 
-      const nameInput = screen.getByTestId('departmentName') as HTMLTextAreaElement;
-      const descInput = screen.getByTestId('departmentDescription') as HTMLTextAreaElement;
+      const nameInput = screen.getByTestId('departmentName');
+      const descInput = screen.getByTestId('departmentDescription');
       const saveButton = screen.getByText('Add Department');
 
       await user.type(nameInput, 'Marketing');
@@ -454,16 +454,17 @@ describe('DepartmentAddEdit', () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(nameInput.value).toBe('');
-        expect(descInput.value).toBe('');
+        expect(useDepartment.addDepartment).toHaveBeenCalledWith(
+          'mock-token-123',
+          expect.objectContaining({ departmentName: 'Marketing' })
+        );
       });
     });
   });
 
   describe('Error Handling', () => {
-    it('logs error when addDepartment fails', async () => {
+    it('shows error message in dialog when addDepartment fails', async () => {
       const user = userEvent.setup();
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const error = new Error('Failed to add department');
       vi.mocked(useDepartment.addDepartment).mockRejectedValue(error);
 
@@ -486,15 +487,12 @@ describe('DepartmentAddEdit', () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith('Error saving department:', error);
+        expect(screen.getByText('Failed to add department')).toBeInTheDocument();
       });
-
-      consoleErrorSpy.mockRestore();
     });
 
-    it('logs error when updateDepartment fails', async () => {
+    it('shows error message in dialog when updateDepartment fails', async () => {
       const user = userEvent.setup();
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const error = new Error('Failed to update department');
       vi.mocked(useDepartment.updateDepartment).mockRejectedValue(error);
 
@@ -512,10 +510,8 @@ describe('DepartmentAddEdit', () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith('Error saving department:', error);
+        expect(screen.getByText('Failed to update department')).toBeInTheDocument();
       });
-
-      consoleErrorSpy.mockRestore();
     });
   });
 

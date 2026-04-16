@@ -1,14 +1,12 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ProfileSidebar } from './ProfileSideBar';
 
-// ---- Hoisted mocks ----
 const mockCloseSidebar = vi.hoisted(() => vi.fn());
 const mockLogout = vi.hoisted(() => vi.fn());
 
-// ---- Mock ProfileStore ----
 const mockProfileStore = {
   member: null as any,
   isSidebarOpen: false,
@@ -22,7 +20,6 @@ vi.mock('./shared/store/profile', () => ({
   useProfileStore: () => mockProfileStore,
 }));
 
-// ---- Mock AuthContext ----
 vi.mock('./shared/auth/AuthContext', () => ({
   useAuth: () => ({
     logout: mockLogout,
@@ -34,12 +31,15 @@ vi.mock('./shared/auth/AuthContext', () => ({
   }),
 }));
 
-// ---- Mock PrimeReact Components ----
+vi.mock('./passwordReset', () => ({
+  ChangePasswordDialog: () => null,
+}));
+
 vi.mock('primereact/sidebar', () => ({
   Sidebar: ({ visible, children, onHide }: any) =>
     visible ? (
       <div data-testid="sidebar">
-        <button data-testid="close-sidebar" onClick={onHide}>
+        <button type="button" data-testid="close-sidebar" onClick={onHide}>
           Close
         </button>
         {children}
@@ -53,7 +53,11 @@ vi.mock('primereact/divider', () => ({
 
 vi.mock('primereact/button', () => ({
   Button: ({ label, onClick, icon }: any) => (
-    <button data-testid="logout-button" onClick={onClick}>
+    <button
+      type="button"
+      data-testid={`p-button-${String(label).replace(/\s+/g, '-').toLowerCase()}`}
+      onClick={onClick}
+    >
       {icon}
       {label}
     </button>
@@ -62,6 +66,8 @@ vi.mock('primereact/button', () => ({
 
 vi.mock('react-icons/fa', () => ({
   FaSignOutAlt: () => <span data-testid="logout-icon">🚪</span>,
+  FaUserCircle: () => <span data-testid="user-circle" />,
+  FaKey: () => <span data-testid="key-icon" />,
 }));
 
 describe('ProfileSidebar Component', () => {
@@ -77,6 +83,10 @@ describe('ProfileSidebar Component', () => {
     vi.clearAllMocks();
     mockProfileStore.member = null;
     mockProfileStore.isSidebarOpen = false;
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it('does not render sidebar when isSidebarOpen is false', () => {
@@ -95,7 +105,8 @@ describe('ProfileSidebar Component', () => {
     render(<ProfileSidebar />);
 
     expect(screen.getByTestId('sidebar')).toBeInTheDocument();
-    expect(screen.getByText('User Profile')).toBeInTheDocument();
+    expect(screen.getByText('John Doe')).toBeInTheDocument();
+    expect(screen.getByText('Account Overview')).toBeInTheDocument();
   });
 
   it('displays member information when member data is available', () => {
@@ -120,13 +131,13 @@ describe('ProfileSidebar Component', () => {
     expect(screen.getByText('Recruiter')).toBeInTheDocument();
   });
 
-  it('displays "N/A" when memberName is not provided', () => {
+  it('shows header fallback when memberName is empty', () => {
     mockProfileStore.isSidebarOpen = true;
     mockProfileStore.member = { ...mockMember, memberName: '' };
 
     render(<ProfileSidebar />);
 
-    expect(screen.getByText('N/A')).toBeInTheDocument();
+    expect(screen.getByText('User Profile')).toBeInTheDocument();
   });
 
   it('displays "No profile data available" when member is null', () => {
@@ -136,7 +147,7 @@ describe('ProfileSidebar Component', () => {
     render(<ProfileSidebar />);
 
     expect(screen.getByText('No profile data available')).toBeInTheDocument();
-    expect(screen.queryByTestId('logout-button')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('p-button-logout')).not.toBeInTheDocument();
   });
 
   it('calls closeSidebar when sidebar is closed', async () => {
@@ -158,7 +169,7 @@ describe('ProfileSidebar Component', () => {
 
     render(<ProfileSidebar />);
 
-    const logoutButton = screen.getByTestId('logout-button');
+    const logoutButton = screen.getByTestId('p-button-logout');
     await userEvent.click(logoutButton);
 
     await waitFor(() => {
@@ -176,13 +187,12 @@ describe('ProfileSidebar Component', () => {
 
     render(<ProfileSidebar />);
 
-    const logoutButton = screen.getByTestId('logout-button');
+    const logoutButton = screen.getByTestId('p-button-logout');
     await userEvent.click(logoutButton);
 
     await waitFor(() => {
       expect(mockLogout).toHaveBeenCalledTimes(1);
       expect(consoleErrorSpy).toHaveBeenCalledWith('Logout failed:', error);
-      // closeSidebar should NOT be called when logout fails
       expect(mockCloseSidebar).not.toHaveBeenCalled();
     });
 
@@ -193,14 +203,13 @@ describe('ProfileSidebar Component', () => {
     mockProfileStore.isSidebarOpen = true;
     mockProfileStore.member = null;
 
-    render(<ProfileSidebar />);
+    const { rerender } = render(<ProfileSidebar />);
 
-    expect(screen.queryByTestId('logout-button')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('p-button-logout')).not.toBeInTheDocument();
 
-    // Re-render with member data
     mockProfileStore.member = mockMember;
-    render(<ProfileSidebar />);
+    rerender(<ProfileSidebar />);
 
-    expect(screen.getByTestId('logout-button')).toBeInTheDocument();
+    expect(screen.getByTestId('p-button-logout')).toBeInTheDocument();
   });
 });

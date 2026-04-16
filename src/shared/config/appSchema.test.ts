@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   APP_SCHEMA_VERSION,
   APP_SCHEMA_VERSION_STORAGE_KEY,
   TABLE_STORAGE_PREFIXES,
   initializeAppSchemaVersion,
+  isTableStorageKey,
 } from "./appSchema";
 
 describe("initializeAppSchemaVersion", () => {
@@ -89,5 +90,30 @@ describe("initializeAppSchemaVersion", () => {
         TABLE_STORAGE_PREFIXES.some((prefix) => key.startsWith(prefix))
       ).toBe(true);
     });
+  });
+
+  it("isTableStorageKey is false for unrelated keys", () => {
+    expect(isTableStorageKey("accessToken")).toBe(false);
+    expect(isTableStorageKey("table:candidate:filters")).toBe(true);
+  });
+
+  it("logs a warning when clearing table keys throws", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    localStorage.setItem(APP_SCHEMA_VERSION_STORAGE_KEY, "1");
+    localStorage.setItem("lookupPagination", "keep-me");
+
+    const spy = vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+
+    initializeAppSchemaVersion();
+
+    expect(warn).toHaveBeenCalledWith(
+      "Failed to initialize app schema version in localStorage",
+      expect.any(Error)
+    );
+
+    spy.mockRestore();
+    warn.mockRestore();
   });
 });

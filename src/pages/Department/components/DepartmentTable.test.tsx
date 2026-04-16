@@ -62,6 +62,17 @@ vi.mock('../../../shared/DeleteButton', () => ({
 }));
 
 // ✅ Department dialogs mock
+const toastShow = vi.fn();
+
+vi.mock('primereact/toast', () => ({
+  Toast: React.forwardRef((_props: unknown, ref: any) => {
+    React.useImperativeHandle(ref, () => ({
+      show: (...args: unknown[]) => toastShow(...args),
+    }));
+    return <div data-testid="toast-mock" />;
+  }),
+}));
+
 vi.mock('../components/DepartmentAddEdit', () => ({
   default: (props: any) =>
     props.visible ? (
@@ -69,7 +80,16 @@ vi.mock('../components/DepartmentAddEdit', () => ({
         <button
           data-testid="add-edit-success-mock"
           onClick={() => {
-            props.onSuccess?.();
+            props.onSuccess?.({
+              success: true,
+              message: 'Saved',
+              data: {
+                departmentId: 99,
+                departmentName: 'New',
+                departmentDescription: '',
+                clientId: 1,
+              },
+            });
             props.onHide?.(); // simulate hide after success
           }}
         >
@@ -89,7 +109,11 @@ vi.mock('../components/DepartmentDelete', () => ({
         <button
           data-testid="delete-success-mock"
           onClick={() => {
-            props.onSuccess?.();
+            props.onSuccess?.({
+              success: true,
+              message: 'Deleted',
+              data: null,
+            });
             props.onHide?.(); // simulate hide after success
             props.onClearSelection?.(); // simulate clearing selection
           }}
@@ -139,6 +163,7 @@ const defaultProps = {
 describe('DepartmentTable - Logic Verification (Coverage > 90%)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    toastShow.mockClear();
     (getDepartments as any).mockResolvedValue({ departments: mockDepartments });
   });
 
@@ -146,7 +171,7 @@ describe('DepartmentTable - Logic Verification (Coverage > 90%)', () => {
     render(<DepartmentTable {...defaultProps} />);
 
     expect(screen.getByText(`Departments for: ${defaultProps.clientName}`)).toBeInTheDocument();
-    expect(screen.getByTestId('button-back-to-clients')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /back to clients/i })).toBeInTheDocument();
     expect(getDepartments).toHaveBeenCalledWith('mock-token-123',defaultProps.clientId);
 
     await waitFor(() => {
@@ -160,16 +185,18 @@ describe('DepartmentTable - Logic Verification (Coverage > 90%)', () => {
   });
 
   it('2. must log an error if data loading fails (fail path coverage)', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    (getDepartments as any).mockRejectedValue(new Error('Network failure'));
+    (getDepartments as any).mockRejectedValue({ message: 'Network failure' });
 
     render(<DepartmentTable {...defaultProps} />);
 
     await waitFor(() => {
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error loading departments:', expect.any(Error));
+      expect(toastShow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'error',
+          detail: 'Network failure',
+        })
+      );
     });
-
-    consoleErrorSpy.mockRestore();
   });
 
   it('3. must NOT load data if clientId is null/undefined and disable Add button', () => {
@@ -252,7 +279,7 @@ describe('DepartmentTable - Logic Verification (Coverage > 90%)', () => {
   it('8. must call onBackClick when "Back to Clients" button is pressed', async () => {
     const user = userEvent.setup();
     render(<DepartmentTable {...defaultProps} />);
-    await user.click(screen.getByTestId('button-back-to-clients'));
+    await user.click(screen.getByRole('button', { name: /back to clients/i }));
     expect(defaultProps.onBackClick).toHaveBeenCalledTimes(1);
   });
 

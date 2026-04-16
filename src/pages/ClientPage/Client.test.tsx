@@ -1,5 +1,5 @@
 import React from "react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, fireEvent, screen, waitFor } from "@testing-library/react";
 import Client from "./page";
 import * as clientService from "./services/clientService";
@@ -79,12 +79,17 @@ vi.mock("./components/clientAddEdit", () => ({
         />
         <button
           data-testid="SaveBtn"
-          onClick={() =>
-            props.onSave?.({
-              clientName: "Updated Client",
-              address: "Updated Address",
-            })
-          }
+          onClick={() => {
+            const payload =
+              props.mode === "edit" && props.client?.clientId != null
+                ? {
+                    clientId: props.client.clientId,
+                    clientName: "Updated Client",
+                    address: "Updated Address",
+                  }
+                : { clientName: "Updated Client", address: "Updated Address" };
+            void props.onSave?.(payload);
+          }}
         >
           Save
         </button>
@@ -159,8 +164,15 @@ vi.mock("../../shared/DeleteButton", () => ({
   ),
 }));
 
-vi.mock("../../shared/ExportExcelButton", () => ({
-  default: () => <button data-testid="ExportBtn">Export</button>,
+vi.mock("../../shared/SearchButton", () => ({
+  default: ({ value, onChange, placeholder }: any) => (
+    <input
+      data-testid="SearchClientsInput"
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+    />
+  ),
 }));
 
 vi.mock("../Contact/constants/contactConstants", () => ({
@@ -182,8 +194,10 @@ vi.mock("primereact/toast", () => ({
 vi.mock("primereact/splitbutton", () => ({
   SplitButton: (props: any) => (
     <button
+      type="button"
       data-testid="SettingsBtn"
       disabled={props.disabled}
+      aria-label={props["aria-label"]}
       onClick={() => props.model?.[0]?.command?.()}
     >
       Settings
@@ -202,17 +216,29 @@ vi.mock("primereact/datatable", () => ({
 }));
 
 vi.mock("./services/clientService", () => ({
-  createClient: vi.fn((token, data) => Promise.resolve({
-    clientId: 1,
-    name: data.name,
-    address: data.address,
-  })),
-  updateClient: vi.fn((token, data) => Promise.resolve({
-    clientId: data.id,
-    name: data.name,
-    address: data.address,
-  })),
+  createClient: vi.fn((token, data) =>
+    Promise.resolve({
+      clientId: 1,
+      clientName: data.name,
+      address: data.address,
+    })
+  ),
+  updateClient: vi.fn((token, data) =>
+    Promise.resolve({
+      clientId: data.id,
+      clientName: data.name,
+      address: data.address,
+    })
+  ),
   deleteClient: vi.fn(() => Promise.resolve(undefined)),
+  getClients: vi.fn(() =>
+    Promise.resolve({
+      data: [
+        { clientId: 1, clientName: "Test Client", address: "Test Address" },
+      ],
+      meta: null,
+    })
+  ),
 }));
 
 beforeEach(() => {
@@ -220,9 +246,6 @@ beforeEach(() => {
   mockSearchParams = new URLSearchParams();
 });
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
 
 describe("Client Component", () => {
   describe("Initial Render", () => {
@@ -236,7 +259,7 @@ describe("Client Component", () => {
       expect(screen.getByTestId("AddBtn")).toBeInTheDocument();
       expect(screen.getByTestId("EditBtn")).toBeInTheDocument();
       expect(screen.getByTestId("DeleteBtn")).toBeInTheDocument();
-      expect(screen.getByTestId("ExportBtn")).toBeInTheDocument();
+      expect(screen.getByTestId("SearchClientsInput")).toBeInTheDocument();
       expect(screen.getByTestId("SettingsBtn")).toBeInTheDocument();
     });
 

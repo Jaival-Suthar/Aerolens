@@ -1,11 +1,16 @@
 // LoginPage.edge.test.tsx
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, beforeEach, afterEach, vi, expect } from 'vitest';
 import LoginPage from './Login';
 import { AuthContext } from '../../shared/auth/AuthContext';
 
 const STORAGE_KEY = 'auth_email_history';
+
+function renderWithRouter(node: React.ReactElement) {
+  return render(<MemoryRouter>{node}</MemoryRouter>);
+}
 
 describe('LoginPage - edge cases for 100% coverage', () => {
   let getItemSpy: jest.MockedFunction<typeof Storage.prototype.getItem>;
@@ -42,7 +47,7 @@ describe('LoginPage - edge cases for 100% coverage', () => {
   });
 
   it('renders form and basic controls', () => {
-    render(
+    renderWithRouter(
       <AuthContext.Provider value={makeAuth()}>
         <LoginPage />
       </AuthContext.Provider>
@@ -80,7 +85,7 @@ describe('LoginPage - edge cases for 100% coverage', () => {
     const mockLogin = vi.fn().mockResolvedValue(undefined);
     const auth = makeAuth({ login: mockLogin });
 
-    render(
+    renderWithRouter(
       <AuthContext.Provider value={auth}>
         <LoginPage />
       </AuthContext.Provider>
@@ -101,7 +106,7 @@ describe('LoginPage - edge cases for 100% coverage', () => {
     const mockLogin = vi.fn(() => loginPromise);
     const auth = makeAuth({ login: mockLogin });
 
-    render(
+    renderWithRouter(
       <AuthContext.Provider value={auth}>
         <LoginPage />
       </AuthContext.Provider>
@@ -134,7 +139,7 @@ describe('LoginPage - edge cases for 100% coverage', () => {
     // simulate empty history
     getItemSpy.mockImplementation((k: string) => (k === STORAGE_KEY ? null : null));
 
-    render(
+    renderWithRouter(
       <AuthContext.Provider value={auth}>
         <LoginPage />
       </AuthContext.Provider>
@@ -166,7 +171,7 @@ describe('LoginPage - edge cases for 100% coverage', () => {
     const existing = ['a@a.com', 'dup@example.com', 'c@c.com'];
     getItemSpy.mockImplementation((k: string) => (k === STORAGE_KEY ? JSON.stringify(existing) : null));
 
-    render(
+    renderWithRouter(
       <AuthContext.Provider value={auth}>
         <LoginPage />
       </AuthContext.Provider>
@@ -196,7 +201,7 @@ describe('LoginPage - edge cases for 100% coverage', () => {
     const existing = ['1@a.com', '2@a.com', '3@a.com', '4@a.com', '5@a.com'];
     getItemSpy.mockImplementation((k: string) => (k === STORAGE_KEY ? JSON.stringify(existing) : null));
 
-    render(
+    renderWithRouter(
       <AuthContext.Provider value={auth}>
         <LoginPage />
       </AuthContext.Provider>
@@ -219,7 +224,7 @@ describe('LoginPage - edge cases for 100% coverage', () => {
     // invalid JSON stored
     getItemSpy.mockImplementation((k: string) => (k === STORAGE_KEY ? '{ invalid json' : null));
 
-    render(
+    renderWithRouter(
       <AuthContext.Provider value={auth}>
         <LoginPage />
       </AuthContext.Provider>
@@ -240,7 +245,7 @@ describe('LoginPage - edge cases for 100% coverage', () => {
     const mockLogin = vi.fn().mockRejectedValue(new Error('Bad credentials'));
     const auth = makeAuth({ login: mockLogin });
 
-    render(
+    renderWithRouter(
       <AuthContext.Provider value={auth}>
         <LoginPage />
       </AuthContext.Provider>
@@ -254,7 +259,7 @@ describe('LoginPage - edge cases for 100% coverage', () => {
   });
 
   it('changes inline styles on mouseOver and mouseOut for the submit button', () => {
-    render(
+    renderWithRouter(
       <AuthContext.Provider value={makeAuth()}>
         <LoginPage />
       </AuthContext.Provider>
