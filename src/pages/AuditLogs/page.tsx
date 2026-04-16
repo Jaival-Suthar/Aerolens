@@ -7,6 +7,7 @@ import { useAuth } from "../../shared/auth/AuthContext";
 import SearchButton from "../../shared/SearchButton";
 import { AuditLogService } from "./services/auditLogService";
 import type { AuditAction, AuditLogItem } from "./types/auditLogTypes";
+import DetailsSection from "../../shared/DetailsSection";
 
 const actionOptions: { label: string; value: AuditAction }[] = [
   { label: "CREATE", value: "CREATE" },
@@ -19,6 +20,7 @@ const actionOptions: { label: string; value: AuditAction }[] = [
 const AuditLogsPage: React.FC = () => {
   const { accessToken } = useAuth();
   const [items, setItems] = useState<AuditLogItem[]>([]);
+  const [expandedRows, setExpandedRows] = useState<AuditLogItem[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
   const [page, setPage] = useState(1);
   const [rows, setRows] = useState(25);
@@ -43,6 +45,7 @@ const AuditLogsPage: React.FC = () => {
         pageSize: rows,
         action: action || undefined,
         search: search || undefined,
+        includeDiff: true,
       });
       setItems(response.data.items || []);
       setTotalRecords(response.data.meta?.total || 0);
@@ -88,6 +91,107 @@ const AuditLogsPage: React.FC = () => {
     [action]
   );
 
+  const formatJson = (v: unknown) => {
+    if (v == null) return "-";
+    try {
+      return JSON.stringify(v, null, 2);
+    } catch {
+      return String(v);
+    }
+  };
+
+  const rowExpansionTemplate = (row: AuditLogItem) => {
+    const actionUpper = String(row.action ?? "").toUpperCase();
+    const showDiff =
+      actionUpper === "UPDATE" &&
+      Array.isArray(row.fieldChanges) &&
+      row.fieldChanges.length > 0;
+
+    return (
+      <div style={{ padding: "1rem" }}>
+        <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+          <div style={{ flex: "1 1 320px", minWidth: 320 }}>
+            <DetailsSection title="Field changes">
+              {showDiff ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {row.fieldChanges!.map((c, idx) => (
+                    <div key={`${c.field}-${idx}`} style={{ fontSize: "0.95rem" }}>
+                      <div style={{ fontWeight: 700, color: "#072844" }}>
+                        {c.field}
+                      </div>
+                      <pre
+                        style={{
+                          margin: 0,
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                          fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                          background: "#ffffff",
+                          border: "1px solid #e5e7eb",
+                          padding: "0.5rem",
+                          borderRadius: 10,
+                          maxHeight: 240,
+                          overflow: "auto",
+                        }}
+                      >
+                        {`${formatJson(c.oldValue)}  ->  ${formatJson(c.newValue)}`}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ color: "#6b7280" }}>
+                  {actionUpper === "UPDATE" ? "No diff available." : "Diff only for UPDATE actions."}
+                </div>
+              )}
+            </DetailsSection>
+          </div>
+
+          <div style={{ flex: "1 1 320px", minWidth: 320 }}>
+            <DetailsSection title="Old values">
+              <pre
+                style={{
+                  margin: 0,
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                  background: "#ffffff",
+                  border: "1px solid #e5e7eb",
+                  padding: "0.5rem",
+                  borderRadius: 10,
+                  maxHeight: 320,
+                  overflow: "auto",
+                }}
+              >
+                {formatJson(row.oldValues)}
+              </pre>
+            </DetailsSection>
+          </div>
+
+          <div style={{ flex: "1 1 320px", minWidth: 320 }}>
+            <DetailsSection title="New values">
+              <pre
+                style={{
+                  margin: 0,
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                  background: "#ffffff",
+                  border: "1px solid #e5e7eb",
+                  padding: "0.5rem",
+                  borderRadius: 10,
+                  maxHeight: 320,
+                  overflow: "auto",
+                }}
+              >
+                {formatJson(row.newValues)}
+              </pre>
+            </DetailsSection>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div
       className="dashboard-container shadow-3 p-2"
@@ -110,6 +214,9 @@ const AuditLogsPage: React.FC = () => {
         <DataTable
           value={items}
           dataKey="id"
+          expandedRows={expandedRows}
+          onRowToggle={(e: any) => setExpandedRows(e.data)}
+          rowExpansionTemplate={rowExpansionTemplate}
           paginator
           lazy
           first={(page - 1) * rows}
@@ -132,6 +239,7 @@ const AuditLogsPage: React.FC = () => {
           onFilter={(e) => setFilters(e.filters)}
           globalFilterFields={["action", "verb", "summary", "resourceType", "resourceId", "actor.name"]}
         >
+          <Column expander style={{ width: "3rem" }} />
           <Column field="occurredAt" header="Occurred At" body={occurredAtBody} style={{ minWidth: "12rem" }} sortable filter filterPlaceholder="Search timestamp" />
           <Column field="action" header={actionHeader} style={{ minWidth: "10rem" }} sortable filter filterPlaceholder="Select action" />
           <Column field="verb" header="Verb" style={{ minWidth: "14rem" }} sortable filter filterPlaceholder="Search verb" />
