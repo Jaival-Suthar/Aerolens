@@ -51,7 +51,7 @@ describe("usePagination hook", () => {
     mockSearchParams.get.mockReturnValue(null);
     const { result } = renderHook(() => usePagination());
     expect(result.current.pagination.currentPage).toBe(1);
-    expect(result.current.pagination.limit).toBe(10);
+    expect(result.current.pagination.limit).toBe(20);
   });
 
   it("updateUrlParams only updates page and limit in URL", () => {

@@ -9,26 +9,17 @@ import type { ClientType } from "../types/clientTypes";
 // Create mock functions
 const mockLoadClients = vi.fn().mockResolvedValue({
   data: [],
-  meta: null,
+  meta: { total: 0 },
 });
 const mockSetError = vi.fn();
-const mockUpdateUrlParams = vi.fn();
-const mockSavePaginationPreferences = vi.fn();
-const mockUpdatePaginationFromResponse = vi.fn();
-const mockResetPaginationOnError = vi.fn();
 
 // Mock the hooks
 vi.mock("../hooks/useClientData", () => ({
   useClientData: vi.fn(),
 }));
 
-vi.mock("../hooks/usePagination", () => ({
-  usePagination: vi.fn(),
-}));
-
 // Import after mocking
 import { useClientData } from "../hooks/useClientData";
-import { usePagination } from "../hooks/usePagination";
 
 describe("ClientTable", () => {
   const mockClients: ClientType[] = [
@@ -48,27 +39,6 @@ describe("ClientTable", () => {
       setError: mockSetError,
     });
 
-    // Set default mock implementation for usePagination
-    vi.mocked(usePagination).mockReturnValue({
-      pagination: { 
-        currentPage: 1, 
-        limit: 10, 
-        totalPages: 1,
-        totalRecords: 2 
-      },
-      setPagination: vi.fn(),
-      getInitialPagination: () => ({ 
-        currentPage: 1, 
-        limit: 10,
-        totalPages: 1,
-        totalRecords: 0
-      }),
-      updateUrlParams: mockUpdateUrlParams,
-      savePaginationPreferences: mockSavePaginationPreferences,
-      updatePaginationFromResponse: mockUpdatePaginationFromResponse,
-      resetPaginationOnError: mockResetPaginationOnError,
-      searchParams: new URLSearchParams(),
-    });
   });
 
   it("renders client rows and headers", () => {
@@ -117,7 +87,11 @@ describe("ClientTable", () => {
     vi.mocked(useClientData).mockReturnValue({
       clients: [],
       loading: false,
-      error: "Network error",
+      error: {
+        success: false,
+        error: "network",
+        message: "Network error",
+      },
       loadClients: mockLoadClients,
       setError: mockSetError,
     });
@@ -132,7 +106,7 @@ describe("ClientTable", () => {
       />
     );
 
-    expect(screen.getByText(/Error loading clients: Network error/)).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("Network error");
   });
 
   it("shows loading state", () => {
@@ -215,9 +189,8 @@ describe("ClientTable", () => {
       />
     );
 
-    // Should show paginator controls
-    expect(screen.getByLabelText("Table pagination controls")).toBeInTheDocument();
-    // Simulate page change if needed by interacting with paginator elements
+    // Built-in DataTable paginator (standalone Paginator in source is commented out)
+    expect(screen.getByText(/Showing .* of .* Clients/)).toBeInTheDocument();
   });
 
   it("reloads clients when refreshTrigger changes", () => {

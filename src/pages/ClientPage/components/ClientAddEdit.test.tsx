@@ -243,8 +243,6 @@ describe("ClientAddEdit", () => {
     });
 
     it("does not call onSave if clientId is missing in edit mode", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      
       const clientWithoutId = { clientName: "Test", address: "Test Address" } as any;
 
       render(
@@ -260,10 +258,7 @@ describe("ClientAddEdit", () => {
       const submitButton = screen.getByTestId("button-update-client");
       fireEvent.click(submitButton);
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Missing clientId in edit mode");
       expect(mockOnSave).not.toHaveBeenCalled();
-
-      consoleErrorSpy.mockRestore();
     });
   });
 

@@ -1,4 +1,3 @@
-// src/Resume/services/__tests__/candidateService.test.ts
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   createCandidate,
@@ -9,16 +8,72 @@ import {
   downloadResume,
   getResumeDownloadUrl,
 } from './useResume';
-import type { Candidate, AddEditCandidate } from '../types/resumeTypes';
+import type {
+  Candidate,
+  AddEditCandidate,
+  CandidateUpdatePayload,
+} from '../types/resumeTypes';
 
-// Mock environment variables
-const MOCK_BASE_URL = 'https://aerolens-backend.onrender.com';
-vi.stubGlobal('import.meta', {
-  env: {
-    VITE_BASE_URL: MOCK_BASE_URL,
-    DEV: false,
-  },
-});
+/** Matches runtime VITE_BASE_URL baked into the module at build/test time */
+const API_BASE = import.meta.env.VITE_BASE_URL as string;
+
+
+function makeAddEdit(overrides?: Partial<AddEditCandidate>): AddEditCandidate {
+  return {
+    candidateName: 'John Doe',
+    contactNumber: '1234567890',
+    email: 'john@example.com',
+    recruiterId: 1,
+    recruiterName: 'Jane Smith',
+    jobProfileRequirementId: 10,
+    expectedLocation: { city: 'New York', country: 'USA' },
+    currentCTCAmount: 100000,
+    currentCTCCurrencyId: 1,
+    currentCTCTypeId: 1,
+    expectedCTCAmount: 120000,
+    expectedCTCCurrencyId: 1,
+    expectedCTCTypeId: 1,
+    noticePeriod: 30,
+    experienceYears: 5,
+    linkedinProfileUrl: 'https://linkedin.com/in/johndoe',
+    resumeFile: null,
+    ...overrides,
+  };
+}
+
+function toCandidate(
+  id: number,
+  payload: AddEditCandidate,
+  extras?: Partial<Candidate>
+): Candidate {
+  return {
+    candidateId: id,
+    candidateName: payload.candidateName,
+    contactNumber: payload.contactNumber ?? '',
+    email: payload.email ?? '',
+    recruiterId: payload.recruiterId,
+    recruiterName: payload.recruiterName,
+    recruiterContact: null,
+    recruiterEmail: null,
+    jobProfileRequirementId: payload.jobProfileRequirementId,
+    jobRole: 'Software Engineer',
+    expectedLocation: payload.expectedLocation ?? null,
+    currentLocation: payload.currentLocation ?? null,
+    workMode: null,
+    workModeId: null,
+    currentCTCAmount: payload.currentCTCAmount ?? null,
+    currentCTCCurrencyId: payload.currentCTCCurrencyId ?? null,
+    currentCTCTypeId: payload.currentCTCTypeId ?? null,
+    expectedCTCAmount: payload.expectedCTCAmount ?? null,
+    expectedCTCCurrencyId: payload.expectedCTCCurrencyId ?? null,
+    expectedCTCTypeId: payload.expectedCTCTypeId ?? null,
+    noticePeriod: payload.noticePeriod,
+    experienceYears: payload.experienceYears,
+    statusName: 'Active',
+    linkedinProfileUrl: payload.linkedinProfileUrl ?? null,
+    ...extras,
+  };
+}
 
 // Mock AuthContext
 vi.mock('../../../shared/auth/AuthContext', () => ({
@@ -41,28 +96,8 @@ describe('Candidate Service', () => {
   // =========================================================================
   describe('createCandidate', () => {
     it('should create a candidate successfully', async () => {
-      const mockCandidate: AddEditCandidate = {
-        candidateName: 'John Doe',
-        contactNumber: '1234567890',
-        email: 'john@example.com',
-        recruiterName: 'Jane Smith',
-        jobRole: 'Software Engineer',
-        preferredJobLocation: 'New York',
-        currentCTC: 100000,
-        expectedCTC: 120000,
-        statusName: 'Active',
-        noticePeriod: 30,
-        experienceYears: 5,
-        linkedinProfileUrl: 'https://linkedin.com/in/johndoe',
-        resumeFile: null,
-      };
-
-      const mockResponse: Candidate = {
-        candidateId: 1,
-        ...mockCandidate,
-        statusName: 'Active',
-        resumeFile: undefined,
-      } as any;
+      const mockCandidate = makeAddEdit();
+      const mockResponse = toCandidate(1, mockCandidate);
 
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
@@ -73,7 +108,7 @@ describe('Candidate Service', () => {
       const result = await createCandidate('mock-token-123', mockCandidate);
 
       expect(fetch).toHaveBeenCalledWith(
-        `${MOCK_BASE_URL}/candidate`,
+        `${API_BASE}/candidate`,
         expect.objectContaining({
           method: 'POST',
           credentials: 'include',
@@ -85,29 +120,10 @@ describe('Candidate Service', () => {
 
     it('should create a candidate with resume file', async () => {
       const mockFile = new File(['resume content'], 'resume.pdf', { type: 'application/pdf' });
-      const mockCandidate: AddEditCandidate = {
-        candidateName: 'John Doe',
-        contactNumber: '1234567890',
-        email: 'john@example.com',
-        recruiterName: 'Jane Smith',
-        jobRole: 'Software Engineer',
-        preferredJobLocation: 'New York',
-        currentCTC: 100000,
-        expectedCTC: 120000,
-        noticePeriod: 30,
-        statusName: 'Active',
-        experienceYears: 5,
-        linkedinProfileUrl: 'https://linkedin.com/in/johndoe',
-        resumeFile: mockFile,
-      };
-
-      const mockResponse: Candidate = {
-        candidateId: 1,
-        ...mockCandidate,
-        statusName: 'Active',
+      const mockCandidate = makeAddEdit({ resumeFile: mockFile });
+      const mockResponse = toCandidate(1, mockCandidate, {
         resumeFilename: 'resume_123.pdf',
-        resumeFile: undefined,
-      } as any;
+      });
 
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
@@ -118,7 +134,7 @@ describe('Candidate Service', () => {
       const result = await createCandidate('mock-token-123', mockCandidate);
 
       expect(fetch).toHaveBeenCalledWith(
-        `${MOCK_BASE_URL}/candidate`,
+        `${API_BASE}/candidate`,
         expect.objectContaining({
           method: 'POST',
           credentials: 'include',
@@ -133,32 +149,18 @@ describe('Candidate Service', () => {
     });
 
     it('should handle creation failure with error message', async () => {
-      const mockCandidate: AddEditCandidate = {
-        candidateName: 'John Doe',
-        contactNumber: '1234567890',
-        email: 'invalid-email',
-        recruiterName: 'Jane Smith',
-        jobRole: 'Software Engineer',
-        preferredJobLocation: 'New York',
-        currentCTC: 100000,
-        expectedCTC: 120000,
-        noticePeriod: 30,
-        statusName: 'Active',
-        experienceYears: 5,
-        linkedinProfileUrl: 'https://linkedin.com/in/johndoe',
-        resumeFile: null,
-      };
+      const mockCandidate = makeAddEdit({ email: 'invalid-email' });
 
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: false,
         status: 400,
         statusText: 'Bad Request',
-        text: async () => 'Invalid email format',
+        json: async () => ({ message: 'Invalid email format' }),
       } as Response);
 
-      await expect(createCandidate('mock-token-123', mockCandidate)).rejects.toThrow(
-        'API Error (400)'
-      );
+      await expect(createCandidate('mock-token-123', mockCandidate)).rejects.toEqual({
+        message: 'Invalid email format',
+      });
     });
   });
 
@@ -167,49 +169,39 @@ describe('Candidate Service', () => {
   // =========================================================================
   describe('getCandidates', () => {
     it('should fetch candidates with pagination', async () => {
+      const first = makeAddEdit();
+      const second = makeAddEdit({
+        candidateName: 'Jane Smith',
+        contactNumber: '0987654321',
+        email: 'jane@example.com',
+        recruiterName: 'Bob Johnson',
+        recruiterId: 2,
+        jobProfileRequirementId: 11,
+        expectedLocation: { city: 'San Francisco', country: 'USA' },
+        currentCTCAmount: 90000,
+        expectedCTCAmount: 110000,
+        noticePeriod: 60,
+        experienceYears: 3,
+        linkedinProfileUrl: 'https://linkedin.com/in/janesmith',
+      });
       const mockCandidates: Candidate[] = [
-        {
-          candidateId: 1,
-          candidateName: 'John Doe',
-          contactNumber: '1234567890',
-          email: 'john@example.com',
-          recruiterName: 'Jane Smith',
-          jobRole: 'Software Engineer',
-          preferredJobLocation: 'New York',
-          currentCTC: 100000,
-          expectedCTC: 120000,
-          noticePeriod: 30,
-          experienceYears: 5,
-          statusName: 'Active',
-          linkedinProfileUrl: 'https://linkedin.com/in/johndoe',
-        },
-        {
-          candidateId: 2,
-          candidateName: 'Jane Smith',
-          contactNumber: '0987654321',
-          email: 'jane@example.com',
-          recruiterName: 'Bob Johnson',
+        toCandidate(1, first, { jobRole: 'Software Engineer' }),
+        toCandidate(2, second, {
           jobRole: 'Product Manager',
-          preferredJobLocation: 'San Francisco',
-          currentCTC: 90000,
-          expectedCTC: 110000,
-          noticePeriod: 60,
-          experienceYears: 3,
           statusName: 'Pending',
-          linkedinProfileUrl: 'https://linkedin.com/in/janesmith',
-        },
+        }),
       ];
 
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ data: { candidates: mockCandidates, totalCount: 2 } }),
+        json: async () => ({ data: mockCandidates }),
       } as Response);
 
       const result = await getCandidates('mock-token-123', 1, 10);
 
       expect(fetch).toHaveBeenCalledWith(
-        `${MOCK_BASE_URL}/candidate?page=1&limit=10`,
+        `${API_BASE}/candidate?page=1&limit=10`,
         expect.objectContaining({
           method: 'GET',
           credentials: 'include',
@@ -224,7 +216,7 @@ describe('Candidate Service', () => {
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ data: { candidates: [] } }),
+        json: async () => ({ data: [] }),
       } as Response);
 
       const result = await getCandidates('mock-token-123', 1, 10);
@@ -239,13 +231,13 @@ describe('Candidate Service', () => {
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ data: { candidates: mockCandidates } }),
+        json: async () => ({ data: mockCandidates }),
       } as Response);
 
       await getCandidates('mock-token-123');
 
       expect(fetch).toHaveBeenCalledWith(
-        `${MOCK_BASE_URL}/candidate?page=1&limit=10`,
+        `${API_BASE}/candidate?page=1&limit=10`,
         expect.objectContaining({
           method: 'GET',
           credentials: 'include',
@@ -259,18 +251,22 @@ describe('Candidate Service', () => {
   // =========================================================================
   describe('updateCandidate', () => {
     it('should update candidate with all data', async () => {
-      const updatePayload = {
+      const updatePayload: CandidateUpdatePayload = {
         candidateName: 'John Updated',
         contactNumber: '1234567890',
         email: 'john.updated@example.com',
+        recruiterId: 1,
         recruiterName: 'Jane Smith',
-        jobRole: 'Senior Software Engineer',
-        preferredJobLocation: 'New York',
-        currentCTC: 110000,
-        expectedCTC: 130000,
+        jobProfileRequirementId: 10,
+        expectedLocation: { city: 'New York', country: 'USA' },
+        currentCTCAmount: 110000,
+        currentCTCCurrencyId: 1,
+        currentCTCTypeId: 1,
+        expectedCTCAmount: 130000,
+        expectedCTCCurrencyId: 1,
+        expectedCTCTypeId: 1,
         noticePeriod: 30,
         experienceYears: 6,
-        statusName: 'Active',
         linkedinProfileUrl: 'https://linkedin.com/in/johnupdated',
       };
 
@@ -280,6 +276,8 @@ describe('Candidate Service', () => {
         data: {
           candidateId: 1,
           ...updatePayload,
+          jobRole: 'Senior Software Engineer',
+          statusName: 'Active',
         },
       };
 
@@ -292,7 +290,7 @@ describe('Candidate Service', () => {
       const result = await updateCandidate('mock-token-123', 1, updatePayload);
 
       expect(fetch).toHaveBeenCalledWith(
-  `${MOCK_BASE_URL}/candidate/1`,
+  `${API_BASE}/candidate/1`,
   expect.objectContaining({
     method: 'PATCH',
     headers: expect.objectContaining({
@@ -307,18 +305,22 @@ describe('Candidate Service', () => {
     });
 
     it('should handle update failure', async () => {
-      const updatePayload = {
+      const updatePayload: CandidateUpdatePayload = {
         candidateName: 'John Doe',
         contactNumber: '1234567890',
         email: 'john@example.com',
+        recruiterId: 1,
         recruiterName: 'Jane Smith',
-        jobRole: 'Software Engineer',
-        preferredJobLocation: 'New York',
-        currentCTC: 100000,
-        expectedCTC: 120000,
+        jobProfileRequirementId: 10,
+        expectedLocation: { city: 'New York', country: 'USA' },
+        currentCTCAmount: 100000,
+        currentCTCCurrencyId: 1,
+        currentCTCTypeId: 1,
+        expectedCTCAmount: 120000,
+        expectedCTCCurrencyId: 1,
+        expectedCTCTypeId: 1,
         noticePeriod: 30,
         experienceYears: 5,
-        statusName: 'Active',
         linkedinProfileUrl: 'https://linkedin.com/in/johndoe',
       };
 
@@ -326,11 +328,12 @@ describe('Candidate Service', () => {
         ok: false,
         status: 404,
         statusText: 'Not Found',
+        json: async () => ({ message: 'Not Found' }),
       } as Response);
 
-      await expect(updateCandidate('mock-token-123', 999, updatePayload)).rejects.toThrow(
-        'Failed to update candidate: Not Found'
-      );
+      await expect(updateCandidate('mock-token-123', 999, updatePayload)).rejects.toEqual({
+        message: 'Not Found',
+      });
     });
   });
 
@@ -348,7 +351,7 @@ describe('Candidate Service', () => {
       await deleteCandidate('mock-token-123', 1);
 
       expect(fetch).toHaveBeenCalledWith(
-        `${MOCK_BASE_URL}/candidate/1`,
+        `${API_BASE}/candidate/1`,
         expect.objectContaining({
           method: 'DELETE',
           credentials: 'include',
@@ -367,10 +370,12 @@ describe('Candidate Service', () => {
         ok: false,
         status: 404,
         statusText: 'Not Found',
-        text: async () => 'Candidate not found',
+        json: async () => ({ message: 'Candidate not found' }),
       } as Response);
 
-      await expect(deleteCandidate('mock-token-123', 999)).rejects.toThrow('API Error (404)');
+      await expect(deleteCandidate('mock-token-123', 999)).rejects.toEqual({
+        message: 'Candidate not found',
+      });
     });
 
     it('should handle server error on delete', async () => {
@@ -378,10 +383,12 @@ describe('Candidate Service', () => {
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
-        text: async () => 'Database connection failed',
+        json: async () => ({ message: 'Database connection failed' }),
       } as Response);
 
-      await expect(deleteCandidate('mock-token-123', 1)).rejects.toThrow('API Error (500)');
+      await expect(deleteCandidate('mock-token-123', 1)).rejects.toEqual({
+        message: 'Database connection failed',
+      });
     });
   });
 
@@ -405,7 +412,7 @@ describe('Candidate Service', () => {
       const result = await uploadResume('mock-token-123', 1, mockFile);
 
       expect(fetch).toHaveBeenCalledWith(
-        `${MOCK_BASE_URL}/candidate/1/resume`,
+        `${API_BASE}/candidate/1/resume`,
         expect.objectContaining({
           method: 'POST',
           credentials: 'include',
@@ -426,10 +433,12 @@ describe('Candidate Service', () => {
         ok: false,
         status: 413,
         statusText: 'Payload Too Large',
-        text: async () => 'File size exceeds limit',
+        json: async () => ({ message: 'File size exceeds limit' }),
       } as Response);
 
-      await expect(uploadResume('mock-token-123', 1, mockFile)).rejects.toThrow('API Error (413)');
+      await expect(uploadResume('mock-token-123', 1, mockFile)).rejects.toEqual({
+        message: 'File size exceeds limit',
+      });
     });
   });
 
@@ -449,7 +458,7 @@ describe('Candidate Service', () => {
       const result = await downloadResume('mock-token-123', 1);
 
       expect(fetch).toHaveBeenCalledWith(
-        `${MOCK_BASE_URL}/candidate/1/resume`,
+        `${API_BASE}/candidate/1/resume`,
         expect.objectContaining({
           headers: expect.any(Object),
         })
@@ -462,12 +471,12 @@ describe('Candidate Service', () => {
         ok: false,
         status: 404,
         statusText: 'Not Found',
-        text: async () => 'Resume not found',
+        json: async () => ({ message: 'Resume not found' }),
       } as Response);
 
-      await expect(downloadResume('mock-token-123', 1)).rejects.toThrow(
-        'Failed to download resume: Resume not found'
-      );
+      await expect(downloadResume('mock-token-123', 1)).rejects.toEqual({
+        message: 'Resume not found',
+      });
     });
 
     it('should handle server error on download', async () => {
@@ -475,12 +484,12 @@ describe('Candidate Service', () => {
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
-        text: async () => 'Server error',
+        json: async () => ({ message: 'Server error' }),
       } as Response);
 
-      await expect(downloadResume('mock-token-123', 1)).rejects.toThrow(
-        'Failed to download resume: Server error'
-      );
+      await expect(downloadResume('mock-token-123', 1)).rejects.toEqual({
+        message: 'Server error',
+      });
     });
   });
 
@@ -490,13 +499,13 @@ describe('Candidate Service', () => {
   describe('getResumeDownloadUrl', () => {
     it('should return correct download URL', () => {
       const url = getResumeDownloadUrl(1);
-      expect(url).toBe(`${MOCK_BASE_URL}/candidate/1/resume`);
+      expect(url).toBe(`${API_BASE}/candidate/1/resume`);
     });
 
     it('should return correct download URL for different candidate IDs', () => {
-      expect(getResumeDownloadUrl(1)).toBe(`${MOCK_BASE_URL}/candidate/1/resume`);
-      expect(getResumeDownloadUrl(42)).toBe(`${MOCK_BASE_URL}/candidate/42/resume`);
-      expect(getResumeDownloadUrl(999)).toBe(`${MOCK_BASE_URL}/candidate/999/resume`);
+      expect(getResumeDownloadUrl(1)).toBe(`${API_BASE}/candidate/1/resume`);
+      expect(getResumeDownloadUrl(42)).toBe(`${API_BASE}/candidate/42/resume`);
+      expect(getResumeDownloadUrl(999)).toBe(`${API_BASE}/candidate/999/resume`);
     });
   });
 
