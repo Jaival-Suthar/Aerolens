@@ -18,6 +18,7 @@ const Vendor = lazy(() => import('./pages/Vendor/page'));
 const CoverageReportPage = lazy(() => import('./pages/CoverageReport/page'));
 const InterviewTrackerPage = lazy(() => import('./pages/InterviewReport/page'));
 const OfferPage = lazy(() => import('./pages/Offer/page'));
+const AuditLogsPage = lazy(() => import('./pages/AuditLogs/page'));
 
 const LoadingSpinner = () => (
   <div
@@ -207,6 +208,10 @@ const AppContent: React.FC = () => {
         <Route
           path="/vendor"
           element={<ProtectedRoute><AppLayout><Vendor/></AppLayout></ProtectedRoute>}
+        />
+        <Route
+          path="/audit-logs"
+          element={<ProtectedRoute><AppLayout><AuditLogsPage /></AppLayout></ProtectedRoute>}
         />
 
         <Route path="*" element={<NotFound />} />

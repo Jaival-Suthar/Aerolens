@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
+import "@testing-library/jest-dom";
 import AppNavbar from "./AppNavbar";
 
 const mockNavigate = vi.fn();
@@ -94,20 +95,21 @@ vi.mock("primereact/toast", () => ({
 }));
 
 vi.mock("react-icons/fa", () => ({
+  FaClipboardList: () => <span data-testid="icon-clipboardlist" />,
   FaCog: () => <span data-testid="icon-cog" />,
   FaUser: () => <span data-testid="icon-user" />,
-  FaClipboardList: () => <span />,
   FaUsers: () => <span />,
   FaDatabase: () => <span />,
   FaFile: () => <span />,
   FaChartBar: () => <span />,
   FaIdCard: () => <span />,
-  FaUserTie: () => <span />,
-  FaUserPlus: () => <span />,
-  FaBuilding: () => <span />,
-  FaLayerGroup: () => <span />,
-  FaRegCalendarAlt: () => <span />,
-  FaBullseye: () => <span />,
+  FaUserTie: () => <span data-testid="icon-usertie" />,
+  FaUserPlus: () => <span data-testid="icon-userplus" />,
+  FaBuilding: () => <span data-testid="icon-building" />,
+  FaLayerGroup: () => <span data-testid="icon-layergroup" />,
+  FaRegCalendarAlt: () => <span data-testid="icon-calendar" />,
+  FaBullseye: () => <span data-testid="icon-bullseye" />,
+  FaHistory: () => <span data-testid="icon-history" />,
 }));
 
 describe("AppNavbar", () => {
@@ -223,6 +225,17 @@ describe("AppNavbar", () => {
       expect(mockToggleSidebar).toHaveBeenCalledTimes(1);
       expect(mockNavigate).not.toHaveBeenCalled();
     });
+
+    it("should navigate to /audit-logs when 'Audit Logs' is selected from settings", async () => {
+  const user = userEvent.setup();
+  renderComponent();
+
+  await user.click(screen.getByTestId("button-Settings"));
+  const auditLogsItem = screen.getByTestId("settings-menu-item-Audit Logs");
+  await user.click(auditLogsItem);
+
+  expect(mockNavigate).toHaveBeenCalledWith("/audit-logs");
+});
   });
 
   describe("Active State Highlighting", () => {
