@@ -18,7 +18,8 @@ import {
   FaBuilding,
   FaLayerGroup,
   FaRegCalendarAlt,
-  FaBullseye
+  FaBullseye,
+  FaHistory
 } from "react-icons/fa";
 import { useProfileStore } from "./shared/store/profile";
 import SmallLogo from "./assets/SmallLogo.svg";
@@ -49,6 +50,11 @@ const AppNavbar: React.FC = () => {
       label: "Create User",
       icon: <FaUser style={{ marginRight: 8, marginLeft: 4 }} />,
       command: () => setShowCreateUser(true),
+    },
+    {
+      label: "Audit Logs",
+      icon: <FaHistory style={{ marginRight: 8, marginLeft: 4 }} />,
+      command: () => handleNavigation("/audit-logs"),
     },
   ];
 

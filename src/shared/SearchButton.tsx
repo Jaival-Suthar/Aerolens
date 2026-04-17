@@ -31,6 +31,7 @@ const SearchButton: React.FC<SearchButtonProps> = ({
       }}
     />
     <Button
+      type="button"
       aria-label="Search"
       tooltip={tooltip}
       tooltipOptions={{ position: "bottom" }}
