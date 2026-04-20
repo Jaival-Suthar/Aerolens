@@ -318,30 +318,6 @@ const Client: React.FC = () => {
                     className="p-2 border-round"
                     role="button"
                     tabIndex={0}
-                    onClick={openSelectedClientAuditLogs}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        openSelectedClientAuditLogs();
-                      }
-                    }}
-                    style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "#f3f4f6";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                    }}
-                  >
-                    <i className="pi pi-list" style={{ fontSize: "14px", color: "#374151" }} />
-                    <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
-                      Selected Client Logs
-                    </span>
-                  </div>
-                  <div
-                    className="p-2 border-round"
-                    role="button"
-                    tabIndex={0}
                     onClick={() => openGlobalAuditLogs("changes")}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
