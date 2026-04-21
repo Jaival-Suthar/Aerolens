@@ -1,5 +1,5 @@
 const API_URL: string = import.meta.env.VITE_BASE_URL;
-import type { ClientType, ClientsApiResponse, ClientAuditLogResponse } from "../types/clientTypes";
+import type { ClientType, ClientsApiResponse, ClientAuditLogResponse, ClientDeletedResponse } from "../types/clientTypes";
 import type { ApiError } from "../../../types/apiError";
 import { normalizeApiError } from "../../../utils/apiErrorHandler";
 
@@ -166,35 +166,12 @@ export const getClientChangeLogs = async (
   return response.json();
 };
 
-// Get delete logs
-export const getClientDeleteLogs = async (
-  accessToken: string | null,
-  page = 1,
-  limit = 20
-): Promise<ClientAuditLogResponse> => {
+// Get deleted clients
+export const getDeletedClients = async (
+  accessToken: string | null
+): Promise<ClientDeletedResponse> => {
   const response = await fetch(
-    `${API_URL}/client/audit-logs/deletions?page=${page}&limit=${limit}`,
-    {
-      credentials: "include",
-      headers: makeHeaders(accessToken || undefined),
-    }
-  );
-  if (!response.ok) {
-    const apiError: ApiError = await normalizeApiError(response);
-    throw apiError;
-  }
-  return response.json();
-};
-
-// Get logs for a specific client
-export const getClientAuditLogsById = async (
-  accessToken: string | null,
-  clientId: string | number,
-  page = 1,
-  limit = 20
-): Promise<ClientAuditLogResponse> => {
-  const response = await fetch(
-    `${API_URL}/client/${clientId}/audit-logs?page=${page}&limit=${limit}`,
+    `${API_URL}/client/deletions`,
     {
       credentials: "include",
       headers: makeHeaders(accessToken || undefined),

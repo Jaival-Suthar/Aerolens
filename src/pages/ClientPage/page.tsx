@@ -40,10 +40,8 @@ const Client: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [globalFilterValue, setGlobalFilterValue] = useState('');
-  const [auditDialogOpen, setAuditDialogOpen] = useState(false);
-  const [selectedAuditClientId, setSelectedAuditClientId] = useState<number | null>(null);
   const [globalAuditOpen, setGlobalAuditOpen] = useState(false);
-  const [globalAuditTab, setGlobalAuditTab] = useState<"changes" | "deletions">("changes");
+  const [globalAuditTab, setGlobalAuditTab] = useState<"changes" | "deleted">("changes");
   const [showAuditMenu, setShowAuditMenu] = useState(false);
  
   // --- Refs ---
@@ -117,21 +115,11 @@ const Client: React.FC = () => {
     setClientToDelete(null);
   }, []);
 
-  const openGlobalAuditLogs = useCallback((tab: "changes" | "deletions") => {
+  const openGlobalAuditLogs = useCallback((tab: "changes" | "deleted") => {
     setShowAuditMenu(false);
     setGlobalAuditTab(tab);
     setGlobalAuditOpen(true);
   }, []);
-
-  const openSelectedClientAuditLogs = useCallback(() => {
-    setShowAuditMenu(false);
-    if (!selectedClient) {
-      showToast("warn", "No Selection", "Please select client.");
-      return;
-    }
-    setSelectedAuditClientId(selectedClient.clientId);
-    setAuditDialogOpen(true);
-  }, [selectedClient, showToast]);
 
   // --- View Navigation ---
   const handleBackToClients = useCallback(() => {
@@ -342,11 +330,11 @@ const Client: React.FC = () => {
                     className="p-2 border-round"
                     role="button"
                     tabIndex={0}
-                    onClick={() => openGlobalAuditLogs("deletions")}
+                    onClick={() => openGlobalAuditLogs("deleted")}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
-                        openGlobalAuditLogs("deletions");
+                        openGlobalAuditLogs("deleted");
                       }
                     }}
                     style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
@@ -359,7 +347,7 @@ const Client: React.FC = () => {
                   >
                     <i className="pi pi-trash" style={{ fontSize: "14px", color: "#374151" }} />
                     <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
-                      Delete Logs
+                      Deleted Clients
                     </span>
                   </div>
                 </div>
@@ -430,15 +418,6 @@ const Client: React.FC = () => {
           loading={loading}
         />
       )}
-
-      <ClientAuditLogsDialog
-        isOpen={auditDialogOpen}
-        onClose={() => {
-          setAuditDialogOpen(false);
-          setSelectedAuditClientId(null);
-        }}
-        clientId={selectedAuditClientId ?? undefined}
-      />
 
       <ClientAuditLogsDialog
         isOpen={globalAuditOpen}

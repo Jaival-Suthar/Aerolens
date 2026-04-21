@@ -4,8 +4,8 @@ import { Button } from "primereact/button";
 import { Tag } from "primereact/tag";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import type { ClientAuditLog, ClientAuditLogsDialogProps } from "../types/clientTypes";
-import { getClientAuditLogsById, getClientChangeLogs, getClientDeleteLogs } from "../services/clientService";
+import type { ClientAuditLog, ClientAuditLogsDialogProps, ClientDeletedRecord } from "../types/clientTypes";
+import { getClientChangeLogs, getDeletedClients } from "../services/clientService";
 import { useAuth } from "../../../shared/auth/AuthContext";
 
 const parseMaybeJson = (value: unknown) => {
@@ -44,14 +44,14 @@ const formatAuditTimestamp = (value: string) => {
 const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
   isOpen,
   onClose,
-  clientId,
   defaultTab = "changes",
 }) => {
   const { accessToken } = useAuth();
-  const [activeTab, setActiveTab] = useState<"changes" | "deletions">(defaultTab);
+  const [activeTab, setActiveTab] = useState<"changes" | "deleted">(defaultTab);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
-  const [items, setItems] = useState<ClientAuditLog[]>([]);
+  const [changeItems, setChangeItems] = useState<ClientAuditLog[]>([]);
+  const [deletedItems, setDeletedItems] = useState<ClientDeletedRecord[]>([]);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [total, setTotal] = useState(0);
@@ -69,28 +69,33 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
       try {
         setLoading(true);
         setError("");
-        const response = clientId
-          ? await getClientAuditLogsById(accessToken, clientId, page, limit)
-          : activeTab === "changes"
-            ? await getClientChangeLogs(accessToken, page, limit)
-            : await getClientDeleteLogs(accessToken, page, limit);
-
-        setItems(response.data || []);
-        setTotal(response.pagination?.total || 0);
+        if (activeTab === "changes") {
+          const response = await getClientChangeLogs(accessToken, page, limit);
+          setChangeItems(response.data || []);
+          setTotal(response.pagination?.total || 0);
+        } else {
+          const response = await getDeletedClients(accessToken);
+          setDeletedItems(response.data || []);
+          setTotal(response.data?.length || 0);
+        }
       } catch (err: any) {
         setError(err?.message || "Failed to fetch audit logs");
-        setItems([]);
+        if (activeTab === "changes") {
+          setChangeItems([]);
+        } else {
+          setDeletedItems([]);
+        }
         setTotal(0);
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, [isOpen, accessToken, clientId, activeTab, page, limit, reloadKey]);
+  }, [isOpen, accessToken, activeTab, page, limit, reloadKey]);
 
   const title = useMemo(
-    () => (clientId ? `Audit Logs — ${clientId}` : "Client Audit Logs"),
-    [clientId]
+    () => "Client Activity",
+    []
   );
 
   const jsonBody = (raw: unknown) => {
@@ -114,28 +119,26 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
       modal
       style={{ width: "90vw", maxWidth: "1200px" }}
     >
-      {!clientId && (
-        <div className="flex gap-2 mb-3">
-          <Button
-            label="Change Logs"
-            size="small"
-            severity={activeTab === "changes" ? "info" : "secondary"}
-            onClick={() => {
-              setActiveTab("changes");
-              setPage(1);
-            }}
-          />
-          <Button
-            label="Delete Logs"
-            size="small"
-            severity={activeTab === "deletions" ? "danger" : "secondary"}
-            onClick={() => {
-              setActiveTab("deletions");
-              setPage(1);
-            }}
-          />
-        </div>
-      )}
+      <div className="flex gap-2 mb-3">
+        <Button
+          label="Change Logs"
+          size="small"
+          severity={activeTab === "changes" ? "info" : "secondary"}
+          onClick={() => {
+            setActiveTab("changes");
+            setPage(1);
+          }}
+        />
+        <Button
+          label="Deleted Clients"
+          size="small"
+          severity={activeTab === "deleted" ? "danger" : "secondary"}
+          onClick={() => {
+            setActiveTab("deleted");
+            setPage(1);
+          }}
+        />
+      </div>
 
       {loading ? (
         <div className="text-center p-4">
@@ -147,11 +150,13 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
           <span>{error}</span>
           <Button label="Retry" size="small" onClick={() => setReloadKey((k) => k + 1)} />
         </div>
-      ) : items.length === 0 ? (
-        <div className="text-center text-600 p-4">No audit logs found for this client</div>
-      ) : (
+      ) : (activeTab === "changes" ? changeItems.length : deletedItems.length) === 0 ? (
+        <div className="text-center text-600 p-4">
+          {activeTab === "changes" ? "No change logs found" : "No deleted clients found"}
+        </div>
+      ) : activeTab === "changes" ? (
         <DataTable
-          value={items}
+          value={changeItems}
           dataKey="id"
           paginator
           lazy
@@ -167,36 +172,60 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
           scrollHeight="420px"
           tableStyle={{ minWidth: "95rem" }}
           paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Logs"
+          currentPageReportTemplate={
+            "Showing {first} to {last} of {totalRecords} Logs"
+          }
         >
-          <Column
-            field="timestamp"
-            header="Timestamp"
-            body={(row: ClientAuditLog) => formatAuditTimestamp(row.timestamp)}
-            style={{ minWidth: "12rem" }}
-          />
-          <Column
-            field="action"
-            header="Action"
-            body={(row: ClientAuditLog) => (
-              <Tag value={row.action} severity={actionSeverity(row.action) as any} />
-            )}
-            style={{ minWidth: "9rem" }}
-          />
-          <Column field="summary" header="Summary" style={{ minWidth: "18rem" }} />
-          <Column field="user_id" header="Changed By" style={{ minWidth: "8rem" }} />
-          <Column
-            field="old_values"
-            header="Old Values"
-            body={(row: ClientAuditLog) => jsonBody(row.old_values)}
-            style={{ minWidth: "16rem" }}
-          />
-          <Column
-            field="new_values"
-            header="New Values"
-            body={(row: ClientAuditLog) => jsonBody(row.new_values)}
-            style={{ minWidth: "16rem" }}
-          />
+          <>
+            <Column
+              field="timestamp"
+              header="Timestamp"
+              body={(row: ClientAuditLog) => formatAuditTimestamp(row.timestamp)}
+              style={{ minWidth: "12rem" }}
+            />
+            <Column
+              field="action"
+              header="Action"
+              body={(row: ClientAuditLog) => (
+                <Tag value={row.action} severity={actionSeverity(row.action) as any} />
+              )}
+              style={{ minWidth: "9rem" }}
+            />
+            <Column field="summary" header="Summary" style={{ minWidth: "18rem" }} />
+            <Column field="user_id" header="Changed By" style={{ minWidth: "8rem" }} />
+            <Column
+              field="old_values"
+              header="Old Values"
+              body={(row: ClientAuditLog) => jsonBody(row.old_values)}
+              style={{ minWidth: "16rem" }}
+            />
+            <Column
+              field="new_values"
+              header="New Values"
+              body={(row: ClientAuditLog) => jsonBody(row.new_values)}
+              style={{ minWidth: "16rem" }}
+            />
+          </>
+        </DataTable>
+      ) : (
+        <DataTable
+          value={deletedItems}
+          dataKey="clientId"
+          scrollable
+          scrollHeight="420px"
+          tableStyle={{ minWidth: "95rem" }}
+        >
+          <>
+            <Column
+              field="deleted_at"
+              header="Deleted At"
+              body={(row: ClientDeletedRecord) => formatAuditTimestamp(row.deleted_at || "")}
+              style={{ minWidth: "12rem" }}
+            />
+            <Column field="clientId" header="Client ID" style={{ minWidth: "8rem" }} />
+            <Column field="clientName" header="Client Name" style={{ minWidth: "14rem" }} />
+            <Column field="address" header="Address" style={{ minWidth: "18rem" }} />
+          </>
         </DataTable>
       )}
     </Dialog>

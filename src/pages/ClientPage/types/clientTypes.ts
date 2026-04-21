@@ -33,6 +33,19 @@ export type ClientAuditLogResponse = {
   };
 };
 
+export type ClientDeletedRecord = {
+  clientId: number;
+  clientName: string;
+  address: string | null;
+  is_deleted: boolean;
+  deleted_at: string | null;
+};
+
+export type ClientDeletedResponse = {
+  success: boolean;
+  data: ClientDeletedRecord[];
+};
+
 
 // Props for Add/Edit dialog
 export type ClientAddEditProps = {
@@ -93,6 +106,5 @@ export type ApiResponseWithPagination<T = unknown> = {
 export type ClientAuditLogsDialogProps = {
   isOpen: boolean;
   onClose: () => void;
-  clientId?: string | number;
-  defaultTab?: "changes" | "deletions";
+  defaultTab?: "changes" | "deleted";
 };
