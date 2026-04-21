@@ -285,7 +285,7 @@ const Client: React.FC = () => {
             <div ref={auditMenuRef} style={{ position: "relative" }}>
               <CogButton
                 onClick={() => setShowAuditMenu((prev) => !prev)}
-                tooltip="Audit Logs"
+                tooltip="Client Activity"
               />
               {showAuditMenu && (
                 <div
