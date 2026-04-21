@@ -18,7 +18,8 @@ import { ClientType, ClientAddType } from "./types/clientTypes";
 import { useAuth } from '../../shared/auth/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import SearchButton from '../../shared/SearchButton';
-import { FilterMatchMode } from 'primereact/api';
+import CogButton from "../../shared/CogButton";
+import ClientAuditLogsDialog from "./components/ClientAuditLogsDialog";
 
 const Client: React.FC = () => {
   // --- Dialog States ---
@@ -39,14 +40,18 @@ const Client: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [globalFilterValue, setGlobalFilterValue] = useState('');
+  const [globalAuditOpen, setGlobalAuditOpen] = useState(false);
+  const [globalAuditTab, setGlobalAuditTab] = useState<"changes" | "deleted">("changes");
+  const [showAuditMenu, setShowAuditMenu] = useState(false);
  
   // --- Refs ---
   const toast = useRef<Toast | null>(null);
   const dt = useRef<React.ElementRef<typeof DataTable>>(null);
+  const auditMenuRef = useRef<HTMLDivElement | null>(null);
 
   // --- Toast Helper ---
   const showToast = useCallback(
-    (severity: "success" | "error", summary: string, detail: string) => {
+    (severity: "success" | "error" | "warn", summary: string, detail: string) => {
       toast.current?.show({ severity, summary, detail });
     },
     []
@@ -110,6 +115,12 @@ const Client: React.FC = () => {
     setClientToDelete(null);
   }, []);
 
+  const openGlobalAuditLogs = useCallback((tab: "changes" | "deleted") => {
+    setShowAuditMenu(false);
+    setGlobalAuditTab(tab);
+    setGlobalAuditOpen(true);
+  }, []);
+
   // --- View Navigation ---
   const handleBackToClients = useCallback(() => {
     setSearchParams({});
@@ -123,6 +134,17 @@ const Client: React.FC = () => {
     }
     setSearchParams({ view, clientId: String(selectedClient?.clientId || '') });
   });
+
+  useEffect(() => {
+    if (!showAuditMenu) return;
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (auditMenuRef.current && !auditMenuRef.current.contains(event.target as Node)) {
+        setShowAuditMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [showAuditMenu]);
 
   // --- API Handlers ---
   const handleSaveClient = useCallback(
@@ -260,6 +282,77 @@ const Client: React.FC = () => {
             <AddButton onClick={openAddDialog} disabled={loading} data-testid="AddBtn" />
             <EditButton onClick={handleEditSelected} disabled={!selectedClient || loading} data-testid="EditBtn" />
             <DeleteButton onClick={openDeleteDialog} disabled={!selectedClient || loading} data-testid="DeleteBtn" />
+            <div ref={auditMenuRef} style={{ position: "relative" }}>
+              <CogButton
+                onClick={() => setShowAuditMenu((prev) => !prev)}
+                tooltip="Audit Logs"
+              />
+              {showAuditMenu && (
+                <div
+                  className="card shadow-3"
+                  style={{
+                    position: "absolute",
+                    right: 0,
+                    top: 50,
+                    zIndex: 1000,
+                    minWidth: 220,
+                    backgroundColor: "white",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                    padding: "0.5rem",
+                  }}
+                >
+                  <div
+                    className="p-2 border-round"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openGlobalAuditLogs("changes")}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        openGlobalAuditLogs("changes");
+                      }
+                    }}
+                    style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "#f3f4f6";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
+                    <i className="pi pi-history" style={{ fontSize: "14px", color: "#374151" }} />
+                    <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
+                      Change Logs
+                    </span>
+                  </div>
+                  <div
+                    className="p-2 border-round"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openGlobalAuditLogs("deleted")}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        openGlobalAuditLogs("deleted");
+                      }
+                    }}
+                    style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "#f3f4f6";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
+                    <i className="pi pi-trash" style={{ fontSize: "14px", color: "#374151" }} />
+                    <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
+                      Deleted Clients
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -325,6 +418,12 @@ const Client: React.FC = () => {
           loading={loading}
         />
       )}
+
+      <ClientAuditLogsDialog
+        isOpen={globalAuditOpen}
+        onClose={() => setGlobalAuditOpen(false)}
+        defaultTab={globalAuditTab}
+      />
     </div>
   );
 };
