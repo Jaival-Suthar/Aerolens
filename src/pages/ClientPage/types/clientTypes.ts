@@ -9,6 +9,43 @@ export type ClientType = DataTableValue & {
 };
 export type ClientAddType = Omit<ClientType, "clientId">;
 
+export type ClientAuditLog = {
+  id: number;
+  user_id: number | null;
+  action: "CREATE" | "UPDATE" | "DELETE" | string;
+  verb: string | null;
+  resource_type: string | null;
+  resource_id: string | null;
+  old_values: unknown;
+  new_values: unknown;
+  summary: string | null;
+  timestamp: string;
+};
+
+export type ClientAuditLogResponse = {
+  success: boolean;
+  data: ClientAuditLog[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+};
+
+export type ClientDeletedRecord = {
+  clientId: number;
+  clientName: string;
+  address: string | null;
+  is_deleted: boolean;
+  deleted_at: string | null;
+};
+
+export type ClientDeletedResponse = {
+  success: boolean;
+  data: ClientDeletedRecord[];
+};
+
 
 // Props for Add/Edit dialog
 export type ClientAddEditProps = {
@@ -64,4 +101,10 @@ export type Pagination = {
 export type ApiResponseWithPagination<T = unknown> = {
   data: T[];
   pagination?: Partial<Pagination>;
+};
+
+export type ClientAuditLogsDialogProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  defaultTab?: "changes" | "deleted";
 };
