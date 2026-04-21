@@ -1,43 +1,40 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
-import { Tag } from "primereact/tag";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import type { ClientAuditLog, ClientAuditLogsDialogProps, ClientDeletedRecord } from "../types/clientTypes";
-import { getClientChangeLogs, getDeletedClients } from "../services/clientService";
+import { getDeletedClients } from "../services/clientService";
 import { useAuth } from "../../../shared/auth/AuthContext";
 
-const parseMaybeJson = (value: unknown) => {
-  if (value === null || value === undefined) return null;
-  if (typeof value === "object") return value;
-  if (typeof value === "string") {
-    try {
-      return JSON.parse(value);
-    } catch {
-      return value;
-    }
-  }
-  return value;
-};
+const parseTimestampToDate = (value: string) => {
+  if (!value) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
 
-const actionSeverity = (action: string) => {
-  if (action === "CREATE") return "success";
-  if (action === "UPDATE") return "info";
-  if (action === "DELETE") return "danger";
-  return "secondary";
+  // If timezone is missing, treat backend timestamp as UTC.
+  const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/.test(raw);
+  const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
+  const candidate = hasTimezone ? normalized : `${normalized}Z`;
+
+  const date = new Date(candidate);
+  if (!Number.isNaN(date.getTime())) return date;
+
+  const fallback = new Date(raw);
+  return Number.isNaN(fallback.getTime()) ? null : fallback;
 };
 
 const formatAuditTimestamp = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString("en-GB", {
+  const date = parseTimestampToDate(value);
+  if (!date) return "—";
+  return date.toLocaleString(undefined, {
     day: "2-digit",
     month: "short",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
+    timeZoneName: "short",
   });
 };
 
@@ -60,7 +57,7 @@ const normalizeDeletedRows = (payload: unknown): ClientDeletedRecord[] => {
 const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
   isOpen,
   onClose,
-  defaultTab = "changes",
+  defaultTab = "deleted",
 }) => {
   const { accessToken } = useAuth();
   const [activeTab, setActiveTab] = useState<"changes" | "deleted">(defaultTab);
@@ -68,15 +65,11 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
   const [error, setError] = useState<string>("");
   const [changeItems, setChangeItems] = useState<ClientAuditLog[]>([]);
   const [deletedItems, setDeletedItems] = useState<ClientDeletedRecord[]>([]);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
-  const [total, setTotal] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!isOpen) return;
     setActiveTab(defaultTab);
-    setPage(1);
   }, [isOpen, defaultTab]);
 
   useEffect(() => {
@@ -86,15 +79,13 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
         setLoading(true);
         setError("");
         if (activeTab === "changes") {
-          const response = await getClientChangeLogs(accessToken, page, limit);
-          setChangeItems(response.data || []);
-          setTotal(response.pagination?.total || 0);
-        } else {
-          const response = await getDeletedClients(accessToken);
-          const deletedRows = normalizeDeletedRows(response.data);
-          setDeletedItems(deletedRows);
-          setTotal(deletedRows.length);
+          setChangeItems([]);
+          setDeletedItems([]);
+          return;
         }
+        const response = await getDeletedClients(accessToken);
+        const deletedRows = normalizeDeletedRows(response.data);
+        setDeletedItems(deletedRows);
       } catch (err: any) {
         setError(err?.message || "Failed to fetch audit logs");
         if (activeTab === "changes") {
@@ -102,31 +93,17 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
         } else {
           setDeletedItems([]);
         }
-        setTotal(0);
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, [isOpen, accessToken, activeTab, page, limit, reloadKey]);
+  }, [isOpen, accessToken, activeTab, reloadKey]);
 
   const title = useMemo(
     () => "Client Activity",
     []
   );
-
-  const jsonBody = (raw: unknown) => {
-    const parsed = parseMaybeJson(raw);
-    if (parsed == null) return "—";
-    return (
-      <details>
-        <summary>View</summary>
-        <pre style={{ margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", maxWidth: 320 }}>
-          {typeof parsed === "string" ? parsed : JSON.stringify(parsed, null, 2)}
-        </pre>
-      </details>
-    );
-  };
 
   return (
     <Dialog
@@ -136,7 +113,7 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
       modal
       style={{ width: "90vw", maxWidth: "1200px" }}
     >
-      <div className="flex gap-2 mb-3">
+      {/* <div className="flex gap-2 mb-3">
         <Button
           label="Change Logs"
           size="small"
@@ -155,7 +132,7 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
             setPage(1);
           }}
         />
-      </div>
+      </div> */}
 
       {loading ? (
         <div className="text-center p-4">
@@ -167,61 +144,14 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
           <span>{error}</span>
           <Button label="Retry" size="small" onClick={() => setReloadKey((k) => k + 1)} />
         </div>
-      ) : (activeTab === "changes" ? changeItems.length : deletedItems.length) === 0 ? (
-        <div className="text-center text-600 p-4">
-          {activeTab === "changes" ? "No change logs found" : "No deleted clients found"}
-        </div>
       ) : activeTab === "changes" ? (
-        <DataTable
-          value={changeItems}
-          dataKey="id"
-          paginator
-          lazy
-          first={(page - 1) * limit}
-          rows={limit}
-          totalRecords={total}
-          onPage={(e) => {
-            setPage((e.page ?? 0) + 1);
-            setLimit(e.rows);
-          }}
-          rowsPerPageOptions={[20, 50, 100]}
-          scrollable
-          scrollHeight="420px"
-          tableStyle={{ minWidth: "95rem" }}
-          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-          currentPageReportTemplate={
-            "Showing {first} to {last} of {totalRecords} Logs"
-          }
-        >
-          <Column
-            field="timestamp"
-            header="Timestamp"
-            body={(row: ClientAuditLog) => formatAuditTimestamp(row.timestamp)}
-            style={{ minWidth: "12rem" }}
-          />
-          <Column
-            field="action"
-            header="Action"
-            body={(row: ClientAuditLog) => (
-              <Tag value={row.action} severity={actionSeverity(row.action) as any} />
-            )}
-            style={{ minWidth: "9rem" }}
-          />
-          <Column field="summary" header="Summary" style={{ minWidth: "18rem" }} />
-          <Column field="user_id" header="Changed By" style={{ minWidth: "8rem" }} />
-          <Column
-            field="old_values"
-            header="Old Values"
-            body={(row: ClientAuditLog) => jsonBody(row.old_values)}
-            style={{ minWidth: "16rem" }}
-          />
-          <Column
-            field="new_values"
-            header="New Values"
-            body={(row: ClientAuditLog) => jsonBody(row.new_values)}
-            style={{ minWidth: "16rem" }}
-          />
-        </DataTable>
+        <div className="text-center text-600 p-4">
+          No change logs found
+        </div>
+      ) : deletedItems.length === 0 ? (
+        <div className="text-center text-600 p-4">
+          No deleted clients found
+        </div>
       ) : (
         <DataTable
           value={deletedItems}
