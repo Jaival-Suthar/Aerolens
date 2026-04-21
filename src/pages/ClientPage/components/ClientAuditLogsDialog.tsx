@@ -41,6 +41,22 @@ const formatAuditTimestamp = (value: string) => {
   });
 };
 
+const normalizeDeletedRows = (payload: unknown): ClientDeletedRecord[] => {
+  const rows = Array.isArray(payload)
+    ? payload
+    : Array.isArray((payload as any)?.data)
+      ? (payload as any).data
+      : [];
+
+  return rows.map((row: any) => ({
+    clientId: Number(row.clientId ?? row.clientid ?? row.id ?? 0),
+    clientName: String(row.clientName ?? row.clientname ?? "—"),
+    address: row.address ?? row.Address ?? "—",
+    is_deleted: Boolean(row.is_deleted ?? row.isDeleted ?? true),
+    deleted_at: row.deleted_at ?? row.deletedAt ?? null,
+  }));
+};
+
 const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
   isOpen,
   onClose,
@@ -75,8 +91,9 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
           setTotal(response.pagination?.total || 0);
         } else {
           const response = await getDeletedClients(accessToken);
-          setDeletedItems(response.data || []);
-          setTotal(response.data?.length || 0);
+          const deletedRows = normalizeDeletedRows(response.data);
+          setDeletedItems(deletedRows);
+          setTotal(deletedRows.length);
         }
       } catch (err: any) {
         setError(err?.message || "Failed to fetch audit logs");
@@ -176,36 +193,34 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
             "Showing {first} to {last} of {totalRecords} Logs"
           }
         >
-          <>
-            <Column
-              field="timestamp"
-              header="Timestamp"
-              body={(row: ClientAuditLog) => formatAuditTimestamp(row.timestamp)}
-              style={{ minWidth: "12rem" }}
-            />
-            <Column
-              field="action"
-              header="Action"
-              body={(row: ClientAuditLog) => (
-                <Tag value={row.action} severity={actionSeverity(row.action) as any} />
-              )}
-              style={{ minWidth: "9rem" }}
-            />
-            <Column field="summary" header="Summary" style={{ minWidth: "18rem" }} />
-            <Column field="user_id" header="Changed By" style={{ minWidth: "8rem" }} />
-            <Column
-              field="old_values"
-              header="Old Values"
-              body={(row: ClientAuditLog) => jsonBody(row.old_values)}
-              style={{ minWidth: "16rem" }}
-            />
-            <Column
-              field="new_values"
-              header="New Values"
-              body={(row: ClientAuditLog) => jsonBody(row.new_values)}
-              style={{ minWidth: "16rem" }}
-            />
-          </>
+          <Column
+            field="timestamp"
+            header="Timestamp"
+            body={(row: ClientAuditLog) => formatAuditTimestamp(row.timestamp)}
+            style={{ minWidth: "12rem" }}
+          />
+          <Column
+            field="action"
+            header="Action"
+            body={(row: ClientAuditLog) => (
+              <Tag value={row.action} severity={actionSeverity(row.action) as any} />
+            )}
+            style={{ minWidth: "9rem" }}
+          />
+          <Column field="summary" header="Summary" style={{ minWidth: "18rem" }} />
+          <Column field="user_id" header="Changed By" style={{ minWidth: "8rem" }} />
+          <Column
+            field="old_values"
+            header="Old Values"
+            body={(row: ClientAuditLog) => jsonBody(row.old_values)}
+            style={{ minWidth: "16rem" }}
+          />
+          <Column
+            field="new_values"
+            header="New Values"
+            body={(row: ClientAuditLog) => jsonBody(row.new_values)}
+            style={{ minWidth: "16rem" }}
+          />
         </DataTable>
       ) : (
         <DataTable
@@ -215,17 +230,30 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
           scrollHeight="420px"
           tableStyle={{ minWidth: "95rem" }}
         >
-          <>
-            <Column
-              field="deleted_at"
-              header="Deleted At"
-              body={(row: ClientDeletedRecord) => formatAuditTimestamp(row.deleted_at || "")}
-              style={{ minWidth: "12rem" }}
-            />
-            <Column field="clientId" header="Client ID" style={{ minWidth: "8rem" }} />
-            <Column field="clientName" header="Client Name" style={{ minWidth: "14rem" }} />
-            <Column field="address" header="Address" style={{ minWidth: "18rem" }} />
-          </>
+          <Column
+            field="deleted_at"
+            header="Deleted At"
+            body={(row: ClientDeletedRecord) => formatAuditTimestamp(row.deleted_at || "")}
+            style={{ minWidth: "12rem" }}
+          />
+          <Column
+            field="clientId"
+            header="Client ID"
+            body={(row: ClientDeletedRecord) => row.clientId || "—"}
+            style={{ minWidth: "8rem" }}
+          />
+          <Column
+            field="clientName"
+            header="Client Name"
+            body={(row: ClientDeletedRecord) => row.clientName || "—"}
+            style={{ minWidth: "14rem" }}
+          />
+          <Column
+            field="address"
+            header="Address"
+            body={(row: ClientDeletedRecord) => row.address || "—"}
+            style={{ minWidth: "18rem" }}
+          />
         </DataTable>
       )}
     </Dialog>
