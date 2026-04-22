@@ -22,8 +22,10 @@ import { FaDownload, FaEye, FaPlus } from "react-icons/fa";
 import { Toast } from "primereact/toast";
 import { Tooltip } from "primereact/tooltip";
 import CogButton from "../../../shared/CogButton";
-import JobProfileRequirementsAddEdit 
+import ChangeLogsDialog from "../../../shared/ChangeLogsDialog";
+import JobProfileRequirementsAddEdit
   from "../../JobProfileRequirements/components/jobProfileRequirementsAddEdit";
+import JobProfileDeletedRecordsDialog from "./jobProfileDeletedRecordsDialog";
 import {
   createJobProfileRequirements
 } from "../../JobProfileRequirements/services/jobProfileRequirementsService";
@@ -82,10 +84,13 @@ const JobProfileTable: React.FC = () => {
   const [showAddEdit, setShowAddEdit] = useState(false);
   const [editProfile, setEditProfile] = useState<JobProfile | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDeletedRecordsDialog, setShowDeletedRecordsDialog] = useState(false);
+  const [showChangeLogsDialog, setShowChangeLogsDialog] = useState(false);
   const [showRequirementDialog, setShowRequirementDialog] = useState(false);
   const [selectedJobProfileForReq, setSelectedJobProfileForReq] =
     useState<JobProfile | null>(null);
   const toast = useRef<Toast>(null);
+  const cogMenuRef = useRef<HTMLDivElement | null>(null);
 
   /* -------------------- Column visibility -------------------- */
   const [visibleColumns, setVisibleColumns] = useState(() =>
@@ -97,11 +102,7 @@ const JobProfileTable: React.FC = () => {
 
   useEffect(() => {
     const fields = visibleColumns.map(c => c.field);
-
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(fields)
-    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(fields));
   }, [visibleColumns]);
 
 
@@ -117,6 +118,18 @@ const JobProfileTable: React.FC = () => {
   const [rows, setRows] = useState(sizeFromUrl);
   const [first, setFirst] = useState((pageFromUrl - 1) * sizeFromUrl);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+
+  useEffect(() => {
+    if (!showSettingsMenu) return;
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (cogMenuRef.current && !cogMenuRef.current.contains(event.target as Node)) {
+        setShowSettingsMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [showSettingsMenu]);
+
   const onPageChange = (event: DataTablePageEvent) => {
     const { first, rows } = event;
 
@@ -137,20 +150,9 @@ const JobProfileTable: React.FC = () => {
   {
     label: "Create Job Profile Requirements",
     icon: <FaPlus style={{ marginRight: 8, marginLeft: 4 }} />,
+    disabled: !selected,
     action: () => {
-      if (!selected) {
-        toast.current?.show({
-          severity: "warn",
-          summary: "No Selection",
-          detail: "Please select a Job Profile first",
-          life: 3000
-        });
-        return;
-      }
-
       setShowSettingsMenu(false);
-
-      // Pass selected job profile
       setSelectedJobProfileForReq(selected);
       setShowRequirementDialog(true);
     }
@@ -414,16 +416,22 @@ const previewJD = async (jobProfileId: number) => {
           <AddButton onClick={handleAddNew} />
           <EditButton onClick={handleEdit} disabled={!selected} />
           <DeleteButton onClick={handleDelete} disabled={!selected} />
+          {/* <Button
+            label="Deleted Records"
+            icon="pi pi-trash"
+            severity="secondary"
+            outlined
+            onClick={() => setShowDeletedRecordsDialog(true)}
+          /> */}
 
           <ViewButton
             disabled={!selected}
             tooltip="View Job Profile Details"
             onClick={() => setViewProfile(selected)}
           />
-          <div style={{ position: "relative" }}>
+          <div ref={cogMenuRef} style={{ position: "relative" }}>
           <CogButton
             onClick={() => setShowSettingsMenu(prev => !prev)}
-            disabled={!selected}
             tooltip="More Actions"
           />
 
@@ -444,45 +452,60 @@ const previewJD = async (jobProfileId: number) => {
                   "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)"
               }}
             >
-              {settingsItems.map((item, idx) => (
-                <div
-                  key={idx}
-                  onClick={item.action}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    padding: "0.5rem",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    marginBottom:
-                      idx < settingsItems.length - 1 ? "4px" : "0",
-                    transition: "background-color 0.15s ease"
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = "#f3f4f6";
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                  }}
-                >
-                  {/* Icon */}
-                  <span style={{ fontSize: 16, color: "#374151" }}>
-                    {item.icon}
-                  </span>
+            {settingsItems.map((item, idx) => (
+  <div
+    key={idx}
+    onClick={!item.disabled ? item.action : undefined}
+    style={{
+      display: "flex",
+      alignItems: "center",
+      padding: "0.5rem",
+      borderRadius: "6px",
+      cursor: item.disabled ? "not-allowed" : "pointer",
+      marginBottom: "4px",
+      opacity: item.disabled ? 0.4 : 1,
+    }}
+    onMouseEnter={(e) => { if (!item.disabled) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+  >
+    <span style={{ fontSize: 16, color: "#374151" }}>{item.icon}</span>
+    <span style={{ marginLeft: 12, fontSize: 14, fontWeight: 500, color: "#374151" }}>
+      {item.label}
+    </span>
+  </div>
+))}
 
-                  {/* Label */}
-                  <span
-                    style={{
-                      marginLeft: 12,
-                      fontSize: 14,
-                      fontWeight: 500,
-                      color: "#374151"
-                    }}
-                  >
-                    {item.label}
-                  </span>
-                </div>
-              ))}
+<div
+  className="p-2 border-round"
+  role="button"
+  tabIndex={0}
+  onClick={() => { setShowSettingsMenu(false); setShowChangeLogsDialog(true); }}
+  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowSettingsMenu(false); setShowChangeLogsDialog(true); } }}
+  style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+>
+  <i className="pi pi-history" style={{ fontSize: "14px", color: "#374151" }} />
+  <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
+    Change Logs
+  </span>
+</div>
+
+<div
+  className="p-2 border-round"
+  role="button"
+  tabIndex={0}
+  onClick={() => { setShowSettingsMenu(false); setShowDeletedRecordsDialog(true); }}
+  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowSettingsMenu(false); setShowDeletedRecordsDialog(true); } }}
+  style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+>
+  <i className="pi pi-trash" style={{ fontSize: "14px", color: "#374151" }} />
+  <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
+    Deleted Job Profiles
+  </span>
+</div>
             </div>
           )}
         </div>
@@ -644,7 +667,15 @@ const previewJD = async (jobProfileId: number) => {
             onSave={createRequirement}
           />
         )}
-
+        <JobProfileDeletedRecordsDialog
+          isOpen={showDeletedRecordsDialog}
+          onClose={() => setShowDeletedRecordsDialog(false)}
+        />
+        <ChangeLogsDialog
+          isOpen={showChangeLogsDialog}
+          onClose={() => setShowChangeLogsDialog(false)}
+          title="Job Profile Change Logs"
+        />
 
       </section>
     </>

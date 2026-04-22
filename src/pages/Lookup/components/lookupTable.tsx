@@ -1,14 +1,17 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { LookupEntry } from '../types/lookupTypes';
 import AddButton from '../../../shared/AddButton';
-import EditButton from '../../../shared/EditButton'; 
+import EditButton from '../../../shared/EditButton';
 import DeleteButton from '../../../shared/DeleteButton';
-import SearchButton from '../../../shared/SearchButton';  // ← ADD
+import SearchButton from '../../../shared/SearchButton';
+import CogButton from '../../../shared/CogButton';
+import ChangeLogsDialog from '../../../shared/ChangeLogsDialog';
 import { AddLookupForm } from './AddEditLookupForm';
 import { DeleteLookupForm } from './DeleteLookupForm';
-import { FilterMatchMode } from 'primereact/api';  // ← ADD
+import { FilterMatchMode } from 'primereact/api';
+import LookupDeletedRecordsDialog from "./lookupDeletedRecordsDialog";
 
 // REMOVE PaginationMeta interface - not needed anymore
 
@@ -28,6 +31,21 @@ const LookupTable: React.FC<LookupTableProps> = ({
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false); 
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeletedRecordsDialog, setShowDeletedRecordsDialog] = useState(false);
+  const [showCogMenu, setShowCogMenu] = useState(false);
+  const [showChangeLogsDialog, setShowChangeLogsDialog] = useState(false);
+  const cogMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!showCogMenu) return;
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (cogMenuRef.current && !cogMenuRef.current.contains(event.target as Node)) {
+        setShowCogMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [showCogMenu]);
 
   // ← ADD search state
   const [globalFilterValue, setGlobalFilterValue] = useState('');
@@ -82,7 +100,6 @@ const LookupTable: React.FC<LookupTableProps> = ({
         display: "flex",
         flexDirection: "column",
         flex: 1,
-        overflow: "hidden",
       }}
     >
       <div
@@ -111,6 +128,59 @@ const LookupTable: React.FC<LookupTableProps> = ({
             onClick={handleDeleteClick}
             disabled={!selectedLookup} // Disabled if nothing is selected
           />
+          <div ref={cogMenuRef} style={{ position: "relative" }}>
+            <CogButton
+              onClick={() => setShowCogMenu((prev) => !prev)}
+              tooltip="Activity"
+            />
+            {showCogMenu && (
+              <div
+                className="card shadow-3"
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  top: 50,
+                  zIndex: 1000,
+                  minWidth: 220,
+                  backgroundColor: "white",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  padding: "0.5rem",
+                }}
+              >
+                <div
+                  className="p-2 border-round"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => { setShowCogMenu(false); setShowChangeLogsDialog(true); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowChangeLogsDialog(true); } }}
+                  style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                >
+                  <i className="pi pi-history" style={{ fontSize: "14px", color: "#374151" }} />
+                  <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
+                    Change Logs
+                  </span>
+                </div>
+                <div
+                  className="p-2 border-round"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => { setShowCogMenu(false); setShowDeletedRecordsDialog(true); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowDeletedRecordsDialog(true); } }}
+                  style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                >
+                  <i className="pi pi-trash" style={{ fontSize: "14px", color: "#374151" }} />
+                  <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
+                    Deleted Lookups
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <div style={{ flex: 1, overflow: "hidden" }}>
@@ -157,6 +227,15 @@ const LookupTable: React.FC<LookupTableProps> = ({
         lookup={selectedLookup}
         onHide={() => setShowDeleteDialog(false)}
         onSuccess={handleSuccess}
+      />
+      <LookupDeletedRecordsDialog
+        isOpen={showDeletedRecordsDialog}
+        onClose={() => setShowDeletedRecordsDialog(false)}
+      />
+      <ChangeLogsDialog
+        isOpen={showChangeLogsDialog}
+        onClose={() => setShowChangeLogsDialog(false)}
+        title="Lookup Change Logs"
       />
     </div>
   );

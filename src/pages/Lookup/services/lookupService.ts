@@ -1,4 +1,4 @@
-import { LookupApiResponse } from "../types/lookupTypes";
+import { LookupApiResponse, LookupDeletedResponse } from "../types/lookupTypes";
 
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
 
@@ -127,5 +127,20 @@ export const lookupService = {
       headers: makeHeaders(accessToken),
     });
     return checkStatus(res);
+  },
+
+  async getDeleted(accessToken: string): Promise<LookupDeletedResponse> {
+    const url = `${API_BASE_URL}/lookup/deletions`;
+    const res = await fetch(url, {
+      method: "GET",
+      headers: makeHeaders(accessToken),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text || res.statusText}`);
+    }
+
+    return res.json();
   },
 };

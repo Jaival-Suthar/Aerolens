@@ -93,6 +93,21 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
+export interface JobProfileRequirementDeletedRecord {
+  jobProfileRequirementId: number;
+  jobProfileId: number;
+  clientId: number | null;
+  departmentId: number | null;
+  positions: number | null;
+  deleted_at: string | null;
+}
+
+export interface JobProfileRequirementDeletedResponse {
+  success: boolean;
+  message: string;
+  data: JobProfileRequirementDeletedRecord[];
+}
+
 export interface JobProfileRequirementsFormErrors {
   jobProfileId?: string;
   clientId?: string;

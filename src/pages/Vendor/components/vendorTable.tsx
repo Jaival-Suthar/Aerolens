@@ -7,6 +7,8 @@ import SearchButton from "../../../shared/SearchButton";
 import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
+import CogButton from "../../../shared/CogButton";
+import ChangeLogsDialog from "../../../shared/ChangeLogsDialog";
 import VendorAddEdit from "./vendorAddEdit";
 import VendorDelete from "./vendorDelete";
 import type { VendorType } from "../types/vendorTypes";
@@ -14,6 +16,7 @@ import { FilterMatchMode } from "primereact/api";
 import { VendorService } from "../services/useVendor";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import { useSearchParams } from "react-router-dom";
+import VendorDeletedRecordsDialog from "./vendorDeletedRecordsDialog";
 
 const VendorTable: React.FC = () => {
   const toast = useRef<Toast>(null);
@@ -39,6 +42,10 @@ const VendorTable: React.FC = () => {
   });
   const [showAddEdit, setShowAddEdit] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+  const [showDeletedRecordsDialog, setShowDeletedRecordsDialog] = useState(false);
+  const [showCogMenu, setShowCogMenu] = useState(false);
+  const [showChangeLogsDialog, setShowChangeLogsDialog] = useState(false);
+  const cogMenuRef = useRef<HTMLDivElement | null>(null);
   const [editVendor, setEditVendor] = useState<VendorType | null>(null);
 
   // Fetch vendors
@@ -72,7 +79,18 @@ const VendorTable: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchVendors(); // fetch immediately on mount
+    if (!showCogMenu) return;
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (cogMenuRef.current && !cogMenuRef.current.contains(event.target as Node)) {
+        setShowCogMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [showCogMenu]);
+
+  useEffect(() => {
+    fetchVendors();
   }, [accessToken]);
   useEffect(() => {
   setSelectedVendor(null);
@@ -140,6 +158,59 @@ const VendorTable: React.FC = () => {
             disabled={!selectedVendor}
             onClick={() => setShowDelete(true)}
           />
+          <div ref={cogMenuRef} style={{ position: "relative" }}>
+            <CogButton
+              onClick={() => setShowCogMenu((prev) => !prev)}
+              tooltip="Activity"
+            />
+            {showCogMenu && (
+              <div
+                className="card shadow-3"
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  top: 50,
+                  zIndex: 1000,
+                  minWidth: 220,
+                  backgroundColor: "white",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  padding: "0.5rem",
+                }}
+              >
+                <div
+                  className="p-2 border-round"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => { setShowCogMenu(false); setShowChangeLogsDialog(true); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowChangeLogsDialog(true); } }}
+                  style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                >
+                  <i className="pi pi-history" style={{ fontSize: "14px", color: "#374151" }} />
+                  <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
+                    Change Logs
+                  </span>
+                </div>
+                <div
+                  className="p-2 border-round"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => { setShowCogMenu(false); setShowDeletedRecordsDialog(true); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowDeletedRecordsDialog(true); } }}
+                  style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                >
+                  <i className="pi pi-trash" style={{ fontSize: "14px", color: "#374151" }} />
+                  <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
+                    Deleted Vendors
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -228,6 +299,15 @@ const VendorTable: React.FC = () => {
         vendorToDelete={selectedVendor}
         onHide={() => setShowDelete(false)}
         onUpdate={fetchVendors} // child handles API, parent refreshes table
+      />
+      <VendorDeletedRecordsDialog
+        isOpen={showDeletedRecordsDialog}
+        onClose={() => setShowDeletedRecordsDialog(false)}
+      />
+      <ChangeLogsDialog
+        isOpen={showChangeLogsDialog}
+        onClose={() => setShowChangeLogsDialog(false)}
+        title="Vendor Change Logs"
       />
     </>
   );
