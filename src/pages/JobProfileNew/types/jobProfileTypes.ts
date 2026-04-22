@@ -154,3 +154,15 @@ export interface ApiResponse<T> {
   message: string;
   data: T;
 }
+
+export interface JobProfileDeletedRecord {
+  jobProfileId: number;
+  jobRole: string;
+  deleted_at: string | null;
+}
+
+export interface JobProfileDeletedResponse {
+  success: boolean;
+  message: string;
+  data: JobProfileDeletedRecord[];
+}
