@@ -80,11 +80,9 @@ const LookupDeletedRecordsDialog: React.FC<LookupDeletedRecordsDialogProps> = ({
         setError("");
         const response = await lookupService.getDeleted(accessToken);
         setItems(normalizeDeletedRows(response.data));
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to fetch deleted lookups";
-        setError(message);
-        setItems([]);
-      } finally {
+      } catch (err: any) {
+        console.error("Delete records error:", err);      
+      }finally {
         setLoading(false);
       }
     };

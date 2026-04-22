@@ -107,7 +107,7 @@ const LookupTable: React.FC<LookupTableProps> = ({
         style={{
           position: "sticky",
           top: 0,
-          zIndex: 2,
+          zIndex: 10,
           background: "white",
           paddingBottom: "0.5rem",
         }}
