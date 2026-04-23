@@ -562,3 +562,18 @@ export const getResumeBulkStatus = async (
 // -------------------- DIRECT DOWNLOAD LINK (optional) --------------------
 export const getResumeDownloadUrl = (candidateId: number): string =>
   `${API_URL}${ROUTES.RESUME(candidateId)}`;
+
+export const getDeletedCandidates = async (accessToken: string | null): Promise<any> => {
+  const res = await fetch(`${API_URL}/candidate/deletions`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`HTTP ${res.status}: ${text || res.statusText}`);
+  }
+  return res.json();
+};

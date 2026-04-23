@@ -2,7 +2,8 @@ import type {
   VendorType,
   CreateVendorPayload,
   UpdateVendorPayload,
-  ApiResponse
+  ApiResponse,
+  VendorDeletedResponse
 } from "../types/vendorTypes";
 // //         <SearchButton
 //   value={globalFilterValue}   // use state instead of filters.global
@@ -134,5 +135,12 @@ export const VendorService = {
     { method: "DELETE" },
     token
   ),
+
+  getDeletedVendors: (token: string): Promise<VendorDeletedResponse> =>
+    apiFetch<VendorDeletedResponse>(
+      `${ROUTES.BASE}/deletions`,
+      { method: "GET" },
+      token
+    ),
 
 };

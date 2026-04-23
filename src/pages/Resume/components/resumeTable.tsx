@@ -29,6 +29,8 @@ import CogButton from "../../../shared/CogButton";
 import { Toast } from "primereact/toast";
 import InterviewScheduler from "../../../shared/InterviewScheduler";
 import ResumeOnBoarding from "./resumeOnBoarding";
+import ResumeDeletedRecordsDialog from "./resumeDeletedRecordsDialog";
+import ChangeLogsDialog from "../../../shared/ChangeLogsDialog";
 import ViewButton from "../../../shared/ViewButton";
 import DetailsGrid from "../../../shared/DetailsGrid";
 import DetailsSection from "../../../shared/DetailsSection";
@@ -183,6 +185,9 @@ const ResumeTable: React.FC = () => {
   const [editingResume, setEditingResume] = useState<Candidate | null>(null);
   const [loading, setLoading] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [showDeletedRecordsDialog, setShowDeletedRecordsDialog] = useState(false);
+  const [showChangeLogsDialog, setShowChangeLogsDialog] = useState(false);
+  const cogMenuRef = useRef<HTMLDivElement | null>(null);
   const [showInterviewDialog, setShowInterviewDialog] = useState(false);
   const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
   const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
@@ -272,6 +277,17 @@ const ResumeTable: React.FC = () => {
 useEffect(() => {
   loadAllData();
 }, [loadAllData]);
+
+useEffect(() => {
+  if (!showSettingsMenu) return;
+  const handleOutsideClick = (event: MouseEvent) => {
+    if (cogMenuRef.current && !cogMenuRef.current.contains(event.target as Node)) {
+      setShowSettingsMenu(false);
+    }
+  };
+  document.addEventListener("mousedown", handleOutsideClick);
+  return () => document.removeEventListener("mousedown", handleOutsideClick);
+}, [showSettingsMenu]);
 
 useEffect(() => {
   const handleBatchFinished = () => {
@@ -878,44 +894,52 @@ useEffect(() => {
           <EditButton onClick={handleEdit} disabled={!selectedResume} />
           <DeleteButton onClick={handleDelete} disabled={!selectedResume} />
           <ViewButton onClick={() => setViewCandidate(selectedResume)} disabled={!selectedResume} tooltip="View Candidate Details" />
-          <div style={{ position: "relative" }}>
-            <CogButton onClick={() => setShowSettingsMenu((prev) => !prev)} disabled={!selectedResume} />
+          <div ref={cogMenuRef} style={{ position: "relative" }}>
+            <CogButton onClick={() => setShowSettingsMenu((prev) => !prev)} tooltip="More Actions" />
             {showSettingsMenu && (
-              <div className="card shadow-3" style={{ position: "absolute", right: 0, top: 50, zIndex: 1000, minWidth: 220, backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "0.5rem" }}>
+              <div className="card shadow-3" style={{ position: "absolute", right: 0, top: 50, zIndex: 1000, minWidth: 220, backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "0.5rem", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)" }}>
                 {settingsItems.map((item, idx) => (
                   <div
                     key={idx}
                     className="p-2 border-round"
                     role="button"
                     tabIndex={item.disabled ? -1 : 0}
-                    onClick={() => {
-                      if (item.disabled) return;
-                      item.action();
-                    }}
-                    onKeyDown={(e) => {
-                      if (item.disabled) return;
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        item.action();
-                      }
-                    }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      cursor: item.disabled ? "not-allowed" : "pointer",
-                      opacity: item.disabled ? 0.45 : 1,
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!item.disabled) e.currentTarget.style.backgroundColor = "#f3f4f6";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                    }}
+                    onClick={() => { if (item.disabled) return; item.action(); }}
+                    onKeyDown={(e) => { if (item.disabled) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); item.action(); } }}
+                    style={{ display: "flex", alignItems: "center", cursor: item.disabled ? "not-allowed" : "pointer", opacity: item.disabled ? 0.45 : 1 }}
+                    onMouseEnter={(e) => { if (!item.disabled) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                   >
                     <span style={{ fontSize: "16px", color: "#374151" }}>{item.icon}</span>
                     <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>{item.label}</span>
                   </div>
                 ))}
+                <div
+                  className="p-2 border-round"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => { setShowSettingsMenu(false); setShowChangeLogsDialog(true); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowSettingsMenu(false); setShowChangeLogsDialog(true); } }}
+                  style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                >
+                  <i className="pi pi-history" style={{ fontSize: "14px", color: "#374151" }} />
+                  <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>Change Logs</span>
+                </div>
+                <div
+                  className="p-2 border-round"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => { setShowSettingsMenu(false); setShowDeletedRecordsDialog(true); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowSettingsMenu(false); setShowDeletedRecordsDialog(true); } }}
+                  style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                >
+                  <i className="pi pi-trash" style={{ fontSize: "14px", color: "#374151" }} />
+                  <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>Deleted Candidates</span>
+                </div>
               </div>
             )}
           </div>
@@ -1135,6 +1159,15 @@ useEffect(() => {
           {whatsAppNote.length}/{WHATSAPP_NOTE_MAX_LENGTH} characters
         </small>
       </Dialog>
+      <ResumeDeletedRecordsDialog
+        isOpen={showDeletedRecordsDialog}
+        onClose={() => setShowDeletedRecordsDialog(false)}
+      />
+      <ChangeLogsDialog
+        isOpen={showChangeLogsDialog}
+        onClose={() => setShowChangeLogsDialog(false)}
+        title="Candidate Change Logs"
+      />
     </>
   );
 };

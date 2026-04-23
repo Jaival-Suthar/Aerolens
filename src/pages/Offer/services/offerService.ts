@@ -116,3 +116,7 @@ export async function updateOfferStatus(
   );
   return (raw as { data?: OfferActionResponse }).data ?? (raw as OfferActionResponse);
 }
+
+export async function getDeletedOffers(accessToken: string | null): Promise<any> {
+  return apiFetch<any>("/offers/deletions", { method: "GET" }, accessToken ?? undefined);
+}
