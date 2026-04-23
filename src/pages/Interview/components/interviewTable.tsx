@@ -27,6 +27,8 @@ import ViewButton from "../../../shared/ViewButton";
 import PremiumDetailsDialog from "../../../shared/PremiumDetailsDialog";
 import DetailsSection from "../../../shared/DetailsSection";
 import DetailsGrid from "../../../shared/DetailsGrid";
+import InterviewDeletedRecordsDialog from "./interviewDeletedRecordsDialog";
+import ChangeLogsDialog from "../../../shared/ChangeLogsDialog";
 
 const formatTimeForTable = (
   backendDateTime: string,
@@ -98,6 +100,9 @@ const InterviewTable: React.FC = () => {
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [showResultDialog, setShowResultDialog] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [showDeletedRecordsDialog, setShowDeletedRecordsDialog] = useState(false);
+  const [showChangeLogsDialog, setShowChangeLogsDialog] = useState(false);
+  const cogMenuRef = useRef<HTMLDivElement | null>(null);
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
   const [loading, setLoading] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -214,6 +219,17 @@ const handleViewAllRounds = () => {
   }, [accessToken]);
 
   useEffect(() => { fetchInterviews(); }, [fetchInterviews]);
+
+  useEffect(() => {
+    if (!showSettingsMenu) return;
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (cogMenuRef.current && !cogMenuRef.current.contains(event.target as Node)) {
+        setShowSettingsMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [showSettingsMenu]);
 
   const handleAdd = () => {
     if (!selectedInterview) {
@@ -406,7 +422,19 @@ const handleViewAllRounds = () => {
       label: "Interview Result",
       icon: <FaClipboardCheck style={{ marginRight: 8, marginLeft: 4 }} />,
       action: handleResultDialogOpen
-    }
+    },
+    {
+      label: "Change Logs",
+      icon: <i className="pi pi-history" style={{ marginRight: 8, marginLeft: 4, fontSize: "14px", color: "#374151" }} />,
+      action: () => { setShowSettingsMenu(false); setShowChangeLogsDialog(true); },
+      alwaysEnabled: true,
+    },
+    {
+      label: "Deleted Interviews",
+      icon: <i className="pi pi-trash" style={{ marginRight: 8, marginLeft: 4, fontSize: "14px", color: "#374151" }} />,
+      action: () => { setShowSettingsMenu(false); setShowDeletedRecordsDialog(true); },
+      alwaysEnabled: true,
+    },
   ];
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   const value = e.target.value;
@@ -725,40 +753,39 @@ const interviewExportHeaders = useMemo(
           <EditButton onClick={handleEdit} disabled={!selectedInterview} />
           <DeleteButton onClick={handleDelete} disabled={!selectedInterview} />
           <ViewButton onClick={() => setViewInterview(selectedInterview)} disabled={!selectedInterview} tooltip="View Interview Details" />
-          <div style={{ position: "relative" }}>
+          <div ref={cogMenuRef} style={{ position: "relative" }}>
             <CogButton
               onClick={(e) => {
-                e.stopPropagation();      // prevents the opening click from closing it
+                e.stopPropagation();
                 setShowSettingsMenu((prev) => !prev);
               }}
-              disabled={!selectedInterview}
+              tooltip="Actions"
             />
             {showSettingsMenu && (
               <div className="card shadow-3" style={{ position: "absolute", right: 0, top: 50, zIndex: 1000, minWidth: 220, backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "0.5rem" }}>
-                {settingsItems.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="p-2 cursor-pointer border-round transition-colors transition-duration-150"
-                    onClick={item.action}
-                    style={{ display: "flex", alignItems: "center", borderRadius: "6px", marginBottom: idx < settingsItems.length - 1 ? "4px" : "0", transition: "background-color 0.15s ease" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-                  >
-                    <span style={{ fontSize: "16px", color: "#374151" }}>
-                      {item.icon}
-                    </span>
-                    <span 
-                      style={{ 
-                        marginLeft: "12px",
-                        fontSize: "14px",
-                        fontWeight: "500",
-                        color: "#374151"
-                      }}
+                {settingsItems.map((item, idx) => {
+                  const disabled = !("alwaysEnabled" in item && item.alwaysEnabled) && !selectedInterview;
+                  return (
+                    <div
+                      key={idx}
+                      className="p-2 border-round"
+                      role="button"
+                      tabIndex={disabled ? -1 : 0}
+                      onClick={() => { if (!disabled) item.action(); }}
+                      onKeyDown={(e) => { if (!disabled && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); item.action(); } }}
+                      style={{ display: "flex", alignItems: "center", borderRadius: "6px", marginBottom: idx < settingsItems.length - 1 ? "4px" : "0", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.45 : 1 }}
+                      onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                     >
-                      {item.label}
-                    </span>
-                  </div>
-                ))}
+                      <span style={{ fontSize: "16px", color: "#374151" }}>
+                        {item.icon}
+                      </span>
+                      <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>
+                        {item.label}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -913,6 +940,15 @@ const interviewExportHeaders = useMemo(
         candidateId={selectedInterview?.candidateId ?? null}
         candidateName={selectedInterview?.candidateName}
         onHide={() => setShowRoundsDialog(false)}
+      />
+      <InterviewDeletedRecordsDialog
+        isOpen={showDeletedRecordsDialog}
+        onClose={() => setShowDeletedRecordsDialog(false)}
+      />
+      <ChangeLogsDialog
+        isOpen={showChangeLogsDialog}
+        onClose={() => setShowChangeLogsDialog(false)}
+        title="Change Logs"
       />
 
     </>

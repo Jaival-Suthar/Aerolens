@@ -100,16 +100,16 @@ const LookupTable: React.FC<LookupTableProps> = ({
         display: "flex",
         flexDirection: "column",
         flex: 1,
+        height:"100%",
+        overflow: "hidden",
       }}
     >
       <div
         className="flex justify-content-between align-items-center mb-2"
         style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 2,
           background: "white",
           paddingBottom: "0.5rem",
+          flexShrink:0,
         }}
       >
         <h2 style={{ color: "#07253f" }}>Lookup Data</h2>
@@ -183,7 +183,7 @@ const LookupTable: React.FC<LookupTableProps> = ({
           </div>
         </div>
       </div>
-      <div style={{ flex: 1, overflow: "hidden" }}>
+      <div style={{ flex: 1, overflow: "auto" }}>
       <DataTable
         value={data}
         loading={loading}

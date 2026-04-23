@@ -518,9 +518,14 @@ const cogMenuRef = useRef<HTMLDivElement | null>(null);
             onClick={() => selectedJobProfile && handleEdit(selectedJobProfile)} 
             disabled={!selectedJobProfile} 
           />
-          <DeleteButton 
-            onClick={() => selectedJobProfile && handleDelete(selectedJobProfile)} 
-            disabled={!selectedJobProfile} 
+          <DeleteButton
+            onClick={() => selectedJobProfile && handleDelete(selectedJobProfile)}
+            disabled={!selectedJobProfile}
+          />
+          <ViewButton
+            onClick={() => setViewJobProfile(selectedJobProfile)}
+            disabled={!selectedJobProfile}
+            tooltip="View Job Profile Details"
           />
           <div ref={cogMenuRef} style={{ position: "relative" }}>
             <CogButton
@@ -575,11 +580,6 @@ const cogMenuRef = useRef<HTMLDivElement | null>(null);
               </div>
             )}
           </div>
-          <ViewButton
-            onClick={() => setViewJobProfile(selectedJobProfile)}
-            disabled={!selectedJobProfile}
-            tooltip="View Job Profile Details"
-          />
         </div>
       </div>
       <div style={{ flex: 1, overflow: "hidden" }}>

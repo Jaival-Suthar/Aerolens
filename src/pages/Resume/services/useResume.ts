@@ -562,3 +562,19 @@ export const getResumeBulkStatus = async (
 // -------------------- DIRECT DOWNLOAD LINK (optional) --------------------
 export const getResumeDownloadUrl = (candidateId: number): string =>
   `${API_URL}${ROUTES.RESUME(candidateId)}`;
+
+export const getDeletedCandidates = async (
+  accessToken: string | null
+): Promise<import("../types/resumeTypes").CandidateDeletedResponse> => {
+  const response = await fetch(`${API_URL}/candidate/deletions`, {
+    credentials: "include",
+    headers: makeHeaders(accessToken || undefined),
+  });
+  if (!response.ok) {
+    if (response.status === 401) throw new Error("Unauthorized");
+    throw new Error("Failed to fetch deleted candidates");
+  }
+  const data = await response.json();
+  if (!data.success) throw new Error(data.message || "Failed to fetch deleted candidates");
+  return data;
+};

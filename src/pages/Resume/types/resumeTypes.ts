@@ -375,3 +375,18 @@ export interface QueueWhatsAppSendResumePayload {
   /** Optional plain text for template var 9; max 1024 on backend. */
   customMessage?: string;
 }
+
+export interface CandidateDeletedRecord {
+  candidateId: number;
+  candidateName: string;
+  contactNumber: string | null;
+  email: string | null;
+  jobRole: string | null;
+  deleted_at: string | null;
+}
+
+export interface CandidateDeletedResponse {
+  success: boolean;
+  message: string;
+  data: CandidateDeletedRecord[];
+}
