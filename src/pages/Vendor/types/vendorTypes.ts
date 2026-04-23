@@ -54,17 +54,3 @@ export type ApiResponse<T> = {
   data: T;
 };
 
-export type VendorDeletedRecord = {
-  vendorId: number;
-  vendorName: string;
-  vendorPhone: string | null;
-  vendorEmail: string | null;
-  contactPersonName: string | null;
-  deleted_at: string | null;
-};
-
-export type VendorDeletedResponse = {
-  success: boolean;
-  message: string;
-  data: VendorDeletedRecord[];
-};

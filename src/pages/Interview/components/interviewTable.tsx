@@ -16,8 +16,6 @@ import { getInterviews } from "../services/interviewService";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import CandidateRoundsDialog from "./CandidateRoundsDialog";
 import CogButton from "../../../shared/CogButton";
-import ChangeLogsDialog from "../../../shared/ChangeLogsDialog";
-import InterviewDeletedRecordsDialog from "./interviewDeletedRecordsDialog";
 import InterviewResultDialog from "./interviewResultDialog";
 import { FaUserTie, FaClipboardCheck, FaLink, FaRoute } from "react-icons/fa";
 import { useSearchParams } from "react-router-dom";
@@ -100,9 +98,6 @@ const InterviewTable: React.FC = () => {
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [showResultDialog, setShowResultDialog] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-  const [showDeletedRecordsDialog, setShowDeletedRecordsDialog] = useState(false);
-  const [showChangeLogsDialog, setShowChangeLogsDialog] = useState(false);
-  const cogMenuRef = useRef<HTMLDivElement | null>(null);
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
   const [loading, setLoading] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -157,19 +152,12 @@ const InterviewTable: React.FC = () => {
 });
   useEffect(() => {
   const fields = visibleColumns.map(col => col.field);
-  localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(fields));
-}, [visibleColumns]);
 
-  useEffect(() => {
-    if (!showSettingsMenu) return;
-    const handleOutsideClick = (event: MouseEvent) => {
-      if (cogMenuRef.current && !cogMenuRef.current.contains(event.target as Node)) {
-        setShowSettingsMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, [showSettingsMenu]);
+  localStorage.setItem(
+    COLUMN_STORAGE_KEY,
+    JSON.stringify(fields)
+  );
+}, [visibleColumns]);
   const resetToDefaultColumns = () => {
   const defaults = ALL_COLUMNS.filter(col =>
     DEFAULT_COLUMN_FIELDS.includes(col.field)
@@ -737,51 +725,40 @@ const interviewExportHeaders = useMemo(
           <EditButton onClick={handleEdit} disabled={!selectedInterview} />
           <DeleteButton onClick={handleDelete} disabled={!selectedInterview} />
           <ViewButton onClick={() => setViewInterview(selectedInterview)} disabled={!selectedInterview} tooltip="View Interview Details" />
-          <div ref={cogMenuRef} style={{ position: "relative" }}>
-            <CogButton onClick={() => setShowSettingsMenu((prev) => !prev)} tooltip="More Actions" />
+          <div style={{ position: "relative" }}>
+            <CogButton
+              onClick={(e) => {
+                e.stopPropagation();      // prevents the opening click from closing it
+                setShowSettingsMenu((prev) => !prev);
+              }}
+              disabled={!selectedInterview}
+            />
             {showSettingsMenu && (
-              <div className="card shadow-3" style={{ position: "absolute", right: 0, top: 50, zIndex: 1000, minWidth: 220, backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "0.5rem", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)" }}>
+              <div className="card shadow-3" style={{ position: "absolute", right: 0, top: 50, zIndex: 1000, minWidth: 220, backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "0.5rem" }}>
                 {settingsItems.map((item, idx) => (
                   <div
                     key={idx}
-                    className="p-2 border-round"
-                    role="button"
-                    tabIndex={!selectedInterview ? -1 : 0}
-                    onClick={() => { if (!selectedInterview) return; item.action(); }}
-                    style={{ display: "flex", alignItems: "center", cursor: !selectedInterview ? "not-allowed" : "pointer", opacity: !selectedInterview ? 0.45 : 1, marginBottom: "4px" }}
-                    onMouseEnter={(e) => { if (selectedInterview) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+                    className="p-2 cursor-pointer border-round transition-colors transition-duration-150"
+                    onClick={item.action}
+                    style={{ display: "flex", alignItems: "center", borderRadius: "6px", marginBottom: idx < settingsItems.length - 1 ? "4px" : "0", transition: "background-color 0.15s ease" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                   >
-                    <span style={{ fontSize: "16px", color: "#374151" }}>{item.icon}</span>
-                    <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>{item.label}</span>
+                    <span style={{ fontSize: "16px", color: "#374151" }}>
+                      {item.icon}
+                    </span>
+                    <span 
+                      style={{ 
+                        marginLeft: "12px",
+                        fontSize: "14px",
+                        fontWeight: "500",
+                        color: "#374151"
+                      }}
+                    >
+                      {item.label}
+                    </span>
                   </div>
                 ))}
-                <div
-                  className="p-2 border-round"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => { setShowSettingsMenu(false); setShowChangeLogsDialog(true); }}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowSettingsMenu(false); setShowChangeLogsDialog(true); } }}
-                  style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-                >
-                  <i className="pi pi-history" style={{ fontSize: "14px", color: "#374151" }} />
-                  <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>Change Logs</span>
-                </div>
-                <div
-                  className="p-2 border-round"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => { setShowSettingsMenu(false); setShowDeletedRecordsDialog(true); }}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowSettingsMenu(false); setShowDeletedRecordsDialog(true); } }}
-                  style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-                >
-                  <i className="pi pi-trash" style={{ fontSize: "14px", color: "#374151" }} />
-                  <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>Deleted Interviews</span>
-                </div>
               </div>
             )}
           </div>
@@ -937,15 +914,7 @@ const interviewExportHeaders = useMemo(
         candidateName={selectedInterview?.candidateName}
         onHide={() => setShowRoundsDialog(false)}
       />
-      <InterviewDeletedRecordsDialog
-        isOpen={showDeletedRecordsDialog}
-        onClose={() => setShowDeletedRecordsDialog(false)}
-      />
-      <ChangeLogsDialog
-        isOpen={showChangeLogsDialog}
-        onClose={() => setShowChangeLogsDialog(false)}
-        title="Interview Change Logs"
-      />
+
     </>
   );
 };

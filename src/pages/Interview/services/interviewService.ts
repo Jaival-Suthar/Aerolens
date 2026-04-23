@@ -159,20 +159,6 @@ export const deleteInterview = async (interviewId: number, token: string) => {
   }
 };
 
-export const getDeletedInterviews = async (token: string) => {
-  const url = `${BASE_URL}/interview/deletions`;
-  try {
-    const res = await fetch(url, {
-      method: "GET",
-      headers: makeHeaders(token),
-    });
-    return await checkStatus(res);
-  } catch (err) {
-    console.error("[getDeletedInterviews] ERROR:", err);
-    throw err;
-  }
-};
-
 export const finalizeInterview = async (
   interviewId: number,
   payload: FinalizeInterviewRequest,

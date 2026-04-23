@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import { DataTable, type DataTableFilterMeta, type DataTableStateEvent } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Dropdown } from "primereact/dropdown";
+import { Menu } from "primereact/menu";
 import { Toast } from "primereact/toast";
 import { FaBan, FaEdit, FaClipboardList } from "react-icons/fa";
 import SearchButton from "../../../shared/SearchButton";
@@ -11,8 +12,6 @@ import DetailsGrid from "../../../shared/DetailsGrid";
 import DetailsSection from "../../../shared/DetailsSection";
 import PremiumDetailsDialog from "../../../shared/PremiumDetailsDialog";
 import CogButton from "../../../shared/CogButton";
-import ChangeLogsDialog from "../../../shared/ChangeLogsDialog";
-import OfferDeletedRecordsDialog from "./OfferDeletedRecordsDialog";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { Message } from "primereact/message";
 import { useAuth } from "../../../shared/auth/AuthContext";
@@ -153,10 +152,7 @@ const OfferTable: React.FC = () => {
   const [offerFormData, setOfferFormData] = useState<OfferFormDataResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedOffer, setSelectedOffer] = useState<OfferTableRow | null>(null);
-  const actionsMenuRef = useRef<HTMLDivElement | null>(null);
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
-  const [showDeletedRecordsDialog, setShowDeletedRecordsDialog] = useState(false);
-  const [showChangeLogsDialog, setShowChangeLogsDialog] = useState(false);
+  const actionsMenuRef = useRef<Menu>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showTerminateDialog, setShowTerminateDialog] = useState(false);
   const [showReviseDialog, setShowReviseDialog] = useState(false);
@@ -205,17 +201,6 @@ const OfferTable: React.FC = () => {
   useEffect(() => {
     loadOffers();
   }, [loadOffers]);
-
-  useEffect(() => {
-    if (!showActionsMenu) return;
-    const handleOutsideClick = (event: MouseEvent) => {
-      if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target as Node)) {
-        setShowActionsMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, [showActionsMenu]);
 
   // Sync pagination from URL when searchParams change (e.g. browser back/forward)
   useEffect(() => {
@@ -321,6 +306,12 @@ const OfferTable: React.FC = () => {
       })
       .finally(() => setOfferDetailsLoading(false));
   };
+
+  const actionMenuModel = [
+    { label: "Terminate Offer", icon: <FaBan style={{ marginRight: 8 }} />, command: handleTerminateOffer, disabled: selectedOffer?.offerStatus !== "ACCEPTED" },
+    { label: "Revise Offer", icon: <FaEdit style={{ marginRight: 8 }} />, command: handleReviseOffer },
+    { label: "Offer Status", icon: <FaClipboardList style={{ marginRight: 8 }} />, command: handleOfferStatus },
+  ];
 
   const globalFilterValue = (filters.global as { value?: string })?.value ?? "";
 
@@ -434,57 +425,13 @@ const OfferTable: React.FC = () => {
             />
             <DeleteButton onClick={handleDeleteOffer} disabled={!selectedOffer} tooltip="Delete offer" />
             <ViewButton onClick={handleViewOffer} disabled={!selectedOffer} tooltip="View offer details" />
-            <div ref={actionsMenuRef} style={{ position: "relative" }}>
-              <CogButton onClick={() => setShowActionsMenu((prev) => !prev)} tooltip="More Actions" />
-              {showActionsMenu && (
-                <div className="card shadow-3" style={{ position: "absolute", right: 0, top: 50, zIndex: 1000, minWidth: 220, backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "0.5rem", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)" }}>
-                  {[
-                    { label: "Terminate Offer", icon: <FaBan style={{ marginRight: 8 }} />, action: handleTerminateOffer, disabled: selectedOffer?.offerStatus !== "ACCEPTED" },
-                    { label: "Revise Offer", icon: <FaEdit style={{ marginRight: 8 }} />, action: handleReviseOffer, disabled: !selectedOffer },
-                    { label: "Offer Status", icon: <FaClipboardList style={{ marginRight: 8 }} />, action: handleOfferStatus, disabled: !selectedOffer },
-                  ].map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="p-2 border-round"
-                      role="button"
-                      tabIndex={item.disabled ? -1 : 0}
-                      onClick={() => { if (item.disabled) return; setShowActionsMenu(false); item.action(); }}
-                      style={{ display: "flex", alignItems: "center", cursor: item.disabled ? "not-allowed" : "pointer", opacity: item.disabled ? 0.45 : 1, marginBottom: "4px" }}
-                      onMouseEnter={(e) => { if (!item.disabled) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-                    >
-                      <span style={{ fontSize: "16px", color: "#374151" }}>{item.icon}</span>
-                      <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>{item.label}</span>
-                    </div>
-                  ))}
-                  <div
-                    className="p-2 border-round"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => { setShowActionsMenu(false); setShowChangeLogsDialog(true); }}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowActionsMenu(false); setShowChangeLogsDialog(true); } }}
-                    style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-                  >
-                    <i className="pi pi-history" style={{ fontSize: "14px", color: "#374151" }} />
-                    <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>Change Logs</span>
-                  </div>
-                  <div
-                    className="p-2 border-round"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => { setShowActionsMenu(false); setShowDeletedRecordsDialog(true); }}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowActionsMenu(false); setShowDeletedRecordsDialog(true); } }}
-                    style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-                  >
-                    <i className="pi pi-trash" style={{ fontSize: "14px", color: "#374151" }} />
-                    <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>Deleted Offers</span>
-                  </div>
-                </div>
-              )}
+            <div>
+              <Menu model={actionMenuModel} popup ref={actionsMenuRef} />
+              <CogButton
+                onClick={(e) => actionsMenuRef.current?.toggle(e)}
+                disabled={!selectedOffer}
+                tooltip="Offer actions (select a row first)"
+              />
             </div>
           </div>
         </div>
@@ -642,15 +589,6 @@ const OfferTable: React.FC = () => {
           </>
         )}
       </PremiumDetailsDialog>
-      <OfferDeletedRecordsDialog
-        isOpen={showDeletedRecordsDialog}
-        onClose={() => setShowDeletedRecordsDialog(false)}
-      />
-      <ChangeLogsDialog
-        isOpen={showChangeLogsDialog}
-        onClose={() => setShowChangeLogsDialog(false)}
-        title="Offer Change Logs"
-      />
     </>
   );
 };
