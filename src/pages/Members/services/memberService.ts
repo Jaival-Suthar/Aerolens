@@ -4,8 +4,7 @@ import {
   MemberPatchPayload,
   MemberLocation,
   MemberApi,
-  MemberFormData,
-  MemberDeletedResponse
+  MemberFormData
 } from '../types/memberTypes';
 
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
@@ -233,32 +232,6 @@ export const deleteMember = async (
 
   } catch (error) {
     console.error("Error in deleteMember:", error);
-    throw error;
-  }
-};
-
-export const getDeletedMembers = async (
-  accessToken: string | null
-): Promise<MemberDeletedResponse> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/member/deletions`, {
-      credentials: "include",
-      headers: makeHeaders(accessToken || undefined),
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) throw new Error("Unauthorized - invalid or expired token");
-      throw new Error(`Failed to fetch deleted members: ${response.status}`);
-    }
-
-    const data = await response.json();
-    if (!data.success) {
-      throw new Error(data.message || "Failed to fetch deleted members");
-    }
-
-    return data as MemberDeletedResponse;
-  } catch (error) {
-    console.error("Error in getDeletedMembers:", error);
     throw error;
   }
 };

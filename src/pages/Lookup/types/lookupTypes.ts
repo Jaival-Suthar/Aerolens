@@ -35,15 +35,3 @@ export interface LookupApiResponse {
   meta?: PaginationMeta;
 }
 
-export interface LookupDeletedRecord {
-  lookupKey: number;
-  tag: string;
-  value: string;
-  deleted_at: string | null;
-}
-
-export interface LookupDeletedResponse {
-  success: boolean;
-  message: string;
-  data: LookupDeletedRecord[];
-}

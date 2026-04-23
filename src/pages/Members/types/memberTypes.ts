@@ -75,20 +75,6 @@ export interface ApiResponse<T> {
   data: T;
 }
 
-export interface MemberDeletedRecord {
-  memberId: number;
-  memberName: string;
-  memberContact: string | null;
-  email: string | null;
-  deleted_at: string | null;
-}
-
-export interface MemberDeletedResponse {
-  success: boolean;
-  message: string;
-  data: MemberDeletedRecord[];
-}
-
 export interface ClientOption {
   clientId: number | null;
   clientName: string;

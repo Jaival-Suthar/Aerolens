@@ -1,8 +1,7 @@
 import {
   ApiResponse,
   JobProfile,
-  ApiJobProfile,
-  JobProfileDeletedResponse
+  ApiJobProfile
 } from "../types/jobProfileTypes";
 
 import {
@@ -96,26 +95,6 @@ export const getAllJobProfilesWithJD = async (
     message: data.message,
     data: mapped
   };
-};
-
-/* -------------------- Get Deleted Job Profiles -------------------- */
-
-export const getDeletedJobProfiles = async (
-  accessToken: string | null
-): Promise<JobProfileDeletedResponse> => {
-  const response = await fetch(`${API_BASE_URL}/jobProfile/deletions`, {
-    method: "GET",
-    credentials: "include",
-    headers: makeAuthHeaders(accessToken || undefined)
-  });
-
-  const data = await response.json();
-
-  if (!response.ok || !isSuccessResponse(data)) {
-    throw data;
-  }
-
-  return data;
 };
 
 /* -------------------- Create Job Profile -------------------- */
