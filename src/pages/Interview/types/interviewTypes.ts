@@ -156,3 +156,18 @@ export interface ApiError {
     details?: any;
   };
 }
+
+export interface InterviewDeletedRecord {
+  interviewId: number;
+  candidateName: string;
+  interviewerName: string | null;
+  roundNumber: number | null;
+  result: string | null;
+  deleted_at: string | null;
+}
+
+export interface InterviewDeletedResponse {
+  success: boolean;
+  message: string;
+  data: InterviewDeletedRecord[];
+}

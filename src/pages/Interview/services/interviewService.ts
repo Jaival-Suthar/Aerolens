@@ -199,3 +199,25 @@ export const getFinalizeInterviewData = async (
   }
 };
 
+export const getDeletedInterviews = async (
+  accessToken: string | null
+): Promise<import("../types/interviewTypes").InterviewDeletedResponse> => {
+  const url = `${BASE_URL}/interview/deletions`;
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: makeHeaders(accessToken || undefined),
+    });
+    if (!res.ok) {
+      if (res.status === 401) throw new Error("Unauthorized");
+      throw new Error("Failed to fetch deleted interviews");
+    }
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || "Failed to fetch deleted interviews");
+    return data;
+  } catch (err) {
+    console.error("[getDeletedInterviews] ERROR:", err);
+    throw err;
+  }
+};
+

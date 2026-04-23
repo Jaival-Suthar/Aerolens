@@ -137,3 +137,17 @@ export interface OfferFormDataResponse {
   members: { memberId: number; memberName: string }[];
   jobProfileRequirements: { jobProfileRequirementId: number; jobRole: string; [key: string]: unknown }[];
 }
+
+export interface OfferDeletedRecord {
+  offerId: number;
+  candidateName: string;
+  jobRole: string | null;
+  offerStatus: string | null;
+  deleted_at: string | null;
+}
+
+export interface OfferDeletedResponse {
+  success: boolean;
+  message: string;
+  data: OfferDeletedRecord[];
+}

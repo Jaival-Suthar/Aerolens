@@ -414,6 +414,11 @@ const MembersTable: React.FC = () => {
           <AddButton onClick={handleAddNew} />
           <EditButton onClick={handleEdit} disabled={!selectedMember} />
           <DeleteButton onClick={handleDelete} disabled={!selectedMember} />
+          <ViewButton
+            onClick={() => setViewMember(selectedMember)}
+            disabled={!selectedMember}
+            tooltip="View Member Details"
+          />
           <div ref={cogMenuRef} style={{ position: "relative" }}>
             <CogButton
               onClick={() => setShowCogMenu((prev) => !prev)}
@@ -467,11 +472,6 @@ const MembersTable: React.FC = () => {
               </div>
             )}
           </div>
-          <ViewButton
-            onClick={() => setViewMember(selectedMember)}
-            disabled={!selectedMember}
-            tooltip="View Member Details"
-          />
         </div>
       </div>
       

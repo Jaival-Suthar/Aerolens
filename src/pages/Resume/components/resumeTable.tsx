@@ -37,6 +37,8 @@ import ColumnSettingsButton from "../../../shared/ColumnSettingsButton";
 import CandidateRoundsDialog from "../../Interview/components/CandidateRoundsDialog";
 import { Dropdown } from "primereact/dropdown";
 import BulkPdfUploadButton from "../../../shared/BulkPdfUploadButton";
+import CandidateDeletedRecordsDialog from "./candidateDeletedRecordsDialog";
+import ChangeLogsDialog from "../../../shared/ChangeLogsDialog";
 import {
   RESUME_BULK_BATCH_FINISHED_EVENT,
   startBulkResumeBatchTracking,
@@ -183,6 +185,9 @@ const ResumeTable: React.FC = () => {
   const [editingResume, setEditingResume] = useState<Candidate | null>(null);
   const [loading, setLoading] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [showDeletedRecordsDialog, setShowDeletedRecordsDialog] = useState(false);
+  const [showChangeLogsDialog, setShowChangeLogsDialog] = useState(false);
+  const cogMenuRef = useRef<HTMLDivElement | null>(null);
   const [showInterviewDialog, setShowInterviewDialog] = useState(false);
   const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
   const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
@@ -272,6 +277,17 @@ const ResumeTable: React.FC = () => {
 useEffect(() => {
   loadAllData();
 }, [loadAllData]);
+
+useEffect(() => {
+  if (!showSettingsMenu) return;
+  const handleOutsideClick = (event: MouseEvent) => {
+    if (cogMenuRef.current && !cogMenuRef.current.contains(event.target as Node)) {
+      setShowSettingsMenu(false);
+    }
+  };
+  document.addEventListener("mousedown", handleOutsideClick);
+  return () => document.removeEventListener("mousedown", handleOutsideClick);
+}, [showSettingsMenu]);
 
 useEffect(() => {
   const handleBatchFinished = () => {
@@ -776,7 +792,25 @@ useEffect(() => {
         }
         setShowOnboardingDialog(true);
       }
-    }
+    },
+    {
+      label: "Change Logs",
+      icon: <i className="pi pi-history" style={{ marginRight: 8, marginLeft: 4, fontSize: "14px", color: "#374151" }} />,
+      disabled: false,
+      action: () => {
+        setShowSettingsMenu(false);
+        setShowChangeLogsDialog(true);
+      },
+    },
+    {
+      label: "Deleted Candidates",
+      icon: <i className="pi pi-trash" style={{ marginRight: 8, marginLeft: 4, fontSize: "14px", color: "#374151" }} />,
+      disabled: false,
+      action: () => {
+        setShowSettingsMenu(false);
+        setShowDeletedRecordsDialog(true);
+      },
+    },
   ];
   const filteredResumes = resumes.filter((candidate) => {
     if (!dateRange?.start && !dateRange?.end) return true;
@@ -878,8 +912,8 @@ useEffect(() => {
           <EditButton onClick={handleEdit} disabled={!selectedResume} />
           <DeleteButton onClick={handleDelete} disabled={!selectedResume} />
           <ViewButton onClick={() => setViewCandidate(selectedResume)} disabled={!selectedResume} tooltip="View Candidate Details" />
-          <div style={{ position: "relative" }}>
-            <CogButton onClick={() => setShowSettingsMenu((prev) => !prev)} disabled={!selectedResume} />
+          <div ref={cogMenuRef} style={{ position: "relative" }}>
+            <CogButton onClick={() => setShowSettingsMenu((prev) => !prev)} tooltip="Actions" />
             {showSettingsMenu && (
               <div className="card shadow-3" style={{ position: "absolute", right: 0, top: 50, zIndex: 1000, minWidth: 220, backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "0.5rem" }}>
                 {settingsItems.map((item, idx) => (
@@ -1046,11 +1080,20 @@ useEffect(() => {
               <DetailsGrid items={buildDetailsData(viewCandidate)} />
           </DetailsSection>}
       </PremiumDetailsDialog>
-      <CandidateRoundsDialog 
-        visible={showRoundsDialog} 
-        candidateId={selectedResume?.candidateId ?? null} 
-        candidateName={selectedResume?.candidateName} 
-        onHide={() => setShowRoundsDialog(false)} 
+      <CandidateRoundsDialog
+        visible={showRoundsDialog}
+        candidateId={selectedResume?.candidateId ?? null}
+        candidateName={selectedResume?.candidateName}
+        onHide={() => setShowRoundsDialog(false)}
+      />
+      <CandidateDeletedRecordsDialog
+        isOpen={showDeletedRecordsDialog}
+        onClose={() => setShowDeletedRecordsDialog(false)}
+      />
+      <ChangeLogsDialog
+        isOpen={showChangeLogsDialog}
+        onClose={() => setShowChangeLogsDialog(false)}
+        title="Change Logs"
       />
       <Dialog
         visible={showWhatsAppDialog}
