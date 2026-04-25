@@ -5,6 +5,7 @@ import {
   DepartmentOption,
   ApiResponse,
   Location,
+  JobProfileRequirementDeletedResponse
 } from '../types/jobProfileRequirementsTypes';
 
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
@@ -352,6 +353,22 @@ export const deleteJobProfileRequirements = async (
     console.error('Error in deleteJobProfileRequirements:', error);
     throw error;
   }
+};
+
+export const getDeletedJobProfileRequirements = async (
+  accessToken: string | null
+): Promise<JobProfileRequirementDeletedResponse> => {
+  const response = await fetch(`${API_BASE_URL}/jobProfileRequirement/deletions`, {
+    credentials: "include",
+    headers: makeHeaders(accessToken || undefined),
+  });
+
+  const data = await response.json();
+  if (!response.ok || !data?.success) {
+    throw normalizeApiError(data);
+  }
+
+  return data as JobProfileRequirementDeletedResponse;
 };
 
 

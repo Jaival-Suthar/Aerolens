@@ -2,7 +2,6 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import { DataTable, type DataTableFilterMeta, type DataTableStateEvent } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Dropdown } from "primereact/dropdown";
-import { Menu } from "primereact/menu";
 import { Toast } from "primereact/toast";
 import { FaBan, FaEdit, FaClipboardList } from "react-icons/fa";
 import SearchButton from "../../../shared/SearchButton";
@@ -21,6 +20,8 @@ import OfferDelete from "./OfferDelete";
 import TerminateOfferDialog from "./TerminateOfferDialog";
 import ReviseOfferDialog from "./ReviseOfferDialog";
 import OfferStatusDialog from "./OfferStatusDialog";
+import OfferDeletedRecordsDialog from "./offerDeletedRecordsDialog";
+import ChangeLogsDialog from "../../../shared/ChangeLogsDialog";
 import { FilterMatchMode } from "primereact/api";
 import { useSearchParams } from "react-router-dom";
 
@@ -152,7 +153,10 @@ const OfferTable: React.FC = () => {
   const [offerFormData, setOfferFormData] = useState<OfferFormDataResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedOffer, setSelectedOffer] = useState<OfferTableRow | null>(null);
-  const actionsMenuRef = useRef<Menu>(null);
+  const cogMenuRef = useRef<HTMLDivElement | null>(null);
+  const [showCogMenu, setShowCogMenu] = useState(false);
+  const [showDeletedRecordsDialog, setShowDeletedRecordsDialog] = useState(false);
+  const [showChangeLogsDialog, setShowChangeLogsDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showTerminateDialog, setShowTerminateDialog] = useState(false);
   const [showReviseDialog, setShowReviseDialog] = useState(false);
@@ -221,6 +225,17 @@ const OfferTable: React.FC = () => {
       });
     }
   }, [offers.length, first, setSearchParams]);
+
+  useEffect(() => {
+    if (!showCogMenu) return;
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (cogMenuRef.current && !cogMenuRef.current.contains(event.target as Node)) {
+        setShowCogMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [showCogMenu]);
 
   const onPageChange = (event: DataTableStateEvent) => {
     setFirst(event.first ?? 0);
@@ -307,10 +322,12 @@ const OfferTable: React.FC = () => {
       .finally(() => setOfferDetailsLoading(false));
   };
 
-  const actionMenuModel = [
-    { label: "Terminate Offer", icon: <FaBan style={{ marginRight: 8 }} />, command: handleTerminateOffer, disabled: selectedOffer?.offerStatus !== "ACCEPTED" },
-    { label: "Revise Offer", icon: <FaEdit style={{ marginRight: 8 }} />, command: handleReviseOffer },
-    { label: "Offer Status", icon: <FaClipboardList style={{ marginRight: 8 }} />, command: handleOfferStatus },
+  const cogMenuItems = [
+    { label: "Terminate Offer", icon: <FaBan style={{ marginRight: 8, marginLeft: 4 }} />, action: handleTerminateOffer, selectionRequired: true },
+    { label: "Revise Offer", icon: <FaEdit style={{ marginRight: 8, marginLeft: 4 }} />, action: handleReviseOffer, selectionRequired: true },
+    { label: "Offer Status", icon: <FaClipboardList style={{ marginRight: 8, marginLeft: 4 }} />, action: handleOfferStatus, selectionRequired: true },
+    { label: "Change Logs", icon: <i className="pi pi-history" style={{ marginRight: 8, marginLeft: 4, fontSize: "14px", color: "#374151" }} />, action: () => { setShowCogMenu(false); setShowChangeLogsDialog(true); }, selectionRequired: false },
+    { label: "Deleted Offers", icon: <i className="pi pi-trash" style={{ marginRight: 8, marginLeft: 4, fontSize: "14px", color: "#374151" }} />, action: () => { setShowCogMenu(false); setShowDeletedRecordsDialog(true); }, selectionRequired: false },
   ];
 
   const globalFilterValue = (filters.global as { value?: string })?.value ?? "";
@@ -425,13 +442,37 @@ const OfferTable: React.FC = () => {
             />
             <DeleteButton onClick={handleDeleteOffer} disabled={!selectedOffer} tooltip="Delete offer" />
             <ViewButton onClick={handleViewOffer} disabled={!selectedOffer} tooltip="View offer details" />
-            <div>
-              <Menu model={actionMenuModel} popup ref={actionsMenuRef} />
+            <div ref={cogMenuRef} style={{ position: "relative" }}>
               <CogButton
-                onClick={(e) => actionsMenuRef.current?.toggle(e)}
-                disabled={!selectedOffer}
-                tooltip="Offer actions (select a row first)"
+                onClick={() => setShowCogMenu((prev) => !prev)}
+                tooltip="Actions"
               />
+              {showCogMenu && (
+                <div
+                  className="card shadow-3"
+                  style={{ position: "absolute", right: 0, top: 50, zIndex: 1000, minWidth: 220, backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "0.5rem" }}
+                >
+                  {cogMenuItems.map((item, idx) => {
+                    const disabled = item.selectionRequired && !selectedOffer;
+                    return (
+                      <div
+                        key={idx}
+                        className="p-2 border-round"
+                        role="button"
+                        tabIndex={disabled ? -1 : 0}
+                        onClick={() => { if (!disabled) item.action(); }}
+                        onKeyDown={(e) => { if (!disabled && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); item.action(); } }}
+                        style={{ display: "flex", alignItems: "center", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.45 : 1, marginBottom: idx < cogMenuItems.length - 1 ? "4px" : "0" }}
+                        onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                      >
+                        <span style={{ fontSize: "16px", color: "#374151" }}>{item.icon}</span>
+                        <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>{item.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -548,6 +589,15 @@ const OfferTable: React.FC = () => {
         onHide={() => setShowStatusDialog(false)}
         selectedOffer={selectedOffer}
         onSuccess={handleActionSuccess}
+      />
+      <OfferDeletedRecordsDialog
+        isOpen={showDeletedRecordsDialog}
+        onClose={() => setShowDeletedRecordsDialog(false)}
+      />
+      <ChangeLogsDialog
+        isOpen={showChangeLogsDialog}
+        onClose={() => setShowChangeLogsDialog(false)}
+        title="Change Logs"
       />
       <PremiumDetailsDialog visible={offerDetailsOpen} title="Offer Details" onHide={closeOfferDetailsDialog}>
         {offerDetailsLoading && (

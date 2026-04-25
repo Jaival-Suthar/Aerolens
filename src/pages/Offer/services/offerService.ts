@@ -116,3 +116,22 @@ export async function updateOfferStatus(
   );
   return (raw as { data?: OfferActionResponse }).data ?? (raw as OfferActionResponse);
 }
+
+/** GET /offers/deletions — soft-deleted offers. */
+export async function getDeletedOffers(
+  accessToken: string | null
+): Promise<import("../types/offerTypes").OfferDeletedResponse> {
+  const url = `${API_BASE_URL}/offers/deletions`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: makeHeaders(accessToken ?? undefined),
+    credentials: "include",
+  });
+  if (!res.ok) {
+    if (res.status === 401) throw new Error("Unauthorized");
+    throw new Error("Failed to fetch deleted offers");
+  }
+  const data = await res.json();
+  if (!data.success) throw new Error(data.message || "Failed to fetch deleted offers");
+  return data;
+}
