@@ -161,7 +161,7 @@ const VendorTable: React.FC = () => {
           <div ref={cogMenuRef} style={{ position: "relative" }}>
             <CogButton
               onClick={() => setShowCogMenu((prev) => !prev)}
-              tooltip="Activity"
+              tooltip="Vendor Activity"
             />
             {showCogMenu && (
               <div
@@ -181,11 +181,12 @@ const VendorTable: React.FC = () => {
                 <div
                   className="p-2 border-round"
                   role="button"
-                  tabIndex={0}
-                  onClick={() => { setShowCogMenu(false); setShowChangeLogsDialog(true); }}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowChangeLogsDialog(true); } }}
-                  style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+                  tabIndex={selectedVendor ? 0 : -1}
+                  aria-disabled={!selectedVendor}
+                  onClick={() => { if (!selectedVendor) return; setShowCogMenu(false); setShowChangeLogsDialog(true); }}
+                  onKeyDown={(e) => { if (!selectedVendor) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowChangeLogsDialog(true); } }}
+                  style={{ display: "flex", alignItems: "center", cursor: selectedVendor ? "pointer" : "not-allowed", opacity: selectedVendor ? 1 : 0.4 }}
+                  onMouseEnter={(e) => { if (selectedVendor) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                 >
                   <i className="pi pi-history" style={{ fontSize: "14px", color: "#374151" }} />

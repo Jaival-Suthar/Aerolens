@@ -131,7 +131,7 @@ const LookupTable: React.FC<LookupTableProps> = ({
           <div ref={cogMenuRef} style={{ position: "relative" }}>
             <CogButton
               onClick={() => setShowCogMenu((prev) => !prev)}
-              tooltip="Activity"
+              tooltip="Lookup Activity"
             />
             {showCogMenu && (
               <div
@@ -151,11 +151,12 @@ const LookupTable: React.FC<LookupTableProps> = ({
                 <div
                   className="p-2 border-round"
                   role="button"
-                  tabIndex={0}
-                  onClick={() => { setShowCogMenu(false); setShowChangeLogsDialog(true); }}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowChangeLogsDialog(true); } }}
-                  style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+                  tabIndex={selectedLookup ? 0 : -1}
+                  aria-disabled={!selectedLookup}
+                  onClick={() => { if (!selectedLookup) return; setShowCogMenu(false); setShowChangeLogsDialog(true); }}
+                  onKeyDown={(e) => { if (!selectedLookup) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowChangeLogsDialog(true); } }}
+                  style={{ display: "flex", alignItems: "center", cursor: selectedLookup ? "pointer" : "not-allowed", opacity: selectedLookup ? 1 : 0.4 }}
+                  onMouseEnter={(e) => { if (selectedLookup) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                 >
                   <i className="pi pi-history" style={{ fontSize: "14px", color: "#374151" }} />

@@ -422,7 +422,7 @@ const MembersTable: React.FC = () => {
           <div ref={cogMenuRef} style={{ position: "relative" }}>
             <CogButton
               onClick={() => setShowCogMenu((prev) => !prev)}
-              tooltip="Activity"
+              tooltip="Member Activity"
             />
             {showCogMenu && (
               <div
@@ -442,11 +442,12 @@ const MembersTable: React.FC = () => {
                 <div
                   className="p-2 border-round"
                   role="button"
-                  tabIndex={0}
-                  onClick={() => { setShowCogMenu(false); setShowChangeLogsDialog(true); }}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowChangeLogsDialog(true); } }}
-                  style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+                  tabIndex={selectedMember ? 0 : -1}
+                  aria-disabled={!selectedMember}
+                  onClick={() => { if (!selectedMember) return; setShowCogMenu(false); setShowChangeLogsDialog(true); }}
+                  onKeyDown={(e) => { if (!selectedMember) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowChangeLogsDialog(true); } }}
+                  style={{ display: "flex", alignItems: "center", cursor: selectedMember ? "pointer" : "not-allowed", opacity: selectedMember ? 1 : 0.4 }}
+                  onMouseEnter={(e) => { if (selectedMember) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                 >
                   <i className="pi pi-history" style={{ fontSize: "14px", color: "#374151" }} />

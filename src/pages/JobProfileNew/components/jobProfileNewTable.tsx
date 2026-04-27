@@ -432,7 +432,7 @@ const previewJD = async (jobProfileId: number) => {
           <div ref={cogMenuRef} style={{ position: "relative" }}>
           <CogButton
             onClick={() => setShowSettingsMenu(prev => !prev)}
-            tooltip="More Actions"
+            tooltip="Job Profile Activity"
           />
 
           {showSettingsMenu && (
@@ -478,11 +478,12 @@ const previewJD = async (jobProfileId: number) => {
 <div
   className="p-2 border-round"
   role="button"
-  tabIndex={0}
-  onClick={() => { setShowSettingsMenu(false); setShowChangeLogsDialog(true); }}
-  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowSettingsMenu(false); setShowChangeLogsDialog(true); } }}
-  style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+  tabIndex={selected ? 0 : -1}
+  aria-disabled={!selected}
+  onClick={() => { if (!selected) return; setShowSettingsMenu(false); setShowChangeLogsDialog(true); }}
+  onKeyDown={(e) => { if (!selected) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowSettingsMenu(false); setShowChangeLogsDialog(true); } }}
+  style={{ display: "flex", alignItems: "center", cursor: selected ? "pointer" : "not-allowed", opacity: selected ? 1 : 0.4 }}
+  onMouseEnter={(e) => { if (selected) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
 >
   <i className="pi pi-history" style={{ fontSize: "14px", color: "#374151" }} />

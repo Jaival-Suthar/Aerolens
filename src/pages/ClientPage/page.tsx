@@ -302,30 +302,40 @@ const Client: React.FC = () => {
                     padding: "0.5rem",
                   }}
                 >
-                  <div
-                    className="p-2 border-round"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => openGlobalAuditLogs("changes")}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        openGlobalAuditLogs("changes");
-                      }
-                    }}
-                    style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "#f3f4f6";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                    }}
-                  >
-                    <i className="pi pi-history" style={{ fontSize: "14px", color: "#374151" }} />
-                    <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
-                      Change Logs
-                    </span>
-                  </div>
+                 <div
+                  className="p-2 border-round"
+                  role="button"
+                  tabIndex={selectedClient ? 0 : -1}
+                  aria-disabled={!selectedClient}
+                  onClick={() => {
+                  if (!selectedClient) return;
+                       openGlobalAuditLogs("changes");
+                  }}
+                   onKeyDown={(e) => {
+                 if (!selectedClient) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openGlobalAuditLogs("changes");
+    }
+  }}
+  style={{
+    display: "flex",
+    alignItems: "center",
+    cursor: selectedClient ? "pointer" : "not-allowed",
+    opacity: selectedClient ? 1 : 0.4,
+  }}
+  onMouseEnter={(e) => {
+    if (selectedClient) e.currentTarget.style.backgroundColor = "#f3f4f6";
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.backgroundColor = "transparent";
+  }}
+>
+  <i className="pi pi-history" style={{ fontSize: "14px", color: "#374151" }} />
+  <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
+    Change Logs
+  </span>
+</div>
                   <div
                     className="p-2 border-round"
                     role="button"

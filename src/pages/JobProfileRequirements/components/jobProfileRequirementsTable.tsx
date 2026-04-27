@@ -530,7 +530,7 @@ const cogMenuRef = useRef<HTMLDivElement | null>(null);
           <div ref={cogMenuRef} style={{ position: "relative" }}>
             <CogButton
               onClick={() => setShowCogMenu((prev) => !prev)}
-              tooltip="Activity"
+              tooltip="Requirement Activity"
             />
             {showCogMenu && (
               <div
@@ -550,11 +550,12 @@ const cogMenuRef = useRef<HTMLDivElement | null>(null);
                 <div
                   className="p-2 border-round"
                   role="button"
-                  tabIndex={0}
-                  onClick={() => { setShowCogMenu(false); setShowChangeLogsDialog(true); }}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowChangeLogsDialog(true); } }}
-                  style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+                  tabIndex={selectedJobProfile ? 0 : -1}
+                  aria-disabled={!selectedJobProfile}
+                  onClick={() => { if (!selectedJobProfile) return; setShowCogMenu(false); setShowChangeLogsDialog(true); }}
+                  onKeyDown={(e) => { if (!selectedJobProfile) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowChangeLogsDialog(true); } }}
+                  style={{ display: "flex", alignItems: "center", cursor: selectedJobProfile ? "pointer" : "not-allowed", opacity: selectedJobProfile ? 1 : 0.4 }}
+                  onMouseEnter={(e) => { if (selectedJobProfile) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                 >
                   <i className="pi pi-history" style={{ fontSize: "14px", color: "#374151" }} />

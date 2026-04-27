@@ -796,7 +796,7 @@ useEffect(() => {
     {
       label: "Change Logs",
       icon: <i className="pi pi-history" style={{ marginRight: 8, marginLeft: 4, fontSize: "14px", color: "#374151" }} />,
-      disabled: false,
+      disabled: !selectedResume,
       action: () => {
         setShowSettingsMenu(false);
         setShowChangeLogsDialog(true);
@@ -913,7 +913,7 @@ useEffect(() => {
           <DeleteButton onClick={handleDelete} disabled={!selectedResume} />
           <ViewButton onClick={() => setViewCandidate(selectedResume)} disabled={!selectedResume} tooltip="View Candidate Details" />
           <div ref={cogMenuRef} style={{ position: "relative" }}>
-            <CogButton onClick={() => setShowSettingsMenu((prev) => !prev)} tooltip="Actions" />
+            <CogButton onClick={() => setShowSettingsMenu((prev) => !prev)} tooltip="Candidate Activity" />
             {showSettingsMenu && (
               <div className="card shadow-3" style={{ position: "absolute", right: 0, top: 50, zIndex: 1000, minWidth: 220, backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "0.5rem" }}>
                 {settingsItems.map((item, idx) => (

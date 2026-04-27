@@ -427,7 +427,6 @@ const handleViewAllRounds = () => {
       label: "Change Logs",
       icon: <i className="pi pi-history" style={{ marginRight: 8, marginLeft: 4, fontSize: "14px", color: "#374151" }} />,
       action: () => { setShowSettingsMenu(false); setShowChangeLogsDialog(true); },
-      alwaysEnabled: true,
     },
     {
       label: "Deleted Interviews",
@@ -759,7 +758,7 @@ const interviewExportHeaders = useMemo(
                 e.stopPropagation();
                 setShowSettingsMenu((prev) => !prev);
               }}
-              tooltip="Actions"
+              tooltip="Interview Activity"
             />
             {showSettingsMenu && (
               <div className="card shadow-3" style={{ position: "absolute", right: 0, top: 50, zIndex: 1000, minWidth: 220, backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "0.5rem" }}>

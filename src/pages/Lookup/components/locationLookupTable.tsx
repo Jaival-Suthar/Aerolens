@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { FilterMatchMode } from 'primereact/api';
@@ -9,6 +9,8 @@ import AddButton from '../../../shared/AddButton';
 import EditButton from '../../../shared/EditButton';
 import DeleteButton from '../../../shared/DeleteButton';
 import SearchButton from '../../../shared/SearchButton';
+import CogButton from '../../../shared/CogButton';
+import ChangeLogsDialog from '../../../shared/ChangeLogsDialog';
 
  import AddEditLocationForm  from './AddEditLocationForm';
  import  DeleteLocationForm  from './DeleteLocationForm';
@@ -29,6 +31,20 @@ const LocationLookupTable: React.FC<LocationLookupTableProps> = ({
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showCogMenu, setShowCogMenu] = useState(false);
+  const [showChangeLogsDialog, setShowChangeLogsDialog] = useState(false);
+  const cogMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!showCogMenu) return;
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (cogMenuRef.current && !cogMenuRef.current.contains(event.target as Node)) {
+        setShowCogMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [showCogMenu]);
 
   // Search State
   const [globalFilterValue, setGlobalFilterValue] = useState('');
@@ -101,6 +117,35 @@ const LocationLookupTable: React.FC<LocationLookupTableProps> = ({
             onClick={handleDeleteClick}
             disabled={!selectedLocation}
           />
+          <div ref={cogMenuRef} style={{ position: "relative" }}>
+            <CogButton
+              onClick={() => setShowCogMenu((prev) => !prev)}
+              tooltip="Location Activity"
+            />
+            {showCogMenu && (
+              <div
+                className="card shadow-3"
+                style={{ position: "absolute", right: 0, top: 50, zIndex: 1000, minWidth: 220, backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "0.5rem" }}
+              >
+                <div
+                  className="p-2 border-round"
+                  role="button"
+                  tabIndex={selectedLocation ? 0 : -1}
+                  aria-disabled={!selectedLocation}
+                  onClick={() => { if (!selectedLocation) return; setShowCogMenu(false); setShowChangeLogsDialog(true); }}
+                  onKeyDown={(e) => { if (!selectedLocation) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowChangeLogsDialog(true); } }}
+                  style={{ display: "flex", alignItems: "center", cursor: selectedLocation ? "pointer" : "not-allowed", opacity: selectedLocation ? 1 : 0.4 }}
+                  onMouseEnter={(e) => { if (selectedLocation) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                >
+                  <i className="pi pi-history" style={{ fontSize: "14px", color: "#374151" }} />
+                  <span style={{ marginLeft: "12px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
+                    Change Logs
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <div style={{ flex: 1, overflow: "auto" }}>
@@ -150,6 +195,11 @@ const LocationLookupTable: React.FC<LocationLookupTableProps> = ({
         onHide={() => setShowDeleteDialog(false)}
         onSuccess={handleSuccess}
        />
+      <ChangeLogsDialog
+        isOpen={showChangeLogsDialog}
+        onClose={() => setShowChangeLogsDialog(false)}
+        title="Location Change Logs"
+      />
     </div>
   );
 };

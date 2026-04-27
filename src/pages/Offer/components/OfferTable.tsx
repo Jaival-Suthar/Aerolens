@@ -326,7 +326,7 @@ const OfferTable: React.FC = () => {
     { label: "Terminate Offer", icon: <FaBan style={{ marginRight: 8, marginLeft: 4 }} />, action: handleTerminateOffer, selectionRequired: true },
     { label: "Revise Offer", icon: <FaEdit style={{ marginRight: 8, marginLeft: 4 }} />, action: handleReviseOffer, selectionRequired: true },
     { label: "Offer Status", icon: <FaClipboardList style={{ marginRight: 8, marginLeft: 4 }} />, action: handleOfferStatus, selectionRequired: true },
-    { label: "Change Logs", icon: <i className="pi pi-history" style={{ marginRight: 8, marginLeft: 4, fontSize: "14px", color: "#374151" }} />, action: () => { setShowCogMenu(false); setShowChangeLogsDialog(true); }, selectionRequired: false },
+    { label: "Change Logs", icon: <i className="pi pi-history" style={{ marginRight: 8, marginLeft: 4, fontSize: "14px", color: "#374151" }} />, action: () => { setShowCogMenu(false); setShowChangeLogsDialog(true); }, selectionRequired: true },
     { label: "Deleted Offers", icon: <i className="pi pi-trash" style={{ marginRight: 8, marginLeft: 4, fontSize: "14px", color: "#374151" }} />, action: () => { setShowCogMenu(false); setShowDeletedRecordsDialog(true); }, selectionRequired: false },
   ];
 
@@ -445,7 +445,7 @@ const OfferTable: React.FC = () => {
             <div ref={cogMenuRef} style={{ position: "relative" }}>
               <CogButton
                 onClick={() => setShowCogMenu((prev) => !prev)}
-                tooltip="Actions"
+                tooltip="Offer Activity"
               />
               {showCogMenu && (
                 <div
