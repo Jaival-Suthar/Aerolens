@@ -262,3 +262,17 @@ export const getDeletedMembers = async (
     throw error;
   }
 };
+
+export const restoreMember = async (
+  accessToken: string | null,
+  id: number
+): Promise<any> => {
+  const response = await fetch(`${API_BASE_URL}/member/${id}/restore`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: makeHeaders(accessToken || undefined),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to restore member");
+  return data;
+};

@@ -650,6 +650,7 @@ const MembersTable: React.FC = () => {
       <MembersDeletedRecordsDialog
         isOpen={showDeletedRecordsDialog}
         onClose={() => setShowDeletedRecordsDialog(false)}
+        onRestoreSuccess={loadMembers}
       />
       <ChangeLogsDialog
         isOpen={showChangeLogsDialog}

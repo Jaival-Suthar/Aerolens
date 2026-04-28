@@ -101,7 +101,7 @@ export const locationService = {
   },
 
   /**
-   * Delete location
+   * Delete location (soft-delete on backend)
    */
   async delete(accessToken: string, locationId: number): Promise<LocationApiResponse> {
     if (!locationId || locationId <= 0) {
@@ -111,6 +111,28 @@ export const locationService = {
     const url = `${API_BASE_URL}/location/${locationId}`;
     const res = await fetch(url, {
       method: "DELETE",
+      headers: makeHeaders(accessToken),
+    });
+    return checkStatus(res);
+  },
+
+  /**
+   * Get soft-deleted locations
+   */
+  async getDeleted(accessToken: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/location/deletions`, {
+      method: "GET",
+      headers: makeHeaders(accessToken),
+    });
+    return checkStatus(res);
+  },
+
+  /**
+   * Restore a soft-deleted location
+   */
+  async restore(accessToken: string, locationId: number): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/location/${locationId}/restore`, {
+      method: "PATCH",
       headers: makeHeaders(accessToken),
     });
     return checkStatus(res);

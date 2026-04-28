@@ -578,3 +578,17 @@ export const getDeletedCandidates = async (
   if (!data.success) throw new Error(data.message || "Failed to fetch deleted candidates");
   return data;
 };
+
+export const restoreCandidate = async (
+  accessToken: string | null,
+  id: number
+): Promise<any> => {
+  const response = await fetch(`${API_URL}/candidate/${id}/restore`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: makeHeaders(accessToken || undefined),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to restore candidate");
+  return data;
+};

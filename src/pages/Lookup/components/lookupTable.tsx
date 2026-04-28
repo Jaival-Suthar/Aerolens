@@ -232,6 +232,7 @@ const LookupTable: React.FC<LookupTableProps> = ({
       <LookupDeletedRecordsDialog
         isOpen={showDeletedRecordsDialog}
         onClose={() => setShowDeletedRecordsDialog(false)}
+        onRestoreSuccess={onDataChange}
       />
       <ChangeLogsDialog
         isOpen={showChangeLogsDialog}

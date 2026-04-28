@@ -143,4 +143,11 @@ export const VendorService = {
       token
     ),
 
+  restoreVendor: (vendorId: number, token: string): Promise<any> =>
+    apiFetch<any>(
+      `${ROUTES.BASE}/${vendorId}/restore`,
+      { method: "PATCH" },
+      token
+    ),
+
 };

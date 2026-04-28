@@ -593,6 +593,7 @@ const OfferTable: React.FC = () => {
       <OfferDeletedRecordsDialog
         isOpen={showDeletedRecordsDialog}
         onClose={() => setShowDeletedRecordsDialog(false)}
+        onRestoreSuccess={loadOffers}
       />
       <ChangeLogsDialog
         isOpen={showChangeLogsDialog}
