@@ -221,3 +221,16 @@ export const getDeletedInterviews = async (
   }
 };
 
+export const restoreInterview = async (
+  interviewId: number,
+  accessToken: string | null
+): Promise<any> => {
+  const res = await fetch(`${BASE_URL}/interview/${interviewId}/restore`, {
+    method: "PATCH",
+    headers: makeHeaders(accessToken || undefined),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to restore interview");
+  return data;
+};
+

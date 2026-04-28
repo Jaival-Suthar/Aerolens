@@ -118,6 +118,20 @@ export const getDeletedJobProfiles = async (
   return data;
 };
 
+export const restoreJobProfile = async (
+  accessToken: string | null,
+  id: number
+): Promise<any> => {
+  const response = await fetch(`${API_BASE_URL}/jobProfile/${id}/restore`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: makeAuthHeaders(accessToken || undefined),
+  });
+  const data = await response.json();
+  if (!response.ok) throw data;
+  return data;
+};
+
 /* -------------------- Create Job Profile -------------------- */
 
 export const createJobProfile = async (

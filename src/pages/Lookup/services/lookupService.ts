@@ -143,4 +143,14 @@ export const lookupService = {
 
     return res.json();
   },
+
+  async restore(lookupKey: number, accessToken: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/lookup/${lookupKey}/restore`, {
+      method: "PATCH",
+      headers: makeHeaders(accessToken),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Failed to restore lookup");
+    return data;
+  },
 };

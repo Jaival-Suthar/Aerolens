@@ -943,6 +943,7 @@ const interviewExportHeaders = useMemo(
       <InterviewDeletedRecordsDialog
         isOpen={showDeletedRecordsDialog}
         onClose={() => setShowDeletedRecordsDialog(false)}
+        onRestoreSuccess={fetchInterviews}
       />
       <ChangeLogsDialog
         isOpen={showChangeLogsDialog}
