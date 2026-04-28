@@ -19,7 +19,7 @@ import { useAuth } from '../../shared/auth/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import SearchButton from '../../shared/SearchButton';
 import CogButton from "../../shared/CogButton";
-import ClientAuditLogsDialog from "./components/ClientAuditLogsDialog";
+import ClientAuditLogsDialog from "./components/ClientDeleteRecords";
 
 const Client: React.FC = () => {
   // --- Dialog States ---
