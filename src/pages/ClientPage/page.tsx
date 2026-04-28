@@ -19,7 +19,7 @@ import { useAuth } from '../../shared/auth/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import SearchButton from '../../shared/SearchButton';
 import CogButton from "../../shared/CogButton";
-import ClientAuditLogsDialog from "./components/ClientDeleteRecords";
+import ClientAuditLogsDialog from "./components/ClientAuditLogsDialog";
 
 const Client: React.FC = () => {
   // --- Dialog States ---
@@ -434,6 +434,7 @@ const Client: React.FC = () => {
         onClose={() => setGlobalAuditOpen(false)}
         defaultTab={globalAuditTab}
         onRestoreSuccess={() => setRefreshTrigger((prev) => prev + 1)}
+        clientId={selectedClient?.clientId ?? null}
       />
     </div>
   );

@@ -183,6 +183,27 @@ export const restoreClient = async (
   return response.json();
 };
 
+// Get audit logs for a specific client row
+export const getClientAuditLogsById = async (
+  accessToken: string | null,
+  clientId: number,
+  page = 1,
+  limit = 20
+): Promise<ClientAuditLogResponse> => {
+  const response = await fetch(
+    `${API_URL}/client/${clientId}/audit-logs?page=${page}&limit=${limit}`,
+    {
+      credentials: "include",
+      headers: makeHeaders(accessToken || undefined),
+    }
+  );
+  if (!response.ok) {
+    const apiError: ApiError = await normalizeApiError(response);
+    throw apiError;
+  }
+  return response.json();
+};
+
 // Get deleted clients
 export const getDeletedClients = async (
   accessToken: string | null
