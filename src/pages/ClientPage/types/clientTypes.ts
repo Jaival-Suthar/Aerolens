@@ -107,4 +107,5 @@ export type ClientAuditLogsDialogProps = {
   isOpen: boolean;
   onClose: () => void;
   defaultTab?: "changes" | "deleted";
+  onRestoreSuccess?: () => void;
 };

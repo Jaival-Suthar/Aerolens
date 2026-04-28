@@ -304,6 +304,7 @@ const VendorTable: React.FC = () => {
       <VendorDeletedRecordsDialog
         isOpen={showDeletedRecordsDialog}
         onClose={() => setShowDeletedRecordsDialog(false)}
+        onRestoreSuccess={fetchVendors}
       />
       <ChangeLogsDialog
         isOpen={showChangeLogsDialog}

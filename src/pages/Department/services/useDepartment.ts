@@ -129,3 +129,27 @@ export const deleteDepartment = async (
   );
 };
 
+// -------------------- GET DELETED DEPARTMENTS --------------------
+export const getDeletedDepartments = async (
+  accessToken: string | null,
+  clientId: number
+): Promise<any> => {
+  return apiFetch<any>(
+    `/department/client/${clientId}/deleted`,
+    { method: "GET" },
+    accessToken || undefined
+  );
+};
+
+// -------------------- RESTORE DEPARTMENT --------------------
+export const restoreDepartment = async (
+  accessToken: string | null,
+  departmentId: number
+): Promise<any> => {
+  return apiFetch<any>(
+    `/department/${departmentId}/restore`,
+    { method: "PATCH" },
+    accessToken || undefined
+  );
+};
+

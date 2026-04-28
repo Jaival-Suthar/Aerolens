@@ -1089,6 +1089,7 @@ useEffect(() => {
       <CandidateDeletedRecordsDialog
         isOpen={showDeletedRecordsDialog}
         onClose={() => setShowDeletedRecordsDialog(false)}
+        onRestoreSuccess={loadAllData}
       />
       <ChangeLogsDialog
         isOpen={showChangeLogsDialog}

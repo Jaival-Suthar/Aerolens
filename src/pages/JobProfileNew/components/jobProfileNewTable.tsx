@@ -671,6 +671,7 @@ const previewJD = async (jobProfileId: number) => {
         <JobProfileDeletedRecordsDialog
           isOpen={showDeletedRecordsDialog}
           onClose={() => setShowDeletedRecordsDialog(false)}
+          onRestoreSuccess={refetch}
         />
         <ChangeLogsDialog
           isOpen={showChangeLogsDialog}

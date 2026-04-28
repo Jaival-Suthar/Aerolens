@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import type { ClientAuditLog, ClientAuditLogsDialogProps, ClientDeletedRecord } from "../types/clientTypes";
-import { getDeletedClients } from "../services/clientService";
+import { Toast } from "primereact/toast";
+import type { ClientAuditLogsDialogProps, ClientDeletedRecord } from "../types/clientTypes";
+import { getDeletedClients, restoreClient } from "../services/clientService";
 import { useAuth } from "../../../shared/auth/AuthContext";
 
 const parseTimestampToDate = (value: string) => {
@@ -58,13 +59,15 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
   isOpen,
   onClose,
   defaultTab = "deleted",
+  onRestoreSuccess,
 }) => {
   const { accessToken } = useAuth();
+  const toast = useRef<Toast>(null);
   const [activeTab, setActiveTab] = useState<"changes" | "deleted">(defaultTab);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
-  const [changeItems, setChangeItems] = useState<ClientAuditLog[]>([]);
   const [deletedItems, setDeletedItems] = useState<ClientDeletedRecord[]>([]);
+  const [restoringIds, setRestoringIds] = useState<Set<number>>(new Set());
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -79,7 +82,6 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
         setLoading(true);
         setError("");
         if (activeTab === "changes") {
-          setChangeItems([]);
           setDeletedItems([]);
           return;
         }
@@ -88,11 +90,7 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
         setDeletedItems(deletedRows);
       } catch (err: any) {
         setError(err?.message || "Failed to fetch audit logs");
-        if (activeTab === "changes") {
-          setChangeItems([]);
-        } else {
-          setDeletedItems([]);
-        }
+        setDeletedItems([]);
       } finally {
         setLoading(false);
       }
@@ -100,10 +98,33 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
     load();
   }, [isOpen, accessToken, activeTab, reloadKey]);
 
-  const title = useMemo(
-    () => "Client Activity",
-    []
-  );
+  const handleRestore = async (row: ClientDeletedRecord) => {
+    setRestoringIds((prev) => new Set(prev).add(row.clientId));
+    try {
+      await restoreClient(accessToken, row.clientId);
+      toast.current?.show({
+        severity: "success",
+        summary: "Restored",
+        detail: `${row.clientName} has been restored`,
+      });
+      setDeletedItems((prev) => prev.filter((r) => r.clientId !== row.clientId));
+      onRestoreSuccess?.();
+    } catch (err: any) {
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: err?.message || "Failed to restore client",
+      });
+    } finally {
+      setRestoringIds((prev) => {
+        const next = new Set(prev);
+        next.delete(row.clientId);
+        return next;
+      });
+    }
+  };
+
+  const title = useMemo(() => "Client Activity", []);
 
   return (
     <Dialog
@@ -113,26 +134,7 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
       modal
       style={{ width: "90vw", maxWidth: "1200px" }}
     >
-      {/* <div className="flex gap-2 mb-3">
-        <Button
-          label="Change Logs"
-          size="small"
-          severity={activeTab === "changes" ? "info" : "secondary"}
-          onClick={() => {
-            setActiveTab("changes");
-            setPage(1);
-          }}
-        />
-        <Button
-          label="Deleted Clients"
-          size="small"
-          severity={activeTab === "deleted" ? "danger" : "secondary"}
-          onClick={() => {
-            setActiveTab("deleted");
-            setPage(1);
-          }}
-        />
-      </div> */}
+      <Toast ref={toast} />
 
       {loading ? (
         <div className="text-center p-4">
@@ -145,32 +147,34 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
           <Button label="Retry" size="small" onClick={() => setReloadKey((k) => k + 1)} />
         </div>
       ) : activeTab === "changes" ? (
-        <div className="text-center text-600 p-4">
-          No change logs found
-        </div>
+        <div className="text-center text-600 p-4">No change logs found</div>
       ) : deletedItems.length === 0 ? (
-        <div className="text-center text-600 p-4">
-          No deleted clients found
-        </div>
+        <div className="text-center text-600 p-4">No deleted clients found</div>
       ) : (
         <DataTable
           value={deletedItems}
           dataKey="clientId"
           scrollable
           scrollHeight="420px"
-          tableStyle={{ minWidth: "95rem" }}
         >
           <Column
-            field="deleted_at"
-            header="Deleted At"
-            body={(row: ClientDeletedRecord) => formatAuditTimestamp(row.deleted_at || "")}
-            style={{ minWidth: "12rem" }}
+            header=""
+            body={(row: ClientDeletedRecord) => (
+              <Button
+                label="Restore"
+                size="small"
+                severity="success"
+                loading={restoringIds.has(row.clientId)}
+                onClick={() => handleRestore(row)}
+              />
+            )}
+            style={{ width: "8rem" }}
           />
           <Column
             field="clientId"
             header="Client ID"
             body={(row: ClientDeletedRecord) => row.clientId || "—"}
-            style={{ minWidth: "8rem" }}
+            style={{ width: "7rem" }}
           />
           <Column
             field="clientName"
@@ -182,7 +186,13 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
             field="address"
             header="Address"
             body={(row: ClientDeletedRecord) => row.address || "—"}
-            style={{ minWidth: "18rem" }}
+            style={{ minWidth: "16rem" }}
+          />
+          <Column
+            field="deleted_at"
+            header="Deleted At"
+            body={(row: ClientDeletedRecord) => formatAuditTimestamp(row.deleted_at || "")}
+            style={{ minWidth: "12rem" }}
           />
         </DataTable>
       )}

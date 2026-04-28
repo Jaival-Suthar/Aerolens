@@ -371,6 +371,20 @@ export const getDeletedJobProfileRequirements = async (
   return data as JobProfileRequirementDeletedResponse;
 };
 
+export const restoreJobProfileRequirement = async (
+  accessToken: string | null,
+  id: number
+): Promise<any> => {
+  const response = await fetch(`${API_BASE_URL}/jobProfileRequirement/${id}/restore`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: makeHeaders(accessToken || undefined),
+  });
+  const data = await response.json();
+  if (!response.ok || !data?.success) throw normalizeApiError(data);
+  return data;
+};
+
 
 
 // Validation for job profile data

@@ -433,6 +433,7 @@ const Client: React.FC = () => {
         isOpen={globalAuditOpen}
         onClose={() => setGlobalAuditOpen(false)}
         defaultTab={globalAuditTab}
+        onRestoreSuccess={() => setRefreshTrigger((prev) => prev + 1)}
       />
     </div>
   );

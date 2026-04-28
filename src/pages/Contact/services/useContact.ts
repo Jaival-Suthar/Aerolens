@@ -210,3 +210,32 @@ export const useContact = () => {
 };
 
 export default useContact;
+
+// ─── Plain service functions (used by dialogs outside of hook context) ───────
+
+export const getDeletedContacts = async (
+  accessToken: string,
+  clientId: number
+): Promise<any> => {
+  const response = await fetch(`${import.meta.env.VITE_BASE_URL}/contact/client/${clientId}/deleted`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` },
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const data = await response.json();
+  return data.data ?? data;
+};
+
+export const restoreContact = async (
+  accessToken: string,
+  contactId: number
+): Promise<any> => {
+  const response = await fetch(`${import.meta.env.VITE_BASE_URL}/contact/${contactId}/restore`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` },
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+};

@@ -135,3 +135,17 @@ export async function getDeletedOffers(
   if (!data.success) throw new Error(data.message || "Failed to fetch deleted offers");
   return data;
 }
+
+export async function restoreOffer(
+  accessToken: string | null,
+  offerId: number
+): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/offers/${offerId}/restore`, {
+    method: "PATCH",
+    headers: makeHeaders(accessToken ?? undefined),
+    credentials: "include",
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to restore offer");
+  return data;
+}

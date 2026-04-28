@@ -690,6 +690,7 @@ const cogMenuRef = useRef<HTMLDivElement | null>(null);
       <JobProfileRequirementsDeletedRecordsDialog
         isOpen={showDeletedRecordsDialog}
         onClose={() => setShowDeletedRecordsDialog(false)}
+        onRestoreSuccess={loadData}
       />
       <ChangeLogsDialog
         isOpen={showChangeLogsDialog}
