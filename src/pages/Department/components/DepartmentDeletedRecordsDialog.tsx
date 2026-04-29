@@ -98,12 +98,7 @@ const DepartmentDeletedRecordsDialog: React.FC<Props> = ({ isOpen, onClose, clie
   return (
     <Dialog visible={isOpen} onHide={onClose} header="Deleted Departments" modal style={{ width: "95vw", maxWidth: "1000px" }}>
       <Toast ref={toast} />
-      {loading ? (
-        <div className="text-center p-4">
-          <i className="pi pi-spin pi-spinner" style={{ fontSize: "2rem" }} />
-          <p className="mt-3">Loading deleted records...</p>
-        </div>
-      ) : error ? (
+      {error ? (
         <div className="p-message p-message-error flex align-items-center justify-content-between">
           <span>{error}</span>
           <Button label="Retry" size="small" onClick={() => setReloadKey(k => k + 1)} />
@@ -111,7 +106,11 @@ const DepartmentDeletedRecordsDialog: React.FC<Props> = ({ isOpen, onClose, clie
       ) : items.length === 0 ? (
         <div className="text-center text-600 p-4">No deleted departments found</div>
       ) : (
-        <DataTable value={items} dataKey="departmentId" scrollable scrollHeight="420px">
+        <DataTable value={items} dataKey="departmentId" paginator
+          rows={20}
+          rowsPerPageOptions={[20, 50, 100]}
+          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries">
           <Column
             header=""
             body={(row: DeletedDepartment) => (

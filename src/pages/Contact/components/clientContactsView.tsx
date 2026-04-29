@@ -9,8 +9,8 @@ import AddButton from '../../../shared/AddButton';
 import EditButton from '../../../shared/EditButton';
 import DeleteButton from '../../../shared/DeleteButton';
 import CogButton from '../../../shared/CogButton';
-import ChangeLogsDialog from '../../../shared/ChangeLogsDialog';
 import ContactDeletedRecordsDialog from './ContactDeletedRecordsDialog';
+import ContactAuditLogsDialog from './ContactAuditLogsDialog';
 
 import { useContactOperations } from '../hooks/useContactOperations';
 import { useContactsByClient } from '../hooks/useContactsByClient';
@@ -286,10 +286,11 @@ const ClientContactsView: React.FC<ClientContactsViewProps> = ({ selectedClient,
         onRestoreSuccess={triggerRefresh}
       />
 
-      <ChangeLogsDialog
+      <ContactAuditLogsDialog
         isOpen={showChangeLogsDialog}
         onClose={() => setShowChangeLogsDialog(false)}
-        title="Contact Change Logs"
+        contactId={selectedContact?.clientContactId ?? null}
+        contactName={selectedContact?.contactPersonName ?? null}
       />
     </div>
   );

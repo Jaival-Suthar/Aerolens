@@ -80,11 +80,10 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
 
   // Change logs state
   const [logs, setLogs] = useState<ClientAuditLog[]>([]);
-  const [logsLoading, setLogsLoading] = useState(false);
   const [logsError, setLogsError] = useState("");
   const [logsPage, setLogsPage] = useState(1);
   const [logsTotalRecords, setLogsTotalRecords] = useState(0);
-  const logsLimit = 20;
+  const [logsLimit, setLogsLimit] = useState(20);
 
   // Fetch deleted clients
   useEffect(() => {
@@ -110,7 +109,6 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
     if (!isOpen || defaultTab !== "changes" || !clientId || !accessToken) return;
     const load = async () => {
       try {
-        setLogsLoading(true);
         setLogsError("");
         const res = await getClientAuditLogsById(accessToken, clientId, logsPage, logsLimit);
         setLogs(Array.isArray(res.data) ? res.data : []);
@@ -119,11 +117,10 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
         setLogsError(err?.message || "Failed to fetch change logs");
         setLogs([]);
       } finally {
-        setLogsLoading(false);
       }
     };
     load();
-  }, [isOpen, defaultTab, clientId, accessToken, logsPage, reloadKey]);
+  }, [isOpen, defaultTab, clientId, accessToken, logsPage, logsLimit, reloadKey]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -154,38 +151,37 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
     return (
       <Dialog visible={isOpen} onHide={onClose} header={title} modal style={{ width: "95vw", maxWidth: "1300px" }}>
         <Toast ref={toast} />
-        {logsLoading ? (
-          <div className="text-center p-4">
-            <i className="pi pi-spin pi-spinner" style={{ fontSize: "2rem" }} />
-            <p className="mt-3">Loading change logs...</p>
-          </div>
-        ) : logsError ? (
+        {logsError && logs.length === 0 ? (
           <div className="p-message p-message-error flex align-items-center justify-content-between">
             <span>{logsError}</span>
             <Button label="Retry" size="small" onClick={() => setReloadKey((k) => k + 1)} />
           </div>
-        ) : logs.length === 0 ? (
-          <div className="text-center text-600 p-4">No change logs found for this client.</div>
         ) : (
           <DataTable
             value={logs}
             dataKey="id"
-            scrollable
-            scrollHeight="450px"
+            emptyMessage="No change logs found for this client."
             paginator
             rows={logsLimit}
             totalRecords={logsTotalRecords}
             lazy
             first={(logsPage - 1) * logsLimit}
-            onPage={(e) => setLogsPage(Math.floor(e.first / logsLimit) + 1)}
+            onPage={(e) => { setLogsLimit(e.rows); setLogsPage(Math.floor(e.first / e.rows) + 1); }}
+            rowsPerPageOptions={[20, 50, 100]}
             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
           >
             <Column
-              field="occurred_at"
-              header="Occurred At"
-              body={(row: ClientAuditLog) => formatAuditTimestamp(row.occurred_at || row.timestamp)}
-              style={{ minWidth: "13rem" }}
+              field="resource_id"
+              header="Resource ID"
+              body={(row: ClientAuditLog) => row.resource_id || "—"}
+              style={{ width: "8rem" }}
+            />
+            <Column
+              field="actor_name"
+              header="Actor"
+              body={(row: ClientAuditLog) => row.actor_name || "—"}
+              style={{ minWidth: "10rem" }}
             />
             <Column
               field="action"
@@ -212,16 +208,10 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
               style={{ minWidth: "10rem" }}
             />
             <Column
-              field="resource_id"
-              header="Resource ID"
-              body={(row: ClientAuditLog) => row.resource_id || "—"}
-              style={{ width: "8rem" }}
-            />
-            <Column
-              field="actor_name"
-              header="Actor"
-              body={(row: ClientAuditLog) => row.actor_name || "—"}
-              style={{ minWidth: "10rem" }}
+              field="occurred_at"
+              header="Occurred At"
+              body={(row: ClientAuditLog) => formatAuditTimestamp(row.occurred_at || row.timestamp)}
+              style={{ minWidth: "13rem" }}
             />
           </DataTable>
         )}
@@ -246,7 +236,7 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
       ) : deletedItems.length === 0 ? (
         <div className="text-center text-600 p-4">No deleted clients found</div>
       ) : (
-        <DataTable value={deletedItems} dataKey="clientId" scrollable scrollHeight="420px">
+        <DataTable value={deletedItems} dataKey="clientId" paginator rows={20} rowsPerPageOptions={[20, 50, 100]} paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown" currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries">
           <Column
             header=""
             body={(row: ClientDeletedRecord) => (

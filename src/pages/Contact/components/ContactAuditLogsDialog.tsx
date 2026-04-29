@@ -5,8 +5,8 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Tag } from "primereact/tag";
 import { Toast } from "primereact/toast";
-import type { DepartmentAuditLogsDialogProps, DepartmentAuditLog } from "../types/departmentTypes";
-import { getDepartmentAuditLogsById } from "../services/useDepartment";
+import type { ContactAuditLogsDialogProps, ContactAuditLog } from "../types/contactTypes";
+import { getContactAuditLogsById } from "../services/useContact";
 import { useAuth } from "../../../shared/auth/AuthContext";
 
 const parseTimestampToDate = (value: string) => {
@@ -46,20 +46,20 @@ const actionSeverity = (action: string): "success" | "danger" | "warning" | "inf
   }
 };
 
-const getDeptName = (row: DepartmentAuditLog): string | null => {
+const getContactName = (row: ContactAuditLog): string | null => {
   const nv = row.new_values as any;
   const ov = row.old_values as any;
-  return nv?.departmentName || ov?.departmentName || null;
+  return nv?.contactPersonName || ov?.contactPersonName || null;
 };
 
-const renderSummary = (row: DepartmentAuditLog): string => {
-  const name = getDeptName(row);
+const renderSummary = (row: ContactAuditLog): string => {
+  const name = getContactName(row);
   if (!name) return row.summary || "—";
   switch (row.action) {
-    case "CREATE":  return `Created new department: ${name}`;
-    case "UPDATE":  return `Updated department: ${name}`;
-    case "DELETE":  return `Deleted department: ${name}`;
-    case "RESTORE": return `Restored department: ${name}`;
+    case "CREATE":  return `Created new contact: ${name}`;
+    case "UPDATE":  return `Updated contact: ${name}`;
+    case "DELETE":  return `Deleted contact: ${name}`;
+    case "RESTORE": return `Restored contact: ${name}`;
     default:        return row.summary || "—";
   }
 };
@@ -77,15 +77,16 @@ const renderVerb = (verb: string | null): string => {
   return VERB_SUFFIX_MAP[suffix] || verb;
 };
 
-const DepartmentAuditLogsDialog: React.FC<DepartmentAuditLogsDialogProps> = ({
+const ContactAuditLogsDialog: React.FC<ContactAuditLogsDialogProps> = ({
   isOpen,
   onClose,
-  departmentId,
+  contactId,
+  contactName,
 }) => {
   const { accessToken } = useAuth();
   const toast = useRef<Toast>(null);
 
-  const [logs, setLogs] = useState<DepartmentAuditLog[]>([]);
+  const [logs, setLogs] = useState<ContactAuditLog[]>([]);
   const [logsError, setLogsError] = useState("");
   const [logsPage, setLogsPage] = useState(1);
   const [logsTotalRecords, setLogsTotalRecords] = useState(0);
@@ -93,13 +94,14 @@ const DepartmentAuditLogsDialog: React.FC<DepartmentAuditLogsDialogProps> = ({
   const [logsLimit, setLogsLimit] = useState(20);
 
   useEffect(() => {
-    if (!isOpen || !departmentId || !accessToken) return;
+    if (!isOpen || !contactId || !accessToken) return;
     const load = async () => {
       try {
         setLogsError("");
-        const res = await getDepartmentAuditLogsById(accessToken, departmentId, logsPage, logsLimit);
-        setLogs(Array.isArray(res.data) ? res.data : []);
-        setLogsTotalRecords(res.pagination?.total ?? 0);
+        const res = await getContactAuditLogsById(accessToken, contactId, logsPage, logsLimit);
+        const payload = res.data ?? res;
+        setLogs(Array.isArray(payload.data) ? payload.data : []);
+        setLogsTotalRecords(payload.pagination?.total ?? 0);
       } catch (err: any) {
         setLogsError(err?.message || "Failed to fetch change logs");
         setLogs([]);
@@ -107,14 +109,18 @@ const DepartmentAuditLogsDialog: React.FC<DepartmentAuditLogsDialogProps> = ({
       }
     };
     load();
-  }, [isOpen, departmentId, accessToken, logsPage, logsLimit, reloadKey]);
+  }, [isOpen, contactId, accessToken, logsPage, logsLimit, reloadKey]);
 
   useEffect(() => {
     if (!isOpen) return;
     setLogsPage(1);
   }, [isOpen]);
 
-  const title = departmentId ? `Department #${departmentId} — Change Logs` : "Department Change Logs";
+  const title = contactName
+    ? `${contactName} — Change Logs`
+    : contactId
+    ? `Contact #${contactId} — Change Logs`
+    : "Contact Change Logs";
 
   return (
     <Dialog visible={isOpen} onHide={onClose} header={title} modal style={{ width: "95vw", maxWidth: "1300px" }}>
@@ -128,7 +134,7 @@ const DepartmentAuditLogsDialog: React.FC<DepartmentAuditLogsDialogProps> = ({
         <DataTable
           value={logs}
           dataKey="id"
-          emptyMessage="No change logs found for this department."
+          emptyMessage="No change logs found for this contact."
           paginator
           rows={logsLimit}
           totalRecords={logsTotalRecords}
@@ -142,43 +148,43 @@ const DepartmentAuditLogsDialog: React.FC<DepartmentAuditLogsDialogProps> = ({
           <Column
             field="resource_id"
             header="Resource ID"
-            body={(row: DepartmentAuditLog) => row.resource_id || "—"}
+            body={(row: ContactAuditLog) => row.resource_id || "—"}
             style={{ width: "8rem" }}
           />
           <Column
             field="actor_name"
             header="Actor"
-            body={(row: DepartmentAuditLog) => row.actor_name || "—"}
+            body={(row: ContactAuditLog) => row.actor_name || "—"}
             style={{ minWidth: "10rem" }}
           />
           <Column
             field="action"
             header="Action"
-            body={(row: DepartmentAuditLog) => <Tag value={row.action} severity={actionSeverity(row.action)} />}
+            body={(row: ContactAuditLog) => <Tag value={row.action} severity={actionSeverity(row.action)} />}
             style={{ width: "8rem" }}
           />
           <Column
             field="verb"
             header="Verb"
-            body={(row: DepartmentAuditLog) => renderVerb(row.verb)}
+            body={(row: ContactAuditLog) => renderVerb(row.verb)}
             style={{ minWidth: "8rem" }}
           />
           <Column
             field="summary"
             header="Summary"
-            body={(row: DepartmentAuditLog) => renderSummary(row)}
+            body={(row: ContactAuditLog) => renderSummary(row)}
             style={{ minWidth: "18rem" }}
           />
           <Column
             field="resource_type"
             header="Resource Type"
-            body={(row: DepartmentAuditLog) => row.resource_type || "—"}
+            body={(row: ContactAuditLog) => row.resource_type || "—"}
             style={{ minWidth: "10rem" }}
           />
           <Column
             field="occurred_at"
             header="Occurred At"
-            body={(row: DepartmentAuditLog) => formatAuditTimestamp(row.occurred_at || row.timestamp)}
+            body={(row: ContactAuditLog) => formatAuditTimestamp(row.occurred_at || row.timestamp)}
             style={{ minWidth: "13rem" }}
           />
         </DataTable>
@@ -187,4 +193,4 @@ const DepartmentAuditLogsDialog: React.FC<DepartmentAuditLogsDialogProps> = ({
   );
 };
 
-export default DepartmentAuditLogsDialog;
+export default ContactAuditLogsDialog;
