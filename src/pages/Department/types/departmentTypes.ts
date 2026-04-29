@@ -76,6 +76,38 @@ export interface SelectionChangeEvent<T> {
   value: T;
 }
 
+export type DepartmentAuditLog = {
+  id: number;
+  user_id: number | null;
+  action: "CREATE" | "UPDATE" | "DELETE" | "RESTORE" | string;
+  verb: string | null;
+  resource_type: string | null;
+  resource_id: string | null;
+  old_values: unknown;
+  new_values: unknown;
+  summary: string | null;
+  timestamp: string;
+  occurred_at: string | null;
+  actor_name: string | null;
+};
+
+export type DepartmentAuditLogResponse = {
+  success: boolean;
+  data: DepartmentAuditLog[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+};
+
+export type DepartmentAuditLogsDialogProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  departmentId?: number | null;
+};
+
 // API Error type
 export interface ApiError {
   message: string;
