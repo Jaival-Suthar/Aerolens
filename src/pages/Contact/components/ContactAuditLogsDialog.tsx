@@ -77,6 +77,17 @@ const renderVerb = (verb: string | null): string => {
   return VERB_SUFFIX_MAP[suffix] || verb;
 };
 
+const normalizeAuditResponse = (res: any): { logs: ContactAuditLog[]; total: number } => {
+  const payload = res?.data ?? res;
+  const rows = Array.isArray(payload?.data)
+    ? payload.data
+    : Array.isArray(payload)
+    ? payload
+    : [];
+  const total = Number(payload?.pagination?.total ?? rows.length ?? 0);
+  return { logs: rows, total };
+};
+
 const ContactAuditLogsDialog: React.FC<ContactAuditLogsDialogProps> = ({
   isOpen,
   onClose,
@@ -85,27 +96,45 @@ const ContactAuditLogsDialog: React.FC<ContactAuditLogsDialogProps> = ({
 }) => {
   const { accessToken } = useAuth();
   const toast = useRef<Toast>(null);
+  const latestRequestRef = useRef(0);
 
   const [logs, setLogs] = useState<ContactAuditLog[]>([]);
   const [logsError, setLogsError] = useState("");
+  const [logsLoading, setLogsLoading] = useState(false);
   const [logsPage, setLogsPage] = useState(1);
   const [logsTotalRecords, setLogsTotalRecords] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
   const [logsLimit, setLogsLimit] = useState(20);
 
   useEffect(() => {
-    if (!isOpen || !contactId || !accessToken) return;
+    if (!isOpen || !accessToken) return;
+    if (!contactId) {
+      setLogs([]);
+      setLogsTotalRecords(0);
+      setLogsError("");
+      setLogsLoading(false);
+      return;
+    }
+
+    const requestId = ++latestRequestRef.current;
     const load = async () => {
       try {
+        setLogs([]);
+        setLogsTotalRecords(0);
         setLogsError("");
+        setLogsLoading(true);
         const res = await getContactAuditLogsById(accessToken, contactId, logsPage, logsLimit);
-        const payload = res.data ?? res;
-        setLogs(Array.isArray(payload.data) ? payload.data : []);
-        setLogsTotalRecords(payload.pagination?.total ?? 0);
+        if (requestId !== latestRequestRef.current) return;
+        const normalized = normalizeAuditResponse(res);
+        setLogs(normalized.logs);
+        setLogsTotalRecords(normalized.total);
       } catch (err: any) {
+        if (requestId !== latestRequestRef.current) return;
         setLogsError(err?.message || "Failed to fetch change logs");
         setLogs([]);
       } finally {
+        if (requestId !== latestRequestRef.current) return;
+        setLogsLoading(false);
       }
     };
     load();
@@ -129,6 +158,11 @@ const ContactAuditLogsDialog: React.FC<ContactAuditLogsDialogProps> = ({
         <div className="p-message p-message-error flex align-items-center justify-content-between">
           <span>{logsError}</span>
           <Button label="Retry" size="small" onClick={() => setReloadKey((k) => k + 1)} />
+        </div>
+      ) : logsLoading ? (
+        <div className="text-center p-4">
+          <i className="pi pi-spin pi-spinner" style={{ fontSize: "2rem" }} />
+          <p className="mt-3">Loading change logs...</p>
         </div>
       ) : (
         <DataTable
