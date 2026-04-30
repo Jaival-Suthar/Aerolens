@@ -184,6 +184,23 @@ export const getClientAuditLogsById = async (
   return response.json();
 };
 
+// Restore a soft-deleted client
+export const restoreClient = async (
+  accessToken: string | null,
+  id: number
+): Promise<{ success: boolean; data: any; message: string }> => {
+  const response = await fetch(`${API_URL}/client/${id}/restore`, {
+    method: "PATCH",
+    headers: makeHeaders(accessToken || undefined),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const apiError: ApiError = await normalizeApiError(response);
+    throw apiError;
+  }
+  return response.json();
+};
+
 // Get deleted clients
 export const getDeletedClients = async (
   accessToken: string | null
