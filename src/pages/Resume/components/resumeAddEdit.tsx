@@ -159,6 +159,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [submitted, setSubmitted] = useState(false);
   const [resumePasteText, setResumePasteText] = useState("");
+  const [clearExistingResume, setClearExistingResume] = useState(false);
   const toast = useRef<Toast>(null);
   const previousCurrentCountryRef = useRef<string | null>(null);
   const previousExpectedCountryRef = useRef<string | null>(null);
@@ -168,6 +169,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     setErrors({});
     setSubmitted(false);
     setResumePasteText("");
+    setClearExistingResume(false);
   };
   useEffect(() => {
     if (!visible) {
@@ -1309,7 +1311,7 @@ else {
             >
 
               {/* CASE A: No file */}
-              {!formData.resumeFile && !(isEditMode && existingResumeName) && (
+              {!formData.resumeFile && !(isEditMode && existingResumeName && !clearExistingResume) && (
                 <>
                   <p style={{ marginBottom: "0.75rem", color: "#475569", fontSize: "0.875rem" }}>
                     Drag & drop resume here or browse files
@@ -1339,7 +1341,7 @@ else {
               )}
 
               {/* CASE B: File selected */}
-              {(formData.resumeFile || (isEditMode && existingResumeName)) && (
+              {(formData.resumeFile || (isEditMode && existingResumeName && !clearExistingResume)) && (
                 <div
                   style={{
                     display: "flex",
@@ -1372,6 +1374,7 @@ else {
                     type="button"
                     onClick={() => {
                       handleChange("resumeFile", null);
+                      setClearExistingResume(true);
                     }}
                     style={{
                       display: "flex",
