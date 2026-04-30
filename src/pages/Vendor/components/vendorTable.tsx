@@ -45,6 +45,7 @@ const VendorTable: React.FC = () => {
   const [showDeletedRecordsDialog, setShowDeletedRecordsDialog] = useState(false);
   const [showCogMenu, setShowCogMenu] = useState(false);
   const [showChangeLogsDialog, setShowChangeLogsDialog] = useState(false);
+  const [auditTargetVendor, setAuditTargetVendor] = useState<VendorType | null>(null);
   const cogMenuRef = useRef<HTMLDivElement | null>(null);
   const [editVendor, setEditVendor] = useState<VendorType | null>(null);
 
@@ -183,8 +184,21 @@ const VendorTable: React.FC = () => {
                   role="button"
                   tabIndex={selectedVendor ? 0 : -1}
                   aria-disabled={!selectedVendor}
-                  onClick={() => { if (!selectedVendor) return; setShowCogMenu(false); setShowChangeLogsDialog(true); }}
-                  onKeyDown={(e) => { if (!selectedVendor) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowChangeLogsDialog(true); } }}
+                  onClick={() => {
+                    if (!selectedVendor) return;
+                    setAuditTargetVendor(selectedVendor);
+                    setShowCogMenu(false);
+                    setShowChangeLogsDialog(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!selectedVendor) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setAuditTargetVendor(selectedVendor);
+                      setShowCogMenu(false);
+                      setShowChangeLogsDialog(true);
+                    }
+                  }}
                   style={{ display: "flex", alignItems: "center", cursor: selectedVendor ? "pointer" : "not-allowed", opacity: selectedVendor ? 1 : 0.4 }}
                   onMouseEnter={(e) => { if (selectedVendor) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
@@ -307,9 +321,15 @@ const VendorTable: React.FC = () => {
         onRestoreSuccess={fetchVendors}
       />
       <ChangeLogsDialog
+        key={`vendor-audit-${auditTargetVendor?.vendorId ?? "none"}`}
         isOpen={showChangeLogsDialog}
-        onClose={() => setShowChangeLogsDialog(false)}
+        onClose={() => {
+          setShowChangeLogsDialog(false);
+          setAuditTargetVendor(null);
+        }}
         title="Vendor Change Logs"
+        resourceType="vendor"
+        resourceId={auditTargetVendor?.vendorId ?? null}
       />
     </>
   );

@@ -187,6 +187,7 @@ const ResumeTable: React.FC = () => {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showDeletedRecordsDialog, setShowDeletedRecordsDialog] = useState(false);
   const [showChangeLogsDialog, setShowChangeLogsDialog] = useState(false);
+  const [auditTargetCandidate, setAuditTargetCandidate] = useState<Candidate | null>(null);
   const cogMenuRef = useRef<HTMLDivElement | null>(null);
   const [showInterviewDialog, setShowInterviewDialog] = useState(false);
   const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
@@ -799,6 +800,7 @@ useEffect(() => {
       disabled: !selectedResume,
       action: () => {
         setShowSettingsMenu(false);
+        setAuditTargetCandidate(selectedResume);
         setShowChangeLogsDialog(true);
       },
     },
@@ -1092,9 +1094,15 @@ useEffect(() => {
         onRestoreSuccess={loadAllData}
       />
       <ChangeLogsDialog
+        key={`candidate-audit-${auditTargetCandidate?.candidateId ?? "none"}`}
         isOpen={showChangeLogsDialog}
-        onClose={() => setShowChangeLogsDialog(false)}
+        onClose={() => {
+          setShowChangeLogsDialog(false);
+          setAuditTargetCandidate(null);
+        }}
         title="Change Logs"
+        resourceType="candidate"
+        resourceId={auditTargetCandidate?.candidateId ?? null}
       />
       <Dialog
         visible={showWhatsAppDialog}

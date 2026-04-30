@@ -102,6 +102,7 @@ const InterviewTable: React.FC = () => {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showDeletedRecordsDialog, setShowDeletedRecordsDialog] = useState(false);
   const [showChangeLogsDialog, setShowChangeLogsDialog] = useState(false);
+  const [auditTargetInterview, setAuditTargetInterview] = useState<Interview | null>(null);
   const cogMenuRef = useRef<HTMLDivElement | null>(null);
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -426,7 +427,11 @@ const handleViewAllRounds = () => {
     {
       label: "Change Logs",
       icon: <i className="pi pi-history" style={{ marginRight: 8, marginLeft: 4, fontSize: "14px", color: "#374151" }} />,
-      action: () => { setShowSettingsMenu(false); setShowChangeLogsDialog(true); },
+      action: () => {
+        setShowSettingsMenu(false);
+        setAuditTargetInterview(selectedInterview);
+        setShowChangeLogsDialog(true);
+      },
     },
     {
       label: "Deleted Interviews",
@@ -946,9 +951,15 @@ const interviewExportHeaders = useMemo(
         onRestoreSuccess={fetchInterviews}
       />
       <ChangeLogsDialog
+        key={`interview-audit-${auditTargetInterview?.interviewId ?? "none"}`}
         isOpen={showChangeLogsDialog}
-        onClose={() => setShowChangeLogsDialog(false)}
+        onClose={() => {
+          setShowChangeLogsDialog(false);
+          setAuditTargetInterview(null);
+        }}
         title="Change Logs"
+        resourceType="interview"
+        resourceId={auditTargetInterview?.interviewId ?? null}
       />
 
     </>

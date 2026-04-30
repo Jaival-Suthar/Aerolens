@@ -27,6 +27,7 @@ const LocationLookupTable: React.FC<LocationLookupTableProps> = ({
   onDataChange
 }) => {
   const [selectedLocation, setSelectedLocation] = useState<LocationEntry | null>(null);
+  const [auditTargetLocation, setAuditTargetLocation] = useState<LocationEntry | null>(null);
 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -120,8 +121,21 @@ const LocationLookupTable: React.FC<LocationLookupTableProps> = ({
                   role="button"
                   tabIndex={selectedLocation ? 0 : -1}
                   aria-disabled={!selectedLocation}
-                  onClick={() => { if (!selectedLocation) return; setShowCogMenu(false); setShowChangeLogsDialog(true); }}
-                  onKeyDown={(e) => { if (!selectedLocation) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowChangeLogsDialog(true); } }}
+                  onClick={() => {
+                    if (!selectedLocation) return;
+                    setAuditTargetLocation(selectedLocation);
+                    setShowCogMenu(false);
+                    setShowChangeLogsDialog(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!selectedLocation) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setAuditTargetLocation(selectedLocation);
+                      setShowCogMenu(false);
+                      setShowChangeLogsDialog(true);
+                    }
+                  }}
                   style={{ display: "flex", alignItems: "center", cursor: selectedLocation ? "pointer" : "not-allowed", opacity: selectedLocation ? 1 : 0.4 }}
                   onMouseEnter={(e) => { if (selectedLocation) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
@@ -207,9 +221,15 @@ const LocationLookupTable: React.FC<LocationLookupTableProps> = ({
       />
 
       <ChangeLogsDialog
+        key={`location-audit-${auditTargetLocation?.locationId ?? "none"}`}
         isOpen={showChangeLogsDialog}
-        onClose={() => setShowChangeLogsDialog(false)}
+        onClose={() => {
+          setShowChangeLogsDialog(false);
+          setAuditTargetLocation(null);
+        }}
         title="Location Change Logs"
+        resourceType="location"
+        resourceId={auditTargetLocation?.locationId ?? null}
       />
     </div>
   );

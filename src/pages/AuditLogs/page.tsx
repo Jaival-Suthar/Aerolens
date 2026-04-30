@@ -8,6 +8,7 @@ import SearchButton from "../../shared/SearchButton";
 import { AuditLogService } from "./services/auditLogService";
 import type { AuditAction, AuditLogItem } from "./types/auditLogTypes";
 import DetailsSection from "../../shared/DetailsSection";
+import { formatAuditTimestampLocal } from "../../shared/utils/auditDateTime";
 
 const actionOptions: { label: string; value: AuditAction }[] = [
   { label: "CREATE", value: "CREATE" },
@@ -69,7 +70,7 @@ const AuditLogsPage: React.FC = () => {
   }, [searchInput]);
 
   const occurredAtBody = (row: AuditLogItem) =>
-    row.occurredAt ? new Date(row.occurredAt).toLocaleString() : "-";
+    formatAuditTimestampLocal(row.occurredAt);
 
   const actorBody = (row: AuditLogItem) =>
     row.actor?.name || row.actor?.email || (row.actor?.memberId != null ? String(row.actor.memberId) : "-");

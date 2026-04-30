@@ -77,6 +77,7 @@ const MembersTable: React.FC = () => {
   const [showDeletedRecordsDialog, setShowDeletedRecordsDialog] = useState(false);
   const [showCogMenu, setShowCogMenu] = useState(false);
   const [showChangeLogsDialog, setShowChangeLogsDialog] = useState(false);
+  const [auditTargetMember, setAuditTargetMember] = useState<Member | null>(null);
   const [showCreateUser, setShowCreateUser] = useState(false);
   const cogMenuRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(false);
@@ -444,8 +445,21 @@ const MembersTable: React.FC = () => {
                   role="button"
                   tabIndex={selectedMember ? 0 : -1}
                   aria-disabled={!selectedMember}
-                  onClick={() => { if (!selectedMember) return; setShowCogMenu(false); setShowChangeLogsDialog(true); }}
-                  onKeyDown={(e) => { if (!selectedMember) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowChangeLogsDialog(true); } }}
+                  onClick={() => {
+                    if (!selectedMember) return;
+                    setAuditTargetMember(selectedMember);
+                    setShowCogMenu(false);
+                    setShowChangeLogsDialog(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!selectedMember) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setAuditTargetMember(selectedMember);
+                      setShowCogMenu(false);
+                      setShowChangeLogsDialog(true);
+                    }
+                  }}
                   style={{ display: "flex", alignItems: "center", cursor: selectedMember ? "pointer" : "not-allowed", opacity: selectedMember ? 1 : 0.4 }}
                   onMouseEnter={(e) => { if (selectedMember) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
@@ -653,9 +667,15 @@ const MembersTable: React.FC = () => {
         onRestoreSuccess={loadMembers}
       />
       <ChangeLogsDialog
+        key={`member-audit-${auditTargetMember?.memberId ?? "none"}`}
         isOpen={showChangeLogsDialog}
-        onClose={() => setShowChangeLogsDialog(false)}
+        onClose={() => {
+          setShowChangeLogsDialog(false);
+          setAuditTargetMember(null);
+        }}
         title="Member Change Logs"
+        resourceType="member"
+        resourceId={auditTargetMember?.memberId ?? null}
       />
 
     </>

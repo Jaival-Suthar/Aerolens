@@ -239,3 +239,21 @@ export const restoreContact = async (
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 };
+
+export const getContactAuditLogsById = async (
+  accessToken: string,
+  contactId: number,
+  page = 1,
+  limit = 20
+): Promise<any> => {
+  const response = await fetch(
+    `${import.meta.env.VITE_BASE_URL}/contact/${contactId}/audit-logs?page=${page}&limit=${limit}`,
+    {
+      method: "GET",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` },
+      credentials: "include",
+    }
+  );
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+};

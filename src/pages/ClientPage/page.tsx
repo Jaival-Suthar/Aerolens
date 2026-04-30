@@ -43,6 +43,7 @@ const Client: React.FC = () => {
   const [globalAuditOpen, setGlobalAuditOpen] = useState(false);
   const [globalAuditTab, setGlobalAuditTab] = useState<"changes" | "deleted">("changes");
   const [showAuditMenu, setShowAuditMenu] = useState(false);
+  const [auditTargetClient, setAuditTargetClient] = useState<ClientType | null>(null);
  
   // --- Refs ---
   const toast = useRef<Toast | null>(null);
@@ -117,9 +118,14 @@ const Client: React.FC = () => {
 
   const openGlobalAuditLogs = useCallback((tab: "changes" | "deleted") => {
     setShowAuditMenu(false);
+    if (tab === "changes") {
+      setAuditTargetClient(selectedClient);
+    } else {
+      setAuditTargetClient(null);
+    }
     setGlobalAuditTab(tab);
     setGlobalAuditOpen(true);
-  }, []);
+  }, [selectedClient]);
 
   // --- View Navigation ---
   const handleBackToClients = useCallback(() => {
@@ -430,10 +436,15 @@ const Client: React.FC = () => {
       )}
 
       <ClientAuditLogsDialog
+        key={`client-audit-${globalAuditTab}-${auditTargetClient?.clientId ?? "none"}`}
         isOpen={globalAuditOpen}
-        onClose={() => setGlobalAuditOpen(false)}
+        onClose={() => {
+          setGlobalAuditOpen(false);
+          setAuditTargetClient(null);
+        }}
         defaultTab={globalAuditTab}
         onRestoreSuccess={() => setRefreshTrigger((prev) => prev + 1)}
+        clientId={auditTargetClient?.clientId ?? null}
       />
     </div>
   );

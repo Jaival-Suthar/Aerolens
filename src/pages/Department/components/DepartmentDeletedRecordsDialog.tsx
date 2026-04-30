@@ -5,6 +5,7 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Toast } from "primereact/toast";
 import { useAuth } from "../../../shared/auth/AuthContext";
+import { formatAuditTimestampLocal } from "../../../shared/utils/auditDateTime";
 import { getDeletedDepartments, restoreDepartment } from "../services/useDepartment";
 
 type DeletedDepartment = {
@@ -22,26 +23,6 @@ type Props = {
   onRestoreSuccess?: () => void;
 };
 
-const parseTimestampToDate = (value: string | null) => {
-  if (!value) return null;
-  const raw = String(value).trim();
-  const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/.test(raw);
-  const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
-  const candidate = hasTimezone ? normalized : `${normalized}Z`;
-  const date = new Date(candidate);
-  if (!Number.isNaN(date.getTime())) return date;
-  const fallback = new Date(raw);
-  return Number.isNaN(fallback.getTime()) ? null : fallback;
-};
-
-const formatDeletedAt = (value: string | null) => {
-  const date = parseTimestampToDate(value);
-  if (!date) return "—";
-  return date.toLocaleString(undefined, {
-    day: "2-digit", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit", hour12: false, timeZoneName: "short",
-  });
-};
 
 const normalizeRows = (payload: unknown): DeletedDepartment[] => {
   const rows = Array.isArray(payload) ? payload : (payload as any)?.data ?? [];
@@ -98,12 +79,7 @@ const DepartmentDeletedRecordsDialog: React.FC<Props> = ({ isOpen, onClose, clie
   return (
     <Dialog visible={isOpen} onHide={onClose} header="Deleted Departments" modal style={{ width: "95vw", maxWidth: "1000px" }}>
       <Toast ref={toast} />
-      {loading ? (
-        <div className="text-center p-4">
-          <i className="pi pi-spin pi-spinner" style={{ fontSize: "2rem" }} />
-          <p className="mt-3">Loading deleted records...</p>
-        </div>
-      ) : error ? (
+      {error ? (
         <div className="p-message p-message-error flex align-items-center justify-content-between">
           <span>{error}</span>
           <Button label="Retry" size="small" onClick={() => setReloadKey(k => k + 1)} />
@@ -111,7 +87,11 @@ const DepartmentDeletedRecordsDialog: React.FC<Props> = ({ isOpen, onClose, clie
       ) : items.length === 0 ? (
         <div className="text-center text-600 p-4">No deleted departments found</div>
       ) : (
-        <DataTable value={items} dataKey="departmentId" scrollable scrollHeight="420px">
+        <DataTable value={items} dataKey="departmentId" paginator
+          rows={20}
+          rowsPerPageOptions={[20, 50, 100]}
+          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries">
           <Column
             header=""
             body={(row: DeletedDepartment) => (
@@ -127,7 +107,7 @@ const DepartmentDeletedRecordsDialog: React.FC<Props> = ({ isOpen, onClose, clie
           />
           <Column field="departmentName" header="Department Name" style={{ minWidth: "15rem" }} />
           <Column field="departmentDescription" header="Description" body={(row: DeletedDepartment) => row.departmentDescription || "—"} style={{ minWidth: "20rem" }} />
-          <Column field="deleted_at" header="Deleted At" body={(row: DeletedDepartment) => formatDeletedAt(row.deleted_at)} style={{ minWidth: "15rem" }} />
+          <Column field="deleted_at" header="Deleted At" body={(row: DeletedDepartment) => formatAuditTimestampLocal(row.deleted_at)} style={{ minWidth: "15rem" }} />
         </DataTable>
       )}
     </Dialog>
