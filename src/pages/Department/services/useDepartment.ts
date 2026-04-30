@@ -5,6 +5,7 @@ import type {
   AddDepartmentPayload,
   UpdateDepartmentPayload,
   ApiResponse,
+  DepartmentAuditLogResponse,
 } from "../types/departmentTypes";
 
 const API_URL: string = import.meta.env.VITE_BASE_URL;
@@ -139,6 +140,27 @@ export const getDeletedDepartments = async (
     { method: "GET" },
     accessToken || undefined
   );
+};
+
+// -------------------- GET AUDIT LOGS FOR A SPECIFIC DEPARTMENT --------------------
+export const getDepartmentAuditLogsById = async (
+  accessToken: string | null,
+  departmentId: number,
+  page = 1,
+  limit = 20
+): Promise<DepartmentAuditLogResponse> => {
+  const response = await fetch(
+    `${API_URL}/department/${departmentId}/audit-logs?page=${page}&limit=${limit}`,
+    {
+      credentials: "include",
+      headers: makeHeaders(accessToken || undefined),
+    }
+  );
+  if (!response.ok) {
+    const error = await response.json();
+    throw error;
+  }
+  return response.json();
 };
 
 // -------------------- RESTORE DEPARTMENT --------------------

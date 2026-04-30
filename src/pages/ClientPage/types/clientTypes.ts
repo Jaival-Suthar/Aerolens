@@ -12,7 +12,7 @@ export type ClientAddType = Omit<ClientType, "clientId">;
 export type ClientAuditLog = {
   id: number;
   user_id: number | null;
-  action: "CREATE" | "UPDATE" | "DELETE" | string;
+  action: "CREATE" | "UPDATE" | "DELETE" | "RESTORE" | string;
   verb: string | null;
   resource_type: string | null;
   resource_id: string | null;
@@ -20,6 +20,8 @@ export type ClientAuditLog = {
   new_values: unknown;
   summary: string | null;
   timestamp: string;
+  occurred_at: string | null;
+  actor_name: string | null;
 };
 
 export type ClientAuditLogResponse = {
@@ -108,4 +110,5 @@ export type ClientAuditLogsDialogProps = {
   onClose: () => void;
   defaultTab?: "changes" | "deleted";
   onRestoreSuccess?: () => void;
+  clientId?: number | null;
 };

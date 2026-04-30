@@ -166,3 +166,36 @@ export interface ApiResponse<T = unknown> {
   message?: string;
   error?: string;
 }
+
+export type ContactAuditLog = {
+  id: number;
+  user_id: number | null;
+  action: "CREATE" | "UPDATE" | "DELETE" | "RESTORE" | string;
+  verb: string | null;
+  resource_type: string | null;
+  resource_id: string | null;
+  old_values: unknown;
+  new_values: unknown;
+  summary: string | null;
+  timestamp: string;
+  occurred_at: string | null;
+  actor_name: string | null;
+};
+
+export type ContactAuditLogResponse = {
+  success: boolean;
+  data: ContactAuditLog[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+};
+
+export type ContactAuditLogsDialogProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  contactId?: number | null;
+  contactName?: string | null;
+};

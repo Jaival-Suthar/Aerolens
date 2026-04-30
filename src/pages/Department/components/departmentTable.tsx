@@ -11,7 +11,7 @@ import AddButton from "../../../shared/AddButton";
 import EditButton from "../../../shared/EditButton";
 import DeleteButton from "../../../shared/DeleteButton";
 import CogButton from "../../../shared/CogButton";
-import ChangeLogsDialog from "../../../shared/ChangeLogsDialog";
+import DepartmentAuditLogsDialog from "../components/DepartmentAuditLogsDialog";
 import { Department, DepartmentTableProps } from "../types/departmentTypes";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import { FaArrowLeft } from "react-icons/fa";
@@ -84,8 +84,8 @@ const DepartmentTable: React.FC<DepartmentTableProps> = ({
   const handleEdit = () => { if (!selectedDepartment) return; setEditingDepartment(selectedDepartment); setShowAddEditDialog(true); };
   const handleDelete = () => { if (!selectedDepartment) return; setShowDeleteDialog(true); };
 
-  const handleAddEditSuccess = async (response: ApiResponse<Department>) => {
-    showToast("success", response.message);
+  const handleAddEditSuccess = async (_response: ApiResponse<Department>) => {
+    showToast("success", editingDepartment ? "Department updated successfully." : "Department added successfully.");
     await loadDepartments();
     setSelectedDepartment(null);
   };
@@ -218,10 +218,10 @@ const DepartmentTable: React.FC<DepartmentTableProps> = ({
         onRestoreSuccess={loadDepartments}
       />
 
-      <ChangeLogsDialog
+      <DepartmentAuditLogsDialog
         isOpen={showChangeLogsDialog}
         onClose={() => setShowChangeLogsDialog(false)}
-        title="Department Change Logs"
+        departmentId={selectedDepartment?.departmentId ?? null}
       />
     </div>
   );

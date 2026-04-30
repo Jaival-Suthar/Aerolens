@@ -9,8 +9,8 @@ import AddButton from '../../../shared/AddButton';
 import EditButton from '../../../shared/EditButton';
 import DeleteButton from '../../../shared/DeleteButton';
 import CogButton from '../../../shared/CogButton';
-import ChangeLogsDialog from '../../../shared/ChangeLogsDialog';
 import ContactDeletedRecordsDialog from './ContactDeletedRecordsDialog';
+import ContactAuditLogsDialog from './ContactAuditLogsDialog';
 
 import { useContactOperations } from '../hooks/useContactOperations';
 import { useContactsByClient } from '../hooks/useContactsByClient';
@@ -35,6 +35,7 @@ const ClientContactsView: React.FC<ClientContactsViewProps> = ({ selectedClient,
   const [showCogMenu, setShowCogMenu] = useState(false);
   const [showChangeLogsDialog, setShowChangeLogsDialog] = useState(false);
   const [showDeletedRecordsDialog, setShowDeletedRecordsDialog] = useState(false);
+  const [auditTargetContact, setAuditTargetContact] = useState<Contact | null>(null);
   const cogMenuRef = useRef<HTMLDivElement | null>(null);
 
   const [rowsPerPage, setRowsPerPage] = useState<number>(20);
@@ -148,6 +149,7 @@ const ClientContactsView: React.FC<ClientContactsViewProps> = ({ selectedClient,
 
   const cellClass = useMemo(() => "py-1 px-2", []);
   const headerClass = useMemo(() => "py-1 px-2 font-semibold", []);
+  const auditTargetContactId = auditTargetContact?.clientContactId ?? auditTargetContact?.contactId ?? null;
 
   if (!selectedClient) {
     return (
@@ -193,8 +195,21 @@ const ClientContactsView: React.FC<ClientContactsViewProps> = ({ selectedClient,
                   role="button"
                   tabIndex={selectedContact ? 0 : -1}
                   aria-disabled={!selectedContact}
-                  onClick={() => { if (!selectedContact) return; setShowCogMenu(false); setShowChangeLogsDialog(true); }}
-                  onKeyDown={(e) => { if (!selectedContact) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowChangeLogsDialog(true); } }}
+                  onClick={() => {
+                    if (!selectedContact) return;
+                    setAuditTargetContact(selectedContact);
+                    setShowCogMenu(false);
+                    setShowChangeLogsDialog(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!selectedContact) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setAuditTargetContact(selectedContact);
+                      setShowCogMenu(false);
+                      setShowChangeLogsDialog(true);
+                    }
+                  }}
                   style={{ display: "flex", alignItems: "center", cursor: selectedContact ? "pointer" : "not-allowed", opacity: selectedContact ? 1 : 0.4 }}
                   onMouseEnter={(e) => { if (selectedContact) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
@@ -286,10 +301,15 @@ const ClientContactsView: React.FC<ClientContactsViewProps> = ({ selectedClient,
         onRestoreSuccess={triggerRefresh}
       />
 
-      <ChangeLogsDialog
+      <ContactAuditLogsDialog
+        key={`contact-audit-${auditTargetContactId ?? "none"}`}
         isOpen={showChangeLogsDialog}
-        onClose={() => setShowChangeLogsDialog(false)}
-        title="Contact Change Logs"
+        onClose={() => {
+          setShowChangeLogsDialog(false);
+          setAuditTargetContact(null);
+        }}
+        contactId={auditTargetContactId}
+        contactName={auditTargetContact?.contactPersonName ?? null}
       />
     </div>
   );

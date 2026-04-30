@@ -5,6 +5,7 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Toast } from "primereact/toast";
 import { useAuth } from "../../../shared/auth/AuthContext";
+import { formatAuditTimestampLocal } from "../../../shared/utils/auditDateTime";
 import { getDeletedInterviews, restoreInterview } from "../services/interviewService";
 import type { InterviewDeletedRecord } from "../types/interviewTypes";
 
@@ -14,27 +15,6 @@ type InterviewDeletedRecordsDialogProps = {
   onRestoreSuccess?: () => void;
 };
 
-const parseTimestampToDate = (value: string | null) => {
-  if (!value) return null;
-  const raw = String(value).trim();
-  if (!raw) return null;
-  const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/.test(raw);
-  const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
-  const candidate = hasTimezone ? normalized : `${normalized}Z`;
-  const date = new Date(candidate);
-  if (!Number.isNaN(date.getTime())) return date;
-  const fallback = new Date(raw);
-  return Number.isNaN(fallback.getTime()) ? null : fallback;
-};
-
-const formatDeletedAt = (value: string | null) => {
-  const date = parseTimestampToDate(value);
-  if (!date) return "—";
-  return date.toLocaleString(undefined, {
-    day: "2-digit", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit", hour12: false, timeZoneName: "short",
-  });
-};
 
 const normalizeDeletedRows = (payload: unknown): InterviewDeletedRecord[] => {
   const envelope = payload as { data?: unknown } | null;
@@ -98,16 +78,18 @@ const InterviewDeletedRecordsDialog: React.FC<InterviewDeletedRecordsDialogProps
   return (
     <Dialog visible={isOpen} onHide={onClose} header="Deleted Interviews" modal style={{ width: "95vw", maxWidth: "1200px" }}>
       <Toast ref={toast} />
-      {loading ? (
-        <div className="text-center p-4"><i className="pi pi-spin pi-spinner" style={{ fontSize: "2rem" }} /><p className="mt-3">Loading deleted records...</p></div>
-      ) : error ? (
+      {error ? (
         <div className="p-message p-message-error flex align-items-center justify-content-between">
           <span>{error}</span><Button label="Retry" size="small" onClick={() => setReloadKey((k) => k + 1)} />
         </div>
       ) : items.length === 0 ? (
         <div className="text-center text-600 p-4">No deleted interviews found</div>
       ) : (
-        <DataTable value={items} dataKey="interviewId" scrollable scrollHeight="420px">
+        <DataTable value={items} dataKey="interviewId" paginator
+          rows={20}
+          rowsPerPageOptions={[20, 50, 100]}
+          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries">
           <Column header="" body={(row: InterviewDeletedRecord) => (
             <Button label="Restore" size="small" severity="success" loading={restoringIds.has(row.interviewId)} onClick={() => handleRestore(row)} />
           )} style={{ width: "8rem" }} />
@@ -116,7 +98,7 @@ const InterviewDeletedRecordsDialog: React.FC<InterviewDeletedRecordsDialogProps
           <Column field="interviewerName" header="Interviewer" body={(row: InterviewDeletedRecord) => row.interviewerName || "—"} style={{ minWidth: "14rem" }} />
           <Column field="roundNumber" header="Round" body={(row: InterviewDeletedRecord) => (row.roundNumber != null ? `Round ${row.roundNumber}` : "—")} style={{ minWidth: "10rem" }} />
           <Column field="result" header="Result" body={(row: InterviewDeletedRecord) => row.result || "—"} style={{ minWidth: "12rem" }} />
-          <Column field="deleted_at" header="Deleted At" body={(row: InterviewDeletedRecord) => formatDeletedAt(row.deleted_at)} style={{ minWidth: "15rem" }} />
+          <Column field="deleted_at" header="Deleted At" body={(row: InterviewDeletedRecord) => formatAuditTimestampLocal(row.deleted_at)} style={{ minWidth: "15rem" }} />
         </DataTable>
       )}
     </Dialog>

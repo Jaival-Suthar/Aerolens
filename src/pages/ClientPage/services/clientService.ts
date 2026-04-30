@@ -146,14 +146,32 @@ export const deleteClient = async (
   }
 };
 
-// Get change logs (CREATE + UPDATE)
-export const getClientChangeLogs = async (
+// Restore a soft-deleted client
+export const restoreClient = async (
   accessToken: string | null,
+  id: number
+): Promise<{ success: boolean; data: any; message: string }> => {
+  const response = await fetch(`${API_URL}/client/${id}/restore`, {
+    method: "PATCH",
+    headers: makeHeaders(accessToken || undefined),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const apiError: ApiError = await normalizeApiError(response);
+    throw apiError;
+  }
+  return response.json();
+};
+
+// Get audit logs for a specific client row
+export const getClientAuditLogsById = async (
+  accessToken: string | null,
+  clientId: number,
   page = 1,
   limit = 20
 ): Promise<ClientAuditLogResponse> => {
   const response = await fetch(
-    `${API_URL}/client/audit-logs/changes?page=${page}&limit=${limit}`,
+    `${API_URL}/client/${clientId}/audit-logs?page=${page}&limit=${limit}`,
     {
       credentials: "include",
       headers: makeHeaders(accessToken || undefined),
