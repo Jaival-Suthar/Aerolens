@@ -5,6 +5,7 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Toast } from "primereact/toast";
 import { useAuth } from "../../../shared/auth/AuthContext";
+import { formatAuditTimestampLocal } from "../../../shared/utils/auditDateTime";
 import { lookupService } from "../services/lookupService";
 import type { LookupDeletedRecord } from "../types/lookupTypes";
 
@@ -14,27 +15,6 @@ type LookupDeletedRecordsDialogProps = {
   onRestoreSuccess?: () => void;
 };
 
-const parseTimestampToDate = (value: string | null) => {
-  if (!value) return null;
-  const raw = String(value).trim();
-  if (!raw) return null;
-  const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/.test(raw);
-  const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
-  const candidate = hasTimezone ? normalized : `${normalized}Z`;
-  const date = new Date(candidate);
-  if (!Number.isNaN(date.getTime())) return date;
-  const fallback = new Date(raw);
-  return Number.isNaN(fallback.getTime()) ? null : fallback;
-};
-
-const formatDeletedAt = (value: string | null) => {
-  const date = parseTimestampToDate(value);
-  if (!date) return "—";
-  return date.toLocaleString(undefined, {
-    day: "2-digit", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit", hour12: false, timeZoneName: "short",
-  });
-};
 
 const normalizeDeletedRows = (payload: unknown): LookupDeletedRecord[] => {
   const envelope = payload as { data?: unknown } | null;
@@ -114,7 +94,7 @@ const LookupDeletedRecordsDialog: React.FC<LookupDeletedRecordsDialogProps> = ({
           <Column field="lookupKey" header="Lookup Key" body={(row: LookupDeletedRecord) => row.lookupKey || "—"} style={{ minWidth: "10rem" }} />
           <Column field="tag" header="Tag" body={(row: LookupDeletedRecord) => row.tag || "—"} style={{ minWidth: "15rem" }} />
           <Column field="value" header="Value" body={(row: LookupDeletedRecord) => row.value || "—"} style={{ minWidth: "20rem" }} />
-          <Column field="deleted_at" header="Deleted At" body={(row: LookupDeletedRecord) => formatDeletedAt(row.deleted_at)} style={{ minWidth: "15rem" }} />
+          <Column field="deleted_at" header="Deleted At" body={(row: LookupDeletedRecord) => formatAuditTimestampLocal(row.deleted_at)} style={{ minWidth: "15rem" }} />
         </DataTable>
       )}
     </Dialog>

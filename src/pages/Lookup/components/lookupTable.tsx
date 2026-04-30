@@ -28,6 +28,7 @@ const LookupTable: React.FC<LookupTableProps> = ({
   onDataChange,
 }) => {
   const [selectedLookup, setSelectedLookup] = useState<LookupEntry | null>(null);
+  const [auditTargetLookup, setAuditTargetLookup] = useState<LookupEntry | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false); 
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -153,8 +154,21 @@ const LookupTable: React.FC<LookupTableProps> = ({
                   role="button"
                   tabIndex={selectedLookup ? 0 : -1}
                   aria-disabled={!selectedLookup}
-                  onClick={() => { if (!selectedLookup) return; setShowCogMenu(false); setShowChangeLogsDialog(true); }}
-                  onKeyDown={(e) => { if (!selectedLookup) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowChangeLogsDialog(true); } }}
+                  onClick={() => {
+                    if (!selectedLookup) return;
+                    setAuditTargetLookup(selectedLookup);
+                    setShowCogMenu(false);
+                    setShowChangeLogsDialog(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!selectedLookup) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setAuditTargetLookup(selectedLookup);
+                      setShowCogMenu(false);
+                      setShowChangeLogsDialog(true);
+                    }
+                  }}
                   style={{ display: "flex", alignItems: "center", cursor: selectedLookup ? "pointer" : "not-allowed", opacity: selectedLookup ? 1 : 0.4 }}
                   onMouseEnter={(e) => { if (selectedLookup) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
@@ -235,9 +249,15 @@ const LookupTable: React.FC<LookupTableProps> = ({
         onRestoreSuccess={onDataChange}
       />
       <ChangeLogsDialog
+        key={`lookup-audit-${auditTargetLookup?.lookupKey ?? "none"}`}
         isOpen={showChangeLogsDialog}
-        onClose={() => setShowChangeLogsDialog(false)}
+        onClose={() => {
+          setShowChangeLogsDialog(false);
+          setAuditTargetLookup(null);
+        }}
         title="Lookup Change Logs"
+        resourceType="lookup"
+        resourceId={auditTargetLookup?.lookupKey ?? null}
       />
     </div>
   );

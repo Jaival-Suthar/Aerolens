@@ -86,6 +86,7 @@ const JobProfileTable: React.FC = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showDeletedRecordsDialog, setShowDeletedRecordsDialog] = useState(false);
   const [showChangeLogsDialog, setShowChangeLogsDialog] = useState(false);
+  const [auditTargetJobProfile, setAuditTargetJobProfile] = useState<JobProfile | null>(null);
   const [showRequirementDialog, setShowRequirementDialog] = useState(false);
   const [selectedJobProfileForReq, setSelectedJobProfileForReq] =
     useState<JobProfile | null>(null);
@@ -480,8 +481,21 @@ const previewJD = async (jobProfileId: number) => {
   role="button"
   tabIndex={selected ? 0 : -1}
   aria-disabled={!selected}
-  onClick={() => { if (!selected) return; setShowSettingsMenu(false); setShowChangeLogsDialog(true); }}
-  onKeyDown={(e) => { if (!selected) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowSettingsMenu(false); setShowChangeLogsDialog(true); } }}
+  onClick={() => {
+    if (!selected) return;
+    setAuditTargetJobProfile(selected);
+    setShowSettingsMenu(false);
+    setShowChangeLogsDialog(true);
+  }}
+  onKeyDown={(e) => {
+    if (!selected) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      setAuditTargetJobProfile(selected);
+      setShowSettingsMenu(false);
+      setShowChangeLogsDialog(true);
+    }
+  }}
   style={{ display: "flex", alignItems: "center", cursor: selected ? "pointer" : "not-allowed", opacity: selected ? 1 : 0.4 }}
   onMouseEnter={(e) => { if (selected) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
@@ -674,9 +688,15 @@ const previewJD = async (jobProfileId: number) => {
           onRestoreSuccess={refetch}
         />
         <ChangeLogsDialog
+          key={`job-profile-audit-${auditTargetJobProfile?.id ?? "none"}`}
           isOpen={showChangeLogsDialog}
-          onClose={() => setShowChangeLogsDialog(false)}
+          onClose={() => {
+            setShowChangeLogsDialog(false);
+            setAuditTargetJobProfile(null);
+          }}
           title="Job Profile Change Logs"
+          resourceType="job_profile"
+          resourceId={auditTargetJobProfile?.id ?? null}
         />
 
       </section>

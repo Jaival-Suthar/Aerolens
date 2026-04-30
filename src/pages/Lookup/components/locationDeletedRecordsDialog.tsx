@@ -5,6 +5,7 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Toast } from "primereact/toast";
 import { useAuth } from "../../../shared/auth/AuthContext";
+import { formatAuditTimestampLocal } from "../../../shared/utils/auditDateTime";
 import { locationService } from "../services/locationService";
 
 type DeletedLocation = {
@@ -21,26 +22,6 @@ type Props = {
   onRestoreSuccess?: () => void;
 };
 
-const parseTimestampToDate = (value: string | null) => {
-  if (!value) return null;
-  const raw = String(value).trim();
-  const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/.test(raw);
-  const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
-  const candidate = hasTimezone ? normalized : `${normalized}Z`;
-  const date = new Date(candidate);
-  if (!Number.isNaN(date.getTime())) return date;
-  const fallback = new Date(raw);
-  return Number.isNaN(fallback.getTime()) ? null : fallback;
-};
-
-const formatDeletedAt = (value: string | null) => {
-  const date = parseTimestampToDate(value);
-  if (!date) return "—";
-  return date.toLocaleString(undefined, {
-    day: "2-digit", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit", hour12: false, timeZoneName: "short",
-  });
-};
 
 const normalizeRows = (payload: unknown): DeletedLocation[] => {
   const envelope = payload as { data?: unknown } | null;
@@ -127,7 +108,7 @@ const LocationDeletedRecordsDialog: React.FC<Props> = ({ isOpen, onClose, onRest
           <Column field="city" header="City" style={{ minWidth: "12rem" }} />
           <Column field="state" header="State" body={(row: DeletedLocation) => row.state || "—"} style={{ minWidth: "12rem" }} />
           <Column field="country" header="Country" style={{ minWidth: "12rem" }} />
-          <Column field="deleted_at" header="Deleted At" body={(row: DeletedLocation) => formatDeletedAt(row.deleted_at)} style={{ minWidth: "15rem" }} />
+          <Column field="deleted_at" header="Deleted At" body={(row: DeletedLocation) => formatAuditTimestampLocal(row.deleted_at)} style={{ minWidth: "15rem" }} />
         </DataTable>
       )}
     </Dialog>

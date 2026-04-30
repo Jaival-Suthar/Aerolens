@@ -157,6 +157,7 @@ const OfferTable: React.FC = () => {
   const [showCogMenu, setShowCogMenu] = useState(false);
   const [showDeletedRecordsDialog, setShowDeletedRecordsDialog] = useState(false);
   const [showChangeLogsDialog, setShowChangeLogsDialog] = useState(false);
+  const [auditTargetOffer, setAuditTargetOffer] = useState<OfferTableRow | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showTerminateDialog, setShowTerminateDialog] = useState(false);
   const [showReviseDialog, setShowReviseDialog] = useState(false);
@@ -326,7 +327,16 @@ const OfferTable: React.FC = () => {
     { label: "Terminate Offer", icon: <FaBan style={{ marginRight: 8, marginLeft: 4 }} />, action: handleTerminateOffer, selectionRequired: true },
     { label: "Revise Offer", icon: <FaEdit style={{ marginRight: 8, marginLeft: 4 }} />, action: handleReviseOffer, selectionRequired: true },
     { label: "Offer Status", icon: <FaClipboardList style={{ marginRight: 8, marginLeft: 4 }} />, action: handleOfferStatus, selectionRequired: true },
-    { label: "Change Logs", icon: <i className="pi pi-history" style={{ marginRight: 8, marginLeft: 4, fontSize: "14px", color: "#374151" }} />, action: () => { setShowCogMenu(false); setShowChangeLogsDialog(true); }, selectionRequired: true },
+    {
+      label: "Change Logs",
+      icon: <i className="pi pi-history" style={{ marginRight: 8, marginLeft: 4, fontSize: "14px", color: "#374151" }} />,
+      action: () => {
+        setShowCogMenu(false);
+        setAuditTargetOffer(selectedOffer);
+        setShowChangeLogsDialog(true);
+      },
+      selectionRequired: true
+    },
     { label: "Deleted Offers", icon: <i className="pi pi-trash" style={{ marginRight: 8, marginLeft: 4, fontSize: "14px", color: "#374151" }} />, action: () => { setShowCogMenu(false); setShowDeletedRecordsDialog(true); }, selectionRequired: false },
   ];
 
@@ -596,9 +606,15 @@ const OfferTable: React.FC = () => {
         onRestoreSuccess={loadOffers}
       />
       <ChangeLogsDialog
+        key={`offer-audit-${auditTargetOffer?.offerId ?? "none"}`}
         isOpen={showChangeLogsDialog}
-        onClose={() => setShowChangeLogsDialog(false)}
+        onClose={() => {
+          setShowChangeLogsDialog(false);
+          setAuditTargetOffer(null);
+        }}
         title="Change Logs"
+        resourceType="offer"
+        resourceId={auditTargetOffer?.offerId ?? null}
       />
       <PremiumDetailsDialog visible={offerDetailsOpen} title="Offer Details" onHide={closeOfferDetailsDialog}>
         {offerDetailsLoading && (

@@ -129,6 +129,7 @@ const [viewJobProfile, setViewJobProfile] = useState<JobProfileRequirements | nu
 const [showDeletedRecordsDialog, setShowDeletedRecordsDialog] = useState(false);
 const [showCogMenu, setShowCogMenu] = useState(false);
 const [showChangeLogsDialog, setShowChangeLogsDialog] = useState(false);
+const [auditTargetRequirement, setAuditTargetRequirement] = useState<JobProfileRequirements | null>(null);
 const cogMenuRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!showCogMenu) return;
@@ -552,8 +553,21 @@ const cogMenuRef = useRef<HTMLDivElement | null>(null);
                   role="button"
                   tabIndex={selectedJobProfile ? 0 : -1}
                   aria-disabled={!selectedJobProfile}
-                  onClick={() => { if (!selectedJobProfile) return; setShowCogMenu(false); setShowChangeLogsDialog(true); }}
-                  onKeyDown={(e) => { if (!selectedJobProfile) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCogMenu(false); setShowChangeLogsDialog(true); } }}
+                  onClick={() => {
+                    if (!selectedJobProfile) return;
+                    setAuditTargetRequirement(selectedJobProfile);
+                    setShowCogMenu(false);
+                    setShowChangeLogsDialog(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!selectedJobProfile) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setAuditTargetRequirement(selectedJobProfile);
+                      setShowCogMenu(false);
+                      setShowChangeLogsDialog(true);
+                    }
+                  }}
                   style={{ display: "flex", alignItems: "center", cursor: selectedJobProfile ? "pointer" : "not-allowed", opacity: selectedJobProfile ? 1 : 0.4 }}
                   onMouseEnter={(e) => { if (selectedJobProfile) e.currentTarget.style.backgroundColor = "#f3f4f6"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
@@ -693,9 +707,15 @@ const cogMenuRef = useRef<HTMLDivElement | null>(null);
         onRestoreSuccess={loadData}
       />
       <ChangeLogsDialog
+        key={`jpr-audit-${auditTargetRequirement?.jobProfileRequirementId ?? "none"}`}
         isOpen={showChangeLogsDialog}
-        onClose={() => setShowChangeLogsDialog(false)}
+        onClose={() => {
+          setShowChangeLogsDialog(false);
+          setAuditTargetRequirement(null);
+        }}
         title="Job Profile Requirements Change Logs"
+        resourceType="job_profile_requirement"
+        resourceId={auditTargetRequirement?.jobProfileRequirementId ?? null}
       />
 
     </div>

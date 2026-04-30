@@ -8,33 +8,7 @@ import { Toast } from "primereact/toast";
 import type { ClientAuditLogsDialogProps, ClientAuditLog, ClientDeletedRecord } from "../types/clientTypes";
 import { getClientAuditLogsById, getDeletedClients, restoreClient } from "../services/clientService";
 import { useAuth } from "../../../shared/auth/AuthContext";
-
-const parseTimestampToDate = (value: string) => {
-  if (!value) return null;
-  const raw = String(value).trim();
-  if (!raw) return null;
-  const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/.test(raw);
-  const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
-  const candidate = hasTimezone ? normalized : `${normalized}Z`;
-  const date = new Date(candidate);
-  if (!Number.isNaN(date.getTime())) return date;
-  const fallback = new Date(raw);
-  return Number.isNaN(fallback.getTime()) ? null : fallback;
-};
-
-const formatAuditTimestamp = (value: string) => {
-  const date = parseTimestampToDate(value);
-  if (!date) return "—";
-  return date.toLocaleString(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZoneName: "short",
-  });
-};
+import { formatAuditTimestampLocal } from "../../../shared/utils/auditDateTime";
 
 const actionSeverity = (action: string): "success" | "danger" | "warning" | "info" | undefined => {
   switch (action) {
@@ -81,9 +55,11 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
   // Change logs state
   const [logs, setLogs] = useState<ClientAuditLog[]>([]);
   const [logsError, setLogsError] = useState("");
+  const [logsLoading, setLogsLoading] = useState(false);
   const [logsPage, setLogsPage] = useState(1);
   const [logsTotalRecords, setLogsTotalRecords] = useState(0);
   const [logsLimit, setLogsLimit] = useState(20);
+  const [fetchedForClientId, setFetchedForClientId] = useState<number | null | undefined>(undefined);
 
   // Fetch deleted clients
   useEffect(() => {
@@ -109,14 +85,18 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
     if (!isOpen || defaultTab !== "changes" || !clientId || !accessToken) return;
     const load = async () => {
       try {
+        setLogs([]);
         setLogsError("");
+        setLogsLoading(true);
         const res = await getClientAuditLogsById(accessToken, clientId, logsPage, logsLimit);
         setLogs(Array.isArray(res.data) ? res.data : []);
         setLogsTotalRecords(res.pagination?.total ?? 0);
+        setFetchedForClientId(clientId);
       } catch (err: any) {
         setLogsError(err?.message || "Failed to fetch change logs");
         setLogs([]);
       } finally {
+        setLogsLoading(false);
       }
     };
     load();
@@ -125,7 +105,8 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     setLogsPage(1);
-  }, [isOpen]);
+    setFetchedForClientId(undefined);
+  }, [isOpen, clientId]);
 
   const handleRestore = async (row: ClientDeletedRecord) => {
     setRestoringIds((prev) => new Set(prev).add(row.clientId));
@@ -155,6 +136,11 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
           <div className="p-message p-message-error flex align-items-center justify-content-between">
             <span>{logsError}</span>
             <Button label="Retry" size="small" onClick={() => setReloadKey((k) => k + 1)} />
+          </div>
+        ) : logsLoading || fetchedForClientId !== clientId ? (
+          <div className="text-center p-4">
+            <i className="pi pi-spin pi-spinner" style={{ fontSize: "2rem" }} />
+            <p className="mt-3">Loading change logs...</p>
           </div>
         ) : (
           <DataTable
@@ -210,7 +196,7 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
             <Column
               field="occurred_at"
               header="Occurred At"
-              body={(row: ClientAuditLog) => formatAuditTimestamp(row.occurred_at || row.timestamp)}
+              body={(row: ClientAuditLog) => formatAuditTimestampLocal(row.occurred_at || row.timestamp)}
               style={{ minWidth: "13rem" }}
             />
           </DataTable>
@@ -247,7 +233,7 @@ const ClientAuditLogsDialog: React.FC<ClientAuditLogsDialogProps> = ({
           <Column field="clientId" header="Client ID" body={(row: ClientDeletedRecord) => row.clientId || "—"} style={{ width: "7rem" }} />
           <Column field="clientName" header="Client Name" body={(row: ClientDeletedRecord) => row.clientName || "—"} style={{ minWidth: "14rem" }} />
           <Column field="address" header="Address" body={(row: ClientDeletedRecord) => row.address || "—"} style={{ minWidth: "16rem" }} />
-          <Column field="deleted_at" header="Deleted At" body={(row: ClientDeletedRecord) => formatAuditTimestamp(row.deleted_at || "")} style={{ minWidth: "12rem" }} />
+          <Column field="deleted_at" header="Deleted At" body={(row: ClientDeletedRecord) => formatAuditTimestampLocal(row.deleted_at || "")} style={{ minWidth: "12rem" }} />
         </DataTable>
       )}
     </Dialog>

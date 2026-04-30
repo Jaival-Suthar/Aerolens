@@ -8,33 +8,7 @@ import { Toast } from "primereact/toast";
 import type { ContactAuditLogsDialogProps, ContactAuditLog } from "../types/contactTypes";
 import { getContactAuditLogsById } from "../services/useContact";
 import { useAuth } from "../../../shared/auth/AuthContext";
-
-const parseTimestampToDate = (value: string) => {
-  if (!value) return null;
-  const raw = String(value).trim();
-  if (!raw) return null;
-  const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/.test(raw);
-  const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
-  const candidate = hasTimezone ? normalized : `${normalized}Z`;
-  const date = new Date(candidate);
-  if (!Number.isNaN(date.getTime())) return date;
-  const fallback = new Date(raw);
-  return Number.isNaN(fallback.getTime()) ? null : fallback;
-};
-
-const formatAuditTimestamp = (value: string) => {
-  const date = parseTimestampToDate(value);
-  if (!date) return "—";
-  return date.toLocaleString(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZoneName: "short",
-  });
-};
+import { formatAuditTimestampLocal } from "../../../shared/utils/auditDateTime";
 
 const actionSeverity = (action: string): "success" | "danger" | "warning" | "info" | undefined => {
   switch (action) {
@@ -105,6 +79,7 @@ const ContactAuditLogsDialog: React.FC<ContactAuditLogsDialogProps> = ({
   const [logsTotalRecords, setLogsTotalRecords] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
   const [logsLimit, setLogsLimit] = useState(20);
+  const [fetchedForContactId, setFetchedForContactId] = useState<number | null | undefined>(undefined);
 
   useEffect(() => {
     if (!isOpen || !accessToken) return;
@@ -128,6 +103,7 @@ const ContactAuditLogsDialog: React.FC<ContactAuditLogsDialogProps> = ({
         const normalized = normalizeAuditResponse(res);
         setLogs(normalized.logs);
         setLogsTotalRecords(normalized.total);
+        setFetchedForContactId(contactId);
       } catch (err: any) {
         if (requestId !== latestRequestRef.current) return;
         setLogsError(err?.message || "Failed to fetch change logs");
@@ -143,11 +119,10 @@ const ContactAuditLogsDialog: React.FC<ContactAuditLogsDialogProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     setLogsPage(1);
-  }, [isOpen]);
+    setFetchedForContactId(undefined);
+  }, [isOpen, contactId]);
 
-  const title = contactName
-    ? `${contactName} — Change Logs`
-    : contactId
+  const title = contactId
     ? `Contact #${contactId} — Change Logs`
     : "Contact Change Logs";
 
@@ -159,7 +134,7 @@ const ContactAuditLogsDialog: React.FC<ContactAuditLogsDialogProps> = ({
           <span>{logsError}</span>
           <Button label="Retry" size="small" onClick={() => setReloadKey((k) => k + 1)} />
         </div>
-      ) : logsLoading ? (
+      ) : logsLoading || fetchedForContactId !== contactId ? (
         <div className="text-center p-4">
           <i className="pi pi-spin pi-spinner" style={{ fontSize: "2rem" }} />
           <p className="mt-3">Loading change logs...</p>
@@ -218,7 +193,7 @@ const ContactAuditLogsDialog: React.FC<ContactAuditLogsDialogProps> = ({
           <Column
             field="occurred_at"
             header="Occurred At"
-            body={(row: ContactAuditLog) => formatAuditTimestamp(row.occurred_at || row.timestamp)}
+            body={(row: ContactAuditLog) => formatAuditTimestampLocal(row.occurred_at || row.timestamp)}
             style={{ minWidth: "13rem" }}
           />
         </DataTable>

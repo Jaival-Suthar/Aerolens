@@ -7,6 +7,7 @@ import { Toast } from "primereact/toast";
 import type { JobProfileRequirementDeletedRecord } from "../types/jobProfileRequirementsTypes";
 import { getDeletedJobProfileRequirements, restoreJobProfileRequirement } from "../services/jobProfileRequirementsService";
 import { useAuth } from "../../../shared/auth/AuthContext";
+import { formatAuditTimestampLocal } from "../../../shared/utils/auditDateTime";
 
 type JobProfileRequirementsDeletedRecordsDialogProps = {
   isOpen: boolean;
@@ -14,27 +15,6 @@ type JobProfileRequirementsDeletedRecordsDialogProps = {
   onRestoreSuccess?: () => void;
 };
 
-const parseTimestampToDate = (value: string | null) => {
-  if (!value) return null;
-  const raw = String(value).trim();
-  if (!raw) return null;
-  const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/.test(raw);
-  const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
-  const candidate = hasTimezone ? normalized : `${normalized}Z`;
-  const date = new Date(candidate);
-  if (!Number.isNaN(date.getTime())) return date;
-  const fallback = new Date(raw);
-  return Number.isNaN(fallback.getTime()) ? null : fallback;
-};
-
-const formatDeletedAt = (value: string | null) => {
-  const date = parseTimestampToDate(value);
-  if (!date) return "—";
-  return date.toLocaleString(undefined, {
-    day: "2-digit", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit", hour12: false, timeZoneName: "short",
-  });
-};
 
 const normalizeDeletedRows = (payload: unknown): JobProfileRequirementDeletedRecord[] => {
   const envelope = payload as { data?: unknown } | null;
@@ -118,7 +98,7 @@ const JobProfileRequirementsDeletedRecordsDialog: React.FC<JobProfileRequirement
           <Column field="clientId" header="Client ID" body={(row: JobProfileRequirementDeletedRecord) => row.clientId ?? "—"} style={{ minWidth: "10rem" }} />
           <Column field="departmentId" header="Department ID" body={(row: JobProfileRequirementDeletedRecord) => row.departmentId ?? "—"} style={{ minWidth: "12rem" }} />
           <Column field="positions" header="Positions" body={(row: JobProfileRequirementDeletedRecord) => row.positions ?? "—"} style={{ minWidth: "10rem" }} />
-          <Column field="deleted_at" header="Deleted At" body={(row: JobProfileRequirementDeletedRecord) => formatDeletedAt(row.deleted_at)} style={{ minWidth: "15rem" }} />
+          <Column field="deleted_at" header="Deleted At" body={(row: JobProfileRequirementDeletedRecord) => formatAuditTimestampLocal(row.deleted_at)} style={{ minWidth: "15rem" }} />
         </DataTable>
       )}
     </Dialog>

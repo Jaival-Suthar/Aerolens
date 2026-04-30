@@ -8,33 +8,7 @@ import { Toast } from "primereact/toast";
 import type { DepartmentAuditLogsDialogProps, DepartmentAuditLog } from "../types/departmentTypes";
 import { getDepartmentAuditLogsById } from "../services/useDepartment";
 import { useAuth } from "../../../shared/auth/AuthContext";
-
-const parseTimestampToDate = (value: string) => {
-  if (!value) return null;
-  const raw = String(value).trim();
-  if (!raw) return null;
-  const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/.test(raw);
-  const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
-  const candidate = hasTimezone ? normalized : `${normalized}Z`;
-  const date = new Date(candidate);
-  if (!Number.isNaN(date.getTime())) return date;
-  const fallback = new Date(raw);
-  return Number.isNaN(fallback.getTime()) ? null : fallback;
-};
-
-const formatAuditTimestamp = (value: string) => {
-  const date = parseTimestampToDate(value);
-  if (!date) return "—";
-  return date.toLocaleString(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZoneName: "short",
-  });
-};
+import { formatAuditTimestampLocal } from "../../../shared/utils/auditDateTime";
 
 const actionSeverity = (action: string): "success" | "danger" | "warning" | "info" | undefined => {
   switch (action) {
@@ -87,23 +61,29 @@ const DepartmentAuditLogsDialog: React.FC<DepartmentAuditLogsDialogProps> = ({
 
   const [logs, setLogs] = useState<DepartmentAuditLog[]>([]);
   const [logsError, setLogsError] = useState("");
+  const [logsLoading, setLogsLoading] = useState(false);
   const [logsPage, setLogsPage] = useState(1);
   const [logsTotalRecords, setLogsTotalRecords] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
   const [logsLimit, setLogsLimit] = useState(20);
+  const [fetchedForDeptId, setFetchedForDeptId] = useState<number | null | undefined>(undefined);
 
   useEffect(() => {
     if (!isOpen || !departmentId || !accessToken) return;
     const load = async () => {
       try {
+        setLogs([]);
         setLogsError("");
+        setLogsLoading(true);
         const res = await getDepartmentAuditLogsById(accessToken, departmentId, logsPage, logsLimit);
         setLogs(Array.isArray(res.data) ? res.data : []);
         setLogsTotalRecords(res.pagination?.total ?? 0);
+        setFetchedForDeptId(departmentId);
       } catch (err: any) {
         setLogsError(err?.message || "Failed to fetch change logs");
         setLogs([]);
       } finally {
+        setLogsLoading(false);
       }
     };
     load();
@@ -112,7 +92,8 @@ const DepartmentAuditLogsDialog: React.FC<DepartmentAuditLogsDialogProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     setLogsPage(1);
-  }, [isOpen]);
+    setFetchedForDeptId(undefined);
+  }, [isOpen, departmentId]);
 
   const title = departmentId ? `Department #${departmentId} — Change Logs` : "Department Change Logs";
 
@@ -123,6 +104,11 @@ const DepartmentAuditLogsDialog: React.FC<DepartmentAuditLogsDialogProps> = ({
         <div className="p-message p-message-error flex align-items-center justify-content-between">
           <span>{logsError}</span>
           <Button label="Retry" size="small" onClick={() => setReloadKey((k) => k + 1)} />
+        </div>
+      ) : logsLoading || fetchedForDeptId !== departmentId ? (
+        <div className="text-center p-4">
+          <i className="pi pi-spin pi-spinner" style={{ fontSize: "2rem" }} />
+          <p className="mt-3">Loading change logs...</p>
         </div>
       ) : (
         <DataTable
@@ -178,7 +164,7 @@ const DepartmentAuditLogsDialog: React.FC<DepartmentAuditLogsDialogProps> = ({
           <Column
             field="occurred_at"
             header="Occurred At"
-            body={(row: DepartmentAuditLog) => formatAuditTimestamp(row.occurred_at || row.timestamp)}
+            body={(row: DepartmentAuditLog) => formatAuditTimestampLocal(row.occurred_at || row.timestamp)}
             style={{ minWidth: "13rem" }}
           />
         </DataTable>
