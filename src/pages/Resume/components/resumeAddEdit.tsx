@@ -7,6 +7,8 @@ import { FileUpload } from "primereact/fileupload";
 import { FaCheck, FaTimes } from "react-icons/fa";
 import { Toast } from "primereact/toast";
 import DialogButton from "../../../shared/DialogAddEditButton";
+import PhoneInputField from "../../../shared/components/PhoneInput";
+import { isLikelyE164 } from "../../../shared/utils/phoneE164";
 import {
   createCandidate,
   updateCandidate,
@@ -35,7 +37,7 @@ interface DropdownFieldProps {
 
 // ---------- HELPERS ----------
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const phoneRegex = /^(\+?91|91)?[6-9]\d{9}$|^(\+?1)?[2-9]\d{9}$/;
+
 const linkedinRegex = /^https?:\/\/(www\.)?linkedin\.com\/.*$/i;
 
 const INITIAL_FORM: AddEditCandidate = {
@@ -78,8 +80,8 @@ const validateField = (field: keyof AddEditCandidate, value: any, formData?: Add
         return value ? "" : "Mode of Work is required.";
     case "contactNumber":
       if (!value) return ""; // OPTIONAL
-      if (!phoneRegex.test(value.replace(/[\s-]/g, "")))
-        return "Enter a valid Indian or US phone number.";
+      if (!isLikelyE164(value))
+        return "Enter a valid international number with country code (e.g. +91…, +1…).";
       return "";
     case "email":
       if (!value) return ""; // OPTIONAL
@@ -340,7 +342,7 @@ useEffect(() => {
   setFormData((prev) => {
     const updates: Partial<AddEditCandidate> = {};
 
-    if (currentCountryChanged) {
+    if (currentCountryChanged && prev.currentCTCAmount != null) {
       if (currentCountry === "india") {
         if (inrCurrencyId != null && prev.currentCTCCurrencyId !== inrCurrencyId) {
           updates.currentCTCCurrencyId = inrCurrencyId;
@@ -358,7 +360,7 @@ useEffect(() => {
       }
     }
 
-    if (expectedCountryChanged) {
+    if (expectedCountryChanged && prev.expectedCTCAmount != null) {
       if (expectedCountry === "india") {
         if (inrCurrencyId != null && prev.expectedCTCCurrencyId !== inrCurrencyId) {
           updates.expectedCTCCurrencyId = inrCurrencyId;
@@ -904,17 +906,15 @@ else {
             colSize="col-12 md:col-4"
           />
 
-          <InputField
-            id="contactNumber"
-            label="Contact Number"
-            value={formData.contactNumber}
-            placeholder="e.g. 9876543210"
-            onChange={(e) => handleChange("contactNumber", e.target.value)}
-            onBlur={() => handleBlur("contactNumber")}
-            error={shouldShowError("contactNumber")}
-            colSize="col-12 md:col-4"
-            required={false}
-          />
+          <div className="field col-12 md:col-4">
+            <label htmlFor="contactNumber" className="font-bold">Contact Number</label>
+            <PhoneInputField
+              id="contactNumber"
+              value={formData.contactNumber || ""}
+              onChange={(val) => handleChange("contactNumber", val)}
+              error={shouldShowError("contactNumber")}
+            />
+          </div>
 
           <InputField
             id="email"
