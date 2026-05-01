@@ -7,6 +7,8 @@ import DialogButton from "../../../shared/DialogAddEditButton";
 import type { VendorType } from "../types/vendorTypes";
 import { VendorService } from "../services/useVendor";
 import { useAuth } from "../../../shared/auth/AuthContext";
+import PhoneInputField from "../../../shared/components/PhoneInput";
+import { isLikelyE164 } from "../../../shared/utils/phoneE164";
 
 /** ---------- Types ---------- */
 type VendorFormData = {
@@ -25,7 +27,6 @@ type VendorAddEditProps = {
 
 /** ---------- Validation ---------- */
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_REGEX = /^[0-9]{9,10}$/;
 
 const VendorAddEdit: React.FC<VendorAddEditProps> = ({
   visible,
@@ -71,8 +72,8 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
     if (formData.vendorEmail && !EMAIL_REGEX.test(formData.vendorEmail))
       newErrors.vendorEmail = "Invalid email format";
 
-    if (formData.vendorPhone && !PHONE_REGEX.test(formData.vendorPhone))
-      newErrors.vendorPhone = "Phone must be 10 digits if Indian, 9 digits if US";
+    if (formData.vendorPhone && !isLikelyE164(formData.vendorPhone))
+      newErrors.vendorPhone = "Enter a valid international number with country code (e.g. +91…, +1…).";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -200,16 +201,12 @@ const VendorAddEdit: React.FC<VendorAddEditProps> = ({
 
         <div className="p-field">
           <label className="font-bold mb-2 block">Phone</label>
-          <InputText
+          <PhoneInputField
+            id="vendorPhone"
             value={formData.vendorPhone}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, vendorPhone: e.target.value }))
-            }
-            className={submitted && errors.vendorPhone ? "p-invalid" : ""}
+            onChange={(val) => setFormData((prev) => ({ ...prev, vendorPhone: val }))}
+            error={submitted ? errors.vendorPhone : undefined}
           />
-          {submitted && errors.vendorPhone && (
-            <small className="p-error">{errors.vendorPhone}</small>
-          )}
         </div>
 
         <br />

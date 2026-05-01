@@ -11,6 +11,8 @@ import { FaCheck } from 'react-icons/fa';
 import { useAuth } from "../../../shared/auth/AuthContext";
 import useContact from "../services/useContact";
 import { Dropdown } from "primereact/dropdown";
+import PhoneInputField from "../../../shared/components/PhoneInput";
+import { isLikelyE164 } from "../../../shared/utils/phoneE164";
 
 
 interface Errors {
@@ -127,46 +129,9 @@ const ContactAddEdit: React.FC<ContactAddEditProps> = ({
       newErrors.designation = "Designation is required";
     }
     if (phone && phone.trim() !== "") {
-  const trimmedPhone = phone.trim();
-
-  // Allow only valid characters
-  const phoneRegex = /^[\d\s+\-()]+$/;
-    if (!phoneRegex.test(trimmedPhone)) {
-      newErrors.phone =
-        "Phone number can only contain numbers, spaces, +, -, and parentheses";
-    } else {
-      // Remove all non-digit characters
-      const digitsOnly = trimmedPhone.replace(/\D/g, "");
-
-      // Case 1: Without country code → exactly 10 digits
-      if (!trimmedPhone.startsWith("+")) {
-        if (digitsOnly.length !== 10) {
-          newErrors.phone = "Phone number must be exactly 10 digits";
-        }
-      }
-      // Case 2: With country code
-      else {
-        // India (+91) → 12 digits total
-        if (trimmedPhone.startsWith("+91")) {
-          if (digitsOnly.length !== 12) {
-            newErrors.phone =
-              "Indian phone number with +91 must be 10 digits after country code";
-          }
-        }
-        // US (+1) → 11 digits total
-        else if (trimmedPhone.startsWith("+1")) {
-          if (digitsOnly.length !== 11) {
-            newErrors.phone =
-              "US phone number with +1 must be 10 digits after country code";
-          }
-        }
-        // Any other country code → not allowed
-        else {
-          newErrors.phone = "Only US (+1) and India (+91) phone numbers are allowed";
-        }
-      }
+      if (!isLikelyE164(phone.trim()))
+        newErrors.phone = "Enter a valid international number with country code (e.g. +91…, +1…).";
     }
-  }
     if (!email || email.trim() === "") {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(email.trim())) {
@@ -321,22 +286,16 @@ const ContactAddEdit: React.FC<ContactAddEditProps> = ({
             <small className="p-error block mt-1">{errors.designation}</small>
           )}
         </div>
-        {/* modified phone to optional field. */}
         <div className="field mb-3">
           <label htmlFor="phone" className="block mb-2 font-medium">
             Phone
           </label>
-          <InputText
+          <PhoneInputField
             id="phone"
             value={phone}
-            onChange={(e) => {
-              setPhone(e.target.value);
-              clearFieldError("phone");
-            }}
-            style={{ borderRadius: "8px" }}
-            className={errors.phone ? "p-invalid" : ""}
+            onChange={(val) => { setPhone(val); clearFieldError("phone"); }}
+            error={errors.phone}
           />
-          {errors.phone && <small className="p-error block mt-1">{errors.phone}</small>}
         </div>
 
 
