@@ -39,6 +39,8 @@ import { Dropdown } from "primereact/dropdown";
 import BulkPdfUploadButton from "../../../shared/BulkPdfUploadButton";
 import CandidateDeletedRecordsDialog from "./candidateDeletedRecordsDialog";
 import ChangeLogsDialog from "../../../shared/ChangeLogsDialog";
+import ResumeAnalysisDialog from "./ResumeAnalysisDialog";
+import { FaRobot } from "react-icons/fa";
 import {
   RESUME_BULK_BATCH_FINISHED_EVENT,
   startBulkResumeBatchTracking,
@@ -220,6 +222,7 @@ const ResumeTable: React.FC = () => {
     localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(fields));
   }, [visibleColumns]);
   const [viewCandidate, setViewCandidate] = useState<Candidate | null>(null);
+  const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
   const [globalFilterValue, setGlobalFilterValue] = useState('');
   const [createData, setCreateData] = useState<CandidateCreateData | null>(null);
   const [loadingCreateData, setLoadingCreateData] = useState(false);
@@ -770,6 +773,19 @@ useEffect(() => {
         openWhatsAppDialog();
       },
     },
+    {
+      label: "Analyse Resume (AI)",
+      icon: <FaRobot style={{ marginRight: 8, marginLeft: 4, color: "#7c3aed" }} />,
+      disabled: !selectedResume,
+      action: () => {
+        setShowSettingsMenu(false);
+        if (!selectedResume) {
+          toastRef.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select a candidate first", life: 3000 });
+          return;
+        }
+        setShowAnalysisDialog(true);
+      }
+    },
     { label: "View Interview Rounds", icon: <FaRoute style={{ marginRight: 8, marginLeft: 4 }} />, action: () => { setShowSettingsMenu(false); handleViewAllRounds(); } },
     {
       label: "Schedule Interview", icon: <FaUserTie style={{ marginRight: 8, marginLeft: 4 }} />, action: () => {
@@ -1071,9 +1087,14 @@ useEffect(() => {
           loadAllData();
         }}
       />
-      <PremiumDetailsDialog 
-        visible={!!viewCandidate} 
-        title="Candidate Details" 
+      <ResumeAnalysisDialog
+        visible={showAnalysisDialog}
+        onHide={() => setShowAnalysisDialog(false)}
+        candidate={selectedResume}
+      />
+      <PremiumDetailsDialog
+        visible={!!viewCandidate}
+        title="Candidate Details"
         onHide={() => setViewCandidate(null)}
       >
         {viewCandidate && 
