@@ -498,109 +498,112 @@ const parseAndAutofill = (text: string) => {
 
   const updatedData: Partial<AddEditCandidate> = {};
 
-  // Full Name
-  const nameMatch = text.match(/full\s*name[:\-]?\s*(.+)/i);
-  if (nameMatch) updatedData.candidateName = nameMatch[1].trim();
+  // Full Name — "Full Name:", "Name:", or first non-empty line
+  const nameMatch = text.match(/(?:full\s*name|name)[:\-]\s*(.+)/i);
+  if (nameMatch) {
+    updatedData.candidateName = nameMatch[1].trim();
+  } else {
+    const firstLine = text.split("\n").map(l => l.trim()).find(l => l.length > 1 && l.length < 60 && !/[@\d]/.test(l));
+    if (firstLine) updatedData.candidateName = firstLine;
+  }
 
-  // Contact Number
-  const phoneMatch = text.match(/contact\s*number[:\-]?\s*(.+)/i);
-  if (phoneMatch) updatedData.contactNumber = phoneMatch[1].trim();
+  // Contact Number — labeled or bare E.164 / 10-digit
+  const phoneLabelMatch = text.match(/(?:phone|mobile|contact(?:\s*number)?|ph|cell)[:\s#]*([\+\d][\d\s\-\(\)]{6,18})/i);
+  const phoneRawMatch = text.match(/(?<!\d)(\+\d{1,3}[\s\-]?\d{6,13})(?!\d)/);
+  const phone10Match = text.match(/(?<!\d)([6-9]\d{9})(?!\d)/);
+  const rawPhone = phoneLabelMatch?.[1] ?? phoneRawMatch?.[1] ?? phone10Match?.[1];
+  if (rawPhone) {
+    const digits = rawPhone.replace(/\D/g, "");
+    if (digits.length === 10) updatedData.contactNumber = `+91${digits}`;
+    else if (digits.length > 10) updatedData.contactNumber = `+${digits}`;
+    else updatedData.contactNumber = rawPhone.trim();
+  }
 
   // Email
   const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
   if (emailMatch) updatedData.email = emailMatch[0];
 
   // LinkedIn
-  const linkedinMatch = text.match(/https?:\/\/(www\.)?linkedin\.com\/[^\s]+/i);
-  if (linkedinMatch) updatedData.linkedinProfileUrl = linkedinMatch[0];
+  const linkedinMatch = text.match(/https?:\/\/(www\.)?linkedin\.com\/[^\s,)]+/i);
+  if (linkedinMatch) updatedData.linkedinProfileUrl = linkedinMatch[0].replace(/[.,)]+$/, "");
 
-  // Experience
-  const expMatch = text.match(/experience[:\-]?\s*(\d+(\.\d+)?)/i);
-  if (expMatch) updatedData.experienceYears = parseFloat(expMatch[1]);
+  // Experience — "X years", "X+ years", "experience: X"
+  const expLabelMatch = text.match(/(?:total\s+)?experience[:\-]\s*(\d+(?:\.\d+)?)/i);
+  const expYearsMatch = text.match(/(\d+(?:\.\d+)?)\s*\+?\s*years?\s*(?:of\s+)?(?:experience|exp)/i);
+  const expVal = expLabelMatch?.[1] ?? expYearsMatch?.[1];
+  if (expVal) updatedData.experienceYears = parseFloat(expVal);
 
-  // Current CTC
-  const currentCTCMatch = text.match(/current\s*ctc[:\-]?\s*(\d+(\.\d+)?)/i);
-  if (currentCTCMatch) {
-    updatedData.currentCTCAmount = parseFloat(currentCTCMatch[1]);
+  // Current CTC — "Current CTC:", "CCTC:", "CTC (Current):"
+  const currentCTCMatch = text.match(/(?:current\s*ctc|cctc|ctc\s*[\(\-]\s*current\s*[\)\-])[:\-\s]*([\d.]+)/i);
+  if (currentCTCMatch) updatedData.currentCTCAmount = parseFloat(currentCTCMatch[1]);
+
+  // Expected CTC — "Expected CTC:", "ECTC:", "CTC (Expected):"
+  const expectedCTCMatch = text.match(/(?:expected\s*ctc|ectc|ctc\s*[\(\-]\s*expected\s*[\)\-])[:\-\s]*([\d.]+)/i);
+  if (expectedCTCMatch) updatedData.expectedCTCAmount = parseFloat(expectedCTCMatch[1]);
+
+  // Currency + Type inference from CTC context
+  const ctcBlock = text.match(/(?:ctc|compensation|salary)[^\n]{0,120}/gi)?.join(" ") ?? text;
+  const hasINR = /\b(inr|lpa|lakh|lakhs|₹)\b/i.test(ctcBlock);
+  const hasUSD = /\b(usd|\$|dollar)\b/i.test(ctcBlock);
+  const isHourly = /\bhourly\b/i.test(ctcBlock);
+  const isMonthly = /\bmonthly\b/i.test(ctcBlock);
+
+  const inrCurrencyId = createData?.currencies?.find(c => c.currencyName === "INR")?.currencyId;
+  const usdCurrencyId = createData?.currencies?.find(c => c.currencyName === "USD")?.currencyId;
+  const annualTypeId = createData?.compensationTypes?.find(t => t.compensationTypeName === "Annual")?.compensationTypeId;
+  const hourlyTypeId = createData?.compensationTypes?.find(t => t.compensationTypeName === "Hourly")?.compensationTypeId;
+  const monthlyTypeId = createData?.compensationTypes?.find(t => t.compensationTypeName === "Monthly")?.compensationTypeId;
+
+  const resolvedTypeId = isHourly ? hourlyTypeId : isMonthly ? monthlyTypeId : annualTypeId;
+  const resolvedCurrencyId = hasUSD ? usdCurrencyId : hasINR ? inrCurrencyId : inrCurrencyId;
+
+  if (updatedData.currentCTCAmount != null) {
+    if (resolvedCurrencyId) updatedData.currentCTCCurrencyId = resolvedCurrencyId;
+    if (resolvedTypeId) updatedData.currentCTCTypeId = resolvedTypeId;
+  }
+  if (updatedData.expectedCTCAmount != null) {
+    if (resolvedCurrencyId) updatedData.expectedCTCCurrencyId = resolvedCurrencyId;
+    if (resolvedTypeId) updatedData.expectedCTCTypeId = resolvedTypeId;
   }
 
-  // Expected CTC
-  const expectedCTCMatch = text.match(/expected\s*ctc[:\-]?\s*(\d+(\.\d+)?)/i);
-  if (expectedCTCMatch) {
-    updatedData.expectedCTCAmount = parseFloat(expectedCTCMatch[1]);
-  }
-
-  // Notice Period
-  const noticeMatch = text.match(/notice\s*period[:\-]?\s*(\d+)/i);
-  if (noticeMatch) updatedData.noticePeriod = parseInt(noticeMatch[1]);
+  // Notice Period — "Notice Period: 30 days", "30 days notice", "immediate"
+  const noticeLabelMatch = text.match(/notice\s*period[:\-\s]*(\d+)/i);
+  const noticeDaysMatch = text.match(/(\d+)\s*days?\s*notice/i);
+  const noticeImmediate = /\b(immediate|immediately|serving\s*notice)\b/i.test(text);
+  if (noticeLabelMatch) updatedData.noticePeriod = parseInt(noticeLabelMatch[1]);
+  else if (noticeDaysMatch) updatedData.noticePeriod = parseInt(noticeDaysMatch[1]);
+  else if (noticeImmediate) updatedData.noticePeriod = 0;
 
   // Current Location
-  // const currentLocMatch = text.match(/current\s*location[:\-]?\s*(.+),\s*(.+)/i);
-  // if (currentLocMatch) {
-  //   updatedData.currentLocation = {
-  //     city: currentLocMatch[1].trim(),
-  //     country: currentLocMatch[2].trim(),
-  //   };
-  // }
-  // Current Location
-  const currentLocMatch = text.match(/current\s*location[:\-]?\s*(.+),\s*(.+)/i);
-    if (currentLocMatch && createData?.locations) {
-      const city = currentLocMatch[1].trim();
-      const country = currentLocMatch[2].trim();
-
-      const matchedLocation = createData.locations.find(
-        loc =>
-          loc.city.toLowerCase() === city.toLowerCase() &&
-          loc.country.toLowerCase() === country.toLowerCase()
-      );
-
-      if (matchedLocation) {
-        updatedData.currentLocation = {
-          city: matchedLocation.city,
-          country: matchedLocation.country,
-        };
-    }
+  const currentLocMatch = text.match(/current\s*(?:working\s*)?location[:\-]\s*(.+?),\s*(.+?)(?:\n|$)/i);
+  if (currentLocMatch && createData?.locations) {
+    const city = currentLocMatch[1].trim();
+    const country = currentLocMatch[2].trim();
+    const matchedLocation = createData.locations.find(
+      loc => loc.city.toLowerCase() === city.toLowerCase() && loc.country.toLowerCase() === country.toLowerCase()
+    );
+    if (matchedLocation) updatedData.currentLocation = { city: matchedLocation.city, country: matchedLocation.country };
   }
 
-  // Preferred Location
-  const preferredLocMatch = text.match(/preferred\s*location[:\-]?\s*(.+),\s*(.+)/i);
-
+  // Expected / Preferred Location
+  const preferredLocMatch = text.match(/(?:preferred|expected)\s*(?:working\s*)?location[:\-]\s*(.+?),\s*(.+?)(?:\n|$)/i);
   if (preferredLocMatch && createData?.locations) {
     const city = preferredLocMatch[1].trim();
     const country = preferredLocMatch[2].trim();
-
     const matchedLocation = createData.locations.find(
-      loc =>
-        loc.city.toLowerCase() === city.toLowerCase() &&
-        loc.country.toLowerCase() === country.toLowerCase()
+      loc => loc.city.toLowerCase() === city.toLowerCase() && loc.country.toLowerCase() === country.toLowerCase()
     );
-
-    if (matchedLocation) {
-      updatedData.expectedLocation = {
-        city: matchedLocation.city,
-        country: matchedLocation.country,
-      };
-    }
+    if (matchedLocation) updatedData.expectedLocation = { city: matchedLocation.city, country: matchedLocation.country };
   }
-    // const preferredLocMatch = text.match(/preferred\s*location[:\-]?\s*(.+),\s*(.+)/i);
-    // if (preferredLocMatch) {
-    //   updatedData.expectedLocation = {
-    //     city: preferredLocMatch[1].trim(),
-    //     country: preferredLocMatch[2].trim(),
-    //   };
-    // }
 
-    setFormData(prev => ({
-      ...prev,
-      ...updatedData
-    }));
+  setFormData(prev => ({ ...prev, ...updatedData }));
 
-    toast.current?.show({
-      severity: "success",
-      summary: "Auto-filled",
-      detail: "Fields detected from pasted text",
-      life: 1500,
-    });
+  toast.current?.show({
+    severity: "success",
+    summary: "Auto-filled",
+    detail: "Fields detected from resume",
+    life: 1500,
+  });
 };
 
   const handleFileParse = async (file: File) => {
@@ -1396,6 +1399,7 @@ else {
                     onClick={() => {
                       handleChange("resumeFile", null);
                       setClearExistingResume(true);
+                      setResumePasteText("");
                     }}
                     style={{
                       display: "flex",
