@@ -15,7 +15,9 @@ import {
   updateCandidate,
   uploadResume,
   getCandidateById,
+  analyzeResume,
 } from "../services/useResume";
+import { showGlobalToast } from "../../../shared/services/globalToastService";
 import { ResumeAddEditProps, AddEditCandidate, CandidateCreateData, AddEditCandidateApiPayload } from "../types/resumeTypes";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import { useProfileStore } from "../../../shared/store/profile";
@@ -780,6 +782,8 @@ const parseAndAutofill = (text: string, liveCreateData?: CandidateCreateData | n
     payload
   );
 
+  const hasResume = !!formData.resumeFile || !!selectedResume.resumeFilename;
+
   if (formData.resumeFile) {
     await uploadResume(
       accessToken,
@@ -794,19 +798,49 @@ const parseAndAutofill = (text: string, liveCreateData?: CandidateCreateData | n
     detail: "Candidate updated successfully!",
     life: 3000,
   });
+
+  onSuccess();
+  onHide();
+
+  if (hasResume) {
+    analyzeResume(accessToken, selectedResume.candidateId)
+      .then((result) => {
+        showGlobalToast({
+          severity: "success",
+          summary: "AI Analysis Complete",
+          detail: `${result.match_percentage}% match — ${formData.candidateName}`,
+          life: 5000,
+        });
+      })
+      .catch(() => {});
+  }
+  return;
 }
 else {
-        await createCandidate(accessToken, formData);
+        const created = await createCandidate(accessToken, formData);
         toast.current?.show({
           severity: "success",
           summary: "Success",
           detail: "Candidate added successfully!",
           life: 3000,
         });
-      }
 
-      onSuccess();
-      onHide();
+        onSuccess();
+        onHide();
+
+        if (created?.candidateId && formData.resumeFile) {
+          analyzeResume(accessToken, created.candidateId)
+            .then((result) => {
+              showGlobalToast({
+                severity: "success",
+                summary: "AI Analysis Complete",
+                detail: `${result.match_percentage}% match — ${formData.candidateName}`,
+                life: 5000,
+              });
+            })
+            .catch(() => {});
+        }
+      }
     } catch (err: any) {
       console.error("Error saving candidate:", err);
       handleBackendErrors(err);

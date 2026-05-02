@@ -774,7 +774,7 @@ useEffect(() => {
       },
     },
     {
-      label: "Analyse Resume (AI)",
+      label: "View AI Analysis",
       icon: <FaRobot style={{ marginRight: 8, marginLeft: 4, color: "#7c3aed" }} />,
       disabled: !selectedResume,
       action: () => {
