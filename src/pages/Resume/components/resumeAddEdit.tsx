@@ -903,7 +903,10 @@ else {
 
           <textarea
             value={resumePasteText}
-            onChange={(e) => setResumePasteText(e.target.value)}
+            onChange={(e) => {
+              setResumePasteText(e.target.value);
+              if (!e.target.value.trim()) resetForm();
+            }}
             onPaste={(e) => {
               const pastedText = e.clipboardData.getData("text");
               setResumePasteText(pastedText);
@@ -1416,14 +1419,9 @@ else {
                   <button
                     type="button"
                     onClick={() => {
-                      if (isEditMode) {
-                        handleChange("resumeFile", null);
-                        setClearExistingResume(true);
-                        setResumePasteText("");
-                      } else {
-                        resetForm();
-                        setResumePasteText("");
-                      }
+                      resetForm();
+                      setResumePasteText("");
+                      setClearExistingResume(true);
                     }}
                     style={{
                       display: "flex",
