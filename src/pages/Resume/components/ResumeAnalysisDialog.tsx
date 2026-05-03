@@ -159,7 +159,7 @@ const ResumeAnalysisDialog: React.FC<Props> = ({ visible, onHide, candidate }) =
         <div style={{ textAlign: "center", padding: "2rem 1rem", color: "#6b7280" }}>
           <i className="pi pi-sparkles" style={{ fontSize: 32, marginBottom: 12, display: "block", color: "#9ca3af" }} />
           <div style={{ fontSize: 14 }}>Click <strong>Analyse Resume</strong> to compare this candidate against the linked job profile.</div>
-          <div style={{ fontSize: 12, marginTop: 8 }}>Requires a PDF resume and a linked job profile.</div>
+          <div style={{ fontSize: 12, marginTop: 8 }}>Requires a PDF or DOCX resume and a linked job profile.</div>
         </div>
       )}
 
