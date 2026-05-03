@@ -764,15 +764,15 @@ useEffect(() => {
     action: () => void;
     disabled?: boolean;
   }[] = [
-    {
-      label: "Share resume (WhatsApp)",
-      icon: <FaWhatsapp style={{ marginRight: 8, marginLeft: 4, color: "#25D366" }} />,
-      disabled: !selectedResume,
-      action: () => {
-        setShowSettingsMenu(false);
-        openWhatsAppDialog();
-      },
-    },
+    // {
+    //   label: "Share resume (WhatsApp)",
+    //   icon: <FaWhatsapp style={{ marginRight: 8, marginLeft: 4, color: "#25D366" }} />,
+    //   disabled: !selectedResume,
+    //   action: () => {
+    //     setShowSettingsMenu(false);
+    //     openWhatsAppDialog();
+    //   },
+    // },
     { label: "View Interview Rounds", icon: <FaRoute style={{ marginRight: 8, marginLeft: 4 }} />, action: () => { setShowSettingsMenu(false); handleViewAllRounds(); } },
     {
       label: "Schedule Interview", icon: <FaUserTie style={{ marginRight: 8, marginLeft: 4 }} />, action: () => {
