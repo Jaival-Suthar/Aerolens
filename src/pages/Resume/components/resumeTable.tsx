@@ -63,7 +63,6 @@ const ALL_COLUMNS = [
   { field: "currentLocation.city", header: "Current Working Location", body: "formatCurrentLocation", sortable: true, filter: true },
   { field: "linkedinProfileUrl", header: "LinkedIn Profile", body: "linkedInTemplate" },
   { field: "notes", header: "Notes", sortable: true, filter: true },
-  { field: "aiFeedback", header: "AI Match", body: "aiMatchTemplate" },
 ];
 
 type ExportColumnDef = {
@@ -548,31 +547,6 @@ useEffect(() => {
     return `${symbol}${row.expectedCTCAmount}/${shortType}`;
   };
 
-  const aiMatchTemplate = (row: Candidate) => {
-    const pct = row.aiFeedback?.match_percentage;
-    if (pct == null) return <span className="text-400">—</span>;
-    const color = pct >= 70 ? "#16a34a" : pct >= 45 ? "#d97706" : "#dc2626";
-    return (
-      <span
-        title={`Analysed: ${row.aiFeedbackGeneratedAt ? new Date(row.aiFeedbackGeneratedAt).toLocaleString() : "unknown"}`}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 40,
-          height: 40,
-          borderRadius: "50%",
-          background: color,
-          color: "#fff",
-          fontWeight: 700,
-          fontSize: 13,
-          cursor: "default",
-        }}
-      >
-        {pct}%
-      </span>
-    );
-  };
 
   useEffect(() => {
     if (!showWhatsAppDialog || !accessToken) return;
@@ -1058,7 +1032,6 @@ useEffect(() => {
             if (col.field === "workMode") filterElement = workModeFilterTemplate;
             if (col.field === "currentCTCAmount") bodyTemplate = currentCTCTemplate;
             if (col.field === "expectedCTCAmount") bodyTemplate = expectedCTCTemplate;
-            if (col.body === "aiMatchTemplate") bodyTemplate = aiMatchTemplate;
 
 
             return (
