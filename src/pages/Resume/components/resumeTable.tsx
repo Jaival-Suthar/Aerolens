@@ -800,12 +800,9 @@ useEffect(() => {
     {
       label: "Analyse Resume (AI)",
       icon: <i className="pi pi-sparkles" style={{ marginRight: 8, marginLeft: 4, fontSize: "14px", color: "#7c3aed" }} />,
+      disabled: !selectedResume || !selectedResume.resumeFilename,
       action: () => {
         setShowSettingsMenu(false);
-        if (!selectedResume) {
-          toastRef.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select a candidate first", life: 3000 });
-          return;
-        }
         setShowAnalysisDialog(true);
       }
     },
