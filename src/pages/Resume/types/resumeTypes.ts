@@ -47,6 +47,9 @@ export interface Candidate {
   resumeOriginalName?: string | null;
   resumeUploadDate?: string | null;
 
+  aiFeedback?: import("../services/useResume").AiFeedback | null;
+  aiFeedbackGeneratedAt?: string | null;
+
   notes?: string;
 }
 
