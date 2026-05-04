@@ -101,8 +101,8 @@ const ResumeAnalysisDialog: React.FC<Props> = ({ visible, onHide, candidate }) =
     setError(null);
     try {
       const result = await analyzeResume(accessToken, candidate.candidateId);
-      setFeedback(result.feedback);
-      setGeneratedAt(result.generatedAt);
+      setFeedback(result);
+      setGeneratedAt(new Date().toISOString());
     } catch (err: any) {
       setError(err.message || "Analysis failed");
     } finally {

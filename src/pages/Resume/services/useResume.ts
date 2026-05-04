@@ -611,7 +611,7 @@ export interface AiFeedbackResult {
 export const analyzeResume = async (
   accessToken: string | null,
   candidateId: number
-): Promise<AiFeedbackResult> => {
+): Promise<AiFeedback> => {
   const response = await fetch(`${API_URL}/candidate/${candidateId}/analyze`, {
     method: "POST",
     credentials: "include",
