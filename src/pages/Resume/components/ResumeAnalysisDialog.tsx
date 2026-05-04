@@ -101,8 +101,9 @@ const ResumeAnalysisDialog: React.FC<Props> = ({ visible, onHide, candidate }) =
     setError(null);
     try {
       const result = await analyzeResume(accessToken, candidate.candidateId);
+      const fresh = await getAiFeedback(accessToken, candidate.candidateId);
       setFeedback(result);
-      setGeneratedAt(new Date().toISOString());
+      setGeneratedAt(fresh?.generatedAt ?? new Date().toISOString());
     } catch (err: any) {
       setError(err.message || "Analysis failed");
     } finally {
@@ -111,7 +112,7 @@ const ResumeAnalysisDialog: React.FC<Props> = ({ visible, onHide, candidate }) =
   };
 
   const formattedDate = generatedAt
-    ? new Date(generatedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
+    ? new Date(generatedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
     : null;
 
   const footer = (
