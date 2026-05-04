@@ -6,6 +6,7 @@ import { ProgressSpinner } from "primereact/progressspinner";
 import { analyzeResume, getAiFeedback, type AiFeedback, type AiFeedbackResult } from "../services/useResume";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import type { Candidate } from "../types/resumeTypes";
+import { formatAuditTimestampLocal } from "../../../shared/utils/auditDateTime";
 
 interface Props {
   visible: boolean;
@@ -111,9 +112,7 @@ const ResumeAnalysisDialog: React.FC<Props> = ({ visible, onHide, candidate }) =
     }
   };
 
-  const formattedDate = generatedAt
-    ? new Date(generatedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
-    : null;
+  const formattedDate = generatedAt ? formatAuditTimestampLocal(generatedAt) : null;
 
   const footer = (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
