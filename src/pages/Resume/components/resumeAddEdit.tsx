@@ -17,7 +17,6 @@ import {
   getCandidateById,
   analyzeResume,
 } from "../services/useResume";
-import { showGlobalToast } from "../../../shared/services/globalToastService";
 import { ResumeAddEditProps, AddEditCandidate, CandidateCreateData, AddEditCandidateApiPayload } from "../types/resumeTypes";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import { useProfileStore } from "../../../shared/store/profile";
@@ -803,16 +802,7 @@ const parseAndAutofill = (text: string, liveCreateData?: CandidateCreateData | n
   onHide();
 
   if (hasResume) {
-    analyzeResume(accessToken, selectedResume.candidateId)
-      .then((result) => {
-        showGlobalToast({
-          severity: "success",
-          summary: "AI Analysis Complete",
-          detail: `${result.match_percentage}% match — ${formData.candidateName}`,
-          life: 5000,
-        });
-      })
-      .catch(() => {});
+    analyzeResume(accessToken, selectedResume.candidateId).catch(() => {});
   }
   return;
 }
@@ -829,16 +819,7 @@ else {
         onHide();
 
         if (created?.candidateId && formData.resumeFile) {
-          analyzeResume(accessToken, created.candidateId)
-            .then((result) => {
-              showGlobalToast({
-                severity: "success",
-                summary: "AI Analysis Complete",
-                detail: `${result.match_percentage}% match — ${formData.candidateName}`,
-                life: 5000,
-              });
-            })
-            .catch(() => {});
+          analyzeResume(accessToken, created.candidateId).catch(() => {});
         }
       }
     } catch (err: any) {
