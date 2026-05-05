@@ -361,6 +361,18 @@ export interface ResumeOnBoardingProps {
   onSuccess: () => void;
 }
 
+/** Onboarding document stored in the offer row (doc_* columns). */
+export interface OnboardingDocument {
+  offerId: number;
+  docType: 'offer_letter' | 'service_agreement';
+  docFileName: string;
+  docS3Key: string;
+  docMimeType: string;
+  docFileSize: number | null;
+  docGeneratedAt: string;
+  docGeneratedBy: number | null;
+}
+
 /** Row from GET /whatsapp/groups → data.groups */
 export interface WhatsAppGroup {
   groupId: number;
