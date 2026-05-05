@@ -15,6 +15,7 @@ import {
   updateCandidate,
   uploadResume,
   getCandidateById,
+  analyzeResume,
 } from "../services/useResume";
 import { ResumeAddEditProps, AddEditCandidate, CandidateCreateData, AddEditCandidateApiPayload } from "../types/resumeTypes";
 import { useAuth } from "../../../shared/auth/AuthContext";
@@ -780,6 +781,8 @@ const parseAndAutofill = (text: string, liveCreateData?: CandidateCreateData | n
     payload
   );
 
+  const hasResume = !!formData.resumeFile || !!selectedResume.resumeFilename;
+
   if (formData.resumeFile) {
     await uploadResume(
       accessToken,
@@ -794,19 +797,31 @@ const parseAndAutofill = (text: string, liveCreateData?: CandidateCreateData | n
     detail: "Candidate updated successfully!",
     life: 3000,
   });
+
+  onSuccess();
+  onHide();
+
+  if (hasResume) {
+    analyzeResume(accessToken, selectedResume.candidateId).catch(() => {});
+  }
+  return;
 }
 else {
-        await createCandidate(accessToken, formData);
+        const created = await createCandidate(accessToken, formData);
         toast.current?.show({
           severity: "success",
           summary: "Success",
           detail: "Candidate added successfully!",
           life: 3000,
         });
-      }
 
-      onSuccess();
-      onHide();
+        onSuccess();
+        onHide();
+
+        if (created?.candidateId && formData.resumeFile) {
+          analyzeResume(accessToken, created.candidateId).catch(() => {});
+        }
+      }
     } catch (err: any) {
       console.error("Error saving candidate:", err);
       handleBackendErrors(err);

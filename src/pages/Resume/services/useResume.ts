@@ -592,3 +592,46 @@ export const restoreCandidate = async (
   if (!response.ok) throw new Error(data.message || "Failed to restore candidate");
   return data;
 };
+
+export interface AiFeedback {
+  match_percentage: number;
+  matched_skills: string[];
+  missing_skills: string[];
+  strengths: string[];
+  weaknesses: string[];
+  suggestions: string[];
+  summary: string;
+}
+
+export interface AiFeedbackResult {
+  feedback: AiFeedback;
+  generatedAt: string;
+}
+
+export const analyzeResume = async (
+  accessToken: string | null,
+  candidateId: number
+): Promise<AiFeedback> => {
+  const response = await fetch(`${API_URL}/candidate/${candidateId}/analyze`, {
+    method: "POST",
+    credentials: "include",
+    headers: makeHeaders(accessToken || undefined),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to analyse resume");
+  return data.data;
+};
+
+export const getAiFeedback = async (
+  accessToken: string | null,
+  candidateId: number
+): Promise<AiFeedbackResult | null> => {
+  const response = await fetch(`${API_URL}/candidate/${candidateId}/analyze`, {
+    method: "GET",
+    credentials: "include",
+    headers: makeHeaders(accessToken || undefined),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to fetch AI feedback");
+  return data.data;
+};

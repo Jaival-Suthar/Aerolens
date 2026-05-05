@@ -39,6 +39,7 @@ import { Dropdown } from "primereact/dropdown";
 import BulkPdfUploadButton from "../../../shared/BulkPdfUploadButton";
 import CandidateDeletedRecordsDialog from "./candidateDeletedRecordsDialog";
 import ChangeLogsDialog from "../../../shared/ChangeLogsDialog";
+import ResumeAnalysisDialog from "./ResumeAnalysisDialog";
 import {
   RESUME_BULK_BATCH_FINISHED_EVENT,
   startBulkResumeBatchTracking,
@@ -220,6 +221,7 @@ const ResumeTable: React.FC = () => {
     localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(fields));
   }, [visibleColumns]);
   const [viewCandidate, setViewCandidate] = useState<Candidate | null>(null);
+  const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
   const [globalFilterValue, setGlobalFilterValue] = useState('');
   const [createData, setCreateData] = useState<CandidateCreateData | null>(null);
   const [loadingCreateData, setLoadingCreateData] = useState(false);
@@ -545,6 +547,7 @@ useEffect(() => {
     return `${symbol}${row.expectedCTCAmount}/${shortType}`;
   };
 
+
   useEffect(() => {
     if (!showWhatsAppDialog || !accessToken) return;
 
@@ -761,15 +764,15 @@ useEffect(() => {
     action: () => void;
     disabled?: boolean;
   }[] = [
-    {
-      label: "Share resume (WhatsApp)",
-      icon: <FaWhatsapp style={{ marginRight: 8, marginLeft: 4, color: "#25D366" }} />,
-      disabled: !selectedResume,
-      action: () => {
-        setShowSettingsMenu(false);
-        openWhatsAppDialog();
-      },
-    },
+    // {
+    //   label: "Share resume (WhatsApp)",
+    //   icon: <FaWhatsapp style={{ marginRight: 8, marginLeft: 4, color: "#25D366" }} />,
+    //   disabled: !selectedResume,
+    //   action: () => {
+    //     setShowSettingsMenu(false);
+    //     openWhatsAppDialog();
+    //   },
+    // },
     { label: "View Interview Rounds", icon: <FaRoute style={{ marginRight: 8, marginLeft: 4 }} />, action: () => { setShowSettingsMenu(false); handleViewAllRounds(); } },
     {
       label: "Schedule Interview", icon: <FaUserTie style={{ marginRight: 8, marginLeft: 4 }} />, action: () => {
@@ -792,6 +795,15 @@ useEffect(() => {
           return;
         }
         setShowOnboardingDialog(true);
+      }
+    },
+    {
+      label: "Analyse Resume (AI)",
+      icon: <i className="pi pi-sparkles" style={{ marginRight: 8, marginLeft: 4, fontSize: "14px", color: "#7c3aed" }} />,
+      disabled: !selectedResume || !selectedResume.resumeFilename,
+      action: () => {
+        setShowSettingsMenu(false);
+        setShowAnalysisDialog(true);
       }
     },
     {
@@ -1071,9 +1083,14 @@ useEffect(() => {
           loadAllData();
         }}
       />
-      <PremiumDetailsDialog 
-        visible={!!viewCandidate} 
-        title="Candidate Details" 
+      <ResumeAnalysisDialog
+        visible={showAnalysisDialog}
+        onHide={() => setShowAnalysisDialog(false)}
+        candidate={selectedResume}
+      />
+      <PremiumDetailsDialog
+        visible={!!viewCandidate}
+        title="Candidate Details"
         onHide={() => setViewCandidate(null)}
       >
         {viewCandidate && 
