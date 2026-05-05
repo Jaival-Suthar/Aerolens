@@ -136,6 +136,56 @@ export async function getDeletedOffers(
   return data;
 }
 
+/** POST /offers/:offerId/document — generate (or return existing) document. */
+export async function generateOnboardingDocument(
+  offerId: number,
+  accessToken: string | null
+): Promise<import("../../Resume/types/resumeTypes").OnboardingDocument> {
+  return apiFetch(
+    `/offers/${offerId}/document`,
+    { method: "POST" },
+    accessToken ?? undefined
+  );
+}
+
+/** POST /offers/:offerId/document/regenerate — force regenerate. */
+export async function regenerateOnboardingDocument(
+  offerId: number,
+  accessToken: string | null
+): Promise<import("../../Resume/types/resumeTypes").OnboardingDocument> {
+  return apiFetch(
+    `/offers/${offerId}/document/regenerate`,
+    { method: "POST" },
+    accessToken ?? undefined
+  );
+}
+
+/** GET /offers/:offerId/document — retrieve existing doc info (null if none). */
+export async function getOnboardingDocument(
+  offerId: number,
+  accessToken: string | null
+): Promise<import("../../Resume/types/resumeTypes").OnboardingDocument | null> {
+  return apiFetch(
+    `/offers/${offerId}/document`,
+    { method: "GET" },
+    accessToken ?? undefined
+  );
+}
+
+/** GET /offers/:offerId/document/download — fetch Blob for download / preview. */
+export async function downloadOnboardingDocument(
+  offerId: number,
+  accessToken: string | null
+): Promise<Blob> {
+  const url = `${API_BASE_URL}/offers/${offerId}/document/download`;
+  const res = await fetch(url, {
+    headers: makeHeaders(accessToken ?? undefined),
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to download document");
+  return res.blob();
+}
+
 export async function restoreOffer(
   accessToken: string | null,
   offerId: number
