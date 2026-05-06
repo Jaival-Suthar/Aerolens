@@ -427,6 +427,12 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     return Object.keys(coreErrors).length === 0;
   };
 
+  const docTogglesValid =
+    formData.ndaSent === "Yes" &&
+    formData.codeOfConductSent === "Yes" &&
+    (!isEmployee || formData.offerLetterSent === "Yes") &&
+    (!isConsultant || formData.serviceAgreementSent === "Yes");
+
   /** Whether enough form fields are filled to enable the Generate button. */
   const canGenerate =
     !!formData.employmentTypeLookupId &&
@@ -527,8 +533,21 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
   // ─── Save handler ───────────────────────────────────────────────────────────
 
   const handleSave = async () => {
-    // If offer already saved via generate → just close
+    // If offer already saved via generate → validate toggles then close
     if (savedOfferId) {
+      if (!docTogglesValid) {
+        setSubmitted(true);
+        const docErrors: string[] = [];
+        if (formData.ndaSent !== "Yes") docErrors.push("NDA Sent");
+        if (formData.codeOfConductSent !== "Yes") docErrors.push("Code of Conduct Sent");
+        if (isEmployee && formData.offerLetterSent !== "Yes") docErrors.push("Offer Letter Sent");
+        if (isConsultant && formData.serviceAgreementSent !== "Yes") docErrors.push("Service Agreement Sent");
+        setErrors((p) => ({
+          ...p,
+          documents: `All document statuses must be set to Yes. Please review: ${docErrors.join(", ")}.`,
+        }));
+        return;
+      }
       onSuccess();
       onHide();
       return;
@@ -586,7 +605,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         severity="success"
         icon={<FaCheck className="mr-2" />}
         onClick={handleSave}
-        disabled={saving || generating || !canGenerate || ((isEmployee || isConsultant) && !generatedDoc)}
+        disabled={saving || generating || !canGenerate || ((isEmployee || isConsultant) && !generatedDoc) || !docTogglesValid}
         loading={saving}
       />
     </div>
