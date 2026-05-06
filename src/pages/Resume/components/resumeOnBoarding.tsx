@@ -42,7 +42,7 @@ const getInitialFormData = (candidate: Candidate | null): OnboardingFormData => 
   employmentType: null,
   modeOfWorkingId: candidate?.workModeId ?? null,
   joiningDate: null,
-  offeredCtcValue: candidate?.expectedCTCAmount ?? null,
+  offeredCtcValue: candidate?.expectedCTCAmount || null,
   currencyId: candidate?.expectedCTCCurrencyId ?? null,
   compensationTypeId: candidate?.expectedCTCTypeId ?? null,
   variablePay: null,
@@ -262,7 +262,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           employmentType,
           modeOfWorkingId: offer.workModelLookupId ?? prev.modeOfWorkingId,
           joiningDate: offer.joiningDate ? new Date(offer.joiningDate) : null,
-          offeredCtcValue: offer.offeredCTCAmount ?? prev.offeredCtcValue,
+          offeredCtcValue: offer.offeredCTCAmount || prev.offeredCtcValue,
           currencyId: offer.currencyLookupId ?? prev.currencyId,
           compensationTypeId: offer.compensationTypeLookupId ?? prev.compensationTypeId,
           variablePay: offer.variablePay ?? null,
@@ -333,20 +333,9 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     (e) => e.employmentTypeLookupId === formData.employmentTypeLookupId
   );
   const employmentTypeName = selectedEmploymentType?.employmentTypeName ?? "";
-  console.log("[DEBUG] employmentTypeName:", JSON.stringify(employmentTypeName), "| offerFormData loaded:", !!offerFormData, "| lookupId:", formData.employmentTypeLookupId);
   const type = employmentTypeName?.toLowerCase().trim();
   const isEmployee = type === "employee";
   const isConsultant = type === "consultant" || type === "contractor";
-  console.log("[DEBUG] isEmployee:", isEmployee, "| isConsultant:", isConsultant, "| fields:", {
-    employmentTypeLookupId: formData.employmentTypeLookupId,
-    jprProjectDepartmentId: formData.jprProjectDepartmentId,
-    modeOfWorkingId: formData.modeOfWorkingId,
-    joiningDate: formData.joiningDate,
-    offeredCtcValue: formData.offeredCtcValue,
-    currencyId: formData.currencyId,
-    compensationTypeId: formData.compensationTypeId,
-    reportingToId: formData.reportingToId,
-  });
 
   const handleEmploymentTypeChange = (lookupId: number | null) => {
     const name = offerFormData?.employmentTypes?.find(
@@ -731,11 +720,11 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           <InputNumber
             value={formData.offeredCtcValue ?? undefined}
             onValueChange={(e) => {
-              setFormData((p) => ({ ...p, offeredCtcValue: typeof e.value === "number" ? e.value : null }));
-              clearError("offeredCtcValue");
+              const val = typeof e.value === "number" && e.value > 0 ? e.value : null;
+              setFormData((p) => ({ ...p, offeredCtcValue: val }));
+              if (val) clearError("offeredCtcValue");
             }}
             mode="decimal"
-            min={1}
             className={shouldShowError("offeredCtcValue") ? "p-invalid w-full" : "w-full"}
           />
           {shouldShowError("offeredCtcValue") && (
