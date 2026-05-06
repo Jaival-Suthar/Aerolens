@@ -736,6 +736,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             dateFormat="dd/mm/yy"
             placeholder="Select Date"
             className={shouldShowError("joiningDate") ? "p-invalid w-full" : "w-full"}
+            minDate={new Date()}
             showIcon
           />
           {shouldShowError("joiningDate") && (
