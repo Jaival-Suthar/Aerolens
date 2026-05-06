@@ -124,6 +124,7 @@ const DocumentPanel: React.FC<{
         day: "numeric",
         month: "short",
         year: "numeric",
+        timeZone: "UTC",
       })
     : "";
 
