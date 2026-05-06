@@ -720,9 +720,9 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           <InputNumber
             value={formData.offeredCtcValue ?? undefined}
             onValueChange={(e) => {
-              const val = typeof e.value === "number" && e.value > 0 ? e.value : null;
+              const val = e.value != null && e.value > 0 ? e.value : null;
               setFormData((p) => ({ ...p, offeredCtcValue: val }));
-              if (val) clearError("offeredCtcValue");
+              clearError("offeredCtcValue");
             }}
             mode="decimal"
             className={shouldShowError("offeredCtcValue") ? "p-invalid w-full" : "w-full"}
