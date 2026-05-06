@@ -12,6 +12,7 @@ import type {
   ReviseOfferPayload,
   UpdateOfferStatusPayload,
   OfferDetailsPayload,
+  ActiveOfferData,
 } from "../types/offerTypes";
 
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
@@ -58,6 +59,18 @@ export async function createOffer(
 /** GET /offers/form-data — lookup data for Initiate Onboarding form. */
 export async function getOfferFormData(accessToken: string | null): Promise<OfferFormDataResponse> {
   return apiFetch<OfferFormDataResponse>("/offers/form-data", { method: "GET" }, accessToken ?? undefined);
+}
+
+/** GET /offers/by-candidate/:candidateId — returns the active (PENDING) offer with doc info, or null. */
+export async function getActiveOfferForCandidate(
+  candidateId: number,
+  accessToken: string | null
+): Promise<ActiveOfferData | null> {
+  return apiFetch<ActiveOfferData | null>(
+    `/offers/by-candidate/${candidateId}`,
+    { method: "GET" },
+    accessToken ?? undefined
+  );
 }
 
 /** GET /offers/:offerId/details — full offer + revision history for view dialog. */

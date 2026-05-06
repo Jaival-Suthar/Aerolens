@@ -12,6 +12,7 @@ import { useAuth } from "../../../shared/auth/AuthContext";
 import {
   createOffer,
   getOfferFormData,
+  getActiveOfferForCandidate,
   generateOnboardingDocument,
   regenerateOnboardingDocument,
   downloadOnboardingDocument,
@@ -215,6 +216,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
   const [generatedDoc, setGeneratedDoc] = useState<OnboardingDocument | null>(null);
   const [generating, setGenerating] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [loadingOffer, setLoadingOffer] = useState(false);
 
   useEffect(() => {
     if (visible && selectedCandidate) {
@@ -237,6 +239,59 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
       setOfferFormData(null);
     }
   }, [visible, accessToken]);
+
+  // Pre-populate form from an existing active offer when dialog opens
+  useEffect(() => {
+    if (!visible || !selectedCandidate || !accessToken) return;
+    setLoadingOffer(true);
+    getActiveOfferForCandidate(selectedCandidate.candidateId, accessToken)
+      .then((offer) => {
+        if (!offer) return;
+        const typeLower = offer.employmentTypeName?.toLowerCase().trim() ?? "";
+        const employmentType =
+          typeLower === "employee"
+            ? "Employee"
+            : typeLower === "consultant" || typeLower === "contractor"
+            ? "Consultant"
+            : null;
+        setSavedOfferId(offer.offerId);
+        setFormData((prev) => ({
+          ...prev,
+          jprProjectDepartmentId: offer.jobProfileRequirementId ?? prev.jprProjectDepartmentId,
+          employmentTypeLookupId: offer.employmentTypeLookupId,
+          employmentType,
+          modeOfWorkingId: offer.workModelLookupId ?? prev.modeOfWorkingId,
+          joiningDate: offer.joiningDate ? new Date(offer.joiningDate) : null,
+          offeredCtcValue: offer.offeredCTCAmount ?? prev.offeredCtcValue,
+          currencyId: offer.currencyLookupId ?? prev.currencyId,
+          compensationTypeId: offer.compensationTypeLookupId ?? prev.compensationTypeId,
+          variablePay: offer.variablePay ?? null,
+          joiningBonus: offer.joiningBonus ?? null,
+          reportingToId: offer.reportingManagerId,
+          vendorId: offer.vendorId ?? prev.vendorId,
+          offerLetterSent: offer.offerLetterSent === true ? "Yes" : offer.offerLetterSent === false ? "No" : null,
+          serviceAgreementSent: offer.serviceAgreementSent === true ? "Yes" : offer.serviceAgreementSent === false ? "No" : null,
+          ndaSent: offer.ndaSent === true ? "Yes" : offer.ndaSent === false ? "No" : null,
+          codeOfConductSent: offer.codeOfConductSent === true ? "Yes" : offer.codeOfConductSent === false ? "No" : null,
+        }));
+        if (offer.docType && offer.docFileName && offer.docS3Key && offer.docMimeType && offer.docGeneratedAt) {
+          setGeneratedDoc({
+            offerId: offer.offerId,
+            docType: offer.docType,
+            docFileName: offer.docFileName,
+            docS3Key: offer.docS3Key,
+            docMimeType: offer.docMimeType,
+            docFileSize: offer.docFileSize,
+            docGeneratedAt: offer.docGeneratedAt,
+            docGeneratedBy: offer.docGeneratedBy,
+          });
+        }
+      })
+      .catch(() => {
+        // New candidate — no existing offer, continue with blank form
+      })
+      .finally(() => setLoadingOffer(false));
+  }, [visible, selectedCandidate, accessToken]);
 
   // ─── Dropdown options ───────────────────────────────────────────────────────
 
@@ -278,23 +333,25 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     (e) => e.employmentTypeLookupId === formData.employmentTypeLookupId
   );
   const employmentTypeName = selectedEmploymentType?.employmentTypeName ?? "";
-  const isEmployee = employmentTypeName === "Employee";
-  const isConsultant = employmentTypeName === "Consultant" || employmentTypeName === "Contractor";
+  const type = employmentTypeName?.toLowerCase().trim();
+  const isEmployee = type === "employee";
+  const isConsultant = type === "consultant" || type === "contractor";
 
   const handleEmploymentTypeChange = (lookupId: number | null) => {
     const name = offerFormData?.employmentTypes?.find(
       (e) => e.employmentTypeLookupId === lookupId
     )?.employmentTypeName;
+    const nameLower = name?.toLowerCase().trim();
     setFormData((p) => ({
       ...p,
       employmentTypeLookupId: lookupId,
       employmentType:
-        name === "Employee"
+        nameLower === "employee"
           ? "Employee"
-          : name === "Consultant" || name === "Contractor"
+          : nameLower === "consultant" || nameLower === "contractor"
           ? "Consultant"
           : null,
-      ...(name === "Employee" ? { vendorId: null } : {}),
+      ...(nameLower === "employee" ? { vendorId: null } : {}),
     }));
     if (errors.employmentType) setErrors((p) => ({ ...p, employmentType: undefined }));
   };
@@ -534,6 +591,12 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
       modal
       className="p-fluid"
     >
+      {loadingOffer && (
+        <div className="flex align-items-center justify-content-center gap-2 mb-3">
+          <ProgressSpinner style={{ width: "20px", height: "20px" }} strokeWidth="4" />
+          <span className="text-600" style={{ fontSize: "0.85rem" }}>Loading offer data…</span>
+        </div>
+      )}
       {shouldShowError("formData") && (
         <div className="mb-3">
           <small className="p-error block">{shouldShowError("formData")}</small>

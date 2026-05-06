@@ -138,6 +138,35 @@ export interface OfferFormDataResponse {
   jobProfileRequirements: { jobProfileRequirementId: number; jobRole: string; [key: string]: unknown }[];
 }
 
+/** Response from GET /offers/by-candidate/:candidateId — active (PENDING) offer with doc info. */
+export interface ActiveOfferData {
+  offerId: number;
+  jobProfileRequirementId: number | null;
+  vendorId: number | null;
+  reportingManagerId: number | null;
+  employmentTypeLookupId: number | null;
+  employmentTypeName: string | null;
+  workModelLookupId: number | null;
+  joiningDate: string | null;
+  offeredCTCAmount: number | null;
+  currencyLookupId: number | null;
+  compensationTypeLookupId: number | null;
+  variablePay: number | null;
+  joiningBonus: number | null;
+  offerLetterSent: boolean | null;
+  serviceAgreementSent: boolean | null;
+  ndaSent: boolean | null;
+  codeOfConductSent: boolean | null;
+  offerStatus: string;
+  docType: 'offer_letter' | 'service_agreement' | null;
+  docFileName: string | null;
+  docS3Key: string | null;
+  docMimeType: string | null;
+  docFileSize: number | null;
+  docGeneratedBy: number | null;
+  docGeneratedAt: string | null;
+}
+
 export interface OfferDeletedRecord {
   offerId: number;
   candidateName: string;
