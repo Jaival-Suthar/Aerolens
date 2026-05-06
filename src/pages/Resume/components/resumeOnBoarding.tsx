@@ -578,14 +578,13 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
 
   // ─── Footer ─────────────────────────────────────────────────────────────────
 
-  const saveLabel = savedOfferId ? "Close" : "Save Offer";
   const footer = (
     <div className="flex justify-content-end gap-2">
       <DialogButton label="Cancel" severity="secondary" onClick={onHide} disabled={saving || generating} />
       <DialogButton
-        label={saveLabel}
+        label="Save Offer"
         severity="success"
-        icon={savedOfferId ? undefined : <FaCheck className="mr-2" />}
+        icon={<FaCheck className="mr-2" />}
         onClick={handleSave}
         disabled={saving || generating || (!savedOfferId && (isEmployee || isConsultant) && !generatedDoc)}
         loading={saving}
