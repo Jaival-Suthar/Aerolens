@@ -3,7 +3,7 @@ import { DataTable, type DataTableFilterMeta, type DataTableStateEvent } from "p
 import { Column } from "primereact/column";
 import { Dropdown } from "primereact/dropdown";
 import { Toast } from "primereact/toast";
-import { FaBan, FaEdit, FaClipboardList } from "react-icons/fa";
+import { FaBan, FaEdit, FaClipboardList, FaFileAlt, FaDownload } from "react-icons/fa";
 import SearchButton from "../../../shared/SearchButton";
 import DeleteButton from "../../../shared/DeleteButton";
 import ViewButton from "../../../shared/ViewButton";
@@ -14,7 +14,7 @@ import CogButton from "../../../shared/CogButton";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { Message } from "primereact/message";
 import { useAuth } from "../../../shared/auth/AuthContext";
-import { getOffers, getOfferFormData, getOfferDetails } from "../services/offerService";
+import { getOffers, getOfferFormData, getOfferDetails, downloadOnboardingDocument } from "../services/offerService";
 import type { OfferTableRow, OfferFormDataResponse, OfferDetailsOffer, OfferDetailsPayload, OfferRevision } from "../types/offerTypes";
 import OfferDelete from "./OfferDelete";
 import TerminateOfferDialog from "./TerminateOfferDialog";
@@ -169,6 +169,7 @@ const OfferTable: React.FC = () => {
 
   const [rows, setRows] = useState(() => Number(searchParams.get("rows")) || 20);
   const [first, setFirst] = useState(() => Number(searchParams.get("first")) || 0);
+  const [downloadingDocId, setDownloadingDocId] = useState<number | null>(null);
 
   const [filters, setFilters] = useState<DataTableFilterMeta>({
     global: { value: searchParams.get("q") || null, matchMode: FilterMatchMode.CONTAINS },
@@ -323,6 +324,26 @@ const OfferTable: React.FC = () => {
       .finally(() => setOfferDetailsLoading(false));
   };
 
+  const handleDownloadDocument = async (offer: OfferTableRow) => {
+    if (!accessToken) return;
+    setDownloadingDocId(offer.offerId);
+    try {
+      const blob = await downloadOnboardingDocument(offer.offerId, accessToken);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `offer_${offer.offerId}_document.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      toastRef.current?.show({ severity: "warn", summary: "No Document", detail: "No document has been generated for this offer.", life: 4000 });
+    } finally {
+      setDownloadingDocId(null);
+    }
+  };
+
   const cogMenuItems = [
     { label: "Terminate Offer", icon: <FaBan style={{ marginRight: 8, marginLeft: 4 }} />, action: handleTerminateOffer, selectionRequired: true },
     { label: "Revise Offer", icon: <FaEdit style={{ marginRight: 8, marginLeft: 4 }} />, action: handleReviseOffer, selectionRequired: true },
@@ -345,6 +366,34 @@ const OfferTable: React.FC = () => {
   const offeredCTCBody = useCallback(
     (r: OfferTableRow) => formatOfferedCTC(r, offerFormData),
     [offerFormData]
+  );
+
+  const documentBody = (r: OfferTableRow) => (
+    <button
+      onClick={() => handleDownloadDocument(r)}
+      disabled={downloadingDocId === r.offerId}
+      title="Download offer document"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "6px",
+        background: "none",
+        border: "1px solid #d1d5db",
+        borderRadius: "6px",
+        padding: "4px 10px",
+        cursor: downloadingDocId === r.offerId ? "not-allowed" : "pointer",
+        opacity: downloadingDocId === r.offerId ? 0.6 : 1,
+        fontSize: "0.78rem",
+        color: "#374151",
+      }}
+    >
+      {downloadingDocId === r.offerId ? (
+        <i className="pi pi-spin pi-spinner" style={{ fontSize: "0.8rem" }} />
+      ) : (
+        <FaFileAlt style={{ color: "#6b7280", fontSize: "0.8rem" }} />
+      )}
+      <FaDownload style={{ color: "#6b7280", fontSize: "0.75rem" }} />
+    </button>
   );
 
   /** Distinct trimmed values (stable sort) so filter options don’t duplicate on whitespace. */
@@ -571,6 +620,7 @@ const OfferTable: React.FC = () => {
             />
             <Column field="variablePay" header="Variable Pay" body={(r: OfferTableRow) => formatNumber(r.variablePay)} sortable />
             <Column field="joiningBonus" header="Joining Bonus" body={(r: OfferTableRow) => formatNumber(r.joiningBonus)} sortable />
+            <Column header="Document" body={documentBody} style={{ width: "8rem", textAlign: "center" }} />
           </DataTable>
         </div>
       </div>

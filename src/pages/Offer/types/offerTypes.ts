@@ -31,6 +31,12 @@ export interface OfferTableRow {
   documentsStatus?: string | null;
   /** Optional: when backend provides. */
   onboardingStatus?: string | null;
+  /** Onboarding document fields (populated after document generation). */
+  docType?: 'offer_letter' | 'service_agreement' | null;
+  docFileName?: string | null;
+  docMimeType?: string | null;
+  docFileSize?: number | null;
+  docGeneratedAt?: string | null;
 }
 
 /** Payload for creating an offer (POST /offers/:candidateId). candidateId from URL, createdBy from backend. */
