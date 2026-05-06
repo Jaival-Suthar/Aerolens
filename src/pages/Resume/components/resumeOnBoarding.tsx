@@ -586,7 +586,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         severity="success"
         icon={<FaCheck className="mr-2" />}
         onClick={handleSave}
-        disabled={saving || generating || (!savedOfferId && (isEmployee || isConsultant) && !generatedDoc)}
+        disabled={saving || generating || !canGenerate || ((isEmployee || isConsultant) && !generatedDoc)}
         loading={saving}
       />
     </div>
