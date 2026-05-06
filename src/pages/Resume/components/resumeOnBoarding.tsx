@@ -333,9 +333,11 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     (e) => e.employmentTypeLookupId === formData.employmentTypeLookupId
   );
   const employmentTypeName = selectedEmploymentType?.employmentTypeName ?? "";
+  console.log("[DEBUG] employmentTypeName:", JSON.stringify(employmentTypeName), "| offerFormData loaded:", !!offerFormData, "| lookupId:", formData.employmentTypeLookupId);
   const type = employmentTypeName?.toLowerCase().trim();
   const isEmployee = type === "employee";
   const isConsultant = type === "consultant" || type === "contractor";
+  console.log("[DEBUG] isEmployee:", isEmployee, "| isConsultant:", isConsultant, "| canGenerate:", !!(formData.employmentTypeLookupId && (isEmployee || isConsultant) && formData.jprProjectDepartmentId && formData.modeOfWorkingId && formData.joiningDate && formData.offeredCtcValue && formData.currencyId && formData.compensationTypeId && formData.reportingToId));
 
   const handleEmploymentTypeChange = (lookupId: number | null) => {
     const name = offerFormData?.employmentTypes?.find(
