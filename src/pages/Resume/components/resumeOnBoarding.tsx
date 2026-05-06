@@ -717,19 +717,18 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           <label className="block font-bold mb-1">
             Offered CTC Value <span className="text-red-500">*</span>
           </label>
-          <InputNumber
-            value={formData.offeredCtcValue ?? undefined}
-            onValueChange={(e) => {
-              const val = e.value != null && e.value > 0 ? e.value : null;
-            
+          <InputText
+            type="number"
+            min="0"
+            step="any"
+            value={formData.offeredCtcValue != null ? String(formData.offeredCtcValue) : ""}
+            onChange={(e) => {
+              const parsed = e.target.value === "" ? null : parseFloat(e.target.value);
+              const val = parsed != null && !isNaN(parsed) && parsed > 0 ? parsed : null;
               setFormData((p) => ({ ...p, offeredCtcValue: val }));
-            
-              // ONLY clear when valid
-              if (val && val > 0) {
-                clearError("offeredCtcValue");
-              }
+              clearError("offeredCtcValue");
             }}
-            mode="decimal"
+            placeholder="0"
             className={shouldShowError("offeredCtcValue") ? "p-invalid w-full" : "w-full"}
           />
           {shouldShowError("offeredCtcValue") && (
