@@ -721,8 +721,13 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             value={formData.offeredCtcValue ?? undefined}
             onValueChange={(e) => {
               const val = e.value != null && e.value > 0 ? e.value : null;
+            
               setFormData((p) => ({ ...p, offeredCtcValue: val }));
-              clearError("offeredCtcValue");
+            
+              // ONLY clear when valid
+              if (val && val > 0) {
+                clearError("offeredCtcValue");
+              }
             }}
             mode="decimal"
             className={shouldShowError("offeredCtcValue") ? "p-invalid w-full" : "w-full"}
