@@ -206,6 +206,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
 }) => {
   const { accessToken } = useAuth();
   const [formData, setFormData] = useState<OnboardingFormData>(getInitialFormData(null));
+  console.log("Initial formData", formData);
   const [offerFormData, setOfferFormData] = useState<OfferFormDataResponse | null>(null);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -580,6 +581,8 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
       />
     </div>
   );
+{console.log("RenderformData", { formData, errors })}
+
 
   return (
     <Dialog
@@ -710,7 +713,6 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           )}
         </div>
       </div>
-
       {/* Row 3: CTC | Currency | Compensation Type */}
       <div className="grid p-fluid mb-2">
         <div className="col-12 md:col-4">
