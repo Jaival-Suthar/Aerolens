@@ -3,7 +3,7 @@ import { DataTable, type DataTableFilterMeta, type DataTableStateEvent } from "p
 import { Column } from "primereact/column";
 import { Dropdown } from "primereact/dropdown";
 import { Toast } from "primereact/toast";
-import { FaBan, FaEdit, FaClipboardList, FaFileAlt, FaDownload } from "react-icons/fa";
+import { FaBan, FaEdit, FaClipboardList, FaDownload, FaEye } from "react-icons/fa";
 import SearchButton from "../../../shared/SearchButton";
 import DeleteButton from "../../../shared/DeleteButton";
 import ViewButton from "../../../shared/ViewButton";
@@ -11,6 +11,7 @@ import DetailsGrid from "../../../shared/DetailsGrid";
 import DetailsSection from "../../../shared/DetailsSection";
 import PremiumDetailsDialog from "../../../shared/PremiumDetailsDialog";
 import CogButton from "../../../shared/CogButton";
+import { Button } from "primereact/button";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { Message } from "primereact/message";
 import { useAuth } from "../../../shared/auth/AuthContext";
@@ -344,6 +345,18 @@ const OfferTable: React.FC = () => {
     }
   };
 
+  const handlePreviewDocument = async (offer: OfferTableRow) => {
+    if (!accessToken) return;
+    try {
+      const blob = await downloadOnboardingDocument(offer.offerId, accessToken);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch {
+      toastRef.current?.show({ severity: "warn", summary: "No Document", detail: "No document has been generated for this offer.", life: 4000 });
+    }
+  };
+
   const cogMenuItems = [
     { label: "Terminate Offer", icon: <FaBan style={{ marginRight: 8, marginLeft: 4 }} />, action: handleTerminateOffer, selectionRequired: true },
     { label: "Revise Offer", icon: <FaEdit style={{ marginRight: 8, marginLeft: 4 }} />, action: handleReviseOffer, selectionRequired: true },
@@ -368,33 +381,26 @@ const OfferTable: React.FC = () => {
     [offerFormData]
   );
 
-  const documentBody = (r: OfferTableRow) => (
-    <button
-      onClick={() => handleDownloadDocument(r)}
-      disabled={downloadingDocId === r.offerId}
-      title="Download offer document"
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "6px",
-        background: "none",
-        border: "1px solid #d1d5db",
-        borderRadius: "6px",
-        padding: "4px 10px",
-        cursor: downloadingDocId === r.offerId ? "not-allowed" : "pointer",
-        opacity: downloadingDocId === r.offerId ? 0.6 : 1,
-        fontSize: "0.78rem",
-        color: "#374151",
-      }}
-    >
-      {downloadingDocId === r.offerId ? (
-        <i className="pi pi-spin pi-spinner" style={{ fontSize: "0.8rem" }} />
-      ) : (
-        <FaFileAlt style={{ color: "#6b7280", fontSize: "0.8rem" }} />
-      )}
-      <FaDownload style={{ color: "#6b7280", fontSize: "0.75rem" }} />
-    </button>
-  );
+  const documentBody = (r: OfferTableRow) => {
+    if (!r.docType) return <span className="text-400">—</span>;
+    return (
+      <div className="flex gap-1">
+        <Button
+          icon={<FaDownload />}
+          className="p-button-outlined p-button-m"
+          tooltip="Download"
+          loading={downloadingDocId === r.offerId}
+          onClick={() => handleDownloadDocument(r)}
+        />
+        <Button
+          icon={<FaEye />}
+          className="p-button-outlined p-button-m"
+          tooltip="Preview"
+          onClick={() => handlePreviewDocument(r)}
+        />
+      </div>
+    );
+  };
 
   /** Distinct trimmed values (stable sort) so filter options don’t duplicate on whitespace. */
   const uniqueValues = (arr: (string | null | undefined)[]) => {

@@ -534,6 +534,17 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
       return;
     }
 
+    // Document generation is required for Employee / Consultant before saving
+    if ((isEmployee || isConsultant) && !generatedDoc) {
+      showGlobalToast({
+        severity: "warn",
+        summary: "Document Required",
+        detail: `Please generate the ${isEmployee ? "Offer Letter" : "Service Agreement"} before saving.`,
+        life: 5000,
+      });
+      return;
+    }
+
     if (!validate() || !selectedCandidate || !accessToken) return;
 
     const payload = buildPayload();
@@ -576,7 +587,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         severity="success"
         icon={savedOfferId ? undefined : <FaCheck className="mr-2" />}
         onClick={handleSave}
-        disabled={saving || generating}
+        disabled={saving || generating || (!savedOfferId && (isEmployee || isConsultant) && !generatedDoc)}
         loading={saving}
       />
     </div>
