@@ -11,6 +11,7 @@ import { showGlobalToast } from "../../../shared/services/globalToastService";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import {
   createOffer,
+  updateOffer,
   getOfferFormData,
   getActiveOfferForCandidate,
   generateOnboardingDocument,
@@ -566,27 +567,6 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
   // ─── Save handler ───────────────────────────────────────────────────────────
 
   const handleSave = async () => {
-    // If offer already saved via generate → validate toggles then close
-    if (savedOfferId) {
-      if (!docTogglesValid) {
-        setSubmitted(true);
-        const docErrors: string[] = [];
-        if (formData.ndaSent !== "Yes") docErrors.push("NDA Sent");
-        if (formData.codeOfConductSent !== "Yes") docErrors.push("Code of Conduct Sent");
-        if (isEmployee && formData.offerLetterSent !== "Yes") docErrors.push("Offer Letter Sent");
-        if (isConsultant && formData.serviceAgreementSent !== "Yes") docErrors.push("Service Agreement Sent");
-        setErrors((p) => ({
-          ...p,
-          documents: `All document statuses must be set to Yes. Please review: ${docErrors.join(", ")}.`,
-        }));
-        return;
-      }
-      onSuccess();
-      onHide();
-      return;
-    }
-
-    // Document generation is required for Employee / Consultant before saving
     if (isEmployee && !generatedDoc) {
       showGlobalToast({
         severity: "warn",
@@ -608,8 +588,13 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
 
     setSaving(true);
     try {
-      await createOffer(accessToken, selectedCandidate.candidateId, payload);
-      showGlobalToast({ severity: "success", summary: "Offer created", detail: "Offer has been created successfully.", life: 4000 });
+      if (savedOfferId) {
+        await updateOffer(accessToken, savedOfferId, payload);
+        showGlobalToast({ severity: "success", summary: "Offer updated", detail: "Offer has been updated successfully.", life: 4000 });
+      } else {
+        await createOffer(accessToken, selectedCandidate.candidateId, payload);
+        showGlobalToast({ severity: "success", summary: "Offer created", detail: "Offer has been created successfully.", life: 4000 });
+      }
       onSuccess();
       onHide();
     } catch (err: unknown) {
@@ -617,7 +602,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
       const message =
         Array.isArray(e?.details?.validationErrors) && e.details!.validationErrors!.length > 0
           ? e.details!.validationErrors!.map((v) => v.message).filter(Boolean).join(", ") || e?.message
-          : (e?.message ?? "Failed to create offer.");
+          : (e?.message ?? "Failed to save offer.");
       showGlobalToast({ severity: "error", summary: "Error", detail: message, life: 5000 });
     } finally {
       setSaving(false);
@@ -761,7 +746,9 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           <Calendar
             value={formData.joiningDate}
             onChange={(e) => {
-              setFormData((p) => ({ ...p, joiningDate: e.value ?? null }));
+              const jd = e.value ?? null;
+              const signBefore = jd ? new Date(new Date(jd).setDate(new Date(jd).getDate() + 2)) : null;
+              setFormData((p) => ({ ...p, joiningDate: jd, signBeforeDate: p.signBeforeDate ?? signBefore }));
               clearError("joiningDate");
             }}
             dateFormat="dd/mm/yy"
