@@ -475,8 +475,8 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     if (!joiningDate) return null;
     const signBeforeDate = formData.signBeforeDate
       ? (formData.signBeforeDate instanceof Date
-          ? formData.signBeforeDate.toISOString()
-          : new Date(formData.signBeforeDate).toISOString())
+          ? formData.signBeforeDate.toISOString().slice(0, 10)
+          : new Date(formData.signBeforeDate).toISOString().slice(0, 10))
       : null;
     return {
       jobProfileRequirementId: formData.jprProjectDepartmentId!,
