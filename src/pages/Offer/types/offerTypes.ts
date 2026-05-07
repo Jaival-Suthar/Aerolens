@@ -47,6 +47,7 @@ export interface CreateOfferPayload {
   employmentTypeLookupId: number;
   workModelLookupId: number;
   joiningDate: string;
+  sign_before_date?: string | null;
   offeredCTCAmount?: number | null;
   currencyLookupId?: number | null;
   compensationTypeLookupId?: number | null;
@@ -154,6 +155,7 @@ export interface ActiveOfferData {
   employmentTypeName: string | null;
   workModelLookupId: number | null;
   joiningDate: string | null;
+  signBeforeDate: string | null;
   offeredCTCAmount: number | null;
   currencyLookupId: number | null;
   compensationTypeLookupId: number | null;

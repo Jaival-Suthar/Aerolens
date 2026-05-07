@@ -42,6 +42,7 @@ const getInitialFormData = (candidate: Candidate | null): OnboardingFormData => 
   employmentType: null,
   modeOfWorkingId: candidate?.workModeId ?? null,
   joiningDate: null,
+  signBeforeDate: null,
   offeredCtcValue: candidate?.expectedCTCAmount || null,
   currencyId: candidate?.expectedCTCCurrencyId ?? null,
   compensationTypeId: candidate?.expectedCTCTypeId ?? null,
@@ -276,6 +277,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           employmentType,
           modeOfWorkingId: offer.workModelLookupId ?? prev.modeOfWorkingId,
           joiningDate: offer.joiningDate ? new Date(offer.joiningDate) : null,
+          signBeforeDate: offer.signBeforeDate ? new Date(offer.signBeforeDate) : null,
           offeredCtcValue: offer.offeredCTCAmount || prev.offeredCtcValue,
           currencyId: offer.currencyLookupId ?? prev.currencyId,
           compensationTypeId: offer.compensationTypeLookupId ?? prev.compensationTypeId,
@@ -471,12 +473,18 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         ? new Date(formData.joiningDate).toISOString().slice(0, 10)
         : "";
     if (!joiningDate) return null;
+    const signBeforeDate = formData.signBeforeDate
+      ? (formData.signBeforeDate instanceof Date
+          ? formData.signBeforeDate.toISOString()
+          : new Date(formData.signBeforeDate).toISOString())
+      : null;
     return {
       jobProfileRequirementId: formData.jprProjectDepartmentId!,
       reportingManagerId: formData.reportingToId!,
       employmentTypeLookupId: formData.employmentTypeLookupId,
       workModelLookupId: formData.modeOfWorkingId!,
       joiningDate,
+      sign_before_date: signBeforeDate,
       ndaSent: formData.ndaSent === "Yes",
       codeOfConductSent: formData.codeOfConductSent === "Yes",
       offeredCTCAmount: formData.offeredCtcValue ?? undefined,
@@ -579,11 +587,11 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     }
 
     // Document generation is required for Employee / Consultant before saving
-    if ((isEmployee || isConsultant) && !generatedDoc) {
+    if (isEmployee && !generatedDoc) {
       showGlobalToast({
         severity: "warn",
         summary: "Document Required",
-        detail: `Please generate the ${isEmployee ? "Offer Letter" : "Service Agreement"} before saving.`,
+        detail: "Please generate the Offer Letter before saving.",
         life: 5000,
       });
       return;
@@ -618,7 +626,6 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
 
   // ─── Generate button label ──────────────────────────────────────────────────
 
-  const generateLabel = isConsultant ? "Generate Service Agreement" : "Generate Offer Letter";
 
   // ─── Footer ─────────────────────────────────────────────────────────────────
 
@@ -630,7 +637,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         severity="success"
         icon={<FaCheck className="mr-2" />}
         onClick={handleSave}
-        disabled={saving || generating || !canGenerate || ((isEmployee || isConsultant) && !generatedDoc) || !docTogglesValid}
+        disabled={saving || generating || !canGenerate || (isEmployee && !generatedDoc) || !docTogglesValid}
         loading={saving}
       />
     </div>
@@ -690,7 +697,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         </div>
       </div>
 
-      {/* Row 2: Employment Type | Mode of Working | Joining Date */}
+      {/* Row 2: Employment Type | Mode of Working | Joining Date | Sign Before Date */}
       <div className="grid p-fluid mb-2">
         <div className="col-12 md:col-4">
           <label className="block font-bold mb-1">
@@ -767,6 +774,20 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             <small className="p-error block mt-1">{shouldShowError("joiningDate")}</small>
           )}
         </div>
+        {isEmployee && (
+          <div className="col-12 md:col-4">
+            <label className="block font-bold mb-1">Sign Before Date</label>
+            <Calendar
+              value={formData.signBeforeDate}
+              onChange={(e) => setFormData((p) => ({ ...p, signBeforeDate: e.value ?? null }))}
+              dateFormat="dd/mm/yy"
+              placeholder="Select Date"
+              className="w-full"
+              minDate={new Date()}
+              showIcon
+            />
+          </div>
+        )}
       </div>
       {/* Row 3: CTC | Currency | Compensation Type */}
       <div className="grid p-fluid mb-2">
@@ -915,11 +936,11 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           </div>
         )}
 
-        {/* Generate button — shown when employment type is known and fields are filled */}
-        {(isEmployee || isConsultant) && !generatedDoc && (
+        {/* Generate button — Employee only */}
+        {isEmployee && !generatedDoc && (
           <Button
             icon={<FaMagic className="mr-2" />}
-            label={generating ? "Generating…" : generateLabel}
+            label={generating ? "Generating…" : "Generate Offer Letter"}
             severity="info"
             outlined
             size="small"
@@ -928,6 +949,24 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             onClick={handleGenerate}
             style={{ fontSize: "0.85rem" }}
           />
+        )}
+
+        {/* Service Agreement — coming soon */}
+        {isConsultant && !generatedDoc && (
+          <div
+            className="flex align-items-center gap-2"
+            style={{
+              border: "1.5px dashed #94a3b8",
+              borderRadius: "10px",
+              padding: "10px 14px",
+              background: "#f8fafc",
+            }}
+          >
+            <FaMagic style={{ color: "#94a3b8", fontSize: "0.9rem" }} />
+            <span className="text-500" style={{ fontSize: "0.85rem" }}>
+              Service Agreement template coming soon
+            </span>
+          </div>
         )}
       </div>
 

@@ -338,6 +338,8 @@ export interface OnboardingFormData {
   employmentType: OnboardingEmploymentType | null;
   modeOfWorkingId: number | null;
   joiningDate: Date | null;
+  /** Deadline for candidate to sign and return the offer letter. */
+  signBeforeDate: Date | null;
   offeredCtcValue: number | null;
   currencyId: number | null;
   compensationTypeId: number | null;
