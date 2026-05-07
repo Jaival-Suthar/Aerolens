@@ -11,7 +11,6 @@ import { showGlobalToast } from "../../../shared/services/globalToastService";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import {
   createOffer,
-  updateOffer,
   getOfferFormData,
   getActiveOfferForCandidate,
   generateOnboardingDocument,
@@ -588,13 +587,8 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
 
     setSaving(true);
     try {
-      if (savedOfferId) {
-        await updateOffer(accessToken, savedOfferId, payload);
-        showGlobalToast({ severity: "success", summary: "Offer updated", detail: "Offer has been updated successfully.", life: 4000 });
-      } else {
-        await createOffer(accessToken, selectedCandidate.candidateId, payload);
-        showGlobalToast({ severity: "success", summary: "Offer created", detail: "Offer has been created successfully.", life: 4000 });
-      }
+      await createOffer(accessToken, selectedCandidate.candidateId, payload);
+      showGlobalToast({ severity: "success", summary: "Offer created", detail: "Offer has been created successfully.", life: 4000 });
       onSuccess();
       onHide();
     } catch (err: unknown) {
@@ -602,7 +596,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
       const message =
         Array.isArray(e?.details?.validationErrors) && e.details!.validationErrors!.length > 0
           ? e.details!.validationErrors!.map((v) => v.message).filter(Boolean).join(", ") || e?.message
-          : (e?.message ?? "Failed to save offer.");
+          : (e?.message ?? "Failed to create offer.");
       showGlobalToast({ severity: "error", summary: "Error", detail: message, life: 5000 });
     } finally {
       setSaving(false);
