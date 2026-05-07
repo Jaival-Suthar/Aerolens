@@ -19,7 +19,7 @@ import {
 } from "../../Offer/services/offerService";
 import type { CreateOfferPayload, OfferFormDataResponse } from "../../Offer/types/offerTypes";
 import type { OnboardingDocument } from "../types/resumeTypes";
-import { FaCheck, FaFileAlt, FaDownload, FaEye, FaRedo, FaMagic } from "react-icons/fa";
+import { FaCheck, FaFileAlt, FaDownload, FaEye, FaRedo, FaMagic, FaTimes } from "react-icons/fa";
 import type {
   Candidate,
   OnboardingFormData,
@@ -85,9 +85,10 @@ const DocumentPanel: React.FC<{
   doc: OnboardingDocument;
   offerId: number;
   onRegenerate: () => void;
+  onCancel: () => void;
   regenerating: boolean;
   accessToken: string | null;
-}> = ({ doc, offerId, onRegenerate, regenerating, accessToken }) => {
+}> = ({ doc, offerId, onRegenerate, onCancel, regenerating, accessToken }) => {
   const label =
     doc.docType === "offer_letter" ? "Offer Letter" : "Service Agreement";
 
@@ -188,6 +189,16 @@ const DocumentPanel: React.FC<{
           outlined
           onClick={onRegenerate}
           loading={regenerating}
+          disabled={regenerating}
+          style={{ fontSize: "0.78rem", padding: "4px 10px" }}
+        />
+        <Button
+          icon={<FaTimes className="mr-1" />}
+          label="Cancel"
+          size="small"
+          severity="danger"
+          outlined
+          onClick={onCancel}
           disabled={regenerating}
           style={{ fontSize: "0.78rem", padding: "4px 10px" }}
         />
@@ -480,6 +491,8 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
   };
 
   // ─── Generate handler ───────────────────────────────────────────────────────
+
+  const handleClearDoc = () => setGeneratedDoc(null);
 
   const handleCancelGenerate = () => {
     generateAbortRef.current?.abort();
@@ -868,6 +881,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             doc={generatedDoc}
             offerId={savedOfferId}
             onRegenerate={handleRegenerate}
+            onCancel={handleClearDoc}
             regenerating={regenerating}
             accessToken={accessToken}
           />
