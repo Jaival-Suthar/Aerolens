@@ -748,7 +748,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             onChange={(e) => {
               const jd = e.value ?? null;
               const signBefore = jd ? new Date(new Date(jd).setDate(new Date(jd).getDate() + 2)) : null;
-              setFormData((p) => ({ ...p, joiningDate: jd, signBeforeDate: p.signBeforeDate ?? signBefore }));
+              setFormData((p) => ({ ...p, joiningDate: jd, signBeforeDate: signBefore }));
               clearError("joiningDate");
             }}
             dateFormat="dd/mm/yy"
