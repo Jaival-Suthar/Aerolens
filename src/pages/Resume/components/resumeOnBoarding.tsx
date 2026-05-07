@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Dropdown } from "primereact/dropdown";
@@ -219,6 +219,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
   const [generating, setGenerating] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [loadingOffer, setLoadingOffer] = useState(false);
+  const generateAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (visible && selectedCandidate) {
@@ -480,8 +481,16 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
 
   // ─── Generate handler ───────────────────────────────────────────────────────
 
+  const handleCancelGenerate = () => {
+    generateAbortRef.current?.abort();
+    generateAbortRef.current = null;
+    setGenerating(false);
+  };
+
   const handleGenerate = async () => {
     if (!selectedCandidate || !accessToken) return;
+    const abortController = new AbortController();
+    generateAbortRef.current = abortController;
     setGenerating(true);
     try {
       let offerId = savedOfferId;
@@ -495,7 +504,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         setSavedOfferId(offerId);
       }
 
-      const doc = await generateOnboardingDocument(offerId, accessToken);
+      const doc = await generateOnboardingDocument(offerId, accessToken, abortController.signal);
       setGeneratedDoc(doc);
       showGlobalToast({
         severity: "success",
@@ -504,6 +513,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         life: 4000,
       });
     } catch (err: unknown) {
+      if ((err as { name?: string })?.name === "AbortError") return;
       const e = err as { message?: string };
       showGlobalToast({
         severity: "error",
@@ -512,6 +522,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         life: 5000,
       });
     } finally {
+      generateAbortRef.current = null;
       setGenerating(false);
     }
   };
@@ -865,7 +876,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         {/* Generating spinner */}
         {generating && !generatedDoc && (
           <div
-            className="flex align-items-center gap-2 mb-2"
+            className="flex align-items-center justify-content-between gap-2 mb-2"
             style={{
               border: "1.5px dashed #94a3b8",
               borderRadius: "10px",
@@ -873,10 +884,20 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
               background: "#f8fafc",
             }}
           >
-            <ProgressSpinner style={{ width: "22px", height: "22px" }} strokeWidth="4" />
-            <span className="text-600" style={{ fontSize: "0.85rem" }}>
-              Generating document with AI…
-            </span>
+            <div className="flex align-items-center gap-2">
+              <ProgressSpinner style={{ width: "22px", height: "22px" }} strokeWidth="4" />
+              <span className="text-600" style={{ fontSize: "0.85rem" }}>
+                Generating document with AI…
+              </span>
+            </div>
+            <Button
+              label="Cancel"
+              size="small"
+              severity="secondary"
+              outlined
+              onClick={handleCancelGenerate}
+              style={{ fontSize: "0.78rem", padding: "4px 10px" }}
+            />
           </div>
         )}
 

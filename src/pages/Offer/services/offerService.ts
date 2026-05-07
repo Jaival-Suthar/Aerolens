@@ -152,11 +152,12 @@ export async function getDeletedOffers(
 /** POST /offers/:offerId/document — generate (or return existing) document. */
 export async function generateOnboardingDocument(
   offerId: number,
-  accessToken: string | null
+  accessToken: string | null,
+  signal?: AbortSignal
 ): Promise<import("../../Resume/types/resumeTypes").OnboardingDocument> {
   return apiFetch(
     `/offers/${offerId}/document`,
-    { method: "POST" },
+    { method: "POST", signal },
     accessToken ?? undefined
   );
 }
