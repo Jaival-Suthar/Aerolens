@@ -533,17 +533,19 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     try {
       let offerId = savedOfferId;
 
+      let doc;
       if (!offerId) {
-        // First time: create the offer
+        // Brand-new offer: create then generate for the first time
         const created = await createOffer(accessToken, selectedCandidate.candidateId, payload) as { offerId: number };
         offerId = created.offerId;
         setSavedOfferId(offerId);
+        doc = await generateOnboardingDocument(offerId, accessToken, abortController.signal);
       } else {
-        // Existing offer: sync current form data (variablePay, joiningBonus, currency, dates, etc.)
+        // Existing offer: save latest form data (variablePay, joiningBonus, currency, etc.)
+        // then REGENERATE so the PDF always reflects the current offer row — not a cached copy.
         await updateOffer(accessToken, offerId, payload);
+        doc = await regenerateOnboardingDocument(offerId, accessToken);
       }
-
-      const doc = await generateOnboardingDocument(offerId, accessToken, abortController.signal);
       setGeneratedDoc(doc);
       showGlobalToast({
         severity: "success",
@@ -868,6 +870,10 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           <label className="block font-bold mb-1">Variable Pay</label>
           <InputNumber
             value={formData.variablePay ?? undefined}
+            onChange={(e) => {
+              variablePayRef.current = e.value ?? null;
+              setFormData((p) => ({ ...p, variablePay: e.value ?? null }));
+            }}
             onValueChange={(e) => {
               variablePayRef.current = e.value ?? null;
               setFormData((p) => ({ ...p, variablePay: e.value ?? null }));
@@ -880,6 +886,10 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           <label className="block font-bold mb-1">Joining Bonus</label>
           <InputNumber
             value={formData.joiningBonus ?? undefined}
+            onChange={(e) => {
+              joiningBonusRef.current = e.value ?? null;
+              setFormData((p) => ({ ...p, joiningBonus: e.value ?? null }));
+            }}
             onValueChange={(e) => {
               joiningBonusRef.current = e.value ?? null;
               setFormData((p) => ({ ...p, joiningBonus: e.value ?? null }));
