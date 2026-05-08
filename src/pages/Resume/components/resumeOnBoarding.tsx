@@ -233,10 +233,17 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
   const [regenerating, setRegenerating] = useState(false);
   const [loadingOffer, setLoadingOffer] = useState(false);
   const generateAbortRef = useRef<AbortController | null>(null);
+  // These refs hold the latest typed values for variablePay and joiningBonus so that
+  // buildPayload always reads the committed value even when React 18 batches the
+  // onValueChange state update together with the Generate button click.
+  const variablePayRef = useRef<number | null>(null);
+  const joiningBonusRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (visible && selectedCandidate) {
       setFormData(getInitialFormData(selectedCandidate));
+      variablePayRef.current = null;
+      joiningBonusRef.current = null;
       setErrors({});
       setSubmitted(false);
       setSavedOfferId(null);
@@ -271,6 +278,8 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             ? "Consultant"
             : null;
         setSavedOfferId(offer.offerId);
+        variablePayRef.current = offer.variablePay ?? null;
+        joiningBonusRef.current = offer.joiningBonus ?? null;
         setFormData((prev) => ({
           ...prev,
           jprProjectDepartmentId: offer.jobProfileRequirementId ?? prev.jprProjectDepartmentId,
@@ -493,8 +502,8 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
       offeredCTCAmount: formData.offeredCtcValue ?? undefined,
       currencyLookupId: formData.currencyId ?? undefined,
       compensationTypeLookupId: formData.compensationTypeId ?? undefined,
-      variablePay: formData.variablePay ?? undefined,
-      joiningBonus: formData.joiningBonus ?? undefined,
+      variablePay: variablePayRef.current ?? undefined,
+      joiningBonus: joiningBonusRef.current ?? undefined,
       vendorId: isConsultant ? formData.vendorId : undefined,
       offerLetterSent: isEmployee ? formData.offerLetterSent === "Yes" : undefined,
       serviceAgreementSent: isConsultant ? formData.serviceAgreementSent === "Yes" : undefined,
@@ -859,7 +868,10 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           <label className="block font-bold mb-1">Variable Pay</label>
           <InputNumber
             value={formData.variablePay ?? undefined}
-            onValueChange={(e) => setFormData((p) => ({ ...p, variablePay: e.value ?? null }))}
+            onValueChange={(e) => {
+              variablePayRef.current = e.value ?? null;
+              setFormData((p) => ({ ...p, variablePay: e.value ?? null }));
+            }}
             mode="decimal"
             className="w-full"
           />
@@ -868,7 +880,10 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           <label className="block font-bold mb-1">Joining Bonus</label>
           <InputNumber
             value={formData.joiningBonus ?? undefined}
-            onValueChange={(e) => setFormData((p) => ({ ...p, joiningBonus: e.value ?? null }))}
+            onValueChange={(e) => {
+              joiningBonusRef.current = e.value ?? null;
+              setFormData((p) => ({ ...p, joiningBonus: e.value ?? null }));
+            }}
             mode="decimal"
             className="w-full"
           />
