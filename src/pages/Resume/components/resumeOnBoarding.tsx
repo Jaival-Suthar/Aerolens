@@ -11,6 +11,7 @@ import { showGlobalToast } from "../../../shared/services/globalToastService";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import {
   createOffer,
+  updateOffer,
   getOfferFormData,
   getActiveOfferForCandidate,
   generateOnboardingDocument,
@@ -311,9 +312,9 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
 
   // ─── Dropdown options ───────────────────────────────────────────────────────
 
-  const currencyOptions = (createData?.currencies ?? []).map((c) => ({
+  const currencyOptions = (offerFormData?.currencies ?? []).map((c) => ({
     label: c.currencyName,
-    value: c.currencyId,
+    value: c.currencyLookupId,
   }));
   const compensationTypeOptions = (createData?.compensationTypes ?? []).map((t) => ({
     label: t.compensationTypeName,
@@ -464,20 +465,22 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
 
   // ─── Helpers to build the offer creation payload ────────────────────────────
 
+  // Use local date components to avoid UTC offset shifting the date backward for IST users.
+  function toLocalDateStr(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
   const buildPayload = (): CreateOfferPayload | null => {
     if (formData.employmentTypeLookupId == null) return null;
-    const joiningDate =
-      formData.joiningDate instanceof Date
-        ? formData.joiningDate.toISOString().slice(0, 10)
-        : formData.joiningDate
-        ? new Date(formData.joiningDate).toISOString().slice(0, 10)
-        : "";
+    const rawJoining = formData.joiningDate instanceof Date
+      ? formData.joiningDate
+      : formData.joiningDate ? new Date(formData.joiningDate) : null;
+    const joiningDate = rawJoining ? toLocalDateStr(rawJoining) : "";
     if (!joiningDate) return null;
-    const signBeforeDate = formData.signBeforeDate
-      ? (formData.signBeforeDate instanceof Date
-          ? formData.signBeforeDate.toISOString().slice(0, 10)
-          : new Date(formData.signBeforeDate).toISOString().slice(0, 10))
-      : null;
+    const rawSignBefore = formData.signBeforeDate instanceof Date
+      ? formData.signBeforeDate
+      : formData.signBeforeDate ? new Date(formData.signBeforeDate) : null;
+    const signBeforeDate = rawSignBefore ? toLocalDateStr(rawSignBefore) : null;
     return {
       jobProfileRequirementId: formData.jprProjectDepartmentId!,
       reportingManagerId: formData.reportingToId!,
@@ -510,19 +513,25 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
 
   const handleGenerate = async () => {
     if (!selectedCandidate || !accessToken) return;
+    const payload = buildPayload();
+    if (!payload) {
+      setErrors((p) => ({ ...p, joiningDate: "Invalid joining date." }));
+      return;
+    }
     const abortController = new AbortController();
     generateAbortRef.current = abortController;
     setGenerating(true);
     try {
       let offerId = savedOfferId;
 
-      // Save the offer first if not already done
       if (!offerId) {
-        const payload = buildPayload();
-        if (!payload) return;
+        // First time: create the offer
         const created = await createOffer(accessToken, selectedCandidate.candidateId, payload) as { offerId: number };
         offerId = created.offerId;
         setSavedOfferId(offerId);
+      } else {
+        // Existing offer: sync current form data (variablePay, joiningBonus, currency, dates, etc.)
+        await updateOffer(accessToken, offerId, payload);
       }
 
       const doc = await generateOnboardingDocument(offerId, accessToken, abortController.signal);
@@ -552,6 +561,11 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     if (!savedOfferId || !accessToken) return;
     setRegenerating(true);
     try {
+      // Sync latest form data before regenerating so PDF reflects any edits
+      const payload = buildPayload();
+      if (payload) {
+        await updateOffer(accessToken, savedOfferId, payload);
+      }
       const doc = await regenerateOnboardingDocument(savedOfferId, accessToken);
       setGeneratedDoc(doc);
       showGlobalToast({ severity: "success", summary: "Regenerated", detail: "New document is ready.", life: 4000 });
@@ -587,8 +601,13 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
 
     setSaving(true);
     try {
-      await createOffer(accessToken, selectedCandidate.candidateId, payload);
-      showGlobalToast({ severity: "success", summary: "Offer created", detail: "Offer has been created successfully.", life: 4000 });
+      if (savedOfferId) {
+        await updateOffer(accessToken, savedOfferId, payload);
+      } else {
+        const created = await createOffer(accessToken, selectedCandidate.candidateId, payload) as { offerId: number };
+        setSavedOfferId(created.offerId);
+      }
+      showGlobalToast({ severity: "success", summary: "Offer saved", detail: "Offer has been saved successfully.", life: 4000 });
       onSuccess();
       onHide();
     } catch (err: unknown) {

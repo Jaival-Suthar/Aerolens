@@ -56,6 +56,15 @@ export async function createOffer(
   return apiFetch(`/offers/${candidateId}`, { method: "POST", body: JSON.stringify(payload) }, accessToken ?? undefined);
 }
 
+/** PATCH /offers/:offerId — update existing offer fields (sync form data before document generation). */
+export async function updateOffer(
+  accessToken: string | null,
+  offerId: number,
+  payload: Partial<CreateOfferPayload>
+): Promise<unknown> {
+  return apiFetch(`/offers/${offerId}`, { method: "PATCH", body: JSON.stringify(payload) }, accessToken ?? undefined);
+}
+
 /** GET /offers/form-data — lookup data for Initiate Onboarding form. */
 export async function getOfferFormData(accessToken: string | null): Promise<OfferFormDataResponse> {
   return apiFetch<OfferFormDataResponse>("/offers/form-data", { method: "GET" }, accessToken ?? undefined);
