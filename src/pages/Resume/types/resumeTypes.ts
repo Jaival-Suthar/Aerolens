@@ -347,6 +347,8 @@ export interface OnboardingFormData {
   joiningBonus: number | null;
   reportingToId: number | null;
   vendorId: number | null;
+  /** Aadhaar address — required for Contractor employment type. */
+  contractorAddress: string | null;
   /** Shown when employment type is Employee. */
   offerLetterSent: OnboardingDocumentChoice;
   /** Shown when employment type is Consultant. */

@@ -43,6 +43,7 @@ export interface OfferTableRow {
 export interface CreateOfferPayload {
   jobProfileRequirementId: number;
   vendorId?: number | null;
+  contractorAddress?: string | null;
   reportingManagerId: number;
   employmentTypeLookupId: number;
   workModelLookupId: number;
@@ -150,6 +151,7 @@ export interface ActiveOfferData {
   offerId: number;
   jobProfileRequirementId: number | null;
   vendorId: number | null;
+  contractorAddress: string | null;
   reportingManagerId: number | null;
   employmentTypeLookupId: number | null;
   employmentTypeName: string | null;

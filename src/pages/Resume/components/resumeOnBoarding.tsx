@@ -51,6 +51,7 @@ const getInitialFormData = (candidate: Candidate | null): OnboardingFormData => 
   joiningBonus: null,
   reportingToId: null,
   vendorId: candidate?.vendorId ?? null,
+  contractorAddress: null,
   offerLetterSent: null,
   serviceAgreementSent: null,
   ndaSent: null,
@@ -91,8 +92,7 @@ const DocumentPanel: React.FC<{
   regenerating: boolean;
   accessToken: string | null;
 }> = ({ doc, offerId, onRegenerate, onCancel, regenerating, accessToken }) => {
-  const label =
-    doc.docType === "offer_letter" ? "Offer Letter" : "Service Agreement";
+  const label = doc.docType === "offer_letter" ? "Offer Letter" : "Service Agreement";
 
   const handleDownload = async () => {
     try {
@@ -295,6 +295,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           joiningBonus: offer.joiningBonus ?? null,
           reportingToId: offer.reportingManagerId,
           vendorId: offer.vendorId ?? prev.vendorId,
+          contractorAddress: offer.contractorAddress ?? null,
           offerLetterSent: offer.offerLetterSent === true ? "Yes" : offer.offerLetterSent === false ? "No" : null,
           serviceAgreementSent: offer.serviceAgreementSent === true ? "Yes" : offer.serviceAgreementSent === false ? "No" : null,
           ndaSent: offer.ndaSent === true ? "Yes" : offer.ndaSent === false ? "No" : null,
@@ -360,8 +361,10 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
   );
   const employmentTypeName = selectedEmploymentType?.employmentTypeName ?? "";
   const type = employmentTypeName?.toLowerCase().trim();
-  const isEmployee = type === "employee";
-  const isConsultant = type === "consultant" || type === "contractor";
+  const isEmployee       = type === "employee";
+  const isContractor     = type === "contractor";
+  const isConsultantOnly = type === "consultant";
+  const isConsultant     = isContractor || isConsultantOnly;
 
   const handleEmploymentTypeChange = (lookupId: number | null) => {
     const name = offerFormData?.employmentTypes?.find(
@@ -435,7 +438,8 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     if (!formData.compensationTypeId) next.compensationTypeId = "Compensation type is required.";
     if (!formData.reportingToId) next.reportingToId = "Reporting to is required.";
     if (isEmployee && !formData.signBeforeDate) next.signBeforeDate = "Sign before date is required.";
-    if (isConsultant && !formData.vendorId) next.vendorId = "Vendor is required for Consultant.";
+    if (isContractor && !formData.vendorId) next.vendorId = "Vendor is required for Contractor.";
+    if (isContractor && !formData.contractorAddress?.trim()) next.contractorAddress = "Contractor address is required.";
     return next;
   };
 
@@ -471,8 +475,9 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     !!formData.currencyId &&
     !!formData.compensationTypeId &&
     !!formData.reportingToId &&
-    (!isEmployee || !!formData.signBeforeDate) &&
-    (!isConsultant || !!formData.vendorId);
+    (!isEmployee   || !!formData.signBeforeDate) &&
+    (!isContractor || !!formData.vendorId) &&
+    (!isContractor || !!formData.contractorAddress?.trim());
 
   // ─── Helpers to build the offer creation payload ────────────────────────────
 
@@ -507,6 +512,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
       variablePay: variablePayRef.current ?? undefined,
       joiningBonus: joiningBonusRef.current ?? undefined,
       vendorId: isConsultant ? formData.vendorId : undefined,
+      contractorAddress: isContractor ? (formData.contractorAddress ?? undefined) : undefined,
       offerLetterSent: isEmployee ? formData.offerLetterSent === "Yes" : undefined,
       serviceAgreementSent: isConsultant ? formData.serviceAgreementSent === "Yes" : undefined,
     };
@@ -552,7 +558,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
       showGlobalToast({
         severity: "success",
         summary: "Document generated",
-        detail: `${doc.docType === "offer_letter" ? "Offer Letter" : "Service Agreement"} is ready.`,
+        detail: `${doc.docType === "offer_letter" ? "Offer Letter" : "Service Agreement"} generated successfully.`,
         life: 4000,
       });
     } catch (err: unknown) {
@@ -728,7 +734,9 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           )}
           {isConsultant && (
             <div className="mt-2">
-              <label className="block font-bold mb-1">Vendor</label>
+              <label className="block font-bold mb-1">
+                Vendor {isContractor && <span className="text-red-500">*</span>}
+              </label>
               <Dropdown
                 value={formData.vendorId}
                 options={vendorOptions}
@@ -742,6 +750,25 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
               />
               {shouldShowError("vendorId") && (
                 <small className="p-error block mt-1">{shouldShowError("vendorId")}</small>
+              )}
+            </div>
+          )}
+          {isContractor && (
+            <div className="mt-2">
+              <label className="block font-bold mb-1">
+                Contractor Address (as per Aadhaar) <span className="text-red-500">*</span>
+              </label>
+              <InputText
+                value={formData.contractorAddress ?? ""}
+                onChange={(e) => {
+                  setFormData((p) => ({ ...p, contractorAddress: e.target.value || null }));
+                  clearError("contractorAddress");
+                }}
+                placeholder="Full address as per Aadhaar card"
+                className={shouldShowError("contractorAddress") ? "p-invalid w-full" : "w-full"}
+              />
+              {shouldShowError("contractorAddress") && (
+                <small className="p-error block mt-1">{shouldShowError("contractorAddress")}</small>
               )}
             </div>
           )}
@@ -986,22 +1013,19 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           />
         )}
 
-        {/* Service Agreement — coming soon */}
+        {/* Generate Service Agreement button — Consultant / Contractor */}
         {isConsultant && !generatedDoc && (
-          <div
-            className="flex align-items-center gap-2"
-            style={{
-              border: "1.5px dashed #94a3b8",
-              borderRadius: "10px",
-              padding: "10px 14px",
-              background: "#f8fafc",
-            }}
-          >
-            <FaMagic style={{ color: "#94a3b8", fontSize: "0.9rem" }} />
-            <span className="text-500" style={{ fontSize: "0.85rem" }}>
-              Service Agreement template coming soon
-            </span>
-          </div>
+          <Button
+            icon={<FaMagic className="mr-2" />}
+            label={generating ? "Generating…" : "Generate Service Agreement"}
+            severity="info"
+            outlined
+            size="small"
+            disabled={!canGenerate || generating}
+            loading={generating}
+            onClick={handleGenerate}
+            style={{ fontSize: "0.85rem" }}
+          />
         )}
       </div>
 
