@@ -434,6 +434,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     if (!formData.currencyId) next.currencyId = "Currency is required.";
     if (!formData.compensationTypeId) next.compensationTypeId = "Compensation type is required.";
     if (!formData.reportingToId) next.reportingToId = "Reporting to is required.";
+    if (isEmployee && !formData.signBeforeDate) next.signBeforeDate = "Sign before date is required.";
     if (isConsultant && !formData.vendorId) next.vendorId = "Vendor is required for Consultant.";
     return next;
   };
@@ -470,6 +471,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     !!formData.currencyId &&
     !!formData.compensationTypeId &&
     !!formData.reportingToId &&
+    (!isEmployee || !!formData.signBeforeDate) &&
     (!isConsultant || !!formData.vendorId);
 
   // ─── Helpers to build the offer creation payload ────────────────────────────
@@ -787,16 +789,24 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         </div>
         {isEmployee && (
           <div className="col-12 md:col-4">
-            <label className="block font-bold mb-1">Sign Before Date</label>
+            <label className="block font-bold mb-1">
+              Sign Before Date <span className="text-red-500">*</span>
+            </label>
             <Calendar
               value={formData.signBeforeDate}
-              onChange={(e) => setFormData((p) => ({ ...p, signBeforeDate: e.value ?? null }))}
+              onChange={(e) => {
+                setFormData((p) => ({ ...p, signBeforeDate: e.value ?? null }));
+                clearError("signBeforeDate");
+              }}
               dateFormat="dd/mm/yy"
               placeholder="Select Date"
-              className="w-full"
+              className={shouldShowError("signBeforeDate") ? "p-invalid w-full" : "w-full"}
               minDate={new Date()}
               showIcon
             />
+            {shouldShowError("signBeforeDate") && (
+              <small className="p-error block mt-1">{shouldShowError("signBeforeDate")}</small>
+            )}
           </div>
         )}
       </div>
