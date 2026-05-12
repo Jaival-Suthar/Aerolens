@@ -171,6 +171,62 @@ export async function generateOnboardingDocument(
   );
 }
 
+type ContractorAttachments = {
+  professionalPhoto: File | null;
+  aadhaarFront: File | null;
+  aadhaarBack: File | null;
+  panCard: File | null;
+};
+
+function buildAttachmentFormData(attachments: ContractorAttachments): FormData {
+  const fd = new FormData();
+  if (attachments.professionalPhoto) fd.append("professionalPhoto", attachments.professionalPhoto);
+  if (attachments.aadhaarFront)      fd.append("aadhaarFront",      attachments.aadhaarFront);
+  if (attachments.aadhaarBack)       fd.append("aadhaarBack",        attachments.aadhaarBack);
+  if (attachments.panCard)           fd.append("panCard",            attachments.panCard);
+  return fd;
+}
+
+async function fetchWithAttachments<T>(
+  url: string,
+  attachments: ContractorAttachments,
+  accessToken: string | null,
+  signal?: AbortSignal
+): Promise<T> {
+  const fd = buildAttachmentFormData(attachments);
+  const headers: Record<string, string> = {};
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+  const res = await fetch(`${API_BASE_URL}${url}`, {
+    method: "POST",
+    headers,
+    body: fd,
+    credentials: "include",
+    signal,
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || "Request failed");
+  return data.data;
+}
+
+/** POST /offers/:offerId/document/with-attachments — contractor generate with images. */
+export async function generateWithAttachments(
+  offerId: number,
+  accessToken: string | null,
+  attachments: ContractorAttachments,
+  signal?: AbortSignal
+): Promise<import("../../Resume/types/resumeTypes").OnboardingDocument> {
+  return fetchWithAttachments(`/offers/${offerId}/document/with-attachments`, attachments, accessToken, signal);
+}
+
+/** POST /offers/:offerId/document/regenerate-with-attachments — contractor regenerate with images. */
+export async function regenerateWithAttachments(
+  offerId: number,
+  accessToken: string | null,
+  attachments: ContractorAttachments
+): Promise<import("../../Resume/types/resumeTypes").OnboardingDocument> {
+  return fetchWithAttachments(`/offers/${offerId}/document/regenerate-with-attachments`, attachments, accessToken);
+}
+
 /** POST /offers/:offerId/document/regenerate — force regenerate. */
 export async function regenerateOnboardingDocument(
   offerId: number,

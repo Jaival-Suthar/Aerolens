@@ -16,11 +16,13 @@ import {
   getActiveOfferForCandidate,
   generateOnboardingDocument,
   regenerateOnboardingDocument,
+  generateWithAttachments,
+  regenerateWithAttachments,
   downloadOnboardingDocument,
 } from "../../Offer/services/offerService";
 import type { CreateOfferPayload, OfferFormDataResponse } from "../../Offer/types/offerTypes";
 import type { OnboardingDocument } from "../types/resumeTypes";
-import { FaCheck, FaFileAlt, FaDownload, FaEye, FaRedo, FaMagic, FaTimes } from "react-icons/fa";
+import { FaCheck, FaFileAlt, FaDownload, FaEye, FaRedo, FaMagic, FaTimes, FaUpload } from "react-icons/fa";
 import type {
   Candidate,
   OnboardingFormData,
@@ -226,6 +228,14 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
+  // Contractor attachment images (not persisted — sent at generate time only)
+  const [attachments, setAttachments] = useState<{
+    professionalPhoto: File | null;
+    aadhaarFront: File | null;
+    aadhaarBack: File | null;
+    panCard: File | null;
+  }>({ professionalPhoto: null, aadhaarFront: null, aadhaarBack: null, panCard: null });
+
   // Document generation state
   const [savedOfferId, setSavedOfferId] = useState<number | null>(null);
   const [generatedDoc, setGeneratedDoc] = useState<OnboardingDocument | null>(null);
@@ -250,6 +260,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
       setGeneratedDoc(null);
       setGenerating(false);
       setRegenerating(false);
+      setAttachments({ professionalPhoto: null, aadhaarFront: null, aadhaarBack: null, panCard: null });
     }
   }, [visible, selectedCandidate]);
 
@@ -432,10 +443,12 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     if (!formData.jprProjectDepartmentId) next.jprProjectDepartmentId = "Final JPR is required.";
     if (!formData.modeOfWorkingId) next.modeOfWorkingId = "Mode of Working is required.";
     if (!formData.joiningDate) next.joiningDate = "Joining date is required.";
-    if (!formData.offeredCtcValue || Number(formData.offeredCtcValue) <= 0)
-      next.offeredCtcValue = "Offered CTC must be greater than 0.";
-    if (!formData.currencyId) next.currencyId = "Currency is required.";
-    if (!formData.compensationTypeId) next.compensationTypeId = "Compensation type is required.";
+    if (!isContractor) {
+      if (!formData.offeredCtcValue || Number(formData.offeredCtcValue) <= 0)
+        next.offeredCtcValue = "Offered CTC must be greater than 0.";
+      if (!formData.currencyId) next.currencyId = "Currency is required.";
+      if (!formData.compensationTypeId) next.compensationTypeId = "Compensation type is required.";
+    }
     if (!formData.reportingToId) next.reportingToId = "Reporting to is required.";
     if (isEmployee && !formData.signBeforeDate) next.signBeforeDate = "Sign before date is required.";
     if (isContractor && !formData.vendorId) next.vendorId = "Vendor is required for Contractor.";
@@ -470,10 +483,9 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     !!formData.jprProjectDepartmentId &&
     !!formData.modeOfWorkingId &&
     !!formData.joiningDate &&
-    !!formData.offeredCtcValue &&
-    Number(formData.offeredCtcValue) > 0 &&
-    !!formData.currencyId &&
-    !!formData.compensationTypeId &&
+    (isContractor || (!!formData.offeredCtcValue && Number(formData.offeredCtcValue) > 0)) &&
+    (isContractor || !!formData.currencyId) &&
+    (isContractor || !!formData.compensationTypeId) &&
     !!formData.reportingToId &&
     (!isEmployee   || !!formData.signBeforeDate) &&
     (!isContractor || !!formData.vendorId) &&
@@ -543,16 +555,17 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
 
       let doc;
       if (!offerId) {
-        // Brand-new offer: create then generate for the first time
         const created = await createOffer(accessToken, selectedCandidate.candidateId, payload) as { offerId: number };
         offerId = created.offerId;
         setSavedOfferId(offerId);
-        doc = await generateOnboardingDocument(offerId, accessToken, abortController.signal);
+        doc = isContractor
+          ? await generateWithAttachments(offerId, accessToken, attachments, abortController.signal)
+          : await generateOnboardingDocument(offerId, accessToken, abortController.signal);
       } else {
-        // Existing offer: save latest form data (variablePay, joiningBonus, currency, etc.)
-        // then REGENERATE so the PDF always reflects the current offer row — not a cached copy.
         await updateOffer(accessToken, offerId, payload);
-        doc = await regenerateOnboardingDocument(offerId, accessToken);
+        doc = isContractor
+          ? await regenerateWithAttachments(offerId, accessToken, attachments)
+          : await regenerateOnboardingDocument(offerId, accessToken);
       }
       setGeneratedDoc(doc);
       showGlobalToast({
@@ -585,7 +598,9 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
       if (payload) {
         await updateOffer(accessToken, savedOfferId, payload);
       }
-      const doc = await regenerateOnboardingDocument(savedOfferId, accessToken);
+      const doc = isContractor
+        ? await regenerateWithAttachments(savedOfferId, accessToken, attachments)
+        : await regenerateOnboardingDocument(savedOfferId, accessToken);
       setGeneratedDoc(doc);
       showGlobalToast({ severity: "success", summary: "Regenerated", detail: "New document is ready.", life: 4000 });
     } catch (err: unknown) {
@@ -837,8 +852,8 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           </div>
         )}
       </div>
-      {/* Row 3: CTC | Currency | Compensation Type */}
-      <div className="grid p-fluid mb-2">
+      {/* Row 3: CTC | Currency | Compensation Type — hidden for Contractor */}
+      {!isContractor && (<div className="grid p-fluid mb-2">
         <div className="col-12 md:col-4">
           <label className="block font-bold mb-1">
             Offered CTC Value <span className="text-red-500">*</span>
@@ -899,10 +914,11 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             <small className="p-error block mt-1">{shouldShowError("compensationTypeId")}</small>
           )}
         </div>
-      </div>
+      </div>)}
 
       {/* Row 4: Variable Pay | Joining Bonus | Reporting To */}
       <div className="grid p-fluid mb-3">
+        {!isContractor && (<>
         <div className="col-12 md:col-4">
           <label className="block font-bold mb-1">Variable Pay</label>
           <InputNumber
@@ -935,6 +951,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             className="w-full"
           />
         </div>
+        </>)}
         <div className="col-12 md:col-4">
           <label className="block font-bold mb-1">
             Reporting To <span className="text-red-500">*</span>
@@ -955,6 +972,87 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           )}
         </div>
       </div>
+
+      {/* ── Contractor document attachments ── */}
+      {isContractor && (
+        <div className="mb-3 pt-2 border-top-1 surface-border">
+          <label className="block font-bold mb-2" style={{ fontSize: "0.9rem" }}>
+            Document Attachments <span className="text-500 font-normal" style={{ fontSize: "0.8rem" }}>(jpg / png — embedded in agreement PDF)</span>
+          </label>
+          <div className="grid p-fluid">
+            {([
+              { key: "professionalPhoto", label: "Professional Photo" },
+              { key: "aadhaarFront",      label: "Aadhaar Card Front" },
+              { key: "aadhaarBack",       label: "Aadhaar Card Back"  },
+              { key: "panCard",           label: "Owner PAN Card"     },
+            ] as const).map(({ key, label }) => {
+              const file = attachments[key];
+              const previewUrl = file ? URL.createObjectURL(file) : null;
+              return (
+                <div key={key} className="col-12 md:col-3">
+                  <div
+                    style={{
+                      border: "1.5px dashed #cbd5e1",
+                      borderRadius: "8px",
+                      padding: "8px",
+                      background: "#f8fafc",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      position: "relative",
+                      minHeight: "110px",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                    }}
+                    onClick={() => document.getElementById(`attach-${key}`)?.click()}
+                  >
+                    {previewUrl ? (
+                      <img
+                        src={previewUrl}
+                        alt={label}
+                        style={{ maxWidth: "100%", maxHeight: "80px", objectFit: "contain", borderRadius: "4px" }}
+                        onLoad={() => URL.revokeObjectURL(previewUrl)}
+                      />
+                    ) : (
+                      <>
+                        <FaUpload style={{ color: "#94a3b8", fontSize: "1.2rem" }} />
+                        <span className="text-500" style={{ fontSize: "0.75rem" }}>Upload</span>
+                      </>
+                    )}
+                    <span className="font-semibold" style={{ fontSize: "0.72rem", color: "#475569" }}>{label}</span>
+                    {file && (
+                      <Button
+                        icon={<FaTimes />}
+                        size="small"
+                        severity="danger"
+                        text
+                        style={{ position: "absolute", top: 2, right: 2, padding: "2px 4px", fontSize: "0.65rem" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAttachments((p) => ({ ...p, [key]: null }));
+                        }}
+                      />
+                    )}
+                  </div>
+                  <input
+                    id={`attach-${key}`}
+                    type="file"
+                    accept="image/jpeg,image/png"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] ?? null;
+                      setAttachments((p) => ({ ...p, [key]: f }));
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Generate Document section ── */}
       <div className="mb-3">
