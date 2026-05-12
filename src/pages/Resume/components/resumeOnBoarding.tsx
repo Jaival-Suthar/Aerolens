@@ -558,7 +558,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         const created = await createOffer(accessToken, selectedCandidate.candidateId, payload) as { offerId: number };
         offerId = created.offerId;
         setSavedOfferId(offerId);
-        doc = isContractor
+        doc = isConsultantOnly
           ? await generateWithAttachments(offerId, accessToken, attachments, abortController.signal)
           : await generateOnboardingDocument(offerId, accessToken, abortController.signal);
       } else {
@@ -598,7 +598,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
       if (payload) {
         await updateOffer(accessToken, savedOfferId, payload);
       }
-      const doc = isContractor
+      const doc = isConsultantOnly
         ? await regenerateWithAttachments(savedOfferId, accessToken, attachments)
         : await regenerateOnboardingDocument(savedOfferId, accessToken);
       setGeneratedDoc(doc);
@@ -973,8 +973,8 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         </div>
       </div>
 
-      {/* ── Contractor document attachments ── */}
-      {isContractor && (
+      {/* ── Consultant document attachments ── */}
+      {isConsultantOnly && (
         <div className="mb-3 pt-2 border-top-1 surface-border">
           <label className="block font-bold mb-2" style={{ fontSize: "0.9rem" }}>
             Document Attachments <span className="text-500 font-normal" style={{ fontSize: "0.8rem" }}>(jpg / png — embedded in agreement PDF)</span>
