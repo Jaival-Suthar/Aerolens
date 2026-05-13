@@ -3,7 +3,7 @@ import { DataTable, type DataTableFilterMeta, type DataTableStateEvent } from "p
 import { Column } from "primereact/column";
 import { Dropdown } from "primereact/dropdown";
 import { Toast } from "primereact/toast";
-import { FaBan, FaEdit, FaClipboardList } from "react-icons/fa";
+import { FaBan, FaEdit, FaClipboardList, FaDownload, FaEye } from "react-icons/fa";
 import SearchButton from "../../../shared/SearchButton";
 import DeleteButton from "../../../shared/DeleteButton";
 import ViewButton from "../../../shared/ViewButton";
@@ -11,10 +11,11 @@ import DetailsGrid from "../../../shared/DetailsGrid";
 import DetailsSection from "../../../shared/DetailsSection";
 import PremiumDetailsDialog from "../../../shared/PremiumDetailsDialog";
 import CogButton from "../../../shared/CogButton";
+import { Button } from "primereact/button";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { Message } from "primereact/message";
 import { useAuth } from "../../../shared/auth/AuthContext";
-import { getOffers, getOfferFormData, getOfferDetails } from "../services/offerService";
+import { getOffers, getOfferFormData, getOfferDetails, downloadOnboardingDocument } from "../services/offerService";
 import type { OfferTableRow, OfferFormDataResponse, OfferDetailsOffer, OfferDetailsPayload, OfferRevision } from "../types/offerTypes";
 import OfferDelete from "./OfferDelete";
 import TerminateOfferDialog from "./TerminateOfferDialog";
@@ -169,6 +170,7 @@ const OfferTable: React.FC = () => {
 
   const [rows, setRows] = useState(() => Number(searchParams.get("rows")) || 20);
   const [first, setFirst] = useState(() => Number(searchParams.get("first")) || 0);
+  const [downloadingDocId, setDownloadingDocId] = useState<number | null>(null);
 
   const [filters, setFilters] = useState<DataTableFilterMeta>({
     global: { value: searchParams.get("q") || null, matchMode: FilterMatchMode.CONTAINS },
@@ -323,6 +325,38 @@ const OfferTable: React.FC = () => {
       .finally(() => setOfferDetailsLoading(false));
   };
 
+  const handleDownloadDocument = async (offer: OfferTableRow) => {
+    if (!accessToken) return;
+    setDownloadingDocId(offer.offerId);
+    try {
+      const blob = await downloadOnboardingDocument(offer.offerId, accessToken);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `offer_${offer.offerId}_document.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      toastRef.current?.show({ severity: "warn", summary: "No Document", detail: "No document has been generated for this offer.", life: 4000 });
+    } finally {
+      setDownloadingDocId(null);
+    }
+  };
+
+  const handlePreviewDocument = async (offer: OfferTableRow) => {
+    if (!accessToken) return;
+    try {
+      const blob = await downloadOnboardingDocument(offer.offerId, accessToken);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch {
+      toastRef.current?.show({ severity: "warn", summary: "No Document", detail: "No document has been generated for this offer.", life: 4000 });
+    }
+  };
+
   const cogMenuItems = [
     { label: "Terminate Offer", icon: <FaBan style={{ marginRight: 8, marginLeft: 4 }} />, action: handleTerminateOffer, selectionRequired: true },
     { label: "Revise Offer", icon: <FaEdit style={{ marginRight: 8, marginLeft: 4 }} />, action: handleReviseOffer, selectionRequired: true },
@@ -346,6 +380,27 @@ const OfferTable: React.FC = () => {
     (r: OfferTableRow) => formatOfferedCTC(r, offerFormData),
     [offerFormData]
   );
+
+  const documentBody = (r: OfferTableRow) => {
+    if (!r.docType) return <span className="text-400">—</span>;
+    return (
+      <div className="flex gap-1">
+        <Button
+          icon={<FaDownload />}
+          className="p-button-outlined p-button-m"
+          tooltip="Download"
+          loading={downloadingDocId === r.offerId}
+          onClick={() => handleDownloadDocument(r)}
+        />
+        <Button
+          icon={<FaEye />}
+          className="p-button-outlined p-button-m"
+          tooltip="Preview"
+          onClick={() => handlePreviewDocument(r)}
+        />
+      </div>
+    );
+  };
 
   /** Distinct trimmed values (stable sort) so filter options don’t duplicate on whitespace. */
   const uniqueValues = (arr: (string | null | undefined)[]) => {
@@ -571,6 +626,7 @@ const OfferTable: React.FC = () => {
             />
             <Column field="variablePay" header="Variable Pay" body={(r: OfferTableRow) => formatNumber(r.variablePay)} sortable />
             <Column field="joiningBonus" header="Joining Bonus" body={(r: OfferTableRow) => formatNumber(r.joiningBonus)} sortable />
+            <Column header="Document" body={documentBody} style={{ width: "8rem", textAlign: "center" }} />
           </DataTable>
         </div>
       </div>

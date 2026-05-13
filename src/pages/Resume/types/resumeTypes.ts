@@ -338,6 +338,8 @@ export interface OnboardingFormData {
   employmentType: OnboardingEmploymentType | null;
   modeOfWorkingId: number | null;
   joiningDate: Date | null;
+  /** Deadline for candidate to sign and return the offer letter. */
+  signBeforeDate: Date | null;
   offeredCtcValue: number | null;
   currencyId: number | null;
   compensationTypeId: number | null;
@@ -345,6 +347,8 @@ export interface OnboardingFormData {
   joiningBonus: number | null;
   reportingToId: number | null;
   vendorId: number | null;
+  /** Aadhaar address — required for Contractor employment type. */
+  contractorAddress: string | null;
   /** Shown when employment type is Employee. */
   offerLetterSent: OnboardingDocumentChoice;
   /** Shown when employment type is Consultant. */
@@ -359,6 +363,18 @@ export interface ResumeOnBoardingProps {
   selectedCandidate: Candidate | null;
   createData: CandidateCreateData | null;
   onSuccess: () => void;
+}
+
+/** Onboarding document stored in the offer row (doc_* columns). */
+export interface OnboardingDocument {
+  offerId: number;
+  docType: 'offer_letter' | 'service_agreement';
+  docFileName: string;
+  docS3Key: string;
+  docMimeType: string;
+  docFileSize: number | null;
+  docGeneratedAt: string;
+  docGeneratedBy: number | null;
 }
 
 /** Row from GET /whatsapp/groups → data.groups */

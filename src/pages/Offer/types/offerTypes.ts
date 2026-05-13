@@ -31,16 +31,24 @@ export interface OfferTableRow {
   documentsStatus?: string | null;
   /** Optional: when backend provides. */
   onboardingStatus?: string | null;
+  /** Onboarding document fields (populated after document generation). */
+  docType?: 'offer_letter' | 'service_agreement' | null;
+  docFileName?: string | null;
+  docMimeType?: string | null;
+  docFileSize?: number | null;
+  docGeneratedAt?: string | null;
 }
 
 /** Payload for creating an offer (POST /offers/:candidateId). candidateId from URL, createdBy from backend. */
 export interface CreateOfferPayload {
   jobProfileRequirementId: number;
   vendorId?: number | null;
+  contractorAddress?: string | null;
   reportingManagerId: number;
   employmentTypeLookupId: number;
   workModelLookupId: number;
   joiningDate: string;
+  sign_before_date?: string | null;
   offeredCTCAmount?: number | null;
   currencyLookupId?: number | null;
   compensationTypeLookupId?: number | null;
@@ -136,6 +144,41 @@ export interface OfferFormDataResponse {
   vendors: { vendorId: number; vendorName: string }[];
   members: { memberId: number; memberName: string }[];
   jobProfileRequirements: { jobProfileRequirementId: number; jobRole: string; [key: string]: unknown }[];
+}
+
+/** Response from GET /offers/by-candidate/:candidateId — active (PENDING) offer with doc info. */
+export interface ActiveOfferData {
+  offerId: number;
+  jobProfileRequirementId: number | null;
+  vendorId: number | null;
+  contractorAddress: string | null;
+  photoS3Key: string | null;
+  aadhaarFrontS3Key: string | null;
+  aadhaarBackS3Key: string | null;
+  panCardS3Key: string | null;
+  reportingManagerId: number | null;
+  employmentTypeLookupId: number | null;
+  employmentTypeName: string | null;
+  workModelLookupId: number | null;
+  joiningDate: string | null;
+  signBeforeDate: string | null;
+  offeredCTCAmount: number | null;
+  currencyLookupId: number | null;
+  compensationTypeLookupId: number | null;
+  variablePay: number | null;
+  joiningBonus: number | null;
+  offerLetterSent: boolean | null;
+  serviceAgreementSent: boolean | null;
+  ndaSent: boolean | null;
+  codeOfConductSent: boolean | null;
+  offerStatus: string;
+  docType: 'offer_letter' | 'service_agreement' | null;
+  docFileName: string | null;
+  docS3Key: string | null;
+  docMimeType: string | null;
+  docFileSize: number | null;
+  docGeneratedBy: number | null;
+  docGeneratedAt: string | null;
 }
 
 export interface OfferDeletedRecord {

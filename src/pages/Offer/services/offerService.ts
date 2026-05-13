@@ -12,6 +12,7 @@ import type {
   ReviseOfferPayload,
   UpdateOfferStatusPayload,
   OfferDetailsPayload,
+  ActiveOfferData,
 } from "../types/offerTypes";
 
 const API_BASE_URL: string = import.meta.env.VITE_BASE_URL;
@@ -55,9 +56,30 @@ export async function createOffer(
   return apiFetch(`/offers/${candidateId}`, { method: "POST", body: JSON.stringify(payload) }, accessToken ?? undefined);
 }
 
+/** PATCH /offers/:offerId — update existing offer fields (sync form data before document generation). */
+export async function updateOffer(
+  accessToken: string | null,
+  offerId: number,
+  payload: Partial<CreateOfferPayload>
+): Promise<unknown> {
+  return apiFetch(`/offers/${offerId}`, { method: "PATCH", body: JSON.stringify(payload) }, accessToken ?? undefined);
+}
+
 /** GET /offers/form-data — lookup data for Initiate Onboarding form. */
 export async function getOfferFormData(accessToken: string | null): Promise<OfferFormDataResponse> {
   return apiFetch<OfferFormDataResponse>("/offers/form-data", { method: "GET" }, accessToken ?? undefined);
+}
+
+/** GET /offers/by-candidate/:candidateId — returns the active (PENDING) offer with doc info, or null. */
+export async function getActiveOfferForCandidate(
+  candidateId: number,
+  accessToken: string | null
+): Promise<ActiveOfferData | null> {
+  return apiFetch<ActiveOfferData | null>(
+    `/offers/by-candidate/${candidateId}`,
+    { method: "GET" },
+    accessToken ?? undefined
+  );
 }
 
 /** GET /offers/:offerId/details — full offer + revision history for view dialog. */
@@ -134,6 +156,160 @@ export async function getDeletedOffers(
   const data = await res.json();
   if (!data.success) throw new Error(data.message || "Failed to fetch deleted offers");
   return data;
+}
+
+type ConsultantImageFiles = {
+  professionalPhoto?: File | null;
+  aadhaarFront?: File | null;
+  aadhaarBack?: File | null;
+  panCard?: File | null;
+};
+
+/** POST /offers/:offerId/consultant-images — upload up to 4 identity images to S3. */
+export async function uploadConsultantImages(
+  offerId: number,
+  images: ConsultantImageFiles,
+  accessToken: string | null
+): Promise<{ savedCount: number }> {
+  const fd = new FormData();
+  if (images.professionalPhoto) fd.append("professionalPhoto", images.professionalPhoto);
+  if (images.aadhaarFront)      fd.append("aadhaarFront",      images.aadhaarFront);
+  if (images.aadhaarBack)       fd.append("aadhaarBack",       images.aadhaarBack);
+  if (images.panCard)           fd.append("panCard",           images.panCard);
+  const headers: Record<string, string> = {};
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+  const res = await fetch(`${API_BASE_URL}/offers/${offerId}/consultant-images`, {
+    method: "POST", headers, body: fd, credentials: "include",
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || "Image upload failed");
+  return data.data;
+}
+
+/** GET /offers/:offerId/consultant-images/:field — returns a blob URL for preview. */
+export async function getConsultantImageBlob(
+  offerId: number,
+  field: "photo" | "aadhaar_front" | "aadhaar_back" | "pan_card",
+  accessToken: string | null
+): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/offers/${offerId}/consultant-images/${field}`, {
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      credentials: "include",
+    });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  } catch {
+    return null;
+  }
+}
+
+/** POST /offers/:offerId/document — generate (or return existing) document. */
+export async function generateOnboardingDocument(
+  offerId: number,
+  accessToken: string | null,
+  signal?: AbortSignal
+): Promise<import("../../Resume/types/resumeTypes").OnboardingDocument> {
+  return apiFetch(
+    `/offers/${offerId}/document`,
+    { method: "POST", signal },
+    accessToken ?? undefined
+  );
+}
+
+type ContractorAttachments = {
+  professionalPhoto: File | null;
+  aadhaarFront: File | null;
+  aadhaarBack: File | null;
+  panCard: File | null;
+};
+
+function buildAttachmentFormData(attachments: ContractorAttachments): FormData {
+  const fd = new FormData();
+  if (attachments.professionalPhoto) fd.append("professionalPhoto", attachments.professionalPhoto);
+  if (attachments.aadhaarFront)      fd.append("aadhaarFront",      attachments.aadhaarFront);
+  if (attachments.aadhaarBack)       fd.append("aadhaarBack",        attachments.aadhaarBack);
+  if (attachments.panCard)           fd.append("panCard",            attachments.panCard);
+  return fd;
+}
+
+async function fetchWithAttachments<T>(
+  url: string,
+  attachments: ContractorAttachments,
+  accessToken: string | null,
+  signal?: AbortSignal
+): Promise<T> {
+  const fd = buildAttachmentFormData(attachments);
+  const headers: Record<string, string> = {};
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+  const res = await fetch(`${API_BASE_URL}${url}`, {
+    method: "POST",
+    headers,
+    body: fd,
+    credentials: "include",
+    signal,
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || "Request failed");
+  return data.data;
+}
+
+/** POST /offers/:offerId/document/with-attachments — contractor generate with images. */
+export async function generateWithAttachments(
+  offerId: number,
+  accessToken: string | null,
+  attachments: ContractorAttachments,
+  signal?: AbortSignal
+): Promise<import("../../Resume/types/resumeTypes").OnboardingDocument> {
+  return fetchWithAttachments(`/offers/${offerId}/document/with-attachments`, attachments, accessToken, signal);
+}
+
+/** POST /offers/:offerId/document/regenerate-with-attachments — contractor regenerate with images. */
+export async function regenerateWithAttachments(
+  offerId: number,
+  accessToken: string | null,
+  attachments: ContractorAttachments
+): Promise<import("../../Resume/types/resumeTypes").OnboardingDocument> {
+  return fetchWithAttachments(`/offers/${offerId}/document/regenerate-with-attachments`, attachments, accessToken);
+}
+
+/** POST /offers/:offerId/document/regenerate — force regenerate. */
+export async function regenerateOnboardingDocument(
+  offerId: number,
+  accessToken: string | null
+): Promise<import("../../Resume/types/resumeTypes").OnboardingDocument> {
+  return apiFetch(
+    `/offers/${offerId}/document/regenerate`,
+    { method: "POST" },
+    accessToken ?? undefined
+  );
+}
+
+/** GET /offers/:offerId/document — retrieve existing doc info (null if none). */
+export async function getOnboardingDocument(
+  offerId: number,
+  accessToken: string | null
+): Promise<import("../../Resume/types/resumeTypes").OnboardingDocument | null> {
+  return apiFetch(
+    `/offers/${offerId}/document`,
+    { method: "GET" },
+    accessToken ?? undefined
+  );
+}
+
+/** GET /offers/:offerId/document/download — fetch Blob for download / preview. */
+export async function downloadOnboardingDocument(
+  offerId: number,
+  accessToken: string | null
+): Promise<Blob> {
+  const url = `${API_BASE_URL}/offers/${offerId}/document/download`;
+  const res = await fetch(url, {
+    headers: makeHeaders(accessToken ?? undefined),
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to download document");
+  return res.blob();
 }
 
 export async function restoreOffer(

@@ -1,19 +1,30 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Dropdown } from "primereact/dropdown";
 import { InputNumber } from "primereact/inputnumber";
 import { Calendar } from "primereact/calendar";
 import { Button } from "primereact/button";
+import { ProgressSpinner } from "primereact/progressspinner";
 import DialogButton from "../../../shared/DialogAddEditButton";
 import { showGlobalToast } from "../../../shared/services/globalToastService";
 import { useAuth } from "../../../shared/auth/AuthContext";
-import { createOffer, getOfferFormData } from "../../Offer/services/offerService";
+import {
+  createOffer,
+  updateOffer,
+  getOfferFormData,
+  getActiveOfferForCandidate,
+  generateOnboardingDocument,
+  regenerateOnboardingDocument,
+  uploadConsultantImages,
+  getConsultantImageBlob,
+  downloadOnboardingDocument,
+} from "../../Offer/services/offerService";
 import type { CreateOfferPayload, OfferFormDataResponse } from "../../Offer/types/offerTypes";
-import { FaCheck } from "react-icons/fa";
+import type { OnboardingDocument } from "../types/resumeTypes";
+import { FaCheck, FaFileAlt, FaDownload, FaEye, FaRedo, FaMagic, FaTimes, FaUpload } from "react-icons/fa";
 import type {
   Candidate,
-  CandidateCreateData,
   OnboardingFormData,
   OnboardingDocumentChoice,
   ResumeOnBoardingProps,
@@ -34,20 +45,21 @@ const getInitialFormData = (candidate: Candidate | null): OnboardingFormData => 
   employmentType: null,
   modeOfWorkingId: candidate?.workModeId ?? null,
   joiningDate: null,
-  offeredCtcValue: candidate?.expectedCTCAmount ?? null,
+  signBeforeDate: null,
+  offeredCtcValue: candidate?.expectedCTCAmount || null,
   currencyId: candidate?.expectedCTCCurrencyId ?? null,
   compensationTypeId: candidate?.expectedCTCTypeId ?? null,
   variablePay: null,
   joiningBonus: null,
   reportingToId: null,
   vendorId: candidate?.vendorId ?? null,
+  contractorAddress: null,
   offerLetterSent: null,
   serviceAgreementSent: null,
   ndaSent: null,
   codeOfConductSent: null,
 });
 
-/** Yes (green) / No (red) toggle buttons; neither selected until the user picks one. */
 const DocumentToggle: React.FC<{
   value: OnboardingDocumentChoice;
   onChange: (v: "Yes" | "No") => void;
@@ -72,6 +84,135 @@ const DocumentToggle: React.FC<{
   </div>
 );
 
+// ─── Document Preview Panel ───────────────────────────────────────────────────
+
+const DocumentPanel: React.FC<{
+  doc: OnboardingDocument;
+  offerId: number;
+  onRegenerate: () => void;
+  onCancel: () => void;
+  regenerating: boolean;
+  accessToken: string | null;
+}> = ({ doc, offerId, onRegenerate, onCancel, regenerating, accessToken }) => {
+  const label = doc.docType === "offer_letter" ? "Offer Letter" : "Service Agreement";
+
+  const handleDownload = async () => {
+    try {
+      const blob = await downloadOnboardingDocument(offerId, accessToken);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = doc.docFileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      showGlobalToast({ severity: "error", summary: "Error", detail: "Failed to download document.", life: 4000 });
+    }
+  };
+
+  const handlePreview = async () => {
+    try {
+      const blob = await downloadOnboardingDocument(offerId, accessToken);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch {
+      showGlobalToast({ severity: "error", summary: "Error", detail: "Failed to preview document.", life: 4000 });
+    }
+  };
+
+  const kb = doc.docFileSize ? `${Math.round(doc.docFileSize / 1024)} KB` : "";
+  const generatedDate = doc.docGeneratedAt
+    ? new Date(doc.docGeneratedAt).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      })
+    : "";
+
+  return (
+    <div
+      style={{
+        border: "1.5px solid #22c55e",
+        borderRadius: "10px",
+        padding: "14px 16px",
+        background: "#f0fdf4",
+        marginBottom: "12px",
+      }}
+    >
+      {/* File info row */}
+      <div className="flex align-items-center gap-2 mb-2">
+        <FaFileAlt style={{ color: "#16a34a", fontSize: "1.4rem", flexShrink: 0 }} />
+        <div style={{ minWidth: 0 }}>
+          <div
+            className="font-semibold text-900"
+            style={{
+              fontSize: "0.85rem",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+            title={doc.docFileName}
+          >
+            {doc.docFileName}
+          </div>
+          <div className="text-500" style={{ fontSize: "0.72rem" }}>
+            {label}{kb ? ` · ${kb}` : ""}{generatedDate ? ` · ${generatedDate}` : ""}
+          </div>
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          icon={<FaEye className="mr-1" />}
+          label="View"
+          size="small"
+          severity="success"
+          outlined
+          onClick={handlePreview}
+          style={{ fontSize: "0.78rem", padding: "4px 10px" }}
+        />
+        <Button
+          icon={<FaDownload className="mr-1" />}
+          label="Download"
+          size="small"
+          severity="success"
+          outlined
+          onClick={handleDownload}
+          style={{ fontSize: "0.78rem", padding: "4px 10px" }}
+        />
+        <Button
+          icon={<FaRedo className="mr-1" />}
+          label="Regenerate"
+          size="small"
+          severity="secondary"
+          outlined
+          onClick={onRegenerate}
+          loading={regenerating}
+          disabled={regenerating}
+          style={{ fontSize: "0.78rem", padding: "4px 10px" }}
+        />
+        <Button
+          icon={<FaTimes className="mr-1" />}
+          label="Cancel"
+          size="small"
+          severity="danger"
+          outlined
+          onClick={onCancel}
+          disabled={regenerating}
+          style={{ fontSize: "0.78rem", padding: "4px 10px" }}
+        />
+      </div>
+    </div>
+  );
+};
+
+// ─── Main dialog ──────────────────────────────────────────────────────────────
+
 const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
   visible,
   onHide,
@@ -81,16 +222,54 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
 }) => {
   const { accessToken } = useAuth();
   const [formData, setFormData] = useState<OnboardingFormData>(getInitialFormData(null));
+  console.log("Initial formData", formData);
   const [offerFormData, setOfferFormData] = useState<OfferFormDataResponse | null>(null);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
+  // New image files selected by user (uploaded to S3 before generate)
+  const [attachments, setAttachments] = useState<{
+    professionalPhoto: File | null;
+    aadhaarFront: File | null;
+    aadhaarBack: File | null;
+    panCard: File | null;
+  }>({ professionalPhoto: null, aadhaarFront: null, aadhaarBack: null, panCard: null });
+
+  // Blob URLs for images already stored in S3 (loaded when dialog opens)
+  const [existingImageUrls, setExistingImageUrls] = useState<{
+    professionalPhoto: string | null;
+    aadhaarFront: string | null;
+    aadhaarBack: string | null;
+    panCard: string | null;
+  }>({ professionalPhoto: null, aadhaarFront: null, aadhaarBack: null, panCard: null });
+
+  // Document generation state
+  const [savedOfferId, setSavedOfferId] = useState<number | null>(null);
+  const [generatedDoc, setGeneratedDoc] = useState<OnboardingDocument | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [loadingOffer, setLoadingOffer] = useState(false);
+  const generateAbortRef = useRef<AbortController | null>(null);
+  // These refs hold the latest typed values for variablePay and joiningBonus so that
+  // buildPayload always reads the committed value even when React 18 batches the
+  // onValueChange state update together with the Generate button click.
+  const variablePayRef = useRef<number | null>(null);
+  const joiningBonusRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (visible && selectedCandidate) {
       setFormData(getInitialFormData(selectedCandidate));
+      variablePayRef.current = null;
+      joiningBonusRef.current = null;
       setErrors({});
       setSubmitted(false);
+      setSavedOfferId(null);
+      setGeneratedDoc(null);
+      setGenerating(false);
+      setRegenerating(false);
+      setAttachments({ professionalPhoto: null, aadhaarFront: null, aadhaarBack: null, panCard: null });
+      setExistingImageUrls({ professionalPhoto: null, aadhaarFront: null, aadhaarBack: null, panCard: null });
     }
   }, [visible, selectedCandidate]);
 
@@ -104,15 +283,93 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     }
   }, [visible, accessToken]);
 
-  const currencyOptions = (createData?.currencies ?? []).map((c) => ({
+  // Pre-populate form from an existing active offer when dialog opens
+  useEffect(() => {
+    if (!visible || !selectedCandidate || !accessToken) return;
+    setLoadingOffer(true);
+    getActiveOfferForCandidate(selectedCandidate.candidateId, accessToken)
+      .then((offer) => {
+        if (!offer) return;
+        const typeLower = offer.employmentTypeName?.toLowerCase().trim() ?? "";
+        const employmentType =
+          typeLower === "employee"
+            ? "Employee"
+            : typeLower === "consultant" || typeLower === "contractor"
+            ? "Consultant"
+            : null;
+        setSavedOfferId(offer.offerId);
+        variablePayRef.current = offer.variablePay ?? null;
+        joiningBonusRef.current = offer.joiningBonus ?? null;
+        setFormData((prev) => ({
+          ...prev,
+          jprProjectDepartmentId: offer.jobProfileRequirementId ?? prev.jprProjectDepartmentId,
+          employmentTypeLookupId: offer.employmentTypeLookupId,
+          employmentType,
+          modeOfWorkingId: offer.workModelLookupId ?? prev.modeOfWorkingId,
+          joiningDate: offer.joiningDate ? new Date(offer.joiningDate) : null,
+          signBeforeDate: offer.signBeforeDate ? new Date(offer.signBeforeDate) : null,
+          offeredCtcValue: offer.offeredCTCAmount || prev.offeredCtcValue,
+          currencyId: offer.currencyLookupId ?? prev.currencyId,
+          compensationTypeId: offer.compensationTypeLookupId ?? prev.compensationTypeId,
+          variablePay: offer.variablePay ?? null,
+          joiningBonus: offer.joiningBonus ?? null,
+          reportingToId: offer.reportingManagerId,
+          vendorId: offer.vendorId ?? prev.vendorId,
+          contractorAddress: offer.contractorAddress ?? null,
+          offerLetterSent: offer.offerLetterSent === true ? "Yes" : offer.offerLetterSent === false ? "No" : null,
+          serviceAgreementSent: offer.serviceAgreementSent === true ? "Yes" : offer.serviceAgreementSent === false ? "No" : null,
+          ndaSent: offer.ndaSent === true ? "Yes" : offer.ndaSent === false ? "No" : null,
+          codeOfConductSent: offer.codeOfConductSent === true ? "Yes" : offer.codeOfConductSent === false ? "No" : null,
+        }));
+        if (offer.docType && offer.docFileName && offer.docS3Key && offer.docMimeType && offer.docGeneratedAt) {
+          setGeneratedDoc({
+            offerId: offer.offerId,
+            docType: offer.docType,
+            docFileName: offer.docFileName,
+            docS3Key: offer.docS3Key,
+            docMimeType: offer.docMimeType,
+            docFileSize: offer.docFileSize,
+            docGeneratedAt: offer.docGeneratedAt,
+            docGeneratedBy: offer.docGeneratedBy,
+          });
+        }
+        // Load existing consultant image previews from S3
+        if (offer.photoS3Key || offer.aadhaarFrontS3Key || offer.aadhaarBackS3Key || offer.panCardS3Key) {
+          const fieldMap = [
+            { key: "professionalPhoto" as const, field: "photo" as const,         s3Key: offer.photoS3Key },
+            { key: "aadhaarFront"      as const, field: "aadhaar_front" as const,  s3Key: offer.aadhaarFrontS3Key },
+            { key: "aadhaarBack"       as const, field: "aadhaar_back" as const,   s3Key: offer.aadhaarBackS3Key },
+            { key: "panCard"           as const, field: "pan_card" as const,       s3Key: offer.panCardS3Key },
+          ];
+          Promise.all(
+            fieldMap.map(async ({ key, field, s3Key }) => {
+              if (!s3Key) return { key, url: null };
+              const url = await getConsultantImageBlob(offer.offerId, field, accessToken);
+              return { key, url };
+            })
+          ).then((results) => {
+            const urls = { professionalPhoto: null as string | null, aadhaarFront: null as string | null, aadhaarBack: null as string | null, panCard: null as string | null };
+            results.forEach(({ key, url }) => { urls[key] = url; });
+            setExistingImageUrls(urls);
+          });
+        }
+      })
+      .catch(() => {
+        // New candidate — no existing offer, continue with blank form
+      })
+      .finally(() => setLoadingOffer(false));
+  }, [visible, selectedCandidate, accessToken]);
+
+  // ─── Dropdown options ───────────────────────────────────────────────────────
+
+  const currencyOptions = (offerFormData?.currencies ?? []).map((c) => ({
     label: c.currencyName,
-    value: c.currencyId,
+    value: c.currencyLookupId,
   }));
   const compensationTypeOptions = (createData?.compensationTypes ?? []).map((t) => ({
     label: t.compensationTypeName,
     value: t.compensationTypeId,
   }));
-
   const workModeOptions = (createData?.workModes ?? []).map((w) => ({
     label: w.workMode,
     value: w.workModeId,
@@ -121,7 +378,6 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     label: v.vendorName,
     value: v.vendorId,
   }));
-
   const jprOptions: JprDropdownOption[] = (createData?.jobProfiles ?? []).map((j) => ({
     label: [j.jobRole, j.clientName, j.departmentName].filter(Boolean).join(" | "),
     value: j.jobProfileRequirementId,
@@ -129,63 +385,42 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
     clientName: j.clientName ?? "",
     departmentName: j.departmentName ?? "",
   }));
-
-  const jprOptionTemplate = (option: JprDropdownOption | null) => {
-    if (!option) return null;
-    return (
-      <div className="flex flex-column gap-1 py-1">
-        <div className="flex align-items-center gap-2 flex-wrap">
-          <span className="font-semibold text-900">{option.jobRole}</span>
-        </div>
-        <div className="flex flex-wrap gap-3 text-xs text-500">
-          {option.clientName ? <span>Client: {option.clientName}</span> : null}
-          {option.departmentName ? <span>Dept: {option.departmentName}</span> : null}
-        </div>
-      </div>
-    );
-  };
-
-  const jprValueTemplate = (option: JprDropdownOption | null) => {
-    if (!option) return <span>Select</span>;
-    const clientPart = option.clientName ? `Client: ${option.clientName}` : "";
-    const deptPart = option.departmentName ? `Dept: ${option.departmentName}` : "";
-    const meta = [clientPart, deptPart].filter(Boolean).join(" · ");
-    return (
-      <span className="block truncate">
-        <span className="font-semibold">{option.jobRole}</span>
-        {meta ? (
-          <>
-            {" "}
-            <span className="text-600 text-sm">· {meta}</span>
-          </>
-        ) : null}
-      </span>
-    );
-  };
   const reportingToOptions = (offerFormData?.members ?? []).map((m) => ({
     label: m.memberName,
     value: m.memberId,
   }));
-
   const employmentTypeOptions = (offerFormData?.employmentTypes ?? []).map((e) => ({
     label: e.employmentTypeName,
     value: e.employmentTypeLookupId,
   }));
 
+  // ─── Employment type helpers ────────────────────────────────────────────────
+
   const selectedEmploymentType = offerFormData?.employmentTypes?.find(
     (e) => e.employmentTypeLookupId === formData.employmentTypeLookupId
   );
   const employmentTypeName = selectedEmploymentType?.employmentTypeName ?? "";
-  const isEmployee = employmentTypeName === "Employee";
-  const isConsultant = employmentTypeName === "Consultant" || employmentTypeName === "Contractor";
+  const type = employmentTypeName?.toLowerCase().trim();
+  const isEmployee       = type === "employee";
+  const isContractor     = type === "contractor";
+  const isConsultantOnly = type === "consultant";
+  const isConsultant     = isContractor || isConsultantOnly;
 
   const handleEmploymentTypeChange = (lookupId: number | null) => {
-    const name = offerFormData?.employmentTypes?.find((e) => e.employmentTypeLookupId === lookupId)?.employmentTypeName;
+    const name = offerFormData?.employmentTypes?.find(
+      (e) => e.employmentTypeLookupId === lookupId
+    )?.employmentTypeName;
+    const nameLower = name?.toLowerCase().trim();
     setFormData((p) => ({
       ...p,
       employmentTypeLookupId: lookupId,
-      employmentType: name === "Employee" ? "Employee" : name === "Consultant" || name === "Contractor" ? "Consultant" : null,
-      ...(name === "Employee" ? { vendorId: null } : {}),
+      employmentType:
+        nameLower === "employee"
+          ? "Employee"
+          : nameLower === "consultant" || nameLower === "contractor"
+          ? "Consultant"
+          : null,
+      ...(nameLower === "employee" ? { vendorId: null } : {}),
     }));
     if (errors.employmentType) setErrors((p) => ({ ...p, employmentType: undefined }));
   };
@@ -197,103 +432,287 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
   const shouldShowError = (field: string): string | undefined =>
     submitted ? errors[field] : undefined;
 
-  const validate = (): boolean => {
-    const next: Record<string, string | undefined> = {};
+  // ─── JPR dropdown templates ─────────────────────────────────────────────────
+
+  const jprOptionTemplate = (option: JprDropdownOption | null) => {
+    if (!option) return null;
+    return (
+      <div className="flex flex-column gap-1 py-1">
+        <span className="font-semibold text-900">{option.jobRole}</span>
+        <div className="flex flex-wrap gap-3 text-xs text-500">
+          {option.clientName ? <span>Client: {option.clientName}</span> : null}
+          {option.departmentName ? <span>Dept: {option.departmentName}</span> : null}
+        </div>
+      </div>
+    );
+  };
+
+  const jprValueTemplate = (option: JprDropdownOption | null) => {
+    if (!option) return <span>Select</span>;
+    const meta = [
+      option.clientName ? `Client: ${option.clientName}` : "",
+      option.departmentName ? `Dept: ${option.departmentName}` : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    return (
+      <span className="block truncate">
+        <span className="font-semibold">{option.jobRole}</span>
+        {meta ? <span className="text-600 text-sm"> · {meta}</span> : null}
+      </span>
+    );
+  };
+
+  // ─── Validation ─────────────────────────────────────────────────────────────
+
+  /** Validates all fields required for offer creation (excludes doc toggles). */
+  const validateCore = (): Record<string, string> => {
+    const next: Record<string, string> = {};
     if (formData.employmentTypeLookupId == null) next.employmentType = "Employment type is required.";
-    if (!formData.jprProjectDepartmentId) next.jprProjectDepartmentId = "Find JPR (Project/Department) is required.";
+    if (!formData.jprProjectDepartmentId) next.jprProjectDepartmentId = "Final JPR is required.";
     if (!formData.modeOfWorkingId) next.modeOfWorkingId = "Mode of Working is required.";
     if (!formData.joiningDate) next.joiningDate = "Joining date is required.";
-    if (
-      formData.offeredCtcValue === null ||
-      formData.offeredCtcValue === undefined ||
-      Number(formData.offeredCtcValue) <= 0
-    ) {
-      next.offeredCtcValue = "Offered CTC must be greater than 0.";
+    if (!isContractor) {
+      if (!formData.offeredCtcValue || Number(formData.offeredCtcValue) <= 0)
+        next.offeredCtcValue = "Offered CTC must be greater than 0.";
+      if (!formData.currencyId) next.currencyId = "Currency is required.";
+      if (!formData.compensationTypeId) next.compensationTypeId = "Compensation type is required.";
     }
-    if (!formData.currencyId) next.currencyId = "Currency is required.";
-    if (!formData.compensationTypeId) next.compensationTypeId = "Compensation type is required.";
     if (!formData.reportingToId) next.reportingToId = "Reporting to is required.";
-    if (isConsultant && !formData.vendorId) next.vendorId = "Vendor is required for Consultant.";
+    if (isEmployee && !formData.signBeforeDate) next.signBeforeDate = "Sign before date is required.";
+    if (isContractor && !formData.vendorId) next.vendorId = "Vendor is required for Contractor.";
+    if (isContractor && !formData.contractorAddress?.trim()) next.contractorAddress = "Contractor address is required.";
+    return next;
+  };
+
+  const validate = (): boolean => {
+    const coreErrors = validateCore();
     const docErrors: string[] = [];
     if (formData.ndaSent !== "Yes") docErrors.push("NDA Sent");
     if (formData.codeOfConductSent !== "Yes") docErrors.push("Code of Conduct Sent");
     if (isEmployee && formData.offerLetterSent !== "Yes") docErrors.push("Offer Letter Sent");
     if (isConsultant && formData.serviceAgreementSent !== "Yes") docErrors.push("Service Agreement Sent");
-    if (docErrors.length > 0) next.documents = `All document statuses must be set to Yes. Please review: ${docErrors.join(", ")}.`;
-    setErrors(next);
+    if (docErrors.length > 0)
+      coreErrors.documents = `All document statuses must be set to Yes. Please review: ${docErrors.join(", ")}.`;
+    setErrors(coreErrors);
     setSubmitted(true);
-    return Object.keys(next).length === 0;
+    return Object.keys(coreErrors).length === 0;
   };
 
-  const handleSave = async () => {
-    if (!validate() || !selectedCandidate || !accessToken) return;
+  const docTogglesValid =
+    formData.ndaSent === "Yes" &&
+    formData.codeOfConductSent === "Yes" &&
+    (!isEmployee || formData.offerLetterSent === "Yes") &&
+    (!isConsultant || formData.serviceAgreementSent === "Yes");
 
-    let formDataToUse = offerFormData;
-    if (formDataToUse == null && accessToken) {
-      try {
-        formDataToUse = await getOfferFormData(accessToken);
-        setOfferFormData(formDataToUse);
-      } catch {
-        formDataToUse = null;
+  /** Whether enough form fields are filled to enable the Generate button. */
+  const canGenerate =
+    !!formData.employmentTypeLookupId &&
+    (isEmployee || isConsultant) &&
+    !!formData.jprProjectDepartmentId &&
+    !!formData.modeOfWorkingId &&
+    !!formData.joiningDate &&
+    (isContractor || (!!formData.offeredCtcValue && Number(formData.offeredCtcValue) > 0)) &&
+    (isContractor || !!formData.currencyId) &&
+    (isContractor || !!formData.compensationTypeId) &&
+    !!formData.reportingToId &&
+    (!isEmployee   || !!formData.signBeforeDate) &&
+    (!isContractor || !!formData.vendorId) &&
+    (!isContractor || !!formData.contractorAddress?.trim());
+
+  // ─── Helpers to build the offer creation payload ────────────────────────────
+
+  // Use local date components to avoid UTC offset shifting the date backward for IST users.
+  function toLocalDateStr(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  const buildPayload = (): CreateOfferPayload | null => {
+    if (formData.employmentTypeLookupId == null) return null;
+    const rawJoining = formData.joiningDate instanceof Date
+      ? formData.joiningDate
+      : formData.joiningDate ? new Date(formData.joiningDate) : null;
+    const joiningDate = rawJoining ? toLocalDateStr(rawJoining) : "";
+    if (!joiningDate) return null;
+    const rawSignBefore = formData.signBeforeDate instanceof Date
+      ? formData.signBeforeDate
+      : formData.signBeforeDate ? new Date(formData.signBeforeDate) : null;
+    const signBeforeDate = rawSignBefore ? toLocalDateStr(rawSignBefore) : null;
+    return {
+      jobProfileRequirementId: formData.jprProjectDepartmentId!,
+      reportingManagerId: formData.reportingToId!,
+      employmentTypeLookupId: formData.employmentTypeLookupId,
+      workModelLookupId: formData.modeOfWorkingId!,
+      joiningDate,
+      sign_before_date: signBeforeDate,
+      ndaSent: formData.ndaSent === "Yes",
+      codeOfConductSent: formData.codeOfConductSent === "Yes",
+      offeredCTCAmount: formData.offeredCtcValue ?? undefined,
+      currencyLookupId: formData.currencyId ?? undefined,
+      compensationTypeLookupId: formData.compensationTypeId ?? undefined,
+      variablePay: variablePayRef.current ?? undefined,
+      joiningBonus: joiningBonusRef.current ?? undefined,
+      vendorId: isConsultant ? formData.vendorId : undefined,
+      contractorAddress: isContractor ? (formData.contractorAddress ?? undefined) : undefined,
+      offerLetterSent: isEmployee ? formData.offerLetterSent === "Yes" : undefined,
+      serviceAgreementSent: isConsultant ? formData.serviceAgreementSent === "Yes" : undefined,
+    };
+  };
+
+  // ─── Generate handler ───────────────────────────────────────────────────────
+
+  const handleClearDoc = () => setGeneratedDoc(null);
+
+  const handleCancelGenerate = () => {
+    generateAbortRef.current?.abort();
+    generateAbortRef.current = null;
+    setGenerating(false);
+  };
+
+  const handleGenerate = async () => {
+    if (!selectedCandidate || !accessToken) return;
+    const payload = buildPayload();
+    if (!payload) {
+      setErrors((p) => ({ ...p, joiningDate: "Invalid joining date." }));
+      return;
+    }
+    const abortController = new AbortController();
+    generateAbortRef.current = abortController;
+    setGenerating(true);
+    try {
+      let offerId = savedOfferId;
+
+      let doc;
+      const isNewOffer = !offerId;
+      if (isNewOffer) {
+        const created = await createOffer(accessToken, selectedCandidate.candidateId, payload) as { offerId: number };
+        offerId = created.offerId;
+        setSavedOfferId(offerId);
+      } else {
+        await updateOffer(accessToken, offerId!, payload);
       }
+      const confirmedOfferId = offerId!;
+      // Upload any newly selected images to S3 before generating
+      if (isConsultantOnly) {
+        const hasNewImages = attachments.professionalPhoto || attachments.aadhaarFront || attachments.aadhaarBack || attachments.panCard;
+        if (hasNewImages) await uploadConsultantImages(confirmedOfferId, attachments, accessToken);
+      }
+      // New offers: generateDocument (idempotent, creates the first doc)
+      // Existing offers: always regenerate so updated images/data are reflected
+      doc = isNewOffer
+        ? await generateOnboardingDocument(confirmedOfferId, accessToken, abortController.signal)
+        : await regenerateOnboardingDocument(confirmedOfferId, accessToken);
+      setGeneratedDoc(doc);
+      showGlobalToast({
+        severity: "success",
+        summary: "Document generated",
+        detail: `${doc.docType === "offer_letter" ? "Offer Letter" : "Service Agreement"} generated successfully.`,
+        life: 4000,
+      });
+    } catch (err: unknown) {
+      if ((err as { name?: string })?.name === "AbortError") return;
+      const e = err as { message?: string };
+      showGlobalToast({
+        severity: "error",
+        summary: "Generation failed",
+        detail: e?.message ?? "Failed to generate document.",
+        life: 5000,
+      });
+    } finally {
+      generateAbortRef.current = null;
+      setGenerating(false);
+    }
+  };
+
+  const handleRegenerate = async () => {
+    if (!savedOfferId || !accessToken) return;
+    setRegenerating(true);
+    try {
+      // Sync latest form data before regenerating so PDF reflects any edits
+      const payload = buildPayload();
+      if (payload) {
+        await updateOffer(accessToken, savedOfferId, payload);
+      }
+      if (isConsultantOnly) {
+        const hasNewImages = attachments.professionalPhoto || attachments.aadhaarFront || attachments.aadhaarBack || attachments.panCard;
+        if (hasNewImages) await uploadConsultantImages(savedOfferId, attachments, accessToken);
+      }
+      const doc = await regenerateOnboardingDocument(savedOfferId, accessToken);
+      setGeneratedDoc(doc);
+      showGlobalToast({ severity: "success", summary: "Regenerated", detail: "New document is ready.", life: 4000 });
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      showGlobalToast({ severity: "error", summary: "Error", detail: e?.message ?? "Regeneration failed.", life: 5000 });
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  // ─── Save handler ───────────────────────────────────────────────────────────
+
+  const handleSave = async () => {
+    if (isEmployee && !generatedDoc) {
+      showGlobalToast({
+        severity: "warn",
+        summary: "Document Required",
+        detail: "Please generate the Offer Letter before saving.",
+        life: 5000,
+      });
+      return;
     }
 
-    const employmentTypeLookupId = formData.employmentTypeLookupId;
-    if (employmentTypeLookupId == null) return;
+    if (!validate() || !selectedCandidate || !accessToken) return;
 
-    const joiningDate =
-      formData.joiningDate instanceof Date
-        ? formData.joiningDate.toISOString().slice(0, 10)
-        : formData.joiningDate
-          ? new Date(formData.joiningDate).toISOString().slice(0, 10)
-          : "";
-    if (!joiningDate) {
+    const payload = buildPayload();
+    if (!payload) {
       setErrors((p) => ({ ...p, joiningDate: "Invalid joining date." }));
       setSubmitted(true);
       return;
     }
 
-    const payload: CreateOfferPayload = {
-      jobProfileRequirementId: formData.jprProjectDepartmentId!,
-      reportingManagerId: formData.reportingToId!,
-      employmentTypeLookupId,
-      workModelLookupId: formData.modeOfWorkingId!,
-      joiningDate,
-      ndaSent: formData.ndaSent === "Yes",
-      codeOfConductSent: formData.codeOfConductSent === "Yes",
-      offeredCTCAmount: (formData.offeredCtcValue != null && formData.offeredCtcValue >= 1) ? formData.offeredCtcValue : undefined,
-      currencyLookupId: formData.currencyId ?? undefined,
-      compensationTypeLookupId: formData.compensationTypeId ?? undefined,
-      variablePay: formData.variablePay ?? undefined,
-      joiningBonus: formData.joiningBonus ?? undefined,
-      vendorId: isConsultant ? formData.vendorId : undefined,
-      offerLetterSent: isEmployee ? formData.offerLetterSent === "Yes" : undefined,
-      serviceAgreementSent: isConsultant ? formData.serviceAgreementSent === "Yes" : undefined,
-    };
-
     setSaving(true);
     try {
-      await createOffer(accessToken, selectedCandidate.candidateId, payload);
-      showGlobalToast({ severity: "success", summary: "Offer created", detail: "Offer has been created successfully.", life: 4000 });
+      if (savedOfferId) {
+        await updateOffer(accessToken, savedOfferId, payload);
+      } else {
+        const created = await createOffer(accessToken, selectedCandidate.candidateId, payload) as { offerId: number };
+        setSavedOfferId(created.offerId);
+      }
+      showGlobalToast({ severity: "success", summary: "Offer saved", detail: "Offer has been saved successfully.", life: 4000 });
       onSuccess();
       onHide();
     } catch (err: unknown) {
       const e = err as { message?: string; details?: { validationErrors?: { message?: string }[] } };
-      const message = Array.isArray(e?.details?.validationErrors) && e.details.validationErrors.length > 0
-        ? e.details.validationErrors.map((v) => v.message).filter(Boolean).join(", ") || e?.message
-        : (e?.message ?? "Failed to create offer.");
+      const message =
+        Array.isArray(e?.details?.validationErrors) && e.details!.validationErrors!.length > 0
+          ? e.details!.validationErrors!.map((v) => v.message).filter(Boolean).join(", ") || e?.message
+          : (e?.message ?? "Failed to create offer.");
       showGlobalToast({ severity: "error", summary: "Error", detail: message, life: 5000 });
     } finally {
       setSaving(false);
     }
   };
 
+  // ─── Generate button label ──────────────────────────────────────────────────
+
+
+  // ─── Footer ─────────────────────────────────────────────────────────────────
+
   const footer = (
     <div className="flex justify-content-end gap-2">
-      <DialogButton label="Cancel" severity="secondary" onClick={onHide} disabled={saving} />
-      <DialogButton label="Save Offer" severity="success" icon={<FaCheck className="mr-2" />} onClick={handleSave} disabled={saving} loading={saving} />
+      <DialogButton label="Cancel" severity="secondary" onClick={onHide} disabled={saving || generating} />
+      <DialogButton
+        label="Save Offer"
+        severity="success"
+        icon={<FaCheck className="mr-2" />}
+        onClick={handleSave}
+        disabled={saving || generating || !canGenerate || (isEmployee && !generatedDoc) || !docTogglesValid}
+        loading={saving}
+      />
     </div>
   );
+{console.log("RenderformData", { formData, errors })}
+
 
   return (
     <Dialog
@@ -305,20 +724,28 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
       modal
       className="p-fluid"
     >
+      {loadingOffer && (
+        <div className="flex align-items-center justify-content-center gap-2 mb-3">
+          <ProgressSpinner style={{ width: "20px", height: "20px" }} strokeWidth="4" />
+          <span className="text-600" style={{ fontSize: "0.85rem" }}>Loading offer data…</span>
+        </div>
+      )}
       {shouldShowError("formData") && (
         <div className="mb-3">
           <small className="p-error block">{shouldShowError("formData")}</small>
         </div>
       )}
 
-      {/* Row 1: Candidate Name (Read-only) | Find JPR (Project/Department) * */}
+      {/* Row 1: Candidate Name | JPR */}
       <div className="grid p-fluid mb-2">
         <div className="col-12 md:col-4">
           <label className="block font-bold mb-1">Candidate Name</label>
           <InputText value={formData.candidateName} disabled className="w-full" />
         </div>
         <div className="col-12 md:col-8">
-          <label className="block font-bold mb-1">Final JPR (Project/Department) <span className="text-red-500">*</span></label>
+          <label className="block font-bold mb-1">
+            Final JPR (Project/Department) <span className="text-red-500">*</span>
+          </label>
           <Dropdown
             value={formData.jprProjectDepartmentId}
             options={jprOptions}
@@ -333,14 +760,18 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             className={shouldShowError("jprProjectDepartmentId") ? "p-invalid w-full" : "w-full"}
             showClear
           />
-          {shouldShowError("jprProjectDepartmentId") && <small className="p-error block mt-1">{shouldShowError("jprProjectDepartmentId")}</small>}
+          {shouldShowError("jprProjectDepartmentId") && (
+            <small className="p-error block mt-1">{shouldShowError("jprProjectDepartmentId")}</small>
+          )}
         </div>
       </div>
 
-      {/* Row 2: Employment Type * | Mode of Working * | Joining Date * */}
+      {/* Row 2: Employment Type | Mode of Working | Joining Date | Sign Before Date */}
       <div className="grid p-fluid mb-2">
         <div className="col-12 md:col-4">
-          <label className="block font-bold mb-1">Employment Type <span className="text-red-500">*</span></label>
+          <label className="block font-bold mb-1">
+            Employment Type <span className="text-red-500">*</span>
+          </label>
           <Dropdown
             value={formData.employmentTypeLookupId}
             options={employmentTypeOptions}
@@ -350,10 +781,14 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             showClear
             disabled={employmentTypeOptions.length === 0}
           />
-          {shouldShowError("employmentType") && <small className="p-error block mt-1">{shouldShowError("employmentType")}</small>}
+          {shouldShowError("employmentType") && (
+            <small className="p-error block mt-1">{shouldShowError("employmentType")}</small>
+          )}
           {isConsultant && (
             <div className="mt-2">
-              <label className="block font-bold mb-1">Vendor</label>
+              <label className="block font-bold mb-1">
+                Vendor {isContractor && <span className="text-red-500">*</span>}
+              </label>
               <Dropdown
                 value={formData.vendorId}
                 options={vendorOptions}
@@ -365,12 +800,35 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
                 className={shouldShowError("vendorId") ? "p-invalid w-full" : "w-full"}
                 showClear
               />
-              {shouldShowError("vendorId") && <small className="p-error block mt-1">{shouldShowError("vendorId")}</small>}
+              {shouldShowError("vendorId") && (
+                <small className="p-error block mt-1">{shouldShowError("vendorId")}</small>
+              )}
+            </div>
+          )}
+          {isContractor && (
+            <div className="mt-2">
+              <label className="block font-bold mb-1">
+                Contractor Address (as per Aadhaar) <span className="text-red-500">*</span>
+              </label>
+              <InputText
+                value={formData.contractorAddress ?? ""}
+                onChange={(e) => {
+                  setFormData((p) => ({ ...p, contractorAddress: e.target.value || null }));
+                  clearError("contractorAddress");
+                }}
+                placeholder="Full address as per Aadhaar card"
+                className={shouldShowError("contractorAddress") ? "p-invalid w-full" : "w-full"}
+              />
+              {shouldShowError("contractorAddress") && (
+                <small className="p-error block mt-1">{shouldShowError("contractorAddress")}</small>
+              )}
             </div>
           )}
         </div>
         <div className="col-12 md:col-4">
-          <label className="block font-bold mb-1">Mode of Working <span className="text-red-500">*</span></label>
+          <label className="block font-bold mb-1">
+            Mode of Working <span className="text-red-500">*</span>
+          </label>
           <Dropdown
             value={formData.modeOfWorkingId}
             options={workModeOptions}
@@ -382,49 +840,83 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             className={shouldShowError("modeOfWorkingId") ? "p-invalid w-full" : "w-full"}
             showClear
           />
-          {shouldShowError("modeOfWorkingId") && <small className="p-error block mt-1">{shouldShowError("modeOfWorkingId")}</small>}
+          {shouldShowError("modeOfWorkingId") && (
+            <small className="p-error block mt-1">{shouldShowError("modeOfWorkingId")}</small>
+          )}
         </div>
         <div className="col-12 md:col-4">
-          <label className="block font-bold mb-1">Joining Date <span className="text-red-500">*</span></label>
+          <label className="block font-bold mb-1">
+            Joining Date <span className="text-red-500">*</span>
+          </label>
           <Calendar
             value={formData.joiningDate}
             onChange={(e) => {
-              setFormData((p) => ({ ...p, joiningDate: e.value ?? null }));
+              const jd = e.value ?? null;
+              const signBefore = jd ? new Date(new Date(jd).setDate(new Date(jd).getDate() + 2)) : null;
+              setFormData((p) => ({ ...p, joiningDate: jd, signBeforeDate: signBefore }));
               clearError("joiningDate");
             }}
             dateFormat="dd/mm/yy"
             placeholder="Select Date"
             className={shouldShowError("joiningDate") ? "p-invalid w-full" : "w-full"}
+            minDate={new Date()}
             showIcon
           />
-          {shouldShowError("joiningDate") && <small className="p-error block mt-1">{shouldShowError("joiningDate")}</small>}
+          {shouldShowError("joiningDate") && (
+            <small className="p-error block mt-1">{shouldShowError("joiningDate")}</small>
+          )}
         </div>
+        {isEmployee && (
+          <div className="col-12 md:col-4">
+            <label className="block font-bold mb-1">
+              Sign Before Date <span className="text-red-500">*</span>
+            </label>
+            <Calendar
+              value={formData.signBeforeDate}
+              onChange={(e) => {
+                setFormData((p) => ({ ...p, signBeforeDate: e.value ?? null }));
+                clearError("signBeforeDate");
+              }}
+              dateFormat="dd/mm/yy"
+              placeholder="Select Date"
+              className={shouldShowError("signBeforeDate") ? "p-invalid w-full" : "w-full"}
+              minDate={new Date()}
+              showIcon
+            />
+            {shouldShowError("signBeforeDate") && (
+              <small className="p-error block mt-1">{shouldShowError("signBeforeDate")}</small>
+            )}
+          </div>
+        )}
       </div>
-
-      {/* Row 3: Offered CTC Value * | Currency * | Compensation Type * — display as number + symbol/type */}
-      <div className="grid p-fluid mb-2">
+      {/* Row 3: CTC | Currency | Compensation Type — hidden for Contractor */}
+      {!isContractor && (<div className="grid p-fluid mb-2">
         <div className="col-12 md:col-4">
-          <label className="block font-bold mb-1">Offered CTC Value <span className="text-red-500">*</span></label>
-          <InputNumber
-            value={formData.offeredCtcValue ?? undefined}
-            onValueChange={(e) => {
-              const value = typeof e.value === "number" ? e.value : null;
-            
-              setFormData((p) => ({
-                ...p,
-                offeredCtcValue: value,
-              }));
-            
+          <label className="block font-bold mb-1">
+            Offered CTC Value <span className="text-red-500">*</span>
+          </label>
+          <InputText
+            type="number"
+            min="0"
+            step="any"
+            value={formData.offeredCtcValue != null ? String(formData.offeredCtcValue) : ""}
+            onChange={(e) => {
+              const parsed = e.target.value === "" ? null : parseFloat(e.target.value);
+              const val = parsed != null && !isNaN(parsed) && parsed > 0 ? parsed : null;
+              setFormData((p) => ({ ...p, offeredCtcValue: val }));
               clearError("offeredCtcValue");
             }}
-            mode="decimal"
-            min={1}
+            placeholder="0"
             className={shouldShowError("offeredCtcValue") ? "p-invalid w-full" : "w-full"}
           />
-          {shouldShowError("offeredCtcValue") && <small className="p-error block mt-1">{shouldShowError("offeredCtcValue")}</small>}
+          {shouldShowError("offeredCtcValue") && (
+            <small className="p-error block mt-1">{shouldShowError("offeredCtcValue")}</small>
+          )}
         </div>
         <div className="col-12 md:col-4">
-          <label className="block font-bold mb-1">Currency <span className="text-red-500">*</span></label>
+          <label className="block font-bold mb-1">
+            Currency <span className="text-red-500">*</span>
+          </label>
           <Dropdown
             value={formData.currencyId}
             options={currencyOptions}
@@ -436,10 +928,14 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             className={shouldShowError("currencyId") ? "p-invalid w-full" : "w-full"}
             showClear
           />
-          {shouldShowError("currencyId") && <small className="p-error block mt-1">{shouldShowError("currencyId")}</small>}
+          {shouldShowError("currencyId") && (
+            <small className="p-error block mt-1">{shouldShowError("currencyId")}</small>
+          )}
         </div>
         <div className="col-12 md:col-4">
-          <label className="block font-bold mb-1">Compensation Type <span className="text-red-500">*</span></label>
+          <label className="block font-bold mb-1">
+            Compensation Type <span className="text-red-500">*</span>
+          </label>
           <Dropdown
             value={formData.compensationTypeId}
             options={compensationTypeOptions}
@@ -451,17 +947,27 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             className={shouldShowError("compensationTypeId") ? "p-invalid w-full" : "w-full"}
             showClear
           />
-          {shouldShowError("compensationTypeId") && <small className="p-error block mt-1">{shouldShowError("compensationTypeId")}</small>}
+          {shouldShowError("compensationTypeId") && (
+            <small className="p-error block mt-1">{shouldShowError("compensationTypeId")}</small>
+          )}
         </div>
-      </div>
+      </div>)}
 
-      {/* Row 4: Variable Pay | Joining Bonus | Reporting To * */}
+      {/* Row 4: Variable Pay | Joining Bonus | Reporting To */}
       <div className="grid p-fluid mb-3">
+        {!isContractor && (<>
         <div className="col-12 md:col-4">
           <label className="block font-bold mb-1">Variable Pay</label>
           <InputNumber
             value={formData.variablePay ?? undefined}
-            onValueChange={(e) => setFormData((p) => ({ ...p, variablePay: e.value ?? null }))}
+            onChange={(e) => {
+              variablePayRef.current = e.value ?? null;
+              setFormData((p) => ({ ...p, variablePay: e.value ?? null }));
+            }}
+            onValueChange={(e) => {
+              variablePayRef.current = e.value ?? null;
+              setFormData((p) => ({ ...p, variablePay: e.value ?? null }));
+            }}
             mode="decimal"
             className="w-full"
           />
@@ -470,13 +976,23 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           <label className="block font-bold mb-1">Joining Bonus</label>
           <InputNumber
             value={formData.joiningBonus ?? undefined}
-            onValueChange={(e) => setFormData((p) => ({ ...p, joiningBonus: e.value ?? null }))}
+            onChange={(e) => {
+              joiningBonusRef.current = e.value ?? null;
+              setFormData((p) => ({ ...p, joiningBonus: e.value ?? null }));
+            }}
+            onValueChange={(e) => {
+              joiningBonusRef.current = e.value ?? null;
+              setFormData((p) => ({ ...p, joiningBonus: e.value ?? null }));
+            }}
             mode="decimal"
             className="w-full"
           />
         </div>
+        </>)}
         <div className="col-12 md:col-4">
-          <label className="block font-bold mb-1">Reporting To <span className="text-red-500">*</span></label>
+          <label className="block font-bold mb-1">
+            Reporting To <span className="text-red-500">*</span>
+          </label>
           <Dropdown
             value={formData.reportingToId}
             options={reportingToOptions}
@@ -488,12 +1004,174 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             className={shouldShowError("reportingToId") ? "p-invalid w-full" : "w-full"}
             showClear
           />
-          {shouldShowError("reportingToId") && <small className="p-error block mt-1">{shouldShowError("reportingToId")}</small>}
+          {shouldShowError("reportingToId") && (
+            <small className="p-error block mt-1">{shouldShowError("reportingToId")}</small>
+          )}
         </div>
       </div>
 
-      {/* Document status — Yes (green) / No (red). Employee: Offer Letter only; Consultant: Service Agreement only; NDA & Code of Conduct for both. */}
-      <div className="flex flex-column gap-2 mt-3 pt-3 border-top-1 surface-border">
+      {/* ── Consultant document attachments ── */}
+      {isConsultantOnly && (
+        <div className="mb-3 pt-2 border-top-1 surface-border">
+          <label className="block font-bold mb-2" style={{ fontSize: "0.9rem" }}>
+            Document Attachments <span className="text-500 font-normal" style={{ fontSize: "0.8rem" }}>(jpg / png — embedded in agreement PDF)</span>
+          </label>
+          <div className="grid p-fluid">
+            {([
+              { key: "professionalPhoto", label: "Professional Photo" },
+              { key: "aadhaarFront",      label: "Aadhaar Card Front" },
+              { key: "aadhaarBack",       label: "Aadhaar Card Back"  },
+              { key: "panCard",           label: "Owner PAN Card"     },
+            ] as const).map(({ key, label }) => {
+              const file = attachments[key];
+              const previewUrl = file ? URL.createObjectURL(file) : existingImageUrls[key];
+              const hasSaved = !file && !!existingImageUrls[key];
+              return (
+                <div key={key} className="col-12 md:col-3">
+                  <div
+                    style={{
+                      border: hasSaved ? "1.5px solid #22c55e" : "1.5px dashed #cbd5e1",
+                      borderRadius: "8px",
+                      padding: "8px",
+                      background: "#f8fafc",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      position: "relative",
+                      minHeight: "110px",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                    }}
+                    onClick={() => document.getElementById(`attach-${key}`)?.click()}
+                  >
+                    {previewUrl ? (
+                      <>
+                        <img
+                          src={previewUrl}
+                          alt={label}
+                          style={{ maxWidth: "100%", maxHeight: "75px", objectFit: "contain", borderRadius: "4px" }}
+                          onLoad={() => { if (file) URL.revokeObjectURL(previewUrl); }}
+                        />
+                        {hasSaved && (
+                          <span style={{ fontSize: "0.65rem", color: "#16a34a", fontWeight: 600 }}>✓ Saved</span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <FaUpload style={{ color: "#94a3b8", fontSize: "1.2rem" }} />
+                        <span className="text-500" style={{ fontSize: "0.75rem" }}>Upload</span>
+                      </>
+                    )}
+                    <span className="font-semibold" style={{ fontSize: "0.72rem", color: "#475569" }}>{label}</span>
+                    {file && (
+                      <Button
+                        icon={<FaTimes />}
+                        size="small"
+                        severity="danger"
+                        text
+                        style={{ position: "absolute", top: 2, right: 2, padding: "2px 4px", fontSize: "0.65rem" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAttachments((p) => ({ ...p, [key]: null }));
+                        }}
+                      />
+                    )}
+                  </div>
+                  <input
+                    id={`attach-${key}`}
+                    type="file"
+                    accept="image/jpeg,image/png"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] ?? null;
+                      setAttachments((p) => ({ ...p, [key]: f }));
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Generate Document section ── */}
+      <div className="mb-3">
+        {/* Generated document preview */}
+        {generatedDoc && savedOfferId && (
+          <DocumentPanel
+            doc={generatedDoc}
+            offerId={savedOfferId}
+            onRegenerate={handleRegenerate}
+            onCancel={handleClearDoc}
+            regenerating={regenerating}
+            accessToken={accessToken}
+          />
+        )}
+
+        {/* Generating spinner */}
+        {generating && !generatedDoc && (
+          <div
+            className="flex align-items-center justify-content-between gap-2 mb-2"
+            style={{
+              border: "1.5px dashed #94a3b8",
+              borderRadius: "10px",
+              padding: "12px 16px",
+              background: "#f8fafc",
+            }}
+          >
+            <div className="flex align-items-center gap-2">
+              <ProgressSpinner style={{ width: "22px", height: "22px" }} strokeWidth="4" />
+              <span className="text-600" style={{ fontSize: "0.85rem" }}>
+                Generating document with AI…
+              </span>
+            </div>
+            <Button
+              label="Cancel"
+              size="small"
+              severity="secondary"
+              outlined
+              onClick={handleCancelGenerate}
+              style={{ fontSize: "0.78rem", padding: "4px 10px" }}
+            />
+          </div>
+        )}
+
+        {/* Generate button — Employee only */}
+        {isEmployee && !generatedDoc && (
+          <Button
+            icon={<FaMagic className="mr-2" />}
+            label={generating ? "Generating…" : "Generate Offer Letter"}
+            severity="info"
+            outlined
+            size="small"
+            disabled={!canGenerate || generating}
+            loading={generating}
+            onClick={handleGenerate}
+            style={{ fontSize: "0.85rem" }}
+          />
+        )}
+
+        {/* Generate Service Agreement button — Consultant / Contractor */}
+        {isConsultant && !generatedDoc && (
+          <Button
+            icon={<FaMagic className="mr-2" />}
+            label={generating ? "Generating…" : "Generate Service Agreement"}
+            severity="info"
+            outlined
+            size="small"
+            disabled={!canGenerate || generating}
+            loading={generating}
+            onClick={handleGenerate}
+            style={{ fontSize: "0.85rem" }}
+          />
+        )}
+      </div>
+
+      {/* ── Document status toggles ── */}
+      <div className="flex flex-column gap-2 pt-3 border-top-1 surface-border">
         {isEmployee && (
           <div className="flex align-items-center gap-2 flex-wrap">
             <span className="font-bold mr-2" style={{ minWidth: "260px" }}>
@@ -501,7 +1179,10 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             </span>
             <DocumentToggle
               value={formData.offerLetterSent}
-              onChange={(v) => { setFormData((p) => ({ ...p, offerLetterSent: v })); clearError("documents"); }}
+              onChange={(v) => {
+                setFormData((p) => ({ ...p, offerLetterSent: v }));
+                clearError("documents");
+              }}
             />
           </div>
         )}
@@ -512,7 +1193,10 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             </span>
             <DocumentToggle
               value={formData.serviceAgreementSent}
-              onChange={(v) => { setFormData((p) => ({ ...p, serviceAgreementSent: v })); clearError("documents"); }}
+              onChange={(v) => {
+                setFormData((p) => ({ ...p, serviceAgreementSent: v }));
+                clearError("documents");
+              }}
             />
           </div>
         )}
@@ -522,7 +1206,10 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           </span>
           <DocumentToggle
             value={formData.ndaSent}
-            onChange={(v) => { setFormData((p) => ({ ...p, ndaSent: v })); clearError("documents"); }}
+            onChange={(v) => {
+              setFormData((p) => ({ ...p, ndaSent: v }));
+              clearError("documents");
+            }}
           />
         </div>
         <div className="flex align-items-center gap-2 flex-wrap">
@@ -531,7 +1218,10 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
           </span>
           <DocumentToggle
             value={formData.codeOfConductSent}
-            onChange={(v) => { setFormData((p) => ({ ...p, codeOfConductSent: v })); clearError("documents"); }}
+            onChange={(v) => {
+              setFormData((p) => ({ ...p, codeOfConductSent: v }));
+              clearError("documents");
+            }}
           />
         </div>
       </div>

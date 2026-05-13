@@ -787,13 +787,9 @@ useEffect(() => {
     {
       label: "Initiate Onboarding",
       icon: <FaUserPlus style={{ marginRight: 8, marginLeft: 4 }} />,
-
+      disabled: !selectedResume,
       action: () => {
         setShowSettingsMenu(false);
-        if (!selectedResume) {
-          toastRef.current?.show({ severity: "warn", summary: "No Selection", detail: "Please select a candidate first", life: 3000 });
-          return;
-        }
         setShowOnboardingDialog(true);
       }
     },
