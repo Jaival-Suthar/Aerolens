@@ -152,6 +152,10 @@ export interface ActiveOfferData {
   jobProfileRequirementId: number | null;
   vendorId: number | null;
   contractorAddress: string | null;
+  photoS3Key: string | null;
+  aadhaarFrontS3Key: string | null;
+  aadhaarBackS3Key: string | null;
+  panCardS3Key: string | null;
   reportingManagerId: number | null;
   employmentTypeLookupId: number | null;
   employmentTypeName: string | null;

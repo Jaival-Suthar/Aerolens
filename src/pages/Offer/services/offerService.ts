@@ -158,6 +158,53 @@ export async function getDeletedOffers(
   return data;
 }
 
+type ConsultantImageFiles = {
+  professionalPhoto?: File | null;
+  aadhaarFront?: File | null;
+  aadhaarBack?: File | null;
+  panCard?: File | null;
+};
+
+/** POST /offers/:offerId/consultant-images — upload up to 4 identity images to S3. */
+export async function uploadConsultantImages(
+  offerId: number,
+  images: ConsultantImageFiles,
+  accessToken: string | null
+): Promise<{ savedCount: number }> {
+  const fd = new FormData();
+  if (images.professionalPhoto) fd.append("professionalPhoto", images.professionalPhoto);
+  if (images.aadhaarFront)      fd.append("aadhaarFront",      images.aadhaarFront);
+  if (images.aadhaarBack)       fd.append("aadhaarBack",       images.aadhaarBack);
+  if (images.panCard)           fd.append("panCard",           images.panCard);
+  const headers: Record<string, string> = {};
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+  const res = await fetch(`${API_BASE_URL}/offers/${offerId}/consultant-images`, {
+    method: "POST", headers, body: fd, credentials: "include",
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || "Image upload failed");
+  return data.data;
+}
+
+/** GET /offers/:offerId/consultant-images/:field — returns a blob URL for preview. */
+export async function getConsultantImageBlob(
+  offerId: number,
+  field: "photo" | "aadhaar_front" | "aadhaar_back" | "pan_card",
+  accessToken: string | null
+): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/offers/${offerId}/consultant-images/${field}`, {
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      credentials: "include",
+    });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  } catch {
+    return null;
+  }
+}
+
 /** POST /offers/:offerId/document — generate (or return existing) document. */
 export async function generateOnboardingDocument(
   offerId: number,

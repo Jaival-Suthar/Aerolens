@@ -16,8 +16,8 @@ import {
   getActiveOfferForCandidate,
   generateOnboardingDocument,
   regenerateOnboardingDocument,
-  generateWithAttachments,
-  regenerateWithAttachments,
+  uploadConsultantImages,
+  getConsultantImageBlob,
   downloadOnboardingDocument,
 } from "../../Offer/services/offerService";
 import type { CreateOfferPayload, OfferFormDataResponse } from "../../Offer/types/offerTypes";
@@ -228,12 +228,20 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
-  // Contractor attachment images (not persisted — sent at generate time only)
+  // New image files selected by user (uploaded to S3 before generate)
   const [attachments, setAttachments] = useState<{
     professionalPhoto: File | null;
     aadhaarFront: File | null;
     aadhaarBack: File | null;
     panCard: File | null;
+  }>({ professionalPhoto: null, aadhaarFront: null, aadhaarBack: null, panCard: null });
+
+  // Blob URLs for images already stored in S3 (loaded when dialog opens)
+  const [existingImageUrls, setExistingImageUrls] = useState<{
+    professionalPhoto: string | null;
+    aadhaarFront: string | null;
+    aadhaarBack: string | null;
+    panCard: string | null;
   }>({ professionalPhoto: null, aadhaarFront: null, aadhaarBack: null, panCard: null });
 
   // Document generation state
@@ -261,6 +269,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
       setGenerating(false);
       setRegenerating(false);
       setAttachments({ professionalPhoto: null, aadhaarFront: null, aadhaarBack: null, panCard: null });
+      setExistingImageUrls({ professionalPhoto: null, aadhaarFront: null, aadhaarBack: null, panCard: null });
     }
   }, [visible, selectedCandidate]);
 
@@ -322,6 +331,26 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             docFileSize: offer.docFileSize,
             docGeneratedAt: offer.docGeneratedAt,
             docGeneratedBy: offer.docGeneratedBy,
+          });
+        }
+        // Load existing consultant image previews from S3
+        if (offer.photoS3Key || offer.aadhaarFrontS3Key || offer.aadhaarBackS3Key || offer.panCardS3Key) {
+          const fieldMap = [
+            { key: "professionalPhoto" as const, field: "photo" as const,         s3Key: offer.photoS3Key },
+            { key: "aadhaarFront"      as const, field: "aadhaar_front" as const,  s3Key: offer.aadhaarFrontS3Key },
+            { key: "aadhaarBack"       as const, field: "aadhaar_back" as const,   s3Key: offer.aadhaarBackS3Key },
+            { key: "panCard"           as const, field: "pan_card" as const,       s3Key: offer.panCardS3Key },
+          ];
+          Promise.all(
+            fieldMap.map(async ({ key, field, s3Key }) => {
+              if (!s3Key) return { key, url: null };
+              const url = await getConsultantImageBlob(offer.offerId, field, accessToken);
+              return { key, url };
+            })
+          ).then((results) => {
+            const urls = { professionalPhoto: null as string | null, aadhaarFront: null as string | null, aadhaarBack: null as string | null, panCard: null as string | null };
+            results.forEach(({ key, url }) => { urls[key] = url; });
+            setExistingImageUrls(urls);
           });
         }
       })
@@ -558,15 +587,15 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         const created = await createOffer(accessToken, selectedCandidate.candidateId, payload) as { offerId: number };
         offerId = created.offerId;
         setSavedOfferId(offerId);
-        doc = isConsultantOnly
-          ? await generateWithAttachments(offerId, accessToken, attachments, abortController.signal)
-          : await generateOnboardingDocument(offerId, accessToken, abortController.signal);
       } else {
         await updateOffer(accessToken, offerId, payload);
-        doc = isContractor
-          ? await regenerateWithAttachments(offerId, accessToken, attachments)
-          : await regenerateOnboardingDocument(offerId, accessToken);
       }
+      // Upload any newly selected images to S3 before generating
+      if (isConsultantOnly) {
+        const hasNewImages = attachments.professionalPhoto || attachments.aadhaarFront || attachments.aadhaarBack || attachments.panCard;
+        if (hasNewImages) await uploadConsultantImages(offerId, attachments, accessToken);
+      }
+      doc = await generateOnboardingDocument(offerId, accessToken, abortController.signal);
       setGeneratedDoc(doc);
       showGlobalToast({
         severity: "success",
@@ -598,9 +627,11 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
       if (payload) {
         await updateOffer(accessToken, savedOfferId, payload);
       }
-      const doc = isConsultantOnly
-        ? await regenerateWithAttachments(savedOfferId, accessToken, attachments)
-        : await regenerateOnboardingDocument(savedOfferId, accessToken);
+      if (isConsultantOnly) {
+        const hasNewImages = attachments.professionalPhoto || attachments.aadhaarFront || attachments.aadhaarBack || attachments.panCard;
+        if (hasNewImages) await uploadConsultantImages(savedOfferId, attachments, accessToken);
+      }
+      const doc = await regenerateOnboardingDocument(savedOfferId, accessToken);
       setGeneratedDoc(doc);
       showGlobalToast({ severity: "success", summary: "Regenerated", detail: "New document is ready.", life: 4000 });
     } catch (err: unknown) {
@@ -987,12 +1018,13 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
               { key: "panCard",           label: "Owner PAN Card"     },
             ] as const).map(({ key, label }) => {
               const file = attachments[key];
-              const previewUrl = file ? URL.createObjectURL(file) : null;
+              const previewUrl = file ? URL.createObjectURL(file) : existingImageUrls[key];
+              const hasSaved = !file && !!existingImageUrls[key];
               return (
                 <div key={key} className="col-12 md:col-3">
                   <div
                     style={{
-                      border: "1.5px dashed #cbd5e1",
+                      border: hasSaved ? "1.5px solid #22c55e" : "1.5px dashed #cbd5e1",
                       borderRadius: "8px",
                       padding: "8px",
                       background: "#f8fafc",
@@ -1009,12 +1041,17 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
                     onClick={() => document.getElementById(`attach-${key}`)?.click()}
                   >
                     {previewUrl ? (
-                      <img
-                        src={previewUrl}
-                        alt={label}
-                        style={{ maxWidth: "100%", maxHeight: "80px", objectFit: "contain", borderRadius: "4px" }}
-                        onLoad={() => URL.revokeObjectURL(previewUrl)}
-                      />
+                      <>
+                        <img
+                          src={previewUrl}
+                          alt={label}
+                          style={{ maxWidth: "100%", maxHeight: "75px", objectFit: "contain", borderRadius: "4px" }}
+                          onLoad={() => { if (file) URL.revokeObjectURL(previewUrl); }}
+                        />
+                        {hasSaved && (
+                          <span style={{ fontSize: "0.65rem", color: "#16a34a", fontWeight: 600 }}>✓ Saved</span>
+                        )}
+                      </>
                     ) : (
                       <>
                         <FaUpload style={{ color: "#94a3b8", fontSize: "1.2rem" }} />
