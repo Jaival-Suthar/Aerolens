@@ -583,19 +583,25 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
       let offerId = savedOfferId;
 
       let doc;
-      if (!offerId) {
+      const isNewOffer = !offerId;
+      if (isNewOffer) {
         const created = await createOffer(accessToken, selectedCandidate.candidateId, payload) as { offerId: number };
         offerId = created.offerId;
         setSavedOfferId(offerId);
       } else {
-        await updateOffer(accessToken, offerId, payload);
+        await updateOffer(accessToken, offerId!, payload);
       }
+      const confirmedOfferId = offerId!;
       // Upload any newly selected images to S3 before generating
       if (isConsultantOnly) {
         const hasNewImages = attachments.professionalPhoto || attachments.aadhaarFront || attachments.aadhaarBack || attachments.panCard;
-        if (hasNewImages) await uploadConsultantImages(offerId, attachments, accessToken);
+        if (hasNewImages) await uploadConsultantImages(confirmedOfferId, attachments, accessToken);
       }
-      doc = await generateOnboardingDocument(offerId, accessToken, abortController.signal);
+      // New offers: generateDocument (idempotent, creates the first doc)
+      // Existing offers: always regenerate so updated images/data are reflected
+      doc = isNewOffer
+        ? await generateOnboardingDocument(confirmedOfferId, accessToken, abortController.signal)
+        : await regenerateOnboardingDocument(confirmedOfferId, accessToken);
       setGeneratedDoc(doc);
       showGlobalToast({
         severity: "success",
