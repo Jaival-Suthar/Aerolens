@@ -18,6 +18,7 @@ import {
   regenerateOnboardingDocument,
   uploadConsultantImages,
   getConsultantImageBlob,
+  viewCodeOfConduct,
   downloadOnboardingDocument,
 } from "../../Offer/services/offerService";
 import type { CreateOfferPayload, OfferFormDataResponse } from "../../Offer/types/offerTypes";
@@ -1222,6 +1223,21 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
               setFormData((p) => ({ ...p, codeOfConductSent: v }));
               clearError("documents");
             }}
+          />
+          <Button
+            icon={<FaEye className="mr-1" />}
+            label="View"
+            size="small"
+            severity="info"
+            outlined
+            onClick={async () => {
+              try {
+                await viewCodeOfConduct(accessToken);
+              } catch {
+                showGlobalToast({ severity: "error", summary: "Error", detail: "Could not open Code of Conduct.", life: 4000 });
+              }
+            }}
+            style={{ fontSize: "0.78rem", padding: "4px 10px" }}
           />
         </div>
       </div>

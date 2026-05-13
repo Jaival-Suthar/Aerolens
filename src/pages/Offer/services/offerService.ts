@@ -205,6 +205,20 @@ export async function getConsultantImageBlob(
   }
 }
 
+/** GET /offers/code-of-conduct — open the Code of Business Conduct PDF in a new tab. */
+export async function viewCodeOfConduct(accessToken: string | null): Promise<void> {
+  const url = `${API_BASE_URL}/offers/code-of-conduct`;
+  const res = await fetch(url, {
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Code of Conduct document not available.");
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  window.open(objectUrl, "_blank");
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 3000);
+}
+
 /** POST /offers/:offerId/document — generate (or return existing) document. */
 export async function generateOnboardingDocument(
   offerId: number,
