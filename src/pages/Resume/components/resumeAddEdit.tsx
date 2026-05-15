@@ -9,7 +9,6 @@ import { Toast } from "primereact/toast";
 import DialogButton from "../../../shared/DialogAddEditButton";
 import PhoneInputField from "../../../shared/components/PhoneInput";
 import { isLikelyE164 } from "../../../shared/utils/phoneE164";
-import { extractPdfText } from "../../JobProfileNew/util/pdfParser.util";
 import {
   createCandidate,
   updateCandidate,
@@ -17,7 +16,7 @@ import {
   getCandidateById,
   analyzeResume,
 } from "../services/useResume";
-import { ResumeAddEditProps, AddEditCandidate, CandidateCreateData, AddEditCandidateApiPayload } from "../types/resumeTypes";
+import { ResumeAddEditProps, AddEditCandidate, AddEditCandidateApiPayload } from "../types/resumeTypes";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import { useProfileStore } from "../../../shared/store/profile";
 
@@ -162,7 +161,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   const [formData, setFormData] = useState<AddEditCandidate>(INITIAL_FORM);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [submitted, setSubmitted] = useState(false);
-  const [resumePasteText, setResumePasteText] = useState("");
   const [clearExistingResume, setClearExistingResume] = useState(false);
   const toast = useRef<Toast>(null);
   const previousCurrentCountryRef = useRef<string | null>(null);
@@ -172,7 +170,6 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
     setFormData(INITIAL_FORM);
     setErrors({});
     setSubmitted(false);
-    setResumePasteText("");
     setClearExistingResume(false);
   };
   useEffect(() => {
@@ -494,156 +491,6 @@ useEffect(() => {
   [errors]
 );
 
-const parseAndAutofill = (text: string, liveCreateData?: CandidateCreateData | null) => {
-  if (!text.trim()) return;
-
-  const data = liveCreateData ?? createData;
-  const updatedData: Partial<AddEditCandidate> = {};
-
-  // Full Name — labeled or first short clean line at top of doc
-  const nameMatch = text.match(/(?:full\s*name|name)[:\-]\s*(.+)/i);
-  if (nameMatch) {
-    updatedData.candidateName = nameMatch[1].trim();
-  } else {
-    const firstLine = text.split("\n").map(l => l.trim()).find(
-      l => l.length > 1 && l.length < 60 && !/[@\d:\/\\]/.test(l)
-    );
-    if (firstLine) updatedData.candidateName = firstLine;
-  }
-
-  // Contact Number — labeled first, then bare E.164, then bare 10-digit Indian
-  const phoneLabelMatch = text.match(/(?:phone|mobile|contact(?:\s*(?:no|number))?|ph\.?|cell)[:\s#.]*([+\d][\d\s\-().]{6,18})/i);
-  const phoneE164Match = text.match(/(?<!\d)(\+\d{1,3}[\s\-]?\(?\d{1,4}\)?[\s\-]?\d{3,5}[\s\-]?\d{4,6})(?!\d)/);
-  const phone10Match = text.match(/(?<!\d)([6-9]\d{9})(?!\d)/);
-  const rawPhone = phoneLabelMatch?.[1]?.trim() ?? phoneE164Match?.[1]?.trim() ?? phone10Match?.[1]?.trim();
-  if (rawPhone) {
-    const digits = rawPhone.replace(/\D/g, "");
-    if (digits.length === 10) updatedData.contactNumber = `+91${digits}`;
-    else if (digits.length > 10) updatedData.contactNumber = rawPhone.startsWith("+") ? rawPhone.replace(/[\s\-]/g, "") : `+${digits}`;
-  }
-
-  // Email
-  const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-  if (emailMatch) updatedData.email = emailMatch[0];
-
-  // LinkedIn
-  const linkedinMatch = text.match(/https?:\/\/(www\.)?linkedin\.com\/[^\s,)\]>]+/i);
-  if (linkedinMatch) updatedData.linkedinProfileUrl = linkedinMatch[0].replace(/[.,)\]]+$/, "");
-
-  // Experience — "experience: X", "X years of experience", "X+ yrs"
-  const expLabel = text.match(/(?:total\s+)?(?:work\s+)?experience[:\-\s]+(\d+(?:\.\d+)?)/i);
-  const expInline = text.match(/(\d+(?:\.\d+)?)\s*\+?\s*(?:years?|yrs?)(?:\s+of)?\s+(?:experience|exp\b)/i);
-  const expVal = expLabel?.[1] ?? expInline?.[1];
-  if (expVal) updatedData.experienceYears = parseFloat(expVal);
-
-  // CTC — current
-  const cctcMatch = text.match(/(?:current\s*ctc|c\.?c\.?t\.?c|ctc\s*[(\-]\s*current\s*[)\-])\s*[:\-]?\s*([\d.]+)/i);
-  if (cctcMatch) updatedData.currentCTCAmount = parseFloat(cctcMatch[1]);
-
-  // CTC — expected
-  const ectcMatch = text.match(/(?:expected\s*ctc|e\.?c\.?t\.?c|ctc\s*[(\-]\s*expected\s*[)\-])\s*[:\-]?\s*([\d.]+)/i);
-  if (ectcMatch) updatedData.expectedCTCAmount = parseFloat(ectcMatch[1]);
-
-  // Currency + Type — infer from text around CTC keywords
-  const ctcContext = (text.match(/(?:ctc|salary|compensation|package)[^\n]{0,150}/gi) ?? []).join(" ");
-  const scanArea = ctcContext || text;
-  const hasINR = /\b(inr|lpa|lakh|lakhs?|₹)\b/i.test(scanArea);
-  const hasUSD = /\b(usd|\$|dollar)\b/i.test(scanArea);
-  const isHourly = /\bhourly\b/i.test(scanArea);
-  const isMonthly = /\bmonthly\b/i.test(scanArea);
-
-  const inrId  = data?.currencies?.find(c => c.currencyName === "INR")?.currencyId;
-  const usdId  = data?.currencies?.find(c => c.currencyName === "USD")?.currencyId;
-  const annualId  = data?.compensationTypes?.find(t => t.compensationTypeName === "Annual")?.compensationTypeId;
-  const hourlyId  = data?.compensationTypes?.find(t => t.compensationTypeName === "Hourly")?.compensationTypeId;
-  const monthlyId = data?.compensationTypes?.find(t => t.compensationTypeName === "Monthly")?.compensationTypeId;
-
-  const resolvedCurrency = hasUSD ? usdId : (hasINR ? inrId : inrId);
-  const resolvedType = isHourly ? hourlyId : isMonthly ? monthlyId : annualId;
-
-  if (updatedData.currentCTCAmount != null) {
-    if (resolvedCurrency) updatedData.currentCTCCurrencyId = resolvedCurrency;
-    if (resolvedType)     updatedData.currentCTCTypeId     = resolvedType;
-  }
-  if (updatedData.expectedCTCAmount != null) {
-    if (resolvedCurrency) updatedData.expectedCTCCurrencyId = resolvedCurrency;
-    if (resolvedType)     updatedData.expectedCTCTypeId     = resolvedType;
-  }
-
-  // Notice Period
-  const noticeLabel = text.match(/notice\s*period\s*[:\-]?\s*(\d+)/i);
-  const noticeDays  = text.match(/(\d+)\s*days?\s*(?:of\s+)?notice/i);
-  const immediate   = /\b(immediate(?:ly)?|currently?\s+serving)\b/i.test(text);
-  if (noticeLabel)    updatedData.noticePeriod = parseInt(noticeLabel[1]);
-  else if (noticeDays) updatedData.noticePeriod = parseInt(noticeDays[1]);
-  else if (immediate)  updatedData.noticePeriod = 0;
-
-  // Mode of Work
-  if (data?.workModes?.length) {
-    const isRemote = /\bremote\b/i.test(text);
-    const isHybridMode = /\bhybrid\b/i.test(text);
-    const isOnsite = /\b(on[\s\-]?site|onsite|in[\s\-]?office)\b/i.test(text);
-    const modeKeyword = isRemote ? "remote" : isHybridMode ? "hybrid" : isOnsite ? "on-site" : null;
-    if (modeKeyword) {
-      const matched = data.workModes.find(w => w.workMode.toLowerCase().includes(modeKeyword));
-      if (matched) {
-        updatedData.workModeId = matched.workModeId;
-        updatedData.workMode   = matched.workMode;
-      }
-    }
-  }
-
-  // Current Location — match "Current Location: City, Country"
-  const curLocMatch = text.match(/current\s*(?:working\s*)?location\s*[:\-]\s*(.+?),\s*(.+?)(?:\n|$)/i);
-  if (curLocMatch && data?.locations) {
-    const city    = curLocMatch[1].trim();
-    const country = curLocMatch[2].trim();
-    const loc = data.locations.find(
-      l => l.city.toLowerCase() === city.toLowerCase() && l.country.toLowerCase() === country.toLowerCase()
-    );
-    if (loc) updatedData.currentLocation = { city: loc.city, country: loc.country };
-  }
-
-  // Expected / Preferred Location
-  const expLocMatch = text.match(/(?:preferred|expected)\s*(?:working\s*)?location\s*[:\-]\s*(.+?),\s*(.+?)(?:\n|$)/i);
-  if (expLocMatch && data?.locations) {
-    const city    = expLocMatch[1].trim();
-    const country = expLocMatch[2].trim();
-    const loc = data.locations.find(
-      l => l.city.toLowerCase() === city.toLowerCase() && l.country.toLowerCase() === country.toLowerCase()
-    );
-    if (loc) updatedData.expectedLocation = { city: loc.city, country: loc.country };
-  }
-
-  const filledCount = Object.keys(updatedData).length;
-  setFormData(prev => ({ ...prev, ...updatedData }));
-
-  toast.current?.show({
-    severity: filledCount > 0 ? "success" : "warn",
-    summary: filledCount > 0 ? "Auto-filled" : "Nothing detected",
-    detail: filledCount > 0 ? `${filledCount} field(s) filled from resume` : "Could not detect fields — check resume format",
-    life: 2500,
-  });
-};
-
-  const handleFileParse = async (file: File, liveCreateData: CandidateCreateData | null | undefined) => {
-    const isPdf = file.name.toLowerCase().endsWith(".pdf");
-    if (!isPdf) return;
-
-    try {
-      const text = await extractPdfText(file);
-      setResumePasteText(text);
-      parseAndAutofill(text, liveCreateData);
-    } catch {
-      toast.current?.show({
-        severity: "warn",
-        summary: "Parse failed",
-        detail: "Could not extract text from PDF",
-        life: 2500,
-      });
-    }
-  };
-
   const handleBlur = useCallback(
     (field: keyof AddEditCandidate) => {
       // Optional: validate on blur if needed
@@ -911,32 +758,6 @@ else {
         modal
         className="p-fluid"
       >
-      <div className="field col-12 mb-4">
-          <label className="font-bold">
-            Candidate Details for Auto-fill Form (Optional)
-          </label>
-
-          <textarea
-            value={resumePasteText}
-            onChange={(e) => {
-              setResumePasteText(e.target.value);
-              if (!e.target.value.trim()) resetForm();
-            }}
-            onPaste={(e) => {
-              const pastedText = e.clipboardData.getData("text");
-              setResumePasteText(pastedText);
-              parseAndAutofill(pastedText);
-            }}
-            placeholder="Paste resume text here..."
-            style={{
-              width: "100%",
-              minHeight: "120px",
-              padding: "0.75rem",
-              borderRadius: "6px",
-              border: "1px solid #cbd5e1"
-            }}
-          />
-        </div>
         {duplicateError && (
         <div
         style={{
@@ -1357,7 +1178,6 @@ else {
                 const file = e.dataTransfer.files?.[0];
                 if (file) {
                   handleChange("resumeFile", file);
-                  handleFileParse(file, createData);
                 }
               }}
               style={{
@@ -1394,7 +1214,6 @@ else {
                       const selectedFile = e.files?.[0];
                       if (selectedFile) {
                         handleChange("resumeFile", selectedFile);
-                        handleFileParse(selectedFile, createData);
                       }
                     }}
                   />
@@ -1435,7 +1254,6 @@ else {
                     type="button"
                     onClick={() => {
                       resetForm();
-                      setResumePasteText("");
                       setClearExistingResume(true);
                     }}
                     style={{
