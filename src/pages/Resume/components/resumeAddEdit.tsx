@@ -168,7 +168,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   const previousCurrentCountryRef = useRef<string | null>(null);
   const previousExpectedCountryRef = useRef<string | null>(null);
   
-  const resetForm = () => {
+  const resetAll = () => {
     setFormData(INITIAL_FORM);
     setErrors({});
     setSubmitted(false);
@@ -177,7 +177,7 @@ const ResumeAddEdit: React.FC<ResumeAddEditProps> = ({
   };
   useEffect(() => {
     if (!visible) {
-      resetForm();
+      resetAll();
     }
   }, [visible]);
 
@@ -920,7 +920,6 @@ else {
             value={resumePasteText}
             onChange={(e) => {
               setResumePasteText(e.target.value);
-              if (!e.target.value.trim()) resetForm();
             }}
             onPaste={(e) => {
               const pastedText = e.clipboardData.getData("text");
@@ -1434,8 +1433,7 @@ else {
                   <button
                     type="button"
                     onClick={() => {
-                      resetForm();
-                      setResumePasteText("");
+                      setFormData((prev) => ({ ...prev, resumeFile: null }));
                       setClearExistingResume(true);
                     }}
                     style={{
