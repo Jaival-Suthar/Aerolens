@@ -1009,7 +1009,7 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             <small className="p-error block mt-1">{shouldShowError("reportingToId")}</small>
           )}
         </div>
-      )}
+      </div>
 
       {/* ── Generate Document section ── */}
       <div className="mb-3">
