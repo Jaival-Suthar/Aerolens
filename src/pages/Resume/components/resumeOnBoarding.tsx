@@ -1009,6 +1009,79 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
             <small className="p-error block mt-1">{shouldShowError("reportingToId")}</small>
           )}
         </div>
+      )}
+
+      {/* ── Generate Document section ── */}
+      <div className="mb-3">
+        {/* Generated document preview */}
+        {generatedDoc && savedOfferId && (
+          <DocumentPanel
+            doc={generatedDoc}
+            offerId={savedOfferId}
+            onRegenerate={handleRegenerate}
+            onCancel={handleClearDoc}
+            regenerating={regenerating}
+            accessToken={accessToken}
+          />
+        )}
+
+        {/* Generating spinner */}
+        {generating && !generatedDoc && (
+          <div
+            className="flex align-items-center justify-content-between gap-2 mb-2"
+            style={{
+              border: "1.5px dashed #94a3b8",
+              borderRadius: "10px",
+              padding: "12px 16px",
+              background: "#f8fafc",
+            }}
+          >
+            <div className="flex align-items-center gap-2">
+              <ProgressSpinner style={{ width: "22px", height: "22px" }} strokeWidth="4" />
+              <span className="text-600" style={{ fontSize: "0.85rem" }}>
+                Generating document with AI…
+              </span>
+            </div>
+            <Button
+              label="Cancel"
+              size="small"
+              severity="secondary"
+              outlined
+              onClick={handleCancelGenerate}
+              style={{ fontSize: "0.78rem", padding: "4px 10px" }}
+            />
+          </div>
+        )}
+
+        {/* Generate button — Employee only */}
+        {isEmployee && !generatedDoc && (
+          <Button
+            icon={<FaMagic className="mr-2" />}
+            label={generating ? "Generating…" : "Generate Offer Letter"}
+            severity="info"
+            outlined
+            size="small"
+            disabled={!canGenerate || generating}
+            loading={generating}
+            onClick={handleGenerate}
+            style={{ fontSize: "0.85rem" }}
+          />
+        )}
+
+        {/* Generate Service Agreement button — Consultant / Contractor */}
+        {isConsultant && !generatedDoc && (
+          <Button
+            icon={<FaMagic className="mr-2" />}
+            label={generating ? "Generating…" : "Generate Service Agreement"}
+            severity="info"
+            outlined
+            size="small"
+            disabled={!canGenerate || generating}
+            loading={generating}
+            onClick={handleGenerate}
+            style={{ fontSize: "0.85rem" }}
+          />
+        )}
       </div>
 
       {/* ── Consultant document attachments ── */}
