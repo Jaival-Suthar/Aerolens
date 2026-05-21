@@ -9,7 +9,6 @@ import { Toast } from "primereact/toast";
 import DialogButton from "../../../shared/DialogAddEditButton";
 import PhoneInputField from "../../../shared/components/PhoneInput";
 import { isLikelyE164 } from "../../../shared/utils/phoneE164";
-import { extractPdfText } from "../../JobProfileNew/util/pdfParser.util";
 import {
   createCandidate,
   updateCandidate,
@@ -624,24 +623,6 @@ useEffect(() => {
       detail: filledCount > 0 ? `${filledCount} field(s) filled from resume` : "Could not detect fields — check resume format",
       life: 2500,
     });
-  };
-
-  const handleFileParse = async (file: File, liveCreateData: CandidateCreateData | null | undefined) => {
-    const isPdf = file.name.toLowerCase().endsWith(".pdf");
-    if (!isPdf) return;
-
-    try {
-      const text = await extractPdfText(file);
-      setResumePasteText(text);
-      parseAndAutofill(text, liveCreateData);
-    } catch {
-      toast.current?.show({
-        severity: "warn",
-        summary: "Parse failed",
-        detail: "Could not extract text from PDF",
-        life: 2500,
-      });
-    }
   };
 
   const handleBlur = useCallback(
@@ -1357,7 +1338,6 @@ else {
                 const file = e.dataTransfer.files?.[0];
                 if (file) {
                   handleChange("resumeFile", file);
-                  handleFileParse(file, createData);
                 }
               }}
               style={{
@@ -1394,7 +1374,6 @@ else {
                       const selectedFile = e.files?.[0];
                       if (selectedFile) {
                         handleChange("resumeFile", selectedFile);
-                        handleFileParse(selectedFile, createData);
                       }
                     }}
                   />
