@@ -18,6 +18,7 @@ import {
   regenerateOnboardingDocument,
   uploadConsultantImages,
   getConsultantImageBlob,
+  viewCodeOfConduct,
   downloadOnboardingDocument,
 } from "../../Offer/services/offerService";
 import type { CreateOfferPayload, OfferFormDataResponse } from "../../Offer/types/offerTypes";
@@ -1010,6 +1011,79 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
         </div>
       </div>
 
+      {/* ── Generate Document section ── */}
+      <div className="mb-3">
+        {/* Generated document preview */}
+        {generatedDoc && savedOfferId && (
+          <DocumentPanel
+            doc={generatedDoc}
+            offerId={savedOfferId}
+            onRegenerate={handleRegenerate}
+            onCancel={handleClearDoc}
+            regenerating={regenerating}
+            accessToken={accessToken}
+          />
+        )}
+
+        {/* Generating spinner */}
+        {generating && !generatedDoc && (
+          <div
+            className="flex align-items-center justify-content-between gap-2 mb-2"
+            style={{
+              border: "1.5px dashed #94a3b8",
+              borderRadius: "10px",
+              padding: "12px 16px",
+              background: "#f8fafc",
+            }}
+          >
+            <div className="flex align-items-center gap-2">
+              <ProgressSpinner style={{ width: "22px", height: "22px" }} strokeWidth="4" />
+              <span className="text-600" style={{ fontSize: "0.85rem" }}>
+                Generating document with AI…
+              </span>
+            </div>
+            <Button
+              label="Cancel"
+              size="small"
+              severity="secondary"
+              outlined
+              onClick={handleCancelGenerate}
+              style={{ fontSize: "0.78rem", padding: "4px 10px" }}
+            />
+          </div>
+        )}
+
+        {/* Generate button — Employee only */}
+        {isEmployee && !generatedDoc && (
+          <Button
+            icon={<FaMagic className="mr-2" />}
+            label={generating ? "Generating…" : "Generate Offer Letter"}
+            severity="info"
+            outlined
+            size="small"
+            disabled={!canGenerate || generating}
+            loading={generating}
+            onClick={handleGenerate}
+            style={{ fontSize: "0.85rem" }}
+          />
+        )}
+
+        {/* Generate Service Agreement button — Consultant / Contractor */}
+        {isConsultant && !generatedDoc && (
+          <Button
+            icon={<FaMagic className="mr-2" />}
+            label={generating ? "Generating…" : "Generate Service Agreement"}
+            severity="info"
+            outlined
+            size="small"
+            disabled={!canGenerate || generating}
+            loading={generating}
+            onClick={handleGenerate}
+            style={{ fontSize: "0.85rem" }}
+          />
+        )}
+      </div>
+
       {/* ── Consultant document attachments ── */}
       {isConsultantOnly && (
         <div className="mb-3 pt-2 border-top-1 surface-border">
@@ -1222,6 +1296,21 @@ const ResumeOnBoarding: React.FC<ResumeOnBoardingProps> = ({
               setFormData((p) => ({ ...p, codeOfConductSent: v }));
               clearError("documents");
             }}
+          />
+          <Button
+            icon={<FaEye className="mr-1" />}
+            label="View"
+            size="small"
+            severity="info"
+            outlined
+            onClick={async () => {
+              try {
+                await viewCodeOfConduct(accessToken);
+              } catch {
+                showGlobalToast({ severity: "error", summary: "Error", detail: "Could not open Code of Conduct.", life: 4000 });
+              }
+            }}
+            style={{ fontSize: "0.78rem", padding: "4px 10px" }}
           />
         </div>
       </div>
